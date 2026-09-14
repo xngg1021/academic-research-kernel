@@ -3,7 +3,7 @@ name: academic-source-verification
 description: "核查文献真实性:交叉核对被引数、撤稿状态、开放获取全文与原文内容."
 version: 1.1.1
 author: SJF, Hermes Agent
-license: MIT
+license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
 required_environment_variables:
   - name: OPENALEX_API_KEY
