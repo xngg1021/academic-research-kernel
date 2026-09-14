@@ -10,8 +10,8 @@ The separately identified [Nous Research MIT license](tests/upstream/LICENSE) an
 
 ## First SLL snapshot
 
-- Application commit: PENDING — record after Commit A exists.
-- Application tree: PENDING — record from Commit A.
+- Application commit: `441ab72e85c9ea607680dac7d8abdbd53f163ae4`.
+- Application tree: `91c3d15d167e8bb46010cd45f21b38c7c7d7864d`.
 - Version: repository application; no product version bump.
 - License: Source Lineage License Version 1.0 / LicenseRef-Source-Lineage-1.0.
 - Exact LICENSE SHA-256: `f6c982dafe666ceb2b01df4bc4f146e4facbd6f62753b7ae4cfd324f1db7cda6`.
