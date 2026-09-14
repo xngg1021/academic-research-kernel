@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "project": "hermes-academic-skills",
+  "repository": "xngg1021/hermes-academic-skills",
+  "version": null,
+  "pre_application_commit": "439ce4a29d6d2d9137308d7f9f045863e9f0c5b3",
+  "pre_application_license_record": "MIT",
+  "canonical_sll_repository": "xngg1021/source-lineage-license-review",
+  "canonical_sll_commit": "ee413d709ba35ca44406473f9d468d022d13fdec",
+  "canonical_sll_path": "final/source-lineage-license-1.0/SOURCE_LINEAGE_LICENSE_1.0.md",
+  "license_ref": "LicenseRef-Source-Lineage-1.0",
+  "canonical_sll_blob": "d24b763a2d3ecbc13c21760c60345b8e9adff33d",
+  "license_sha256": "f6c982dafe666ceb2b01df4bc4f146e4facbd6f62753b7ae4cfd324f1db7cda6",
+  "boundary_state": "pending-first-commit",
+  "application_commit": null,
+  "application_tree": null,
+  "boundary_record_rule": "The following forward-only documentation commit records the first application commit and tree. This receipt never self-identifies its containing commit.",
+  "historical_grants_preserved": true,
+  "third_party_rights_preserved": true,
+  "preserved_mit_files": {
+    "LICENSES/MIT-pre-SLL.txt": "d01bed852830e1fac7046bf01391058967f706d497d44e471e77d124c0b9720e",
+    "tests/upstream/LICENSE": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6",
+    "tests/upstream/provenance.json": "a8371375c4bc3ac8c2603b2cd09665b4e03f3f5a45c70c5107b36ee26104289a",
+    "tests/upstream/hermes_authoring_standards.py": "eaf3eadb59a976b53b4eb0e22c9bf31736ee886777b98e497bbbebe7dadb1918",
+    "tests/upstream/tap_discovery.py": "891c47ffc97047c4c544d3dd88cea4aedf3edd8c99b91c66f83d243e88fd0084"
+  },
+  "skill_body_hashes": {
+    "skills/academic-writing/SKILL.md": "4d0e7839561f0c3b42773e7a9ccb28a62a250c61dfab7e79fca0e77f4c200549",
+    "skills/literature-analysis/SKILL.md": "da7950fae2f84a2dd633a988fed8037bb9fd9e8d9b07a32e05c2546915ab9c62",
+    "skills/math-computation/SKILL.md": "fa05ef5eee571c15e8f842cec4634c83730fdebdc66acabf0c09d60d6121d7c0",
+    "skills/academic-source-verification/SKILL.md": "fe6fa3a8873430d2c99f2535855608f83e97d0733cba0081c948190827a9d962"
+  }
+}

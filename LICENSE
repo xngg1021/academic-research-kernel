@@ -1,21 +1,176 @@
-MIT License
+# SOURCE LINEAGE LICENSE
+## Version 1.0
 
-Copyright (c) 2026 Junfu Shi (xngg1021)
+**FINAL CANONICAL TEXT.** This document is Source Lineage License Version 1.0 (SLL 1.0). Its exact local machine-readable reference is `LicenseRef-Source-Lineage-1.0`, a local LicenseRef, not an SPDX-assigned identifier. Publication of this License does not constitute OSI approval. The numbered provisions below are the license instrument. Companion reports and templates are non-normative and are not incorporated into it. Placing this document in a review repository does not automatically apply it to that repository or to any other project.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+### 1. Definitions
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1.1. “License” means this exact English Source Lineage License Version 1.0. It does not mean an earlier development version or a later version.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1.2. “Licensor” means each individual or legal entity offering rights under this License, solely in respect of rights that person owns, controls, or is lawfully entitled to license. “You” means the individual or single legal entity exercising those rights; “Your” has the corresponding meaning.
+
+1.3. “Copyright and Similar Rights” means copyright and related economic rights, including applicable rights in performances, broadcasts, sound recordings, and databases, including sui generis database rights. It excludes patents, trademarks, moral rights, privacy and publicity rights, confidentiality, and trade secrets. “Licensed Rights” means only those Copyright and Similar Rights in Covered Material that the relevant Licensor is lawfully entitled to grant and that apply to Your activity.
+
+1.4. “Covered Material” means the identified work, database, or other material to which a Licensor expressly applies this License, including the Licensor's protected material as present in copies or Modified Material. Merely sharing a repository, package, network, or product does not bring other material within this definition. “Modified Material” means material containing or adapting Covered Material in a manner requiring permission under the relevant Licensed Rights. “Your Contributions” means Your additions, modifications, or other authorship, including within Modified Material, but only to the extent of rights You actually own or may lawfully license.
+
+1.5. “Your Organization” means You and, if You are a legal entity, entities actually controlling, controlled by, or under common control with You. Control means ownership of more than half of the voting rights or an enforceable power to direct ordinary management and operations. A commercial relationship, minority investment, or label alone is insufficient. This definition does not merge separate legal persons or make one responsible for another's conduct.
+
+1.6. “Internal Use” means use solely for the internal purposes of Your Organization by its personnel, or by a contractor acting solely on its behalf for those purposes. It excludes offering the functionality to an external customer for that customer's own use. Separate legal persons receiving copies remain recipients under Section 4, including group entities and contractors.
+
+1.7. “Source Lineage Information” means the supplied, materially relevant identification of Covered Material's upstream origin and modification history: project or work name; identified authors or rights holders, including supplied pseudonyms; source or repository reference; applicable license identity and version; supplied release, commit, or equivalent identifier; and supplied indications of prior modification. It includes relevant intermediate upstream sources supplied with the material, without requiring a complete historical chain or an investigation of unknown history. It does not include confidential development records or information about how a work was created merely because those records exist.
+
+1.8. “Distribute” means supply a copy of Covered Material, including in Modified Material or a larger product, to another person, by sale or otherwise, in source, executable, or another form. Copies supplied to a separate legal person count even within Your Organization. Personnel acting solely for the same legal person are not separate recipients merely through their employment. This definition identifies the notice context; it does not enlarge statutory exclusive rights.
+
+1.9. “Intentional Provenance Falsification” means knowingly making, or knowingly maintaining, a materially false representation of the upstream origin, modification status, or upstream version or revision represented by Covered Material with the purpose of misleading recipients. This includes purposeful removal or substitution of material lineage information to present upstream protected material as wholly independent original work, and false representations that Covered Material is an official or unmodified upstream release or corresponds to a specified upstream version or revision, in each case meeting those knowledge, materiality, and purpose requirements. An allegation, repetition, or an ordinary clerical, metadata, packaging, formatting, placement, transcription, or version-identification error, or an ambiguous technical description, does not by itself establish that purpose.
+
+### 2. Grant and legal scope
+
+2.1. Each Licensor grants You a worldwide, royalty-free, non-exclusive license under the Licensed Rights to use, study, reproduce, modify, translate, port, refactor, display, perform, communicate, make available, Distribute, extract and reuse database contents, and otherwise exploit Covered Material, in any medium, for commercial or non-commercial purposes. This includes automated and agent-assisted activity, combination with proprietary material, and private use of modifications, subject to the applicable conditions below.
+
+2.2. Sections 3.2, 4, and 6 are conditions of this grant only to the extent they are applicable to an actual exercise of Licensed Rights for which the relevant Licensor's permission is legally required, and only to the extent applicable law permits that condition to limit those rights. Acceptance through exercise of Licensed Rights is subject to applicable law. Merely receiving, possessing, reading, or running material does not establish that permission or contractual assent is legally required.
+
+2.3. No provision restricts an activity that can lawfully be undertaken without this permission, including through an exception, limitation, exhaustion, expiry, or independently held license. If a provision operates only as a contractual covenant, it is enforceable as such only where a binding contract and the necessary legal requirements actually exist. Its breach is not made copyright infringement by this License, and does not terminate Licensed Rights through Section 12.
+
+2.4. This License neither creates rights nor proves copyrightability, authorship, title, originality, or ownership. It does not claim ideas, facts, methods, algorithms, functionality, APIs as such, abstract architecture, or independent implementations where applicable law provides no relevant Licensed Rights. It does not warrant clearance of third-party rights.
+
+2.5. Each recipient of Covered Material receives the relevant Licensor's direct offer of these Licensed Rights on these terms, exercisable subject to the recipient's own compliance. Distribution does not require assignment of the distributor's grant. This direct offer supplies no rights the Licensor lacks and does not bypass a recipient's own termination under Section 12.
+
+### 3. Distinct rights layers and other terms
+
+3.1. Upstream protected material and Your Contributions are distinct rights layers even when technically inseparable. No rights in Your Contributions are assigned or automatically licensed to a Licensor by their inclusion in Modified Material. You may keep them closed and apply proprietary or other terms to the rights You actually hold in them. You may license a larger product under Your chosen terms. This License requires no disclosure of source code, modifications, build instructions, prompts, or development records.
+
+3.2. In exercising Licensed Rights to supply Covered Material or Modified Material, You must identify the continued application of this License to the relevant upstream rights. Your additional terms must not purport to erase, replace, or contradict those rights or prevent compliance with their applicable conditions. This does not grant recipients rights in Your Contributions that You have not granted, require separation of code, or prevent access controls protecting Your own material.
+
+3.3. Third-party material remains governed by its applicable rights and terms. Neither inclusion nor attribution under this License relicenses it, cures incompatible obligations, or makes uncopyrightable material copyrightable. Removing all relevant upstream protected material through lawful independent development can remove the need for this License for the resulting material; renaming or mechanically transforming protected expression does not establish that result.
+
+### 4. Distribution notices
+
+4.1. When You Distribute in exercise of Licensed Rights, You must provide recipients with the applicable license identity and version, an unmodified copy of the applicable license text, the supplied and materially relevant copyright and license notices and warranty and liability disclaimers, and the Source Lineage Information relevant to the material supplied. If You supply Modified Material, You must accurately indicate that it has been modified and retain supplied indications of prior modification. A concise indication is sufficient; a detailed change log is not required.
+
+4.2. Required information may be reasonably consolidated in accompanying legal notices, documentation, a notices file, an accessible application notice facility, or other media-appropriate materials delivered with the copy. The full applicable license text must be included in that delivery, including an offline-readable electronic accompanying document where appropriate; a bare external link alone does not satisfy this distribution requirement. Duplicate notices and unrelated notices may be omitted if the relevant substance and the mapping to affected material remain clear.
+
+4.3. Required notices must be reasonably discoverable by the relevant recipient in context. No advertising credit, homepage logo, every-screen notice, fixed click count, fixed font size, or disclosure of source code is required. Sale of a product is permitted, but recipients must not be required to make a separate payment or enter a separate nondisclosure undertaking merely to see its required license and lineage information.
+
+### 5. Service operation and internal use
+
+5.1. Operating Covered Material to provide a network service, without supplying copies of Covered Material to its users, creates no service-lineage notice obligation under this License, regardless of the material's contribution or whether the service is public or privately contracted. Reproduction or modification solely to operate that service does not itself create such a notice obligation or a service-notice basis for termination under Section 12. Actual supply of copies remains subject to Sections 3.2, 4, and 6 to the extent applicable.
+
+5.2. Merely operating a server, interacting over a network, or calling another person's remote service does not by itself establish an exercise of Licensed Rights requiring permission, contractual assent, or infringement.
+
+5.3. Internal Use requires no public notice. Section 4 still applies to copies supplied to separate legal persons in exercise of Licensed Rights. Responsibility for copying, distribution, and external services follows the actual actor and legally attributable conduct, not automatic group-wide liability.
+
+### 6. Accurate lineage and modification information
+
+6.1. This Section applies only when You Distribute in exercise of Licensed Rights. You must not engage in Intentional Provenance Falsification or falsely imply official authorship, status, sponsorship, or endorsement. You may change product names, branding, interfaces, and architecture while preserving required truthful upstream information and modification indications.
+
+6.2. You need preserve only supplied, materially relevant Source Lineage Information and notices. You need not discover unknown authors, reconstruct lost history, keep a former source publicly available, or reactivate a private or dead repository. An unavailable source reference may be retained as a historical identifier. Known material factual inaccuracies may be corrected with a concise indication of the correction, without inventing missing facts or silently substituting Your authorship for upstream authorship.
+
+6.3. Technical removal or relocation of headers or machine-readable metadata is permitted when equivalent required information is preserved in a compliant place and is not made materially misleading. Applicable statutory rules on copyright-management information remain independent; this License does not declare every metadata change unlawful or create a new statutory cause of action.
+
+### 7. Automated activity and databases
+
+7.1. Human-directed tools, agents, automated translation, refactoring, and other transformations are subject to the same rights analysis as other activity. Use of such tools neither automatically severs source lineage nor establishes that every output is a derivative work. Exposure during training or use does not by itself make all later outputs Modified Material. Protection of any human contribution or machine-generated material depends on applicable law and the facts.
+
+7.2. This License imposes no additional restriction on text and data mining or model training within the Licensed Rights. Provider-specific policies are not incorporated. A later unilateral reservation, machine-readable notice, or provider-policy change cannot reduce permissions already validly granted here. Separate arrangements may govern the parties and rights actually within their scope; mandatory exceptions and independently held rights remain unaffected.
+
+7.3. Database permissions cover only rights the relevant Licensor can grant. Protection of selection or arrangement and sui generis database rights must be distinguished from ownership of facts and from rights in individual contents. The applicable notice conditions concern material for which an exercise of those rights actually requires permission, including legally regulated cumulative extraction; they do not create rights over unprotected data.
+
+### 8. Moral rights
+
+8.1. Only a person legally entitled to consent, acting personally or through a legally authorized representative, can give consent concerning moral rights. To the extent the relevant Licensor is such a person and applicable law permits effective consent through this instrument, that person consents to the modifications, translations, and other adaptations authorized here of the identified Covered Material, solely as necessary to exercise the Licensed Rights in compliance with this License.
+
+8.2. This is not a general waiver of moral rights, a transfer of those rights, or consent to false attribution or treatment beyond that limited scope. Economic copyright ownership alone does not establish authority over an author's moral rights. Applicable formalities, unwaivable rights, and statutory exceptions remain effective; no signature or specific author consent is presumed from publication by someone else.
+
+### 9. Patents, names, and other rights
+
+9.1. This License makes no express patent grant. It does not exclude or limit exhaustion, an implied license, estoppel, invalidity, non-infringement, statutory defenses, or any other effect arising independently under applicable law. The absence of an express patent grant does not establish that an activity infringes any patent. Patent permissions may be given by a separate instrument.
+
+9.2. To the extent a Licensor controls relevant trademark rights, this License permits only the use of names necessary for truthful nominative identification and source-lineage attribution. It grants no right to use logos, brand a product, certify it, or claim official status, affiliation, or endorsement. Rights independently available under law remain unaffected. This provision asserts neither the existence nor ownership of any trademark.
+
+9.3. No rights in privacy, publicity, confidentiality, trade secrets, or other excluded rights are granted here. These rights and their lawful exceptions are governed separately.
+
+### 10. Contributions and separate arrangements
+
+10.1. Submission or acceptance of a contribution does not under this License assign copyright or patents, waive moral rights, or authorize unrestricted relicensing or sale of another person's rights. Any inbound grant, assignment, certification, or contribution policy requires its own applicable basis. A contributor is a Licensor only to the extent that contributor actually grants identified rights under this License.
+
+10.2. A rights holder may separately authorize attribution waivers, commercial, exclusive, non-exclusive, dual, field-of-use, territorial, or OEM licensing, or permissions for patents or trademarks, to the extent of rights that holder may grant and subject to existing grants and applicable law. No such instrument is mandatory under this License. A separate agreement binds only those legally bound by it and does not rewrite this License for other recipients or retroactively withdraw their valid grants.
+
+### 11. No service or administration undertaking
+
+11.1. Publishing material or granting this License creates no undertaking to provide support, maintenance, updates, security fixes, compatibility, code review, issue or pull-request review, consulting, legal explanations, service availability, patent clearance, data protection services, or defense or indemnification against claims. It creates no duty to monitor compliance, police downstream use, enforce rights, or respond to cure or reinstatement requests.
+
+11.2. A Licensor need not maintain an active repository, email address, website, company, support channel, or steward. Discontinuing any such facility does not alone terminate existing grants. A person may undertake separate obligations expressly and on that person's own behalf, without authority to bind another Licensor. This License itself imposes no indemnity on either party. Non-excludable legal duties are governed by Section 17.
+
+### 12. Duration, termination, and objective reinstatement
+
+12.1. Each grant endures for the full lawful term of the Licensed Rights, without lapse merely through non-use, subject to this Section and mandatory law under Sections 14 and 17. It is not revocable at will. Mandatory formalities or statutory limits are not displaced by this statement of duration.
+
+12.2. Only a material failure of an applicable license condition identified in Section 2.2 can terminate a grant, and only to the extent that termination is legally effective. Such failure terminates automatically only Your affected Licensed Rights from the affected Licensor in the affected Covered Material. Materiality concerns a substantial impairment of the applicable license identity, material lineage, modification information, or continued upstream permissions in context. Non-material errors do not terminate a grant and must be corrected when discovered where the condition applies.
+
+12.3. A terminated grant automatically reinstates when You cease the non-compliant activity and complete the applicable correction under this Section. For failures other than Intentional Provenance Falsification, correction means correcting the affected copies and notices You continue to supply, and making corrected notice information available by the ordinary delivery or notice channel for the affected recipients. If no such channel remains under Your control, sending the correction to known direct recipients for whom You retain a usable contact is sufficient. No new public service or contact channel must be created. Past copies outside Your control need not be recalled. There is no deadline after which cure requires discretionary approval.
+
+12.4. For Intentional Provenance Falsification, correction additionally requires an express, accurate retraction or correction of the false representation constituting Intentional Provenance Falsification, reasonably directed to the audience to which You made it. You must correct the claims and notices in channels still under Your control and take reasonably practicable steps to send the correction to known direct recipients for whom You retain a usable contact. Correction through those channels or contacts is sufficient; You need not locate unknown recipients, recover all past copies, secure third-party publication, or monitor the correction indefinitely. If neither an affected channel nor a usable direct contact remains, You must correct material still under Your control and include the express correction with any resumed supply. Silent removal of a false claim, without the applicable express correction, is insufficient.
+
+12.5. The Licensor's acknowledgment, consent, response, continued existence, or availability is not required for reinstatement under Sections 12.3 and 12.4. No fee, confession of liability, new agreement, or certification to the Licensor is required. Repeated ordinary errors do not automatically become intentional; actual evidence of knowing, purposeful falsification remains relevant. Each later material failure is assessed under this same Section.
+
+12.6. The relevant Licensor permits, notwithstanding termination under Section 12.2, the exercise of affected Licensed Rights strictly necessary to prepare and deliver corrections required by this Section, including corrected replacement copies for affected recipients. This limited permission does not authorize continued non-compliant exploitation or expansion to new audiences before reinstatement. Preparatory correction of notices for resumed supply can be completed before resumption.
+
+12.7. Reinstatement operates from completion of the applicable cure, not retroactively. It does not release accrued liability, extinguish independent statutory claims, or override a binding court order. Once the applicable correction is completed, the corrected conduct is no longer a continuing violation of that condition. Sections concerning interpretation, disclaimers, liability, historical grants, and the consequences and cure of termination continue to apply as appropriate after termination; they do not authorize continued exploitation of terminated rights.
+
+### 13. Downstream grants and enforcement scope
+
+13.1. A distributor's breach does not by itself terminate a compliant recipient's independently held grant. Each Licensor's grant and each recipient's compliance are assessed separately. A recipient cannot evade its own uncured termination merely by obtaining another copy under the same grant, but an independently valid historical or separate license remains governed by its own terms.
+
+13.2. This License gives no person standing to enforce rights that person does not own or cannot lawfully enforce. Ownership of a contribution, project administration, or stewardship does not authorize control over unrelated material or other contributors' rights. Termination of a limited contribution does not terminate others' grants, although use of an inseparable combination may still require permission for that contribution. Remedies, proof, causation, and standing remain matters of applicable law.
+
+### 14. Ownership changes and historical grants
+
+14.1. A Licensor remains free, to the extent permitted by applicable law and rights still held, to retain, assign, contribute, encumber, finance against, or otherwise transfer rights, or to license them under separate terms. This License imposes no consent requirement for those transactions and itself effects no transfer of ownership. Applicable formalities, prior grants, contributors' rights, and third-party encumbrances remain relevant.
+
+14.2. Valid historical grants remain governed by their own terms. Assignment, employment, incorporation, sale of assets or shares, merger, change of control, a change in repository visibility or access, abandonment, death, incapacity, or a later licensing policy does not by itself revoke those grants. A claimed exclusive license or later sale cannot erase earlier valid non-exclusive grants merely through this License. Historical licenses, including MIT or other licenses, are not replaced by applying this License to a later release.
+
+14.3. Existing grants do not require future unreleased material to be offered on the same terms. A rights holder may stop making new releases or apply different terms to future material within the rights that holder actually possesses. This freedom does not withdraw permissions already validly granted in material included in those future releases.
+
+14.4. Continuity is subject to non-excludable statutory termination, reversion, insolvency, succession, and analogous rules, including their formalities and any required recipient elections. This License does not promise absolute survival in every jurisdiction, revive an already validly terminated grant without cure, or require an estate, successor, or insolvency representative to provide continued services.
+
+### 15. Disclaimer of warranties
+
+15.1. To the maximum extent permitted by applicable law, Covered Material and the permissions here are provided as is and as available, without any express, implied, statutory, or other representation or warranty, including title, non-infringement, merchantability, fitness for a purpose, accuracy, security, compatibility, absence of defects, or continued availability. You assess their suitability and the rights required for Your activity. This allocation does not require You to indemnify anyone. This disclaimer and the limitation in Section 16 benefit each Licensor, author, contributor, maintainer, and license steward, solely in respect of that person's participation in Covered Material or stewardship of this License as applied to it, whether or not that person currently holds or grants Licensed Rights. These protections do not make a person a Licensor or confer ownership of or standing to enforce Licensed Rights, authority to bind another person, or responsibility for another's conduct. The protections under Sections 15 and 16 do not extend to liability to the extent arising from a person's own material failure, in the capacity of a recipient or distributor, to comply with an applicable condition of another Licensor's grant under Sections 3.2, 4, or 6, or from that person's exercise beyond the Licensed Rights received from that other Licensor, including exercise after termination and before reinstatement except as permitted by Section 12.6. This boundary applies to the actual conduct, capacity, and rights relationship giving rise to the claim, regardless of the person's other roles or the label or legal theory of the claim. A non-material error under Section 12.2 does not by itself remove these protections. The protections otherwise remain applicable to risks of licensing, authorship, contribution, maintenance, or stewardship, including defects and ordinary participation-related negligence; receiving or distributing material does not by itself remove them. This boundary creates no liability or entitlement to damages, imposes no new duty, and does not limit independently available permissions, exceptions, or defenses.
+
+15.2. A separate express undertaking binds only the person legally making it and only within its scope. Neither a contributor, steward, distributor, nor recipient has authority under this License to give warranties on another Licensor's behalf. Section 17 preserves liabilities and duties that cannot lawfully be excluded.
+
+### 16. Limitation of liability
+
+16.1. To the maximum extent permitted by applicable law, no person described in Section 15.1, acting in the capacity specified there, is liable to You on any legal theory, including contract, tort, or negligence, for direct, indirect, incidental, special, consequential, exemplary, or punitive loss, damage, cost, or expense arising from this License or the use or inability to use Covered Material, including lost profits, data, goodwill, business, or service, even if advised of the possibility. No monetary cap or indemnity is created.
+
+16.2. This exclusion does not apply to liability that applicable law prohibits excluding or limiting, including fraud, intentional misconduct, gross negligence, death or personal injury, or other mandatory liability to the extent non-excludable in the relevant jurisdiction. It does not extinguish an enforceable separate express undertaking by the person making it. Invalidity of an exclusion is addressed under Section 17, without presuming a court must rewrite it to achieve maximum exclusion.
+
+### 17. Mandatory law and interpretation
+
+17.1. Mandatory law prevails, including non-excludable consumer protections, liability, author rights, statutory exceptions, and applicable formalities. If a statute, regulation, or binding judicial order prevents a particular notice, You must comply with the remaining lawful requirements and provide a lawful substitute identifying the affected material and limitation to the extent legally permitted and reasonably practicable. A private confidentiality agreement or commercial preference does not by itself excuse compliance.
+
+17.2. This License selects no governing law, court, arbitration, fee-shifting rule, or fixed damages. Those matters follow applicable law or an effective separate agreement within its scope. Nothing creates automatic statutory damages, a presumption of intent, or a duty to litigate.
+
+17.3. If a provision is invalid or unenforceable, its severance or permitted adjustment and the effect on remaining provisions are governed by applicable law; no forbidden judicial rewriting is required. Failure to enforce is not by itself a change to this License. That statement does not eliminate waiver, estoppel, or other effects imposed by law.
+
+### 18. Exact versions and future publication
+
+18.1. Only the exact version actually offered for the relevant material applies by default. For this final SLL 1.0, this policy is described as SLL-1.0-only. The description is not a claim of SPDX registration. This License does not authorize automatic migration to a future SLL version.
+
+18.2. A recipient may use a later official SLL version only if a rights holder with sufficient authority expressly offered that choice for the relevant material, such as an explicit or-later grant, and the later version was legitimately issued under the applicable stewardship authority. Such a choice is the recipient's option, not a power to force migration. No later version changes the text or scope of the earlier valid grant by itself.
+
+18.3. Final SLL 1.0 is an immutable identified text. Any later substantive revision must have a separate version identity. Disputed stewardship, loss of an account, an unavailable website, or failure to appoint a successor does not amend existing text or invalidate its use under an existing grant.
+
+### 19. Separate stewardship and ownership
+
+19.1. Junfu Shi is the Initial License Steward for the SLL development project. That role does not, without a separate legal basis, establish ownership of any project's copyright, patent, trademark, contribution, repository, domain, account, or signing key. Each may be held by a different person or entity. A transfer of any one does not by itself transfer the others or authority to rewrite an existing license.
+
+19.2. Authority for future official versions may pass through a separate valid, authenticated designation or other applicable legal authority. This License does not appoint an automatic successor from repository control, inheritance of a key, or acquisition of project assets. No active steward or response is necessary to identify and use an already validly granted version. This provision imposes no obligation on the Initial License Steward to appoint a successor or administer requests.
+
+### 20. Text identity and copies
+
+20.1. This exact English Source Lineage License Version 1.0 is the canonical reference text. Faithful copies may be made with the identity intact. Adaptations of this license text may be made, but a changed text must have a distinct identity and must not be presented as this unchanged License. Translations may be supplied for information with their status identified and the applicable English text preserved, subject to mandatory law. These permissions extend only to rights lawfully available from the person authorizing use of the license text.
+
+20.2. A digest, commit identifier, signature, hosting platform, or license-list reference may help identify evidence of particular bytes; none certifies legality, copyrightability, ownership, authority, or approval. A faithful media or line-ending conversion is not, solely because its bytes differ, a substantive license amendment; the original identified text remains the comparison reference.
+
+End of Source Lineage License Version 1.0.
