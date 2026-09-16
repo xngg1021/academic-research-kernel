@@ -130,3 +130,19 @@ def test_retraction_watch_uses_update_to_not_relation():
     signals = watch.update_signals_from_records(records, target)
     assert signals == ['retraction(retraction-watch)'], signals
     assert 'is-retraction-of' not in ''.join(signals)
+
+
+def test_retraction_watch_skill_contract_matches_implementation():
+    """SKILL.md 的 Crossref 语义必须与 watch.py 实现一致。
+
+    曾出现实现改成 updates:<DOI> 反向查询后 SKILL.md 仍保留
+    relation 旧语义（含 blueprint prompt 本身），导致运行时指令与
+    脚本行为矛盾。此测试锁住新口径：文档必须含 update-to 表述，
+    不得含 relation 扫描表述。
+    """
+    text = (ROOT / 'skills' / 'retraction-watch' / 'SKILL.md').read_text(encoding='utf-8')
+    assert 'update-to' in text
+    assert 'filter=updates' in text
+    assert 'select=relation' not in text
+    assert 'relation 键名' not in text
+    assert 'is-retraction-of' not in text

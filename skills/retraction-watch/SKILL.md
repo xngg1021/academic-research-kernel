@@ -26,7 +26,7 @@ metadata:
     blueprint:
       schedule: "0 9 * * 1"
       deliver: origin
-      prompt: "运行 retraction-watch：读取 DOI 监控清单，用 scripts/watch.py --run 逐条查 OpenAlex is_retracted 与 Crossref relation 撤稿信号，与状态快照比对；只有发生变化（含首次建档）的 DOI 才报告，全部无变化则明确说无变化。写回状态文件后结束。"
+      prompt: "运行 retraction-watch：读取 DOI 监控清单，用 scripts/watch.py --run 逐条查 OpenAlex is_retracted 与 Crossref updates 反向查询的 update-to 撤稿信号，与状态快照比对；只有发生变化（含首次建档）的 DOI 才报告，全部无变化则明确说无变化。写回状态文件后结束。"
       no_agent: false
 ---
 
@@ -64,16 +64,16 @@ hermes skills install xngg1021/hermes-academic-skills/skills/retraction-watch
 }
 ```
 
-状态快照文件默认 `~/.hermes/retraction-watch.state.json`，记录每个 DOI 上次的 `is_retracted` 与撤稿关系集合，由脚本自动维护；删除后下一轮全部按"首次建档"报告一次。
+状态快照文件默认 `~/.hermes/retraction-watch.state.json`，记录每个 DOI 上次的 `is_retracted` 与 Crossref 更新信号集合，由脚本自动维护；删除后下一轮全部按"首次建档"报告一次。
 
 ## 信号来源与判定
 
 两个独立信号，合并为状态快照（`snapshot_from_signals`）：
 
 1. **OpenAlex**：`works/https://doi.org/<doi>?select=is_retracted` 的布尔字段；
-2. **Crossref**：`works/<doi>?select=relation,type` 中 relation 键名含 `retract` 的关系（如 `is-retraction-of`）。
+2. **Crossref**：`works?filter=updates:<doi>` 反向查询，命中记录的 `update-to` 条目中指向目标 DOI 的撤稿/撤回/更正/表达关注信号（`type` 与 `source` 双字段，与 academic-source-verification 的 check_updates 语义一致）。
 
-变化检测（`diff_snapshots`）：`is_retracted` 翻转、撤稿关系新增或消失，都构成一次报告；首次建档的 DOI 也报告一次（作为基线）。完全相同则该 DOI 静默。
+变化检测（`diff_snapshots`）：`is_retracted` 翻转、Crossref 更新信号新增或消失，都构成一次报告；首次建档的 DOI 也报告一次（作为基线）。完全相同则该 DOI 静默。
 
 手动跑一次：
 
@@ -84,7 +84,7 @@ python ${HERMES_SKILL_DIR}/scripts/watch.py --run --watchlist ~/.hermes/retracti
 ## 数据源与限制
 
 - OpenAlex 匿名查询有日预算与 100 req/s 上限；key 放 `OPENALEX_API_KEY` 环境变量，只发给 api.openalex.org。429 有界退避，最多 3 次；OpenAlex 404 时继续用 Crossref 单源判定。
-- Crossref 的撤稿标注依赖出版商登记，`relation` 缺失不证明未撤稿；Retraction Watch 数据库本身不在本技能查询范围内。
+- Crossref 的撤稿标注依赖出版商与 Retraction Watch 数据登记；update 记录缺失不证明未撤稿，本技能只报告已登记的更新信号，不推断未登记的事实。
 - 两个信号可能不一致（一方先更新）：报告按快照逐字段列出，由用户判断，不做多数表决。
 - DOI 大小写与前缀形式先归一化再比对，状态文件以归一化 DOI 为键。
 

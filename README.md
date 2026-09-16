@@ -24,7 +24,7 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 | `skills/research-reproducibility` | 1.0.0 | Fourteen-stage reproduction audit pipeline with a structured checklist engine, five fact tiers and a four-state receipt |
 | `skills/systematic-review-meta-analysis` | 1.0.0 | PRISMA search logs, screening ledgers, effect-size conversion, heterogeneity, fixed/random pooling, sensitivity and publication-bias diagnostics |
 | `skills/literature-watch` | 1.0.0 | Weekly blueprint: watch topics, authors and DOI citing works on OpenAlex and Crossref; deduplicate and report only new items |
-| `skills/retraction-watch` | 1.0.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref relations; report only status changes |
+| `skills/retraction-watch` | 1.0.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref update records (update-to signals); report only status changes |
 
 There are 21 Markdown reference files across the nine skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
 
