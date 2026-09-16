@@ -202,3 +202,14 @@ else:
 ```
 
 无 key 时 OpenAlex 自检会实际走匿名路径；带 key 路径仅在配置 OPENALEX_API_KEY 后运行。未配置服务应明确 SKIP，不当作通过。Semantic Scholar 按任务与可用额度另行核对。
+
+## Evidence Receipt 输出约定
+
+核查结束时，将结论写成机器可读的 evidence receipt JSON，格式见 `schemas/evidence-receipt.schema.json`，示例见 `examples/evidence-receipt.example.json`。要点：
+
+- 每个来源单独记录查询时间、状态（ok/failed/skipped）与覆盖范围；失败的查询写进 `failures`，不得当作结果推断。
+- 每条 claim 标明证据类型、来源、定位与支持状态（supported/contradicted/unverifiable/out_of_scope）。
+- 互相矛盾的来源结论写入 `conflicts`，不在 receipt 里私自裁决。
+- 下游技能（literature-analysis、academic-writing、math-computation）优先消费 receipt，不重新用自然语言转述上一阶段结论。
+
+用户未要求落盘时，receipt 仅在对话中呈现；要求落盘时写入用户指定路径。
