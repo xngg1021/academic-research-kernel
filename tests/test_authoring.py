@@ -26,5 +26,5 @@ def test_current_hermes_rules(path, rule):
 
 def test_all_rules_and_skills_present():
     assert len(RULES) == 6
-    assert len(local) == 10
+    assert len(local) == 11
     assert not upstream.GRANDFATHER

@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md)
 
-Ten Chinese-language academic skills for Hermes Agent. They cover source verification, literature analysis, academic writing, numerical computation, quantitative paper audit, reproduction audits, systematic review and meta-analysis, research-object identity and lineage, plus two weekly monitoring automations. The repository includes executable example checks; validation scope and external-service limitations are recorded in [the audit](docs/audit-20260906.md).
+Eleven Chinese-language academic skills for Hermes Agent. They cover source verification, literature analysis, academic writing, numerical computation, quantitative paper audit, reproduction audits, systematic review and meta-analysis, research-object identity and lineage, cross-model review orchestration, plus two weekly monitoring automations. The repository includes executable example checks; validation scope and external-service limitations are recorded in [the audit](docs/audit-20260906.md).
 
 Author: Junfu Shi (SJF, xngg1021), Hermes Agent. Current scoped offer: [Source Lineage License 1.0](LICENSE).
 
@@ -28,8 +28,9 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 | `skills/literature-watch` | 1.0.0 | Weekly blueprint: watch topics, authors and DOI citing works on OpenAlex and Crossref; deduplicate and report only new items |
 | `skills/retraction-watch` | 1.0.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref update records (update-to signals); report only status changes |
 | `skills/research-object-identity` | 1.0.0 | Deterministic research-object identity layer: identifier normalization, five-state verdict (no confidence scores), relation/lineage edges; consumes Evidence Receipts |
+| `skills/cross-review-five` | 1.0.0 | Five-model heterogeneous review panel (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): plan and rotating cross-review stages |
 
-There are 21 Markdown reference files across the ten skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
+There are 21 Markdown reference files across the eleven skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
 
 ## Install in Hermes
 

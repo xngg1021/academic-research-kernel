@@ -35,4 +35,4 @@ def test_actual_upstream_discovers_all_skills():
                                               'quantitative-paper-audit', 'research-reproducibility',
                                               'systematic-review-meta-analysis',
                                               'literature-watch', 'retraction-watch',
-                                              'research-object-identity'}
+                                              'research-object-identity', 'cross-review-five'}
