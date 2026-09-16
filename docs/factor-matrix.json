@@ -1,0 +1,2273 @@
+{
+  "schema_version": "0.1",
+  "generated_at": "2026-09-16T17:13:49+00:00",
+  "source": "docs/pain-atlas-v0.en.md",
+  "primitives": {
+    "1": "Canonical Identity Resolver",
+    "2": "Provenance / Lineage",
+    "3": "State Ledger",
+    "4": "Diff Engine",
+    "5": "Evidence Receipt",
+    "6": "Normalization Layer",
+    "7": "Constraint Compiler",
+    "8": "Coverage Map",
+    "9": "Retrieval / Resurfacing",
+    "10": "Cross-artifact Linker",
+    "11": "Deterministic Verifier",
+    "12": "Uncertainty Queue",
+    "13": "Event Watcher",
+    "14": "Adaptive Practice Engine"
+  },
+  "items": [
+    {
+      "id": "D01",
+      "region": "Discovery",
+      "text": "Relevant material is scattered across Scholar, PubMed, arXiv, conferences, RSS, email and colleague messages.",
+      "primitives": [
+        6,
+        8
+      ],
+      "rationale": "One canonical intake over heterogeneous sources lets coverage be tracked across all of them."
+    },
+    {
+      "id": "D02",
+      "region": "Discovery",
+      "text": "Alert streams overlap; only a minority of items matter.",
+      "primitives": [
+        6,
+        1
+      ],
+      "rationale": "Normalized alert items can be deduplicated by resolving which ones name the same work."
+    },
+    {
+      "id": "D03",
+      "region": "Discovery",
+      "text": "Search results show what was found, never what was missed.",
+      "primitives": [
+        8
+      ],
+      "rationale": "A coverage map records what the search touched and what it never reached."
+    },
+    {
+      "id": "D04",
+      "region": "Discovery",
+      "text": "A paper is treated as new even when it was read three years ago.",
+      "primitives": [
+        1,
+        3
+      ],
+      "rationale": "Resolving the work's identity against a ledger of past reads prevents treating it as new again."
+    },
+    {
+      "id": "D05",
+      "region": "Discovery",
+      "text": "Synonym substitution changes result sets wholesale.",
+      "primitives": [
+        6,
+        1
+      ],
+      "rationale": "Surface synonyms must resolve to one canonical concept before ranking, so result sets stay stable."
+    },
+    {
+      "id": "D06",
+      "region": "Discovery",
+      "text": "Cross-disciplinary terminology breaks recall.",
+      "primitives": [
+        1,
+        6
+      ],
+      "rationale": "Cross-field aliases of one concept need a shared identity behind a normalized vocabulary."
+    },
+    {
+      "id": "D07",
+      "region": "Discovery",
+      "text": "Foundational, incremental, replication and critique work are mixed into one relevance ranking.",
+      "primitives": [
+        8
+      ],
+      "rationale": "A typed coverage map separates foundational, replication and critique roles instead of one blended ranking."
+    },
+    {
+      "id": "D08",
+      "region": "Discovery",
+      "text": "Citation count is conflated with usefulness for the current question.",
+      "primitives": [
+        5
+      ],
+      "rationale": "Relevance claims need receipts stating basis and coverage rather than a raw citation-count proxy."
+    },
+    {
+      "id": "D09",
+      "region": "Discovery",
+      "text": "Conference, preprint and journal versions enter the reading queue as separate items.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Conference, preprint and journal versions are one object and must resolve to a single queue entry."
+    },
+    {
+      "id": "RQ01",
+      "region": "Reading queue",
+      "text": "Saving outpaces reading.",
+      "primitives": [
+        8
+      ],
+      "rationale": "A coverage map of read versus unread makes the growing backlog explicit."
+    },
+    {
+      "id": "RQ02",
+      "region": "Reading queue",
+      "text": "The reason a paper was saved is not recorded, so its purpose is lost months later.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Recording why an item entered the queue preserves its purpose as provenance."
+    },
+    {
+      "id": "RQ03",
+      "region": "Reading queue",
+      "text": "Important, interesting and maybe-useful items share one folder.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Priority is a per-item state that a ledger keeps instead of one undifferentiated folder."
+    },
+    {
+      "id": "RQ04",
+      "region": "Reading queue",
+      "text": "Abstract-only versus full-read versus figure-check versus re-derived computation are not distinguished.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Depth of processing is a state transition that a ledger can record per item."
+    },
+    {
+      "id": "RQ05",
+      "region": "Reading queue",
+      "text": "Priority does not re-rank with the active project.",
+      "primitives": [
+        9
+      ],
+      "rationale": "Resurfacing re-ranks queued items when the active project context changes."
+    },
+    {
+      "id": "RQ06",
+      "region": "Reading queue",
+      "text": "An old paper that becomes relevant again does not resurface.",
+      "primitives": [
+        9
+      ],
+      "rationale": "Resurfacing returns old items at the moment they become relevant again."
+    },
+    {
+      "id": "BI01",
+      "region": "Bibliographic identity",
+      "text": "DOI, arXiv ID, PMID, OpenAlex ID and publisher URL are several names for one object.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Several identifiers naming one work is the canonical identity problem."
+    },
+    {
+      "id": "BI02",
+      "region": "Bibliographic identity",
+      "text": "Preprints and versions of record are not reliably merged.",
+      "primitives": [
+        1,
+        3
+      ],
+      "rationale": "Preprint to version-of-record is one identity plus a version state chain."
+    },
+    {
+      "id": "BI03",
+      "region": "Bibliographic identity",
+      "text": "Conference and extended journal versions are hard to pair.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Pairing conference and extended journal versions is identity resolution across manifestations."
+    },
+    {
+      "id": "BI04",
+      "region": "Bibliographic identity",
+      "text": "Correction, erratum and retraction notices are hard to trace to the original.",
+      "primitives": [
+        1,
+        10
+      ],
+      "rationale": "Notices must resolve to the same work and stay linked to the original artifact."
+    },
+    {
+      "id": "BI05",
+      "region": "Bibliographic identity",
+      "text": "Supplementary material is detached from the main text.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Supplements and main text are separate artifacts that need an explicit link."
+    },
+    {
+      "id": "BI06",
+      "region": "Bibliographic identity",
+      "text": "Book chapters, books, theses and proceedings are mis-matched by metadata matchers.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Metadata matchers fail at identity resolution for non-journal object types."
+    },
+    {
+      "id": "BI07",
+      "region": "Bibliographic identity",
+      "text": "Author name variants, renames and Chinese name inversion split one person.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Name variants, renames and inversions are several representations of one person."
+    },
+    {
+      "id": "BI08",
+      "region": "Bibliographic identity",
+      "text": "Publisher PDF, author manuscript and preprint are several binaries of one work.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Several binaries of one work must resolve to a single identity."
+    },
+    {
+      "id": "BI09",
+      "region": "Bibliographic identity",
+      "text": "A merged item in the reference manager leaves stale embedded citations in the Word document.",
+      "primitives": [
+        10,
+        4
+      ],
+      "rationale": "Embedded citations must stay linked to the manager identity so merges can be diffed for staleness."
+    },
+    {
+      "id": "FA01",
+      "region": "Full-text acquisition",
+      "text": "Open-access copies exist in several places; which one is best is unclear.",
+      "primitives": [
+        1,
+        12
+      ],
+      "rationale": "Copies first resolve to one work; the best-copy judgment automation cannot make goes to a human queue."
+    },
+    {
+      "id": "FA02",
+      "region": "Full-text acquisition",
+      "text": "A publisher 403 does not distinguish paywall, bot wall and transient failure.",
+      "primitives": [
+        5
+      ],
+      "rationale": "Failures need typed receipts that distinguish paywall, bot wall and transient causes."
+    },
+    {
+      "id": "FA03",
+      "region": "Full-text acquisition",
+      "text": "Institutional proxy URLs break across devices.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Proxy-wrapped URLs must normalize to one canonical target across devices."
+    },
+    {
+      "id": "FA04",
+      "region": "Full-text acquisition",
+      "text": "Supplementary archives, code and data sit on unrelated hosts.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Supplementary archives, code and data on unrelated hosts need links back to the work."
+    },
+    {
+      "id": "FA05",
+      "region": "Full-text acquisition",
+      "text": "Source pages rot; archive snapshots have no lineage to the current version.",
+      "primitives": [
+        2,
+        13
+      ],
+      "rationale": "Snapshots need lineage to the live version, and a watcher reports when the source rots."
+    },
+    {
+      "id": "PD01",
+      "region": "PDF and document parsing",
+      "text": "Two-column reading order is reconstructed incorrectly.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Parsing must produce one canonical document object with correct reading order."
+    },
+    {
+      "id": "PD02",
+      "region": "PDF and document parsing",
+      "text": "OCR destroys formulas, subscripts, superscripts and Greek letters.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Formula and symbol fidelity is a normalization-quality problem from OCR output to canonical text."
+    },
+    {
+      "id": "PD03",
+      "region": "PDF and document parsing",
+      "text": "Tables look fine visually and fall apart on copy.",
+      "primitives": [
+        6,
+        11
+      ],
+      "rationale": "Table structure must be normalized and then verified deterministically, not trusted visually."
+    },
+    {
+      "id": "PD04",
+      "region": "PDF and document parsing",
+      "text": "Some data exist only inside figures, without raw numbers.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Figure-embedded data must be normalized into the canonical numeric object."
+    },
+    {
+      "id": "PD05",
+      "region": "PDF and document parsing",
+      "text": "Footnotes and endnotes are dropped by parsers.",
+      "primitives": [
+        6,
+        8
+      ],
+      "rationale": "Normalization must record what it extracted and what it dropped as coverage."
+    },
+    {
+      "id": "PD06",
+      "region": "PDF and document parsing",
+      "text": "A claim's method details span main text, methods, appendix and a GitHub repository.",
+      "primitives": [
+        10
+      ],
+      "rationale": "One claim's details span text, appendix and repository and need cross-artifact links."
+    },
+    {
+      "id": "N01",
+      "region": "Notes",
+      "text": "Note-taking becomes a second job.",
+      "primitives": [
+        6,
+        10
+      ],
+      "rationale": "Automatic normalization and linking of captured material removes the manual second job."
+    },
+    {
+      "id": "N02",
+      "region": "Notes",
+      "text": "Notes are taken and the paper is still re-read later.",
+      "primitives": [
+        9
+      ],
+      "rationale": "Notes must resurface when the paper is revisited, otherwise re-reading is inevitable."
+    },
+    {
+      "id": "N03",
+      "region": "Notes",
+      "text": "Excerpts lose page, section and context.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Excerpts need provenance: page, section and surrounding context."
+    },
+    {
+      "id": "N04",
+      "region": "Notes",
+      "text": "Paraphrase, after time, cannot be told apart from the author's original words.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Provenance must record whether wording is quotation or paraphrase."
+    },
+    {
+      "id": "N05",
+      "region": "Notes",
+      "text": "One claim copied into several project notes diverges.",
+      "primitives": [
+        1,
+        4
+      ],
+      "rationale": "Copies of one claim must keep one identity so divergence can be diffed."
+    },
+    {
+      "id": "N06",
+      "region": "Notes",
+      "text": "Tag taxonomies grow until their owner stops using them.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Free-form tags need normalization into a governed canonical vocabulary."
+    },
+    {
+      "id": "N07",
+      "region": "Notes",
+      "text": "Topic tags cannot express supports, contradicts, method or example relations.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Supports, contradicts, method and example are typed links between artifacts, not topic tags."
+    },
+    {
+      "id": "N08",
+      "region": "Notes",
+      "text": "Notes freeze the understanding of the year they were written.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Understanding evolves; notes should be a ledger of states, not a frozen snapshot."
+    },
+    {
+      "id": "N09",
+      "region": "Notes",
+      "text": "Outdated facts and changed interpretations are not distinguished.",
+      "primitives": [
+        3,
+        4
+      ],
+      "rationale": "Distinguishing outdated facts from changed interpretations needs versioned states and diffs."
+    },
+    {
+      "id": "CE01",
+      "region": "Citation and evidence",
+      "text": "A remembered claim cannot be located in a known paper.",
+      "primitives": [
+        10
+      ],
+      "rationale": "A remembered claim must be linked to its exact passage in the source."
+    },
+    {
+      "id": "CE02",
+      "region": "Citation and evidence",
+      "text": "The supporting passage of a citation cannot be found.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Every citation needs a link to its supporting passage."
+    },
+    {
+      "id": "CE03",
+      "region": "Citation and evidence",
+      "text": "Citation-of-citation replaces reading the original source.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Citation chains are lineage; reaching the original is a provenance walk."
+    },
+    {
+      "id": "CE04",
+      "region": "Citation and evidence",
+      "text": "A citation supports half a sentence, not the assertion it is attached to.",
+      "primitives": [
+        5
+      ],
+      "rationale": "A receipt must state exactly which span of a claim a source covers."
+    },
+    {
+      "id": "CE05",
+      "region": "Citation and evidence",
+      "text": "Secondary citations drop the qualifiers of the original.",
+      "primitives": [
+        2,
+        5
+      ],
+      "rationale": "Qualifiers are provenance metadata that must travel with the claim as part of its receipt."
+    },
+    {
+      "id": "CE06",
+      "region": "Citation and evidence",
+      "text": "Corrections and retractions do not propagate to old drafts.",
+      "primitives": [
+        13,
+        10
+      ],
+      "rationale": "A watcher on cited works plus links to drafts lets corrections and retractions propagate."
+    },
+    {
+      "id": "CE07",
+      "region": "Citation and evidence",
+      "text": "A number copied through reviews loses its source.",
+      "primitives": [
+        2
+      ],
+      "rationale": "A copied number must carry its provenance through every transcription."
+    },
+    {
+      "id": "CE08",
+      "region": "Citation and evidence",
+      "text": "Numbers in figures disagree with numbers in text.",
+      "primitives": [
+        11,
+        4
+      ],
+      "rationale": "Figure-versus-text number agreement is computable and should be verified by diff, not by eye."
+    },
+    {
+      "id": "CT01",
+      "region": "Concepts and terminology",
+      "text": "The same term means different things in different fields.",
+      "primitives": [
+        1
+      ],
+      "rationale": "One surface form denoting different concepts per field is an identity-resolution failure."
+    },
+    {
+      "id": "CT02",
+      "region": "Concepts and terminology",
+      "text": "Definitions drift over decades.",
+      "primitives": [
+        3,
+        4
+      ],
+      "rationale": "Definitions are states over time; drift must be recorded and diffed."
+    },
+    {
+      "id": "CT03",
+      "region": "Concepts and terminology",
+      "text": "A new paper renames an old concept.",
+      "primitives": [
+        1
+      ],
+      "rationale": "A renamed concept is a new representation of an old identity."
+    },
+    {
+      "id": "CT04",
+      "region": "Concepts and terminology",
+      "text": "Abbreviations collide.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Colliding abbreviations must be resolved to distinct identities by context."
+    },
+    {
+      "id": "CT05",
+      "region": "Concepts and terminology",
+      "text": "Formula symbols coincide while definitions differ.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Identical symbols with different definitions are distinct identities sharing a representation."
+    },
+    {
+      "id": "CT06",
+      "region": "Concepts and terminology",
+      "text": "A default assumption of one field does not hold in another.",
+      "primitives": [
+        5
+      ],
+      "rationale": "Receipts must state the field assumptions a result depends on so they do not port silently."
+    },
+    {
+      "id": "RG01",
+      "region": "Research gaps",
+      "text": "Not finding something is mistaken for nobody having done it.",
+      "primitives": [
+        8
+      ],
+      "rationale": "A coverage map separates searched-and-absent from never-searched."
+    },
+    {
+      "id": "RG02",
+      "region": "Research gaps",
+      "text": "English-only search produces fake novelty.",
+      "primitives": [
+        8
+      ],
+      "rationale": "Language coverage must be explicit so English-only absence is not read as novelty."
+    },
+    {
+      "id": "RG03",
+      "region": "Research gaps",
+      "text": "Theses, proceedings and preprints are skipped.",
+      "primitives": [
+        8
+      ],
+      "rationale": "Coverage must name which literatures were and were not searched."
+    },
+    {
+      "id": "RG04",
+      "region": "Research gaps",
+      "text": "Old terminology hides historical work from retrieval.",
+      "primitives": [
+        1,
+        9
+      ],
+      "rationale": "Historical aliases must resolve to the canonical concept so old work can be retrieved."
+    },
+    {
+      "id": "RG05",
+      "region": "Research gaps",
+      "text": "A little-known paper may have already filled the claimed gap.",
+      "primitives": [
+        8,
+        5
+      ],
+      "rationale": "A gap claim needs a coverage map plus a receipt of what was checked."
+    },
+    {
+      "id": "RG06",
+      "region": "Research gaps",
+      "text": "Absence of research and inconsistency of results are conflated.",
+      "primitives": [
+        8,
+        5
+      ],
+      "rationale": "Coverage distinguishes absence of studies from conflicting ones, and receipts record the conflict."
+    },
+    {
+      "id": "ME01",
+      "region": "Method extraction",
+      "text": "Methods sections are too brief.",
+      "primitives": [
+        8,
+        12
+      ],
+      "rationale": "Unreported parameters must be marked unknown on a coverage map and routed to a human queue."
+    },
+    {
+      "id": "ME02",
+      "region": "Method extraction",
+      "text": "Key parameters hide in supplements.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Parameters in supplements need links between main text and supplementary artifacts."
+    },
+    {
+      "id": "ME03",
+      "region": "Method extraction",
+      "text": "Reagent versions, software versions and random seeds are missing.",
+      "primitives": [
+        7,
+        8
+      ],
+      "rationale": "Required reporting fields compile into checks, and a coverage map shows which are missing."
+    },
+    {
+      "id": "ME04",
+      "region": "Method extraction",
+      "text": "Preprocessing is described incompletely.",
+      "primitives": [
+        7,
+        8
+      ],
+      "rationale": "Preprocessing completeness is a checklist compiled into checks over a coverage map."
+    },
+    {
+      "id": "ME05",
+      "region": "Method extraction",
+      "text": "Paper defaults and repository defaults differ.",
+      "primitives": [
+        4
+      ],
+      "rationale": "Paper versus repository defaults is a diff between two states."
+    },
+    {
+      "id": "ME06",
+      "region": "Method extraction",
+      "text": "Methods cite other methods, requiring recursive lookup.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Recursive method citations are a link graph that must be traversable."
+    },
+    {
+      "id": "ME07",
+      "region": "Method extraction",
+      "text": "Following-X descriptions conceal actual modifications.",
+      "primitives": [
+        4
+      ],
+      "rationale": "A following-X claim must be diffed against X to expose actual modifications."
+    },
+    {
+      "id": "ME08",
+      "region": "Method extraction",
+      "text": "Protocol changes during the experiment are not versioned in the publication.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Protocol evolution during the experiment is a state history the publication must reflect."
+    },
+    {
+      "id": "ME09",
+      "region": "Method extraction",
+      "text": "Exclusion criteria are scattered.",
+      "primitives": [
+        10,
+        6
+      ],
+      "rationale": "Scattered criteria must be linked and normalized into one canonical list."
+    },
+    {
+      "id": "ER01",
+      "region": "Experiment records",
+      "text": "Work happens at the bench; records are written in the evening.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Provenance must be captured at the bench, not reconstructed in the evening."
+    },
+    {
+      "id": "ER02",
+      "region": "Experiment records",
+      "text": "Failed experiments are the least recorded.",
+      "primitives": [
+        8,
+        3
+      ],
+      "rationale": "Coverage must include failed experiments, and the ledger must record them as states."
+    },
+    {
+      "id": "ER03",
+      "region": "Experiment records",
+      "text": "One protocol exists as paper, Word and Notion copies.",
+      "primitives": [
+        1,
+        6
+      ],
+      "rationale": "Paper, Word and Notion copies are representations of one protocol that must normalize to one object."
+    },
+    {
+      "id": "ER04",
+      "region": "Experiment records",
+      "text": "Raw-data file names cannot be traced to experiments.",
+      "primitives": [
+        2,
+        10
+      ],
+      "rationale": "Raw files need provenance links to the experiments that produced them."
+    },
+    {
+      "id": "ER05",
+      "region": "Experiment records",
+      "text": "Sample IDs and notebook IDs are disconnected.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Sample IDs and notebook IDs are disconnected artifacts that need an explicit link."
+    },
+    {
+      "id": "ER06",
+      "region": "Experiment records",
+      "text": "A figure cannot be traced to the analysis run that produced it.",
+      "primitives": [
+        2
+      ],
+      "rationale": "A figure must carry lineage to the analysis run that produced it."
+    },
+    {
+      "id": "ER07",
+      "region": "Experiment records",
+      "text": "The rationale of a past decision is absent.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Decisions need their rationale recorded as decision provenance."
+    },
+    {
+      "id": "ER08",
+      "region": "Experiment records",
+      "text": "Negative results and abandoned attempts disappear and are repeated later.",
+      "primitives": [
+        3,
+        9
+      ],
+      "rationale": "Abandoned attempts must be ledgered and resurfaced before they are repeated."
+    },
+    {
+      "id": "ER09",
+      "region": "Experiment records",
+      "text": "Experimental conditions live only in one researcher's memory.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Conditions held in one memory must be externalized as provenance records."
+    },
+    {
+      "id": "DM01",
+      "region": "Data management",
+      "text": "Raw, cleaned and analysis-ready states are confused.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Raw, cleaned and analysis-ready are states of one dataset and need a ledger."
+    },
+    {
+      "id": "DM02",
+      "region": "Data management",
+      "text": "Spreadsheet software silently retypes CSV columns.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Silent column retyping is caught by deterministic schema verification, not by inspection."
+    },
+    {
+      "id": "DM03",
+      "region": "Data management",
+      "text": "Units are inconsistent.",
+      "primitives": [
+        6,
+        11
+      ],
+      "rationale": "Units must normalize to canonical form and conversions must be verified."
+    },
+    {
+      "id": "DM04",
+      "region": "Data management",
+      "text": "Missing values mix 0, NA, blank and 999.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Mixed sentinel encodings for missing values must normalize to one canonical representation."
+    },
+    {
+      "id": "DM05",
+      "region": "Data management",
+      "text": "Column names change between batches.",
+      "primitives": [
+        6,
+        4
+      ],
+      "rationale": "Column names must map to a canonical schema and batch-to-batch changes must be diffed."
+    },
+    {
+      "id": "DM06",
+      "region": "Data management",
+      "text": "The codebook is separated from the dataset.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Codebook and dataset are separate artifacts that must stay linked."
+    },
+    {
+      "id": "DM07",
+      "region": "Data management",
+      "text": "Exclusion decisions leave no ledger.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Exclusion decisions are state transitions and belong in a ledger."
+    },
+    {
+      "id": "DM08",
+      "region": "Data management",
+      "text": "Cleaning is irreversible.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Keeping the transition history makes cleaning reversible."
+    },
+    {
+      "id": "DM09",
+      "region": "Data management",
+      "text": "Provenance is lost on copy and paste.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Copy and paste must carry provenance with the data."
+    },
+    {
+      "id": "DM10",
+      "region": "Data management",
+      "text": "File names accumulate: final.csv, final2.csv, really_final.csv.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Version proliferation by filename is a missing state ledger over dataset versions."
+    },
+    {
+      "id": "QA01",
+      "region": "Quantitative analysis",
+      "text": "Reported p values and statistics do not match.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Reported statistics are recomputable; verification must not trust the text."
+    },
+    {
+      "id": "QA02",
+      "region": "Quantitative analysis",
+      "text": "Confidence intervals disagree with estimates.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Confidence intervals are recomputable from estimates and must be checked deterministically."
+    },
+    {
+      "id": "QA03",
+      "region": "Quantitative analysis",
+      "text": "Percentage denominators change without note.",
+      "primitives": [
+        11,
+        5
+      ],
+      "rationale": "Denominators are checkable, and receipts must state which denominator each percentage uses."
+    },
+    {
+      "id": "QA04",
+      "region": "Quantitative analysis",
+      "text": "N differs between abstract, tables and flowchart.",
+      "primitives": [
+        11
+      ],
+      "rationale": "N across abstract, tables and flowchart is a numeric consistency check."
+    },
+    {
+      "id": "QA05",
+      "region": "Quantitative analysis",
+      "text": "SD and SE are interchanged.",
+      "primitives": [
+        11,
+        12
+      ],
+      "rationale": "SD/SE confusion is partially checkable; genuinely ambiguous cases go to a human queue."
+    },
+    {
+      "id": "QA06",
+      "region": "Quantitative analysis",
+      "text": "One-tailed and two-tailed are unspecified.",
+      "primitives": [
+        5,
+        7
+      ],
+      "rationale": "Receipts must state test sidedness, and reporting rules must compile into checks."
+    },
+    {
+      "id": "QA07",
+      "region": "Quantitative analysis",
+      "text": "Multiple-testing correction is unclear.",
+      "primitives": [
+        5
+      ],
+      "rationale": "Whether and how multiplicity was corrected must be stated on the receipt."
+    },
+    {
+      "id": "QA08",
+      "region": "Quantitative analysis",
+      "text": "Transformed and raw scales are mixed.",
+      "primitives": [
+        6,
+        11
+      ],
+      "rationale": "Scales must normalize before comparison, and mixing must be caught by verification."
+    },
+    {
+      "id": "QA09",
+      "region": "Quantitative analysis",
+      "text": "Effect-size definitions are ambiguous.",
+      "primitives": [
+        5
+      ],
+      "rationale": "Effect-size claims must carry their exact definition on the receipt."
+    },
+    {
+      "id": "QA10",
+      "region": "Quantitative analysis",
+      "text": "Graph-only values require digitization.",
+      "primitives": [
+        6,
+        12
+      ],
+      "rationale": "Digitization normalizes graph pixels to numbers with uncertainty routed to a queue."
+    },
+    {
+      "id": "QA11",
+      "region": "Quantitative analysis",
+      "text": "Statistical package defaults change across versions.",
+      "primitives": [
+        4,
+        13
+      ],
+      "rationale": "Default changes across package versions must be diffed and watched."
+    },
+    {
+      "id": "SR01",
+      "region": "Systematic review",
+      "text": "The query cannot be reproduced exactly.",
+      "primitives": [
+        2,
+        7
+      ],
+      "rationale": "The query must be recorded as provenance and compiled into a re-runnable form."
+    },
+    {
+      "id": "SR02",
+      "region": "Systematic review",
+      "text": "Database export formats are mutually incompatible.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Incompatible exports must normalize into one canonical record format."
+    },
+    {
+      "id": "SR03",
+      "region": "Systematic review",
+      "text": "Deduplication kills genuinely distinct papers and misses version duplicates.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Deduplication is identity resolution: keep distinct papers, merge version duplicates."
+    },
+    {
+      "id": "SR04",
+      "region": "Systematic review",
+      "text": "Title and abstract screening is mechanical.",
+      "primitives": [
+        7,
+        12
+      ],
+      "rationale": "Eligibility criteria compile into screening checks, with uncertain items queued for humans."
+    },
+    {
+      "id": "SR05",
+      "region": "Systematic review",
+      "text": "Exclusion reasons are backfilled, weakening the ledger.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Exclusion reasons must be ledger entries written at decision time, not backfilled."
+    },
+    {
+      "id": "SR06",
+      "region": "Systematic review",
+      "text": "Missing full texts bias selection.",
+      "primitives": [
+        8
+      ],
+      "rationale": "Missing full texts must appear on the coverage map as unscreened."
+    },
+    {
+      "id": "SR07",
+      "region": "Systematic review",
+      "text": "Multiple reports of one study are counted as multiple studies.",
+      "primitives": [
+        1
+      ],
+      "rationale": "Multiple reports of one study resolve to one study identity."
+    },
+    {
+      "id": "SR08",
+      "region": "Systematic review",
+      "text": "One cohort across several papers is double counted.",
+      "primitives": [
+        1
+      ],
+      "rationale": "One cohort across several papers is one identity and must be counted once."
+    },
+    {
+      "id": "SR09",
+      "region": "Systematic review",
+      "text": "Arms, units and time points are extracted incorrectly.",
+      "primitives": [
+        11,
+        6
+      ],
+      "rationale": "Extracted arms, units and time points must be verified against source tables after normalization."
+    },
+    {
+      "id": "SR10",
+      "region": "Systematic review",
+      "text": "Data are read off graphs by hand.",
+      "primitives": [
+        6,
+        12
+      ],
+      "rationale": "Reading graphs is normalization whose uncertainty belongs in a queue."
+    },
+    {
+      "id": "SR11",
+      "region": "Systematic review",
+      "text": "Effect directions are inverted.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Effect-direction inversion is a sign error that deterministic checks can catch."
+    },
+    {
+      "id": "SR12",
+      "region": "Systematic review",
+      "text": "Reviewer disagreement in extraction is hard to trace.",
+      "primitives": [
+        12,
+        3
+      ],
+      "rationale": "Disagreements go to an explicit queue and their resolutions are ledgered."
+    },
+    {
+      "id": "SR13",
+      "region": "Systematic review",
+      "text": "Meta-analysis inputs cannot be traced back to the paper's tables.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Every meta-analysis input needs lineage back to the paper's tables."
+    },
+    {
+      "id": "QR01",
+      "region": "Qualitative research",
+      "text": "Transcripts and audio timestamps are disconnected.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Transcript spans and audio timestamps are artifacts that need links."
+    },
+    {
+      "id": "QR02",
+      "region": "Qualitative research",
+      "text": "Interview to open code to axial code to theme lineage is weak.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Interview to open code to axial code to theme is lineage and must be recorded as such."
+    },
+    {
+      "id": "QR03",
+      "region": "Qualitative research",
+      "text": "The codebook changes during analysis.",
+      "primitives": [
+        3
+      ],
+      "rationale": "A changing codebook is a state history, not an overwrite."
+    },
+    {
+      "id": "QR04",
+      "region": "Qualitative research",
+      "text": "Merged codes lose the reason old segments were reclassified.",
+      "primitives": [
+        3,
+        2
+      ],
+      "rationale": "Merges must record reclassification reasons as provenance on state transitions."
+    },
+    {
+      "id": "QR05",
+      "region": "Qualitative research",
+      "text": "Inter-coder disagreement is not kept in structured form.",
+      "primitives": [
+        12,
+        3
+      ],
+      "rationale": "Inter-coder disagreement belongs in a structured queue with ledgered resolutions."
+    },
+    {
+      "id": "QR06",
+      "region": "Qualitative research",
+      "text": "Negative and disconfirming cases drown in the main narrative.",
+      "primitives": [
+        8,
+        9
+      ],
+      "rationale": "Negative cases must stay on the coverage map and resurface against the main narrative."
+    },
+    {
+      "id": "QR07",
+      "region": "Qualitative research",
+      "text": "Participant attributes are disconnected from quotes.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Quotes need links to participant attributes."
+    },
+    {
+      "id": "QR08",
+      "region": "Qualitative research",
+      "text": "Anonymization destroys analytic context.",
+      "primitives": [
+        6,
+        10
+      ],
+      "rationale": "Pseudonymized canonical objects can keep analytic links while stripping identity."
+    },
+    {
+      "id": "CR01",
+      "region": "Code reproduction",
+      "text": "A repository exists without an exact commit.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Provenance must pin the exact commit that produced the results."
+    },
+    {
+      "id": "CR02",
+      "region": "Code reproduction",
+      "text": "Requirements are unpinned.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Pinned requirements are environment provenance."
+    },
+    {
+      "id": "CR03",
+      "region": "Code reproduction",
+      "text": "CUDA, Python and package matrices are brittle.",
+      "primitives": [
+        7,
+        11
+      ],
+      "rationale": "Environment matrices compile into executable checks that verify the toolchain."
+    },
+    {
+      "id": "CR04",
+      "region": "Code reproduction",
+      "text": "Dataset download links die.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Dead download links are state changes a watcher must report."
+    },
+    {
+      "id": "CR05",
+      "region": "Code reproduction",
+      "text": "The dataset version is unknown.",
+      "primitives": [
+        2
+      ],
+      "rationale": "The dataset version is provenance that must be recorded."
+    },
+    {
+      "id": "CR06",
+      "region": "Code reproduction",
+      "text": "Checkpoints do not match the paper.",
+      "primitives": [
+        11,
+        4
+      ],
+      "rationale": "Checkpoint behavior must be verified and diffed against reported results."
+    },
+    {
+      "id": "CR07",
+      "region": "Code reproduction",
+      "text": "Preprocessing is hidden.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Hidden preprocessing is missing lineage in the pipeline."
+    },
+    {
+      "id": "CR08",
+      "region": "Code reproduction",
+      "text": "Random seeds are unpublished.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Unpublished seeds are missing run provenance."
+    },
+    {
+      "id": "CR09",
+      "region": "Code reproduction",
+      "text": "Evaluation scripts differ from descriptions.",
+      "primitives": [
+        4,
+        11
+      ],
+      "rationale": "Evaluation scripts must be diffed against their descriptions and verified to match."
+    },
+    {
+      "id": "CR10",
+      "region": "Code reproduction",
+      "text": "Numerical behavior depends on hardware.",
+      "primitives": [
+        11,
+        5
+      ],
+      "rationale": "Hardware-sensitive results need verification within tolerance plus an environment receipt."
+    },
+    {
+      "id": "CR11",
+      "region": "Code reproduction",
+      "text": "Notebook cells do not record actual execution order.",
+      "primitives": [
+        3,
+        2
+      ],
+      "rationale": "Execution order is a state history the notebook must record as lineage."
+    },
+    {
+      "id": "CR12",
+      "region": "Code reproduction",
+      "text": "Shell commands work only on the author's machine.",
+      "primitives": [
+        7,
+        11
+      ],
+      "rationale": "Portability rules compile into checks that run the commands in a clean environment."
+    },
+    {
+      "id": "CR13",
+      "region": "Code reproduction",
+      "text": "Absolute paths are hard-coded.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Hard-coded absolute paths are a rule-checkable defect."
+    },
+    {
+      "id": "CR14",
+      "region": "Code reproduction",
+      "text": "External APIs and databases change after publication.",
+      "primitives": [
+        13
+      ],
+      "rationale": "External APIs and databases must be watched for post-publication change."
+    },
+    {
+      "id": "CR15",
+      "region": "Code reproduction",
+      "text": "Published code contains inference but not training.",
+      "primitives": [
+        8
+      ],
+      "rationale": "What a release contains and omits is a coverage question."
+    },
+    {
+      "id": "CA01",
+      "region": "Computational artifacts",
+      "text": "Notebooks run once and cannot rerun.",
+      "primitives": [
+        11,
+        2
+      ],
+      "rationale": "Rerunnability is verified deterministically against recorded provenance."
+    },
+    {
+      "id": "CA02",
+      "region": "Computational artifacts",
+      "text": "Manual dataframe edits leave code unaware.",
+      "primitives": [
+        3,
+        4
+      ],
+      "rationale": "Manual edits are untracked state transitions that a ledger plus diff would expose."
+    },
+    {
+      "id": "CA03",
+      "region": "Computational artifacts",
+      "text": "Figures do not record generation parameters.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Generation parameters are figure provenance."
+    },
+    {
+      "id": "CA04",
+      "region": "Computational artifacts",
+      "text": "Post-hoc Illustrator edits break the figure-data link.",
+      "primitives": [
+        2,
+        10
+      ],
+      "rationale": "Post-hoc edits break the lineage link between figure and data."
+    },
+    {
+      "id": "CA05",
+      "region": "Computational artifacts",
+      "text": "Manuscript tables are copied by hand and go stale.",
+      "primitives": [
+        10,
+        4
+      ],
+      "rationale": "Tables must be live links to data, and staleness detected by diff."
+    },
+    {
+      "id": "CA06",
+      "region": "Computational artifacts",
+      "text": "Report numbers come from an old model version.",
+      "primitives": [
+        2
+      ],
+      "rationale": "Reported numbers need lineage to the model version that produced them."
+    },
+    {
+      "id": "CA07",
+      "region": "Computational artifacts",
+      "text": "Rounding errors accumulate across copies.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Rounding consistency across copies is a deterministic numeric check."
+    },
+    {
+      "id": "CO01",
+      "region": "Collaboration",
+      "text": "The latest version is unknown.",
+      "primitives": [
+        3
+      ],
+      "rationale": "A state ledger over document versions makes latest unambiguous."
+    },
+    {
+      "id": "CO02",
+      "region": "Collaboration",
+      "text": "PI annotates in Word, the student edits in Overleaf, and the two diverge.",
+      "primitives": [
+        4,
+        6
+      ],
+      "rationale": "Two editing streams must normalize to one canonical document and be diffed."
+    },
+    {
+      "id": "CO03",
+      "region": "Collaboration",
+      "text": "Key decisions in Slack and email never enter project records.",
+      "primitives": [
+        2,
+        6
+      ],
+      "rationale": "Decisions in chat and email must be ingested and normalized into the project record with provenance."
+    },
+    {
+      "id": "CO04",
+      "region": "Collaboration",
+      "text": "Departing students leave data nobody can find.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Data must be linked to the project registry so it survives personnel changes."
+    },
+    {
+      "id": "CO05",
+      "region": "Collaboration",
+      "text": "A collaborator changes a column without a reason.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Every change is a ledger entry that carries its reason."
+    },
+    {
+      "id": "CO06",
+      "region": "Collaboration",
+      "text": "Permissions leave results accessible to one person.",
+      "primitives": [
+        8
+      ],
+      "rationale": "Access coverage, meaning who can reach which result, must be recorded."
+    },
+    {
+      "id": "CO07",
+      "region": "Collaboration",
+      "text": "Newcomers do not know which routes were tried and failed.",
+      "primitives": [
+        3,
+        9
+      ],
+      "rationale": "Failed routes must be ledgered and resurfaced for newcomers."
+    },
+    {
+      "id": "CO08",
+      "region": "Collaboration",
+      "text": "Handoffs contain files but no decision history.",
+      "primitives": [
+        2,
+        3
+      ],
+      "rationale": "Handoffs need decision provenance and a state history, not bare files."
+    },
+    {
+      "id": "W01",
+      "region": "Writing",
+      "text": "Claims are written first and citations hunted afterwards.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Claims and citations must be linked at writing time, not hunted afterwards."
+    },
+    {
+      "id": "W02",
+      "region": "Writing",
+      "text": "Papers update after citations are added; claims do not sync.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Cited papers must be watched so updates propagate to dependent claims."
+    },
+    {
+      "id": "W03",
+      "region": "Writing",
+      "text": "Similar claims in an introduction draw on duplicated literature.",
+      "primitives": [
+        1,
+        10
+      ],
+      "rationale": "Duplicated claims must resolve to one identity with consolidated links to the literature."
+    },
+    {
+      "id": "W04",
+      "region": "Writing",
+      "text": "Methods drift from the actual code.",
+      "primitives": [
+        4,
+        10
+      ],
+      "rationale": "Methods text must be linked to code and diffed against it."
+    },
+    {
+      "id": "W05",
+      "region": "Writing",
+      "text": "Results drift from tables and figures.",
+      "primitives": [
+        11,
+        4
+      ],
+      "rationale": "Results text must be verified and diffed against tables and figures."
+    },
+    {
+      "id": "W06",
+      "region": "Writing",
+      "text": "Abstract numbers do not track body revisions.",
+      "primitives": [
+        11,
+        4
+      ],
+      "rationale": "Abstract numbers must be verified and diffed against the body."
+    },
+    {
+      "id": "W07",
+      "region": "Writing",
+      "text": "Limitations are written late and omit known caveats.",
+      "primitives": [
+        5,
+        9
+      ],
+      "rationale": "Caveats recorded as receipts must resurface when limitations are written."
+    },
+    {
+      "id": "W08",
+      "region": "Writing",
+      "text": "Terminology is inconsistent across sections.",
+      "primitives": [
+        11,
+        6
+      ],
+      "rationale": "Terminology must normalize to a canonical set and consistency must be verified."
+    },
+    {
+      "id": "W09",
+      "region": "Writing",
+      "text": "A missing analysis is discovered late in the manuscript.",
+      "primitives": [
+        8
+      ],
+      "rationale": "A coverage map of planned analyses surfaces a missing one before submission."
+    },
+    {
+      "id": "SU01",
+      "region": "Submission",
+      "text": "Journal requirements differ per venue.",
+      "primitives": [
+        7
+      ],
+      "rationale": "Venue requirements are rules that must compile into executable checks."
+    },
+    {
+      "id": "SU02",
+      "region": "Submission",
+      "text": "Transfer means redoing citations, word limits, sections and figures.",
+      "primitives": [
+        6,
+        7
+      ],
+      "rationale": "A canonical manuscript plus compiled venue rules makes transfer a regeneration, not a redo."
+    },
+    {
+      "id": "SU03",
+      "region": "Submission",
+      "text": "The reporting guideline is chosen wrongly.",
+      "primitives": [
+        7,
+        12
+      ],
+      "rationale": "Guideline selection follows from compiled rules; ambiguous fits go to a human queue."
+    },
+    {
+      "id": "SU04",
+      "region": "Submission",
+      "text": "CONSORT, STROBE and PRISMA items are completed just before submission.",
+      "primitives": [
+        7,
+        8
+      ],
+      "rationale": "Reporting checklists compile into checks whose coverage is tracked from project start."
+    },
+    {
+      "id": "SU05",
+      "region": "Submission",
+      "text": "Author contributions, conflicts and data availability are filled at the end.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Contributions and conflicts are facts to ledger as they happen, not reconstruct at the end."
+    },
+    {
+      "id": "SU06",
+      "region": "Submission",
+      "text": "Blinded manuscripts leak author identity.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Identity leaks in blinded manuscripts are deterministically checkable."
+    },
+    {
+      "id": "SU07",
+      "region": "Submission",
+      "text": "Supplementary naming and cross-references are wrong.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Naming and cross-reference correctness is rule-checkable."
+    },
+    {
+      "id": "SU08",
+      "region": "Submission",
+      "text": "Figure DPI, size and fonts fail the target format.",
+      "primitives": [
+        7,
+        11
+      ],
+      "rationale": "Figure format rules compile into checks verified before submission."
+    },
+    {
+      "id": "SU09",
+      "region": "Submission",
+      "text": "Reference metadata errors accumulate in bulk.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Reference metadata is verifiable against registries in bulk."
+    },
+    {
+      "id": "PR01",
+      "region": "Peer review and rebuttal",
+      "text": "Reviewer comments and manuscript revisions have no one-to-one mapping.",
+      "primitives": [
+        10
+      ],
+      "rationale": "Each comment needs a one-to-one link to its revision."
+    },
+    {
+      "id": "PR02",
+      "region": "Peer review and rebuttal",
+      "text": "Multiple reviewers raise the same issue.",
+      "primitives": [
+        1
+      ],
+      "rationale": "The same issue raised by two reviewers is one identity and should merge."
+    },
+    {
+      "id": "PR03",
+      "region": "Peer review and rebuttal",
+      "text": "Reviewer A and B demand conflicting changes.",
+      "primitives": [
+        12
+      ],
+      "rationale": "Conflicting demands cannot be auto-resolved and belong in a human queue."
+    },
+    {
+      "id": "PR04",
+      "region": "Peer review and rebuttal",
+      "text": "Line locators in the response letter go stale after revision.",
+      "primitives": [
+        10,
+        4
+      ],
+      "rationale": "Locators must be links into the text so revisions can diff and update them."
+    },
+    {
+      "id": "PR05",
+      "region": "Peer review and rebuttal",
+      "text": "A claimed fix misses a second occurrence of the same text.",
+      "primitives": [
+        11,
+        8
+      ],
+      "rationale": "A fix must be verified over all occurrences, with coverage showing what was checked."
+    },
+    {
+      "id": "PR06",
+      "region": "Peer review and rebuttal",
+      "text": "A reviewer-suggested citation may itself be irrelevant.",
+      "primitives": [
+        5,
+        12
+      ],
+      "rationale": "A suggested citation needs an evidence receipt, and doubtful relevance goes to a human queue."
+    },
+    {
+      "id": "PR07",
+      "region": "Peer review and rebuttal",
+      "text": "Second rounds cannot confirm whether old issues actually closed.",
+      "primitives": [
+        3
+      ],
+      "rationale": "Issue open and closed is a state ledger that later rounds can query."
+    },
+    {
+      "id": "RO01",
+      "region": "Reviewing others' work",
+      "text": "Checking whether citations support claims is slow.",
+      "primitives": [
+        5
+      ],
+      "rationale": "Claim-support checking needs receipts that bind citations to spans."
+    },
+    {
+      "id": "RO02",
+      "region": "Reviewing others' work",
+      "text": "Suspicious table values require hand calculation.",
+      "primitives": [
+        11
+      ],
+      "rationale": "Suspicious values are recomputable and should be verified, not hand-calculated."
+    },
+    {
+      "id": "RO03",
+      "region": "Reviewing others' work",
+      "text": "Overlap with an author's earlier work is hard to batch-check.",
+      "primitives": [
+        4,
+        1
+      ],
+      "rationale": "Overlap checking is a diff across an author's resolved body of work."
+    },
+    {
+      "id": "RO04",
+      "region": "Reviewing others' work",
+      "text": "Data and code availability links are checked one by one.",
+      "primitives": [
+        11,
+        13
+      ],
+      "rationale": "Availability links are checkable automatically and watched over time."
+    },
+    {
+      "id": "RO05",
+      "region": "Reviewing others' work",
+      "text": "Methods omissions have no automatic checklist.",
+      "primitives": [
+        7,
+        8
+      ],
+      "rationale": "Methods checklists compile into checks over a coverage map of sections."
+    },
+    {
+      "id": "RO06",
+      "region": "Reviewing others' work",
+      "text": "Self-citation patterns across 350 references are inspected by eye.",
+      "primitives": [
+        11,
+        1
+      ],
+      "rationale": "Self-citation counting is deterministic once author identities are resolved."
+    },
+    {
+      "id": "G01",
+      "region": "Grants",
+      "text": "Funding opportunity and agency instructions change.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Instruction changes are future state changes a watcher must report."
+    },
+    {
+      "id": "G02",
+      "region": "Grants",
+      "text": "Template versions expire.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Template expiry is a state change to watch."
+    },
+    {
+      "id": "G03",
+      "region": "Grants",
+      "text": "Page, font, header, footer and URL rules are fragmented.",
+      "primitives": [
+        7
+      ],
+      "rationale": "Fragmented format rules must compile into one executable check set."
+    },
+    {
+      "id": "G04",
+      "region": "Grants",
+      "text": "Biosketches and current-and-pending are re-entered each time.",
+      "primitives": [
+        6,
+        1
+      ],
+      "rationale": "A canonical person record resolves to one identity and regenerates each form."
+    },
+    {
+      "id": "G05",
+      "region": "Grants",
+      "text": "Collaborators reuse outdated biosketches.",
+      "primitives": [
+        3,
+        13
+      ],
+      "rationale": "Biosketch staleness is a state problem plus a watch on upstream updates."
+    },
+    {
+      "id": "G06",
+      "region": "Grants",
+      "text": "Publications are re-selected per proposal.",
+      "primitives": [
+        9
+      ],
+      "rationale": "Proposal-relevant publications must resurface by context instead of manual re-selection."
+    },
+    {
+      "id": "G07",
+      "region": "Grants",
+      "text": "The data management plan does not match the actual workflow.",
+      "primitives": [
+        4
+      ],
+      "rationale": "Plan versus actual workflow is a diff."
+    },
+    {
+      "id": "G08",
+      "region": "Grants",
+      "text": "One institutional datum is copied into several attachments.",
+      "primitives": [
+        1,
+        6
+      ],
+      "rationale": "One institutional datum copied into attachments must normalize to one canonical source."
+    },
+    {
+      "id": "G09",
+      "region": "Grants",
+      "text": "Format errors surface only at the submission portal.",
+      "primitives": [
+        7,
+        11
+      ],
+      "rationale": "Portal format rules must compile into local checks that run before submission."
+    },
+    {
+      "id": "G10",
+      "region": "Grants",
+      "text": "Resubmission cannot map reviewer criticism to changed proposal text.",
+      "primitives": [
+        10,
+        4
+      ],
+      "rationale": "Criticisms must link to proposal text so changes can be mapped and diffed."
+    },
+    {
+      "id": "T01",
+      "region": "Thesis",
+      "text": "University templates conflict with Word and LaTeX defaults.",
+      "primitives": [
+        7
+      ],
+      "rationale": "Template requirements are rules that compile into checks over the document."
+    },
+    {
+      "id": "T02",
+      "region": "Thesis",
+      "text": "Section breaks and page numbering consume mechanical hours.",
+      "primitives": [
+        7,
+        11
+      ],
+      "rationale": "Section breaks and page numbering are mechanical and must be automated and verified."
+    },
+    {
+      "id": "T03",
+      "region": "Thesis",
+      "text": "Published chapters and dissertation versions drift apart.",
+      "primitives": [
+        1,
+        4
+      ],
+      "rationale": "Chapter and dissertation versions are identities whose drift must be diffed."
+    },
+    {
+      "id": "T04",
+      "region": "Thesis",
+      "text": "Figure and table lists have omissions.",
+      "primitives": [
+        11,
+        8
+      ],
+      "rationale": "List completeness is verifiable against a coverage map of figures and tables."
+    },
+    {
+      "id": "T05",
+      "region": "Thesis",
+      "text": "Format checks are highly local per institution.",
+      "primitives": [
+        7
+      ],
+      "rationale": "Institution-local format checks are compiled rules, not folklore."
+    },
+    {
+      "id": "LM01",
+      "region": "Long-term maintenance",
+      "text": "Code and data stop being maintained after publication.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Maintenance decay after publication is a state change a watcher must surface."
+    },
+    {
+      "id": "LM02",
+      "region": "Long-term maintenance",
+      "text": "DOIs stay alive while external links rot.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Link rot under stable DOIs is exactly what a watcher reports."
+    },
+    {
+      "id": "LM03",
+      "region": "Long-term maintenance",
+      "text": "Dependencies disappear.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Dependency disappearance is a state change to watch."
+    },
+    {
+      "id": "LM04",
+      "region": "Long-term maintenance",
+      "text": "Corrections do not notify local citers.",
+      "primitives": [
+        13,
+        10
+      ],
+      "rationale": "Corrections must be watched and propagated along links to local citers."
+    },
+    {
+      "id": "LM05",
+      "region": "Long-term maintenance",
+      "text": "Systematic reviews go stale within two years.",
+      "primitives": [
+        13
+      ],
+      "rationale": "Reviews go stale as new evidence appears; a watcher reports the drift."
+    },
+    {
+      "id": "LM06",
+      "region": "Long-term maintenance",
+      "text": "New dataset versions change conclusions while old analyses remain unaware.",
+      "primitives": [
+        13,
+        4
+      ],
+      "rationale": "New dataset versions must be watched and their effect diffed against old analyses."
+    },
+    {
+      "id": "LI01",
+      "region": "Learning material intake",
+      "text": "Lecture, notes and flashcards mean entering the same content three times.",
+      "primitives": [
+        6,
+        1
+      ],
+      "rationale": "Lecture, notes and cards are representations of one content identity and should be authored once in canonical form.",
+      "plane": "learning"
+    },
+    {
+      "id": "LI02",
+      "region": "Learning material intake",
+      "text": "PDF, video, handouts and exercises are isolated.",
+      "primitives": [
+        10,
+        6
+      ],
+      "rationale": "Isolated media types must normalize and link into one artifact graph.",
+      "plane": "learning"
+    },
+    {
+      "id": "LI03",
+      "region": "Learning material intake",
+      "text": "One concept's treatments across materials are not merged.",
+      "primitives": [
+        1,
+        10
+      ],
+      "rationale": "Treatments of one concept across materials must resolve to one identity and be linked.",
+      "plane": "learning"
+    },
+    {
+      "id": "LI04",
+      "region": "Learning material intake",
+      "text": "Cards are detached from the context that produced them.",
+      "primitives": [
+        2,
+        10
+      ],
+      "rationale": "Cards need provenance links to the context that produced them.",
+      "plane": "learning"
+    },
+    {
+      "id": "LI05",
+      "region": "Learning material intake",
+      "text": "Image-based knowledge is slow to turn into occlusion cards.",
+      "primitives": [
+        6
+      ],
+      "rationale": "Image content must normalize into card-ready canonical form.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS01",
+      "region": "Learning state",
+      "text": "Recognition is mistaken for recall.",
+      "primitives": [
+        3,
+        14
+      ],
+      "rationale": "Recognition and recall are distinct performance states; practice must adapt to which one failed.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS02",
+      "region": "Learning state",
+      "text": "Recognition is mistaken for generation and application.",
+      "primitives": [
+        3,
+        14
+      ],
+      "rationale": "Generation and application are distinct states that practice must target separately.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS03",
+      "region": "Learning state",
+      "text": "Flashcard performance does not transfer to real problems.",
+      "primitives": [
+        14,
+        3
+      ],
+      "rationale": "Transfer failure is a failure type the practice engine must answer from ledgered performance.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS04",
+      "region": "Learning state",
+      "text": "The final answer is known but the intermediate reasoning is not.",
+      "primitives": [
+        3,
+        8
+      ],
+      "rationale": "Step-level reasoning needs ledgered states and a coverage map, not a single final-answer bit.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS05",
+      "region": "Learning state",
+      "text": "Prerequisite holes are invisible.",
+      "primitives": [
+        8
+      ],
+      "rationale": "Prerequisite holes are unknowns a coverage map must expose.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS06",
+      "region": "Learning state",
+      "text": "Wrong answers record the answer, not the error mechanism.",
+      "primitives": [
+        3,
+        14
+      ],
+      "rationale": "Errors must be ledgered by mechanism so practice can adapt to the failure type.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS07",
+      "region": "Learning state",
+      "text": "Confusable concepts are reviewed separately.",
+      "primitives": [
+        1,
+        14
+      ],
+      "rationale": "Confusables must resolve as distinct identities and be practiced by discrimination.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS08",
+      "region": "Learning state",
+      "text": "The review backlog grows without bound.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Unbounded backlog is a scheduling problem the practice engine owns.",
+      "plane": "learning"
+    },
+    {
+      "id": "LS09",
+      "region": "Learning state",
+      "text": "All content receives the same spaced-repetition policy.",
+      "primitives": [
+        14
+      ],
+      "rationale": "One policy for all content ignores per-item failure history; practice must adapt.",
+      "plane": "learning"
+    },
+    {
+      "id": "LF01",
+      "region": "Learning feedback",
+      "text": "A proof attempt cannot locate the failing step.",
+      "primitives": [
+        11,
+        14
+      ],
+      "rationale": "Proof steps are checkable; locating the failing step drives the next practice action.",
+      "plane": "learning"
+    },
+    {
+      "id": "LF02",
+      "region": "Learning feedback",
+      "text": "Reading the solution immediately produces an illusion of mastery.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Practice must require generation before showing solutions to prevent fluency illusions.",
+      "plane": "learning"
+    },
+    {
+      "id": "LF03",
+      "region": "Learning feedback",
+      "text": "Full solutions destroy productive struggle.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Hint granularity is a practice-engine decision that preserves productive struggle.",
+      "plane": "learning"
+    },
+    {
+      "id": "LF04",
+      "region": "Learning feedback",
+      "text": "No one judges proof rigor.",
+      "primitives": [
+        11,
+        12
+      ],
+      "rationale": "Rule-based rigor checks run deterministically; the rest queue for a human judge.",
+      "plane": "learning"
+    },
+    {
+      "id": "LF05",
+      "region": "Learning feedback",
+      "text": "The same error recurs without a misconception identity.",
+      "primitives": [
+        1,
+        14
+      ],
+      "rationale": "Recurring errors must resolve to one misconception identity that practice then targets.",
+      "plane": "learning"
+    },
+    {
+      "id": "LF06",
+      "region": "Learning feedback",
+      "text": "There is no graduated hint that reveals only the next step.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Graduated next-step hints are the practice engine's delivery mechanism.",
+      "plane": "learning"
+    },
+    {
+      "id": "TR01",
+      "region": "Transfer",
+      "text": "Textbook examples are solved, variants are not.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Failure on variants is a failure type that should drive variant practice.",
+      "plane": "learning"
+    },
+    {
+      "id": "TR02",
+      "region": "Transfer",
+      "text": "Flashcard recall does not become language production.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Recall-to-production gaps are a failure type requiring production practice.",
+      "plane": "learning"
+    },
+    {
+      "id": "TR03",
+      "region": "Transfer",
+      "text": "Isolated facts are trained without contextual retrieval.",
+      "primitives": [
+        9,
+        14
+      ],
+      "rationale": "Facts must be resurfaced in context and practiced contextually.",
+      "plane": "learning"
+    },
+    {
+      "id": "TR04",
+      "region": "Transfer",
+      "text": "No progression from near transfer to far transfer.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Near-to-far progression is a sequenced practice policy.",
+      "plane": "learning"
+    },
+    {
+      "id": "TR05",
+      "region": "Transfer",
+      "text": "Method selection for a new problem is never trained.",
+      "primitives": [
+        14
+      ],
+      "rationale": "Method selection is a trainable skill the engine must schedule.",
+      "plane": "learning"
+    },
+    {
+      "id": "M01",
+      "region": "Metacognition",
+      "text": "Learners judge their own mastery poorly.",
+      "primitives": [
+        3,
+        4
+      ],
+      "rationale": "Objective performance states diffed against self-judgment expose miscalibration.",
+      "plane": "learning"
+    },
+    {
+      "id": "M02",
+      "region": "Metacognition",
+      "text": "Familiarity from easy repetition masquerades as learning.",
+      "primitives": [
+        14,
+        3
+      ],
+      "rationale": "Easy repetition must be detected from ledgered performance and replaced with effortful practice.",
+      "plane": "learning"
+    },
+    {
+      "id": "M03",
+      "region": "Metacognition",
+      "text": "Time is spent reviewing what is already known.",
+      "primitives": [
+        14,
+        8
+      ],
+      "rationale": "Already-known content is visible on a coverage map, and scheduling should skip it.",
+      "plane": "learning"
+    },
+    {
+      "id": "M04",
+      "region": "Metacognition",
+      "text": "The true cause of failure, knowledge gap versus retrieval failure versus strategy choice, is unknown.",
+      "primitives": [
+        14,
+        3
+      ],
+      "rationale": "Failure-cause attribution is the engine's diagnosis step over ledgered history.",
+      "plane": "learning"
+    }
+  ]
+}
