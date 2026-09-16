@@ -7,6 +7,12 @@ import re
 import sys
 
 
+import sys as _sys
+if _sys.platform == "win32":
+    for _s in (_sys.stdout, _sys.stderr):
+        if _s and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8")
+
 def normalize_doi(doi) -> str:
     return (doi or '').strip().lower().removeprefix('https://doi.org/').removeprefix(
         'http://doi.org/').removeprefix('https://dx.doi.org/').removeprefix('doi:')

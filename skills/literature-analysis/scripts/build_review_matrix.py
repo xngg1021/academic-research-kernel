@@ -9,6 +9,12 @@ import argparse
 import json
 import sys
 
+import sys as _sys
+if _sys.platform == "win32":
+    for _s in (_sys.stdout, _sys.stderr):
+        if _s and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8")
+
 NEEDS_FULLTEXT = '【需全文】'
 COLUMNS = ('论文(年份)', '方法', '样本/数据', '核心结论', '局限/适用边界')
 

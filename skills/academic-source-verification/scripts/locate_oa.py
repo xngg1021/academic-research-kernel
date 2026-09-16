@@ -14,6 +14,12 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
+import sys as _sys
+if _sys.platform == "win32":
+    for _s in (_sys.stdout, _sys.stderr):
+        if _s and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8")
+
 USER_AGENT = 'hermes-academic-skills/1.2'
 FALLBACK_ORDER = ['OpenAlex open_access.oa_url', 'Semantic Scholar openAccessPdf.url',
                   'archive.org（公版书/专著）']

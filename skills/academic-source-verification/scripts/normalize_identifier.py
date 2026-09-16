@@ -6,6 +6,12 @@ import json
 import re
 import sys
 
+import sys as _sys
+if _sys.platform == "win32":
+    for _s in (_sys.stdout, _sys.stderr):
+        if _s and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8")
+
 DOI_PREFIXES = (
     'https://doi.org/', 'http://doi.org/', 'https://dx.doi.org/', 'http://dx.doi.org/', 'doi:',
 )
