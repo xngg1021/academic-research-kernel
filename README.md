@@ -71,7 +71,7 @@ QA validates metadata, references, personal-path/known-secret patterns, Python s
 
 Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks nine skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
-Linux/Python 3.12 is tested in this pass. Linux, macOS and Windows remain intended platforms; native Windows/macOS execution, every dependency-version combination, and a fresh Hermes session are not claimed. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
+CI runs the full QA suite on Ubuntu (Python 3.12 and 3.13), Windows and macOS via GitHub Actions. A separate tap-integration workflow runs on main pushes: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. A fresh Hermes session and every dependency-version combination are not claimed. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
 
 ## Research and planning documents
 

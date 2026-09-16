@@ -52,7 +52,7 @@ hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-ver
 
 固定的 Hermes 作者测试被复用，其逐技能规则不改动。上游全分布总体检查不适用于本 tap；本仓库测试覆盖全部九个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
 
-本轮在 Linux 与 Python 3.12 下测试。Linux、macOS 与 Windows 仍为既定目标平台；不声称原生 Windows/macOS 执行、每种依赖版本组合或全新 Hermes 会话已验证。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
+CI 经 GitHub Actions 在 Ubuntu（Python 3.12 与 3.13）、Windows 与 macOS 上运行完整 QA 套件。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。不声称全新 Hermes 会话与每种依赖版本组合已验证。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
 
 ## 研究与规划文档
 
