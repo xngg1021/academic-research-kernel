@@ -80,11 +80,15 @@ def pairings(model_keys):
 
 def spawn(model_key, prompt_path, log_path):
     provider, model = MODELS[model_key]
+    cmd = ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
+           "-m", model, "--provider", provider]
+    if model_key == "glm53":
+        # GLM 5.3 always reasons; the server default is the max effort level,
+        # which is extremely slow. Request the light level explicitly.
+        cmd += ["--reasoning", "low"]
     with open(log_path, "wb") as log:
         return subprocess.Popen(
-            ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
-             "-m", model, "--provider", provider],
-            stdout=log, stderr=subprocess.STDOUT,
+            cmd, stdout=log, stderr=subprocess.STDOUT,
             cwd=os.getcwd(),
         )
 

@@ -51,7 +51,7 @@ python ${HERMES_SKILL_DIR}/scripts/orchestrate.py <流目录> --stage status
 - 三模型一致不是证据:模型产出只是线索,出处谱系才是证据;
 - 产出文件各自独立,评审者不得修改他人产出;
 - 汇总与裁决由主线程完成,不在模型间多数表决;
-- GLM 5.3 是始终思考模型,hermes 的 zai 提供方自动处理其思考参数,无需手工设置 reasoning_effort。
+- GLM 5.3 是始终思考模型,服务器默认思考档位为 max,耗时很长;编排器对其子进程显式传 --reasoning low,其余模型保持默认。
 
 ## Verification
 
