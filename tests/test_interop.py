@@ -1,5 +1,6 @@
 """interop.py 六向互转测试：每种格式一条样本做往返，断言关键字段保持。"""
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location(
     'interop', ROOT / 'skills' / 'literature-analysis' / 'scripts' / 'interop.py')
 interop = importlib.util.module_from_spec(spec)
+sys.modules['interop'] = interop  # dataclass 解析延迟注解要求模块已注册
 spec.loader.exec_module(interop)
 
 CanonicalWork = interop.CanonicalWork
