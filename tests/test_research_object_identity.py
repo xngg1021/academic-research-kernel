@@ -452,3 +452,78 @@ def test_resolve_transitive_merge_stable():
     one = identity.resolve(records)['merged_identifiers']
     two = identity.resolve(list(reversed(records)))['merged_identifiers']
     assert one == two
+
+
+# ---------------------------------------------------------------------------
+# GLM 5.3 第五评审补强
+# ---------------------------------------------------------------------------
+
+def test_consume_receipt_output_validates_against_schema():
+    """consume_receipt 产物必须过 research-object schema 的真实 jsonschema 校验。"""
+    import jsonschema
+    schema = _schema_obj()
+    draft = identity.from_canonical_work({'doi': '10.1/a', 'title': 'T'})
+    out = identity.consume_receipt({'schema_version': '1.0',
+                                    'sources': [{'source': 'OpenAlex',
+                                                 'queried_at': '2026-09-17T00:00:00Z',
+                                                 'status': 'ok', 'coverage': 'identity',
+                                                 'raw_identifier': None}],
+                                    'claims': [{'claim': 'x', 'evidence_type': 'metadata',
+                                                'source': 'OpenAlex',
+                                                'support_status': 'out_of_scope'}],
+                                    'conflicts': [], 'failures': []})
+    draft['source_observations'] = out['source_observations']
+    draft['uncertainty'] = out['uncertainty']
+    jsonschema.validate(draft, schema)
+
+
+def test_lineage_copies_are_independent():
+    """lineage 双写的两侧 evidence 深拷贝,改一侧不影响另一侧。"""
+    a, b = _draft('ro:work:a'), _draft('ro:work:b')
+    identity.link(a, b, 'preprint_to_vor', EVIDENCE)
+    a['lineage'][0]['evidence']['human_confirmed'] = True
+    assert b['lineage'][0]['evidence']['human_confirmed'] is False
+
+
+def test_resolve_single_record_two_conflicting_dois():
+    out = identity.resolve([{'identifiers': [{'type': 'doi', 'value': '10.1/a'},
+                                             {'type': 'doi', 'value': '10.1/b'}]}])
+    assert out['verdict'] == 'CONFLICT'
+
+
+def test_resolve_exact_with_metadata_conflict_goes_to_uncertainty():
+    a = {'identifiers': [{'type': 'doi', 'value': '10.1/a'}], 'title': 'One'}
+    b = {'identifiers': [{'type': 'doi', 'value': '10.1/a'}], 'title': 'Two'}
+    out = identity.resolve([a, b])
+    assert out['verdict'] == 'EXACT'
+    assert 'title' in out['conflict_fields']
+    assert any(u['kind'] == 'metadata_conflict' for u in out['uncertainty'])
+
+
+def test_record_identifiers_normalized_carry_path():
+    rec = {'identifiers': [{'type': 'orcid', 'value': '',
+                            'normalized': '0000-0002-1825-0097'}]}
+    pairs = identity._record_identifiers(rec)
+    assert pairs[0][2] == '0000000218250097'
+
+
+def test_normalize_pmcid_handle_url():
+    assert identity.normalize('pmcid', 'PMC1234567') == '1234567'
+    assert identity.normalize('pmcid', '1234567') == '1234567'
+    assert identity.normalize('handle', 'https://handle.net/20.500/x') == '20.500/x'
+    assert identity.normalize('url', 'HTTPS://Example.COM/Path/') == 'https://example.com/Path'
+
+
+def test_consume_receipt_missing_status_defaults_skipped():
+    out = identity.consume_receipt({'schema_version': '1.0',
+                                    'sources': [{'source': 'X', 'queried_at': '2026-09-17T00:00:00Z'}],
+                                    'claims': [], 'conflicts': [], 'failures': []})
+    assert out['source_observations'][0]['status'] == 'skipped'
+
+
+def test_link_rejects_non_dict():
+    a = _draft('ro:work:a')
+    with pytest.raises(ValueError):
+        identity.link(None, a, 'cites', EVIDENCE)
+    with pytest.raises(ValueError):
+        identity.link(a, None, 'cites', EVIDENCE)

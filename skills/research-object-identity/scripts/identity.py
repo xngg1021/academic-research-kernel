@@ -16,6 +16,7 @@ consume_receipt 消费 schemas/evidence-receipt.schema.json 1.0 回执，
 """
 from __future__ import annotations
 
+import copy
 import re
 from typing import Any
 
@@ -67,6 +68,7 @@ def normalize(kind: str, value: Any) -> str:
     if kind == 'pmid':
         return re.sub(r'\D', '', text)
     if kind == 'pmcid':
+        text = re.sub(r'^PMC\s*', '', text, flags=re.I)
         return re.sub(r'\s', '', text).upper()
     if kind == 'openalex_id':
         text = text.rstrip('/')
@@ -80,9 +82,14 @@ def normalize(kind: str, value: Any) -> str:
     if kind in ('isbn', 'issn'):
         return re.sub(r'[^0-9Xx]', '', text).upper()
     if kind == 'handle':
-        return re.sub(r'^https?://hdl\.handle\.net/', '', text, flags=re.I).strip()
+        text = re.sub(r'^https?://(?:hdl\.)?handle\.net/', '', text, flags=re.I).strip()
+        return text
     if kind == 'url':
-        return text.rstrip('/').strip()
+        text = text.rstrip('/').strip()
+        m = re.match(r'^(https?)://([^/]+)(.*)$', text, flags=re.I)
+        if m:
+            text = f'{m.group(1).lower()}://{m.group(2).lower()}{m.group(3)}'
+        return text
     return text
 
 
@@ -250,6 +257,9 @@ def resolve(records: list) -> dict:
     result['verdict'] = judge(facts)
     result['match_fields'] = sorted(set(match_fields))
     result['conflict_fields'] = sorted(set(conflict_fields) | set(result['conflict_fields']))
+    if result['verdict'] == 'EXACT' and result['conflict_fields']:
+        result['uncertainty'].append({'item': 'metadata disagreement under shared identifier',
+                                      'kind': 'metadata_conflict', 'needs_human': True})
     return result
 
 
@@ -266,6 +276,8 @@ def link(a: dict, b: dict, kind: str, evidence: dict) -> dict:
     missing = [key for key in EVIDENCE_KEYS if key not in (evidence or {})]
     if missing:
         raise ValueError(f'evidence missing keys: {missing}')
+    if not isinstance(a, dict) or not isinstance(b, dict):
+        raise ValueError('link arguments must be dict objects')
     if (a or {}).get('object_id') == (b or {}).get('object_id'):
         raise ValueError('cannot link an object to itself')
     ev = {
@@ -283,7 +295,7 @@ def link(a: dict, b: dict, kind: str, evidence: dict) -> dict:
         edge = {'from_object_id': a['object_id'], 'to_object_id': b['object_id'],
                 'kind': kind, 'evidence': dict(ev)}
         a.setdefault('lineage', []).append(edge)
-        b.setdefault('lineage', []).append(dict(edge))
+        b.setdefault('lineage', []).append(copy.deepcopy(edge))
         return edge
     raise ValueError(f'unknown edge kind: {kind!r}')
 
@@ -335,8 +347,9 @@ def consume_receipt(receipt: dict) -> dict:
     """消费 Evidence Receipt 1.0,产出 source_observations 与 uncertainty。
 
     映射规则(离散、无评分):
-    - schema_version 非 1.0 时全部内容进 uncertainty,
-      kind=unsupported_schema_version,needs_human=True;
+    - schema_version 非 1.0 时:sources 照常保留为观察记录,其余语义
+      内容(claims/conflicts/failures)一律不解读,统一进一条
+      uncertainty(kind=unsupported_schema_version,needs_human=True);
     - sources -> source_observations(source/queried_at/status/coverage/
       raw_identifier 直传);
     - support_status=contradicted 的 claim -> uncertainty,needs_human=True;

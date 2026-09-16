@@ -120,6 +120,7 @@
           "source": { "type": "string" },
           "queried_at": { "type": "string", "format": "date-time" },
           "status": { "enum": ["ok", "failed", "skipped"] },
+          "coverage": { "type": "string" },
           "raw_identifier": { "type": ["string", "null"] }
         },
         "additionalProperties": false

@@ -60,20 +60,20 @@ match_fields 记录一致字段名，conflict_fields 记录冲突字段名，全
 
 `link(a, b, kind, evidence)` 在 a 到 b 之间建有方向的边：
 
-- kind 属于 relations（cites、contradicts、replicates、derived_from）：只写入 a 的 relations（方向 a→b），反向断言不自动回填，需要反向关系时显式调用 link(b, a, kind, evidence)；a 与 b 的 object_id 相同则抛 ValueError；
+- kind 属于 relations（cites、contradicts、replicates、derived_from）：只写入 a 的 relations（方向 a→b），反向断言不自动回填，需要反向关系时显式调用 link（b， a， kind， evidence）；a 与 b 的 object_id 相同则抛 ValueError；
 - kind 属于 lineage（preprint_to_vor、correction、retraction、version_chain）：同一条边（from=a，to=b）写入双方 lineage，方向保留在边内。
 
 evidence 必须含五个键：source、queried_at、match_fields、conflict_fields、human_confirmed，缺一抛 ValueError。边的证据结构在 schema 的 `$defs/edgeEvidence` 中固定。
 
 ## 向后兼容 CanonicalWork
 
-`from_canonical_work(cw)` 把 literature-analysis 的 CanonicalWork 转成 Work 型 ResearchObject 草案：鸭子类型接受实例或同名字段 dict，不 import 对方模块；doi 与 extra.arxiv_id 经 normalize 后入 identifiers，title、authors、year、container 作为信息字段附带，供 resolve 聚合。CanonicalWork 本身与其格式转换函数原样不动。
+`from_canonical_work(cw)` 把 literature-analysis 的 CanonicalWork 转成 Work 型 ResearchObject 草案：鸭子类型接受实例或同名字段 dict，不 import 对方模块；doi 与 extra.arxiv_id 经 normalize 后入 identifiers，title、authors、year、container 作为信息字段附带，供 resolve 聚合。CanonicalWork 本身与其格式转换函数原样不动。无 DOI 时 object_id 用标题前六词的 slug 生成，两篇标题前六词相同的论文可能撞同一 object_id，此时 link 会按自环拒绝，需人工补标识符后再建边。
 
 ## 消费 Evidence Receipt
 
 `consume_receipt(receipt)` 消费符合 [`../../schemas/evidence-receipt.schema.json`](../../schemas/evidence-receipt.schema.json) 1.0 的回执，产出可并入对象的 source_observations 与 uncertainty：
 
-- schema_version 非 1.0 时全部内容进 uncertainty（kind=unsupported_schema_version），needs_human 置 true，不按 1.0 语义解读；
+- schema_version 非 1.0 时：sources 照常保留为观察记录，其余语义内容（claims、conflicts、failures）一律不解读，统一进一条 uncertainty（kind=unsupported_schema_version），needs_human 置 true；
 - sources 逐条直传为 source_observations（source、queried_at、status、coverage、raw_identifier）；
 - support_status 为 contradicted 的 claim 进 uncertainty，needs_human 置 true；
 - support_status 为 unverifiable 的 claim 进 uncertainty，needs_human 为 false；
