@@ -21,35 +21,10 @@
 - key 命名：`第一作者姓+年份+标题首词`，如 `vaswani2017attention`，同一 bib 内不重复。
 - 优先取 Crossref 给出的 family/given 或机构 name；OpenAlex display_name 不包含可靠姓/名边界，不用 rsplit 猜复姓/文化命名规则。只有 display_name 时保留完整字面姓名并标待核，不能默默重排。
 - 文献类型、作者姓名、卷期页码与 DOI 是否必需取决于具体条目类型与排版样式，上表是收集清单，并非所有格式都必填。OpenAlex primary_location/source 均可能为 null；先用 `(w.get('primary_location') or {}).get('source') or {}` 再取字段。完整作者表可能被截断，须核对原文。
-- 以下可运行示例使用结构化 Crossref 元数据；生产输入替换 fixture，未知字段留待核，不输出假的年份/期刊：
+- 转义与姓名格式化规则已实现为脚本（`${HERMES_SKILL_DIR}/scripts/export_bibtex.py`，冒烟断言由仓库测试覆盖）；生产输入替换 fixture，未知字段留 TODO 待核，不输出假的年份/期刊：
 
-```python
-# smoke-test: true
-def tex_escape(text):
-    replacements = {'\\': r'\textbackslash{}', '{': r'\{', '}': r'\}',
-                    '&': r'\&', '%': r'\%', '$': r'\$', '#': r'\#',
-                    '_': r'\_', '~': r'\textasciitilde{}', '^': r'\textasciicircum{}'}
-    return ''.join(replacements.get(c, c) for c in str(text))
-
-def bibtex_name(author):
-    family, given = author.get('family'), author.get('given')
-    if family:
-        return tex_escape(family) + (', ' + tex_escape(given) if given else '')
-    literal = author.get('name') or author.get('display_name')
-    if not literal:
-        raise ValueError('author name missing; do not invent')
-    return '{' + tex_escape(literal) + '}'  # literal name; flag personal display_name for review
-
-authors = [{'family': 'LeCun', 'given': 'Yann'},
-           {'family': 'de la Cruz', 'given': 'María'}, {'name': 'Research & Co.'}]
-author_field = ' and '.join(map(bibtex_name, authors))
-assert bibtex_name(authors[0]) == 'LeCun, Yann'
-assert bibtex_name(authors[1]) == 'de la Cruz, María'
-assert bibtex_name({'display_name': '王小明'}) == '{王小明}'
-assert tex_escape('A_{B} & 5%') == r'A\_\{B\} \& 5\%'
-title = tex_escape('Example {RAG} & Methods')  # plain-text title, not pre-escaped LaTeX
-entry = '@misc{example,\n  author = {' + author_field + '},\n  title = {{' + title + '}}\n}'
-print(entry)  # illustrative misc; no fabricated year/DOI/journal
+```bash
+python "${HERMES_SKILL_DIR}/scripts/export_bibtex.py" --input works.json --source crossref
 ```
 
 ## 中文文献
