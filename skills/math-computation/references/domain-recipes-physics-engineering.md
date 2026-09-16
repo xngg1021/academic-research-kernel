@@ -19,7 +19,7 @@ assert np.all(u[:, [0, -1]] == 0) and u.min() >= 0 and u.max() <= 1
 assert np.sum(u[-1]) < np.sum(u[0])
 ```
 
-边界为两端恒定零温度（Dirichlet），x 单位 m、t 单位 s、alpha 单位 m²/s。1D 显式扩散条件 0<=alpha*dt/dx²<=1/2；2D 五点格式需 alpha*dt*(1/dx²+1/dy²)<=1/2。检验边界、非负性与网格收敛，稳定不等于精确。
+边界为两端恒定零温度（Dirichlet），x 变量单位为 m，t 变量单位为 s，alpha 扩散系数单位为 m²/s。1D 显式扩散条件 0<=alpha*dt/dx²<=1/2；2D 五点格式需 alpha*dt*(1/dx²+1/dy²)<=1/2。检验边界、非负性与网格收敛，稳定不等于精确。
 
 上述迭代的自检应核对固定边界与离散最大值原则。
 

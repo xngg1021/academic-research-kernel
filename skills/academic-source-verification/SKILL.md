@@ -22,9 +22,9 @@ metadata:
 
 # 学术来源核查 Skill
 
-验证一篇论文/文献是否真实存在、交叉核对它的元数据与被引数、核查撤稿与更正状态、下载可获得的开放获取全文做内容验证。与 `arxiv` skill 互补：`arxiv` 负责"检索发现论文"，本 skill 负责"核查论文 + 拿全文"。
+验证论文与文献的真实性，交叉核对元数据与各渠道被引数，检查撤稿与更正记录，并下载可获取的开放获取全文以核验内容。本技能与 `arxiv` 技能互补：`arxiv` 负责检索发现论文，本技能负责核对文献并获取全文。
 
-核心原则：引用一个科研结论前，先核对文献身份、已知撤稿信号、被引数口径和结论原文——而不是凭记忆或二手转述。
+核心原则：引用科研结论前，须核对文献身份、已知撤稿信号、被引数口径以及结论原文，避免凭记忆或二手转述下结论。
 
 ## When to Use
 
@@ -51,7 +51,7 @@ Don't use for: 纯检索发现论文（用 `arxiv` skill）、OCR/解析已下�
 
 ### 第一关：三库交叉核对（真实性 + 被引数）
 
-核对 DOI、标题、作者及版本，记录三个数据库的差异。数据库可能共享出版商/Crossref 数据，不能把一致性当作三个独立证明；被引数不用于判定身份。
+核对 DOI、标题、作者与版本，记录三个数据库的差异。数据库之间可能共享出版商或 Crossref 数据，不能将数据一致性视作三个独立证明；被引数不可用于判定文献身份。
 
 | 库 | 端点 | 关键字段 |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ Crossref 于 2025-01 将 Retraction Watch 信号纳入 REST API（2023-09 是合
 
 1. 查原文 DOI 元数据；标题 `RETRACTED:` / `WITHDRAWN:` 前缀只作需核实信号，普通标题用词不是结论。
 2. 反向查 `https://api.crossref.org/works?filter=updates:<DOI>&rows=100`，逐项核对 `update-to[].DOI` 是否是目标 DOI。超过一页则用 Crossref 自己的 cursor 规则继续，记录截断。
-3. 区分 `retraction`、`withdrawal`、`correction`、`expression-of-concern`，记录 publisher / retraction-watch 来源；不同信号不合并成“撤稿”。
+3. 区分 `retraction`、`withdrawal`、`correction` 与 `expression-of-concern`，记录 publisher 或 retraction-watch 来源；不同信号不合并归为撤稿。
 4. OpenAlex `is_retracted=true` 表示数据库记录的撤稿信号；false 不排除遗漏。arXiv 另查 abs 页及版本历史的 withdrawal 状态；有疑问核对出版社通知或 Retraction Watch 原记录。
 
 以下离线逻辑只提取与目标关联的更新信号，输入须来自已成功查询的 Crossref 记录：
@@ -93,7 +93,7 @@ assert update_signals('10.1234/notice', [fixture]) == []
 assert update_signals('10.1234/original', [{'DOI': '10.1234/original'}]) == []
 ```
 
-查无信号时只报告“在已检查的数据源中未发现撤稿/撤回记录”，附来源、时间、失败/未查项。请求失败不算未发现记录。命中时说明“数据库标记/出版社通知确认”的证据层次；撤稿论文可作为撤稿事件研究对象，不能无说明地当作可靠结论依据。
+查无信号时仅报告“在已检查的数据源中未发现撤稿或撤回记录”，并注明数据来源、查询时间以及失败或未查项目。网络请求失败不等于未发现记录。命中撤稿信号时须说明证据层次；撤稿论文可作为撤稿事件的研究对象，不可在无说明的情况下当作可靠结论依据。
 
 官方依据：[Crossref 集成说明](https://www.crossref.org/blog/retraction-watch-retractions-now-in-the-crossref-api/)、[更新查询过滤器](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/)。
 
@@ -143,7 +143,7 @@ doc.close()
 ## Pitfalls
 
 1. **被引数有来源口径**。预印本与正式版本的合并、重复记录及数据库覆盖都会影响计数，标明来源和查询日；不把某库数值称为真实影响或严格下限。
-2. **Crossref 与 OpenAlex 查 arXiv 的 data-DOI 可能 404/滞后**。`10.48550/arXiv.<id>` 是 DataCite 注册的，Crossref 常返回 404，OpenAlex 偶有收录延迟。遇此情况直接调用 arXiv 官方 API（`http://export.arxiv.org/api/query?id_list=<id>` 或 `search_query=ti:<标题>`）核实标题、摘要、版本历史及撤回（withdrawn）状态。
+2. **Crossref 与 OpenAlex 查 arXiv 的 data-DOI 可能 404/滞后**。`10.48550/arXiv.<id>` 是 DataCite 注册的，Crossref 常返回 404，OpenAlex 偶有收录延迟。遇此情况直接调用 arXiv 官方 API（`http://export.arxiv.org/api/query?id_list=<id>` 或 `search_query=ti:<标题>`）核实标题、摘要、版本历史与撤回（withdrawn）状态。
 3. **经典奠基文献标题易与后继综述撞车**。以简短通用标题（如 "Working Memory"）检索时，极易命中作者多年后的同名回顾篇。核查奠基作须限定出版年份（Crossref `filter=from-pub-date:YYYY-01-01,until-pub-date:YYYY-12-31`）并核对作者序列表。
 4. **Semantic Scholar 无 key 极易 429**。请求间隔 ≥1.1s，失败退避重试；持续 429 就退回 OpenAlex + Crossref 两个来源，并如实说明。
 4. **update-to 非空 ≠ 撤稿**。还须核对更新方向、目标 DOI 与 update.type；更正和表达关注分别记录，不能见 update-to 就报撤稿。

@@ -20,3 +20,7 @@ The separately identified [Nous Research MIT license](tests/upstream/LICENSE) an
 Commit A creates the express application and exact LICENSE; Commit B records A's actual SHA/tree without amending it. [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) and [SLL-APPLICATION.json](SLL-APPLICATION.json) carry the same boundary. The [application notice](LICENSE-APPLICATION.md) supplies the rights-aware scope.
 
 No prior snapshot is retroactively rewritten by this adoption. All valid historical grants and all third-party rights retain their own scope, subject to applicable law. No old commit, tag or release is changed. The root [LICENSE](LICENSE) is the exact English SLL text, not a new license variant.
+
+## Prose cleanup after adoption — 2026-09-16
+
+Skill prose was cleaned (declarative phrasing, punctuation runs, colloquial asides) without semantic change. Frontmatter, code blocks, tables, citation example blocks, versions and hashes stayed byte-identical. The adoption-moment skill body hashes moved from the machine-readable receipt to SOURCE-LINEAGE.md as a historical record; the receipt no longer asserts that current skill bodies equal adoption bodies. The adoption boundary (Commit A `441ab72e85c9ea607680dac7d8abdbd53f163ae4`, tree `91c3d15d167e8bb46010cd45f21b38c7c7d7864d`) is unchanged.

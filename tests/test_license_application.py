@@ -11,6 +11,14 @@ EXPECTED_BLOB = "d24b763a2d3ecbc13c21760c60345b8e9adff33d"
 REF = "LicenseRef-Source-Lineage-1.0"
 
 
+
+HISTORICAL_SKILL_HASHES = {
+    "skills/academic-writing/SKILL.md": "4d0e7839561f0c3b42773e7a9ccb28a62a250c61dfab7e79fca0e77f4c200549",
+    "skills/literature-analysis/SKILL.md": "da7950fae2f84a2dd633a988fed8037bb9fd9e8d9b07a32e05c2546915ab9c62",
+    "skills/math-computation/SKILL.md": "fa05ef5eee571c15e8f842cec4634c83730fdebdc66acabf0c09d60d6121d7c0",
+    "skills/academic-source-verification/SKILL.md": "fe6fa3a8873430d2c99f2535855608f83e97d0733cba0081c948190827a9d962",
+}
+
 class LicenseApplicationTests(unittest.TestCase):
     def setUp(self):
         self.receipt = json.loads((ROOT / "SLL-APPLICATION.json").read_text(encoding="utf-8"))
@@ -111,11 +119,10 @@ class LicenseApplicationTests(unittest.TestCase):
         self.assertIn("do not have to migrate to SLL", history)
         for path, expected in self.receipt["preserved_mit_files"].items():
             self.assertEqual(hashlib.sha256((ROOT/path).read_bytes()).hexdigest(), expected)
-        for path, expected in self.receipt["skill_body_hashes"].items():
-            text = (ROOT/path).read_text(encoding="utf-8")
-            self.assertIn("license: " + REF + "\n", text)
-            old = text.replace("license: " + REF + "\n", "license: MIT\n")
-            self.assertEqual(hashlib.sha256(old.encode()).hexdigest(), expected)
+        lineage = (ROOT / "SOURCE-LINEAGE.md").read_text()
+        for path, expected in HISTORICAL_SKILL_HASHES.items():
+            self.assertIn(path, lineage)
+            self.assertIn(expected, lineage)
 
 
 if __name__ == "__main__":

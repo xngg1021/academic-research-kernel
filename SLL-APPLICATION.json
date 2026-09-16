@@ -23,11 +23,5 @@
     "tests/upstream/provenance.json": "a8371375c4bc3ac8c2603b2cd09665b4e03f3f5a45c70c5107b36ee26104289a",
     "tests/upstream/hermes_authoring_standards.py": "eaf3eadb59a976b53b4eb0e22c9bf31736ee886777b98e497bbbebe7dadb1918",
     "tests/upstream/tap_discovery.py": "891c47ffc97047c4c544d3dd88cea4aedf3edd8c99b91c66f83d243e88fd0084"
-  },
-  "skill_body_hashes": {
-    "skills/academic-writing/SKILL.md": "4d0e7839561f0c3b42773e7a9ccb28a62a250c61dfab7e79fca0e77f4c200549",
-    "skills/literature-analysis/SKILL.md": "da7950fae2f84a2dd633a988fed8037bb9fd9e8d9b07a32e05c2546915ab9c62",
-    "skills/math-computation/SKILL.md": "fa05ef5eee571c15e8f842cec4634c83730fdebdc66acabf0c09d60d6121d7c0",
-    "skills/academic-source-verification/SKILL.md": "fe6fa3a8873430d2c99f2535855608f83e97d0733cba0081c948190827a9d962"
   }
 }

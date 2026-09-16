@@ -13,22 +13,22 @@ metadata:
 
 # 数理计算 Skill
 
-符号计算（sympy）、数值计算（numpy/scipy）、高精度（mpmath）、统计建模（statsmodels/scikit-learn）、数据分析（pandas）、图论（networkx）、自动微分（torch）、科学绘图（matplotlib）、生存分析（lifelines）、波动率建模（arch）、心理测量（pingouin）的统一入口。依赖按任务安装；`terminal` 与 `execute_code` 的解释器/后端可能不同，先打印 `sys.executable` 并核查所需包。
+本技能为各类科学计算任务的统一入口，涵盖符号推导（sympy）、数值分析（numpy 与 scipy）、高精度计算（mpmath）、统计建模（statsmodels 与 scikit-learn）、数据处理（pandas）、图论分析（networkx）、张量求导（torch）、科学可视化（matplotlib）、生存分析（lifelines）、金融波动率建模（arch）以及心理测量分析（pingouin）。相关依赖库按需安装；因 `terminal` 与 `execute_code` 的解释器环境可能不一致，执行前须通过 `sys.executable` 核查实际运行环境与包依赖。
 
-跨学科计算走"领域自动路由"：先识别领域（金融/社科/生物医学/物理工程/纯数统计），再映射任务类型到具体算法与库，领域配方在 `references/domain-recipes-*.md`。各学科共用的底层因子（优化、统计推断、蒙特卡洛、微分方程、时间序列）即"最大公约数"，一次学会全部学科复用。
+跨学科计算采用“领域自动路由”机制：先判定应用领域（涵盖金融、社科、生物医学、物理工程以及数理统计），再将计算需求映射至具体算法与函数库，领域配方详见 `references/domain-recipes-*.md`。各学科通用的数学基础方法（如数值优化、统计推断、蒙特卡洛模拟、微分方程求解以及时间序列分析）构成底层共享能力，便于跨领域复用。
 
 不做：机器学习训练调参（按任务查找专用训练工具；`huggingface-hub`/`llama-cpp` 是可选的模型管理/推理相关技能）、数学动画视频（去 `manim-video` skill）、硬件跑分（使用另行安装并核实的专用工具）。
 
 ## When to Use
 
-- 解方程/方程组、求导/积分/极限/级数、化简、因式分解、矩阵运算/特征值、LaTeX 公式输出 → sympy
-- 数值积分（含重积分）、优化（最小化/拟合/线性规划）、线性方程组、FFT、ODE 初值与边值问题、插值、特殊函数 → scipy/numpy
+- 代数方程求解、微积分与极限计算、表达式化简、因式分解、矩阵运算与特征值分析、LaTeX 公式生成 → sympy
+- 数值积分与重积分、数值优化与线性规划、线性方程组求解、快速傅里叶变换、常微分方程初值与边值问题、数值插值与特殊函数计算 → scipy/numpy
 - 任意精度高精度计算（几十位小数）→ mpmath
-- 描述统计、t 检验/卡方/ANOVA、回归（OLS/WLS/稳健 RLM）、功效分析、时间序列平稳性 → statsmodels + scipy.stats
-- 表格数据读写、分组、透视、清洗 → pandas
-- 图/网络（最短路径、连通性、中心性、最大流）→ networkx
+- 描述统计分析、假设检验（t 检验、卡方检验、方差分析）、回归分析（OLS、WLS、稳健回归）、功效分析与时间序列平稳性检验 → statsmodels + scipy.stats
+- 表格数据读取与写入、数据分组透视与清洗 → pandas
+- 复杂网络与图论分析（最短路径、图连通性、网络中心性、最大流计算）→ networkx
 - 梯度/自动微分、张量运算 → torch
-- 出图（函数曲线、散点、直方图、3D、拟合线、热力图）→ matplotlib
+- 科学图表绘制（函数曲线图、散点图、直方图、三维曲面图、拟合线图、热力图）→ matplotlib
 
 Don't use for: 纯算术四则运算（直接算）、需要联网查数据（用 web_search）、要发给用户的图片需先存文件再说明路径。
 

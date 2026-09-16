@@ -6,14 +6,14 @@
 
 旧 Papers with Code v1 API 不作为稳定依赖；单次返回 HTML 不足以证明永久停用。优先论文主页确认当前代码/数据地址，备选路径三条：
 
-1. **GitHub 搜索**（首选）：`gh search repos "<论文名>" --limit 10` 或 `gh search repos "<方法名> <第一作者>"`；优先官方实现（作者本人账号），其次高 star 复现仓库（star 数、最近提交时间、issue 活跃度三个信号）。
+1. **GitHub 搜索**（首选）：`gh search repos "<论文名>" --limit 10` 或 `gh search repos "<方法名> <第一作者>"`；优先参考官方实现（作者本人或实验室账号），其次选择受关注度高的开源复现仓库（结合关注度、最近更新时间以及 issue 响应情况综合评估）。
 2. **HuggingFace 数据集**：用 `huggingface-hub` 技能查论文 benchmarks 用的数据集是否公开。
 3. **网页检索**：`web_search "<论文名> official code github"`，论文主页（项目页）通常直接放仓库链接。
 
 ## 流程
 
 1. 拿到论文的 arXiv ID/DOI，先查论文主页与 GitHub 仓库。
-2. 下载仓库 → 读 README → 确认环境要求（python 版本、依赖清单、GPU 内存）。
+2. 获取仓库代码后查阅说明文档，明确运行环境需求（包括 Python 版本、核心依赖列表以及 GPU 显存需求）。
 3. 找数据集：README 的下载链接或 HF 数据集 id；需要申请的数据集如实告知用户。
 4. 跑最小示例（demo/quickstart），不跑全量训练。
 5. 报结果：跑通就报"最小示例通过 + 环境 + 耗时"；跑不通报具体报错与已排查的步骤，不假装成功。

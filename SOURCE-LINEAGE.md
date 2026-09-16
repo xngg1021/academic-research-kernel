@@ -22,3 +22,17 @@ This is repository-level Source Lineage Information for the material identified 
 The material in tests/upstream/ remains under its separately supplied Nous Research MIT license and provenance records; the root SLL offer does not replace those terms. The preserved LICENSES/MIT-pre-SLL.txt records this project's former root MIT license. Historical audit records describe their original snapshots. All other third-party material remains under its own applicable rights and terms.
 
 Known prior boundary: MIT The record identifies only known repository evidence and does not invent a complete authorship or assignment chain. This application uses the canonical SLL commit above; no tag or GitHub Release is created or assumed.
+
+
+## Skill body hashes at SLL adoption — historical record
+
+Recorded 2026-09-16, when the prose-cleanup branch changed current skill prose, so the adoption-moment bodies remain independently verifiable. Each hash is the SHA-256 of the SKILL.md body at the pre-SLL terminal MIT snapshot `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` (equivalently, the first SLL snapshot with its license field restored to `license: MIT`).
+
+| Skill file | SHA-256 at adoption |
+|---|---|
+| skills/academic-writing/SKILL.md | `4d0e7839561f0c3b42773e7a9ccb28a62a250c61dfab7e79fca0e77f4c200549` |
+| skills/literature-analysis/SKILL.md | `da7950fae2f84a2dd633a988fed8037bb9fd9e8d9b07a32e05c2546915ab9c62` |
+| skills/math-computation/SKILL.md | `fa05ef5eee571c15e8f842cec4634c83730fdebdc66acabf0c09d60d6121d7c0` |
+| skills/academic-source-verification/SKILL.md | `fe6fa3a8873430d2c99f2535855608f83e97d0733cba0081c948190827a9d962` |
+
+Current skill files evolve independently; the adoption boundary is unchanged. The machine-readable receipt no longer asserts that current bodies equal adoption bodies.
