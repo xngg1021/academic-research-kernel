@@ -77,5 +77,7 @@ CI runs the full QA suite on Ubuntu (Python 3.12 and 3.13), Windows and macOS vi
 
 ## Research and planning documents
 
-- [Pain atlas v0 (English)](docs/pain-atlas-v0.en.md), [中文版](docs/pain-atlas-v0.zh.md): friction points across the academic knowledge work life cycle, with source verification states for quantitative claims.
-- [Research plan v0 (English)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): fourteen architectural primitives, the Research Object model, four planes, candidate directions and the phase-one factor decomposition matrix.
+These two documents are exploratory planning references, not a binding roadmap. Their direction numbers are recomputed from the stored grouping in docs/direction-primitive-mapping.json.
+
+- [Pain Atlas v0 (English)](docs/pain-atlas-v0.en.md), [中文版](docs/pain-atlas-v0.zh.md): friction points across the academic knowledge-work life cycle, with verification states attached to quantitative claims.
+- [Research Plan v0 (English)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): fourteen architectural primitives, the Research Object model, four planes, candidate directions and the phase-one factor decomposition matrix.

@@ -60,5 +60,7 @@ CI 经 GitHub Actions 在 Ubuntu（Python 3.12 与 3.13）、Windows 与 macOS �
 
 ## 研究与规划文档
 
+这两份文档是探索性规划参考，不是强制路线图。其中的方向数字按 docs/direction-primitive-mapping.json 的入库归组重算。
+
 - [痛点图集 v0（英文）](docs/pain-atlas-v0.en.md)与[中文版](docs/pain-atlas-v0.zh.md)：按生命周期枚举学术知识工作摩擦，定量论断标注核实状态。
 - [研究计划 v0（英文）](docs/research-plan-v0.en.md)与[中文版](docs/research-plan-v0.zh.md)：十四原语架构、Research Object 模型、四平面、候选方向与阶段一因子分解矩阵。

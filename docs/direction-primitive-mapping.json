@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "description": "Machine-readable grouping of the fourteen primitives into the six candidate directions. This closes the evidence gap identified in the 2026-09-17 agenda audit: the direction coverage numbers 146/138/136 were computed from an oral grouping that was never stored. Each direction defines a core set (exact-match membership rule), an extended set (candidates for the sensitivity analysis), and a written rationale.",
+  "primitives_source": "docs/factor-matrix.json",
+  "directions": [
+    {
+      "id": "identity-lineage",
+      "name": "Research Object Identity and Lineage",
+      "core_primitives": [1, 2],
+      "extended_primitives": [6],
+      "rationale": "Canonical identity resolution (1) and provenance lineage (2) are the direction's two named pillars. Normalization (6) serves identity directly and is included in the extended set only.",
+      "membership_rule": "An item is covered if its primitive set intersects the direction's primitive set (union of core and extended, per sensitivity run)."
+    },
+    {
+      "id": "method-supplement-miner",
+      "name": "Method / Supplement Miner",
+      "core_primitives": [2, 10],
+      "extended_primitives": [8],
+      "rationale": "Method lineage is a subset of provenance (2); supplement cross-referencing is cross-artifact linking (10). Coverage-map accounting of figures and supplements (8) is the extended candidate."
+    },
+    {
+      "id": "claim-evidence-graph",
+      "name": "Claim-Evidence Graph",
+      "core_primitives": [5, 10],
+      "extended_primitives": [12],
+      "rationale": "The claim-citation-evidence chain consumes Evidence Receipts (5) and links claim to work to passage (10). Items whose support state is genuinely undecidable route to the uncertainty queue (12), hence extended only."
+    },
+    {
+      "id": "decision-negative-ledger",
+      "name": "Decision / Negative Result Ledger",
+      "core_primitives": [3],
+      "extended_primitives": [2],
+      "rationale": "The ledger is a state ledger (3). Decision evolution over time can draw on lineage (2); included in the extended set to test whether it changes the ranking."
+    },
+    {
+      "id": "learning-adaptive",
+      "name": "Learning Error + Adaptive Practice",
+      "core_primitives": [14],
+      "extended_primitives": [9],
+      "rationale": "Error taxonomy and adaptive practice are the adaptive practice engine (14). Retrieval and resurfacing (9) support forgetting curves and spaced practice; extended only."
+    },
+    {
+      "id": "constraint-compiler",
+      "name": "Constraint Compiler",
+      "core_primitives": [7],
+      "extended_primitives": [11],
+      "rationale": "Rule compilation is the constraint compiler (7). Verifying the compiled artifact deterministically is the verifier (11); extended only."
+    }
+  ]
+}

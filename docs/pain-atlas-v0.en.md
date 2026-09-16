@@ -6,6 +6,8 @@ Status: working inventory. Compiled 2026-09-16. Sources are community discussion
 
 The atlas enumerates friction in academic knowledge work across the research life cycle, from discovery to maintenance and learning. Items were collected by cross-model synthesis of public sources. The atlas is enumerative: it does not rank pain points by frequency, and it does not claim that a listed friction is unsolved by all existing tools. Relative coverage of architectural primitives is the subject of the factor decomposition matrix in the research plan (docs/research-plan-v0.en.md).
 
+Provenance note (added 2026-09-17 after the agenda audit): the synthesizing models and the cross-confirmation method behind each individual item were not recorded at compilation time. From this revision on, every newly added item must name its source model and confirmation method. For the existing items, the quantitative claims continue to be governed by the source verification record in section 2.
+
 ## 2. Source verification record
 
 | Claim | State | Source |

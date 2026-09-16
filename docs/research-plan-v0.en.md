@@ -79,24 +79,26 @@ Before any new skill is built, the candidate selection is grounded in measuremen
 
 The matrix measures which primitives absorb the largest share of enumerated friction. It replaces intuition about which skill to build next with a recorded, revisable mapping.
 
-### 6.1 Phase 1 result (2026-09-17)
+### 6.1 Phase 1 result, recomputed from stored grouping (2026-09-17)
 
-The matrix maps all 235 pain-atlas items to the fourteen primitives, one to three primitives per item with a one-line rationale, programmatically verified as lossless against the atlas. Coverage leverage per candidate direction:
+The matrix maps all 235 pain-atlas items to the fourteen primitives, one to three primitives per item with a one-line rationale, programmatically verified as lossless against the atlas. The 2026-09-17 agenda audit found that the previously quoted coverage figures (146/138/136) came from an oral primitive-to-direction grouping that was never stored and cannot be reproduced. The grouping is now machine-readable in docs/direction-primitive-mapping.json (core and extended primitive sets per direction, with rationale), and coverage is recomputed by scripts/recompute_direction_coverage.py under three runs: single (first core primitive only), core, and baseline (core plus extended).
 
-| Direction | Items covered | Share |
-| --- | --- | --- |
-| Research Object Identity and Lineage | 146 / 235 | 62.1% |
-| Method and Supplement Miner | 138 / 235 | 58.7% |
-| Claim-Evidence Graph | 136 / 235 | 57.9% |
-| Decision and Negative Result Ledger | 83 / 235 | 35.3% |
-| Learning Error Taxonomy and Adaptive Practice | 77 / 235 | 32.8% |
-| Constraint Compiler | 57 / 235 | 24.3% |
+| Direction | single | core | baseline |
+| --- | --- | --- | --- |
+| Research Object Identity and Lineage | 34 (14.5%) | 64 (27.2%) | 88 (37.4%) |
+| Method / Supplement Miner | 30 (12.8%) | 59 (25.1%) | 85 (36.2%) |
+| Decision / Negative Result Ledger | 36 (15.3%) | 36 (15.3%) | 63 (26.8%) |
+| Claim-Evidence Graph | 15 (6.4%) | 47 (20.0%) | 58 (24.7%) |
+| Constraint Compiler | 18 (7.7%) | 18 (7.7%) | 49 (20.9%) |
+| Learning Error + Adaptive Practice | 20 (8.5%) | 20 (8.5%) | 29 (12.3%) |
 
-Primitive-level coverage is led by State Ledger (36), Deterministic Verifier (36), Canonical Identity Resolver (34), Normalization Layer (32), Cross-artifact Linker (32) and Provenance / Lineage (30). The top three directions are close (62.1, 58.7, 57.9); there is a steep drop to the fourth (35.3). The recorded recommendation is to start the next round with Research Object Identity and Lineage; the final choice belongs to the maintainer, and the matrix remains revisable as the atlas evolves.
+Rank stability: Identity and Method hold the top three under all three runs; Identity ranks first under core and baseline and second under single, where the Decision ledger leads. The previously quoted 146/138/136 figures are void and must not be cited anywhere.
 
-### 6.2 Phase 1.5: leverage gate (2026-09-17)
+Primitive-level coverage is led by State Ledger (36), Deterministic Verifier (36), Canonical Identity Resolver (34), Normalization Layer (32), Cross-artifact Linker (32) and Provenance / Lineage (30). The recorded recommendation to start with Research Object Identity and Lineage no longer rests on a single share figure: it rests on three-run rank stability plus the leverage judgments in 6.2. The build queue (Claim-Evidence Graph next, then Method / Supplement Miner) is frozen pending re-evaluation against real usage feedback; the final choice belongs to the maintainer, and the matrix and grouping remain revisable as the atlas evolves.
 
-Coverage share alone is not development priority: the top three directions differ by only 4.2 percentage points, and coverage counts favor abstract primitives. The gate adds eight parallel dimensions for the top three directions. These are recorded judgments, not measurements, and they are never combined into a score.
+### 6.2 Phase 1.5: leverage judgments, downgraded from a gate (2026-09-17)
+
+Coverage share alone is not development priority, and coverage counts favor abstract primitives. The 2026-09-17 agenda audit downgraded this table from a gate to recorded judgments: it no longer gates the build queue, and the cells are never combined into a score. Each cell states the judgment together with its basis in existing repository assets; the recorder is the maintainer, and the basis claims are checkable against the repository.
 
 | Dimension | Identity + Lineage | Claim-Evidence Graph | Method / Supplement Miner |
 | --- | --- | --- | --- |
@@ -109,7 +111,7 @@ Coverage share alone is not development priority: the top three directions diffe
 | Immediate user utility | Medium: normalization and dedup usable standalone | High: writing and review tasks | High: supplement navigation |
 | Downstream unlocks | High: unblocks both other directions | High: consumes resolver | High: consumes resolver and linker |
 
-The gate's conclusion: Identity + Lineage has the strongest execution position (deterministic, testable, reusable, low fragility, highest centrality) and is the recorded starting point; Claim-Evidence Graph and Method / Supplement Miner follow as consumers, not as competing products.
+The recorded judgment: Identity + Lineage has the strongest execution position (deterministic, testable, reusable, low fragility, highest centrality) and remains the recorded starting point. The A-to-B-to-C consumer chain originally proposed by ChatGPT is frozen; any successor direction must pass the audit procedure again (stored grouping, recomputed coverage, leverage judgments) before work starts.
 
 ## 7. Design discipline
 
@@ -131,6 +133,7 @@ This structure is the alternative to handing a PDF to a model and asking for ana
 - Tests cover the new code and its regression surface; full suite must pass locally and in CI.
 - SLL credential files remain untouched; any schema or receipt change keeps the historical records intact.
 - Documentation is updated in both language editions before merge; new quantitative claims are source-verified first.
+- New quantitative claims ship with a machine-readable grouping and a recompute script; numbers without a reproducible artifact must not be cited as evidence (added 2026-09-17 after the agenda audit).
 
 ## 9. Relation to other projects
 
