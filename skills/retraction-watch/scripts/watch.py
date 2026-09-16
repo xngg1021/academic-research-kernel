@@ -9,7 +9,9 @@ watchlist JSON 结构：
 
 信号来源（均为 live 函数，只在 --run 下发起真实 HTTPS 请求）：
 - OpenAlex work 的 is_retracted 布尔字段；
-- Crossref message.relation 中含 retract 的关系（is-retraction-of 等）。
+- Crossref updates:<DOI> 反向查询：命中记录的 update-to 字段中指向目标 DOI 的
+  撤稿/撤回/更正/表达关注条目（与 academic-source-verification/scripts/
+  check_updates.py 的 update_signals 语义一致）。
 状态文件记录每个 DOI 上次的状态快照；本次与上次一致则保持静默。
 纯标准库，无第三方依赖。
 """
@@ -44,20 +46,29 @@ def load_watchlist(path) -> list:
     return [normalize_doi(d) for d in dois if str(d).strip()]
 
 
-def retraction_relations(relation: dict) -> list:
-    """从 Crossref relation 字典提取撤稿相关关系名。"""
+def update_signals_from_records(records: list, target_doi: str) -> list:
+    """从 Crossref 反向查询结果提取指向目标 DOI 的更新信号。
+
+    语义与 check_updates.py 的 update_signals 一致：只看 update-to 中
+    DOI 等于目标 DOI 的条目，按 type 与 source 产出类型化信号串，如
+    'retraction(publisher)'、'retraction(retraction-watch)'。
+    """
+    target = normalize_doi(target_doi)
     found = []
-    for key in relation or {}:
-        if 'retract' in str(key).lower():
-            found.append(str(key))
-    return sorted(found)
+    for record in records:
+        for update in record.get('update-to') or []:
+            if normalize_doi(update.get('DOI') or '') == target:
+                kind = str(update.get('type') or 'update')
+                source = str(update.get('source') or 'unknown')
+                found.append(f'{kind}({source})')
+    return sorted(set(found))
 
 
-def snapshot_from_signals(is_retracted, relations) -> dict:
+def snapshot_from_signals(is_retracted, signals) -> dict:
     """把两个来源的信号合并为可比较的状态快照。"""
     return {
         'is_retracted': bool(is_retracted),
-        'relations': sorted(set(relations)),
+        'signals': sorted(set(signals)),
     }
 
 
@@ -67,12 +78,12 @@ def diff_snapshots(old: dict, new: dict) -> list:
     old_r, new_r = bool(old.get('is_retracted')), bool(new.get('is_retracted'))
     if old_r != new_r:
         changes.append(f'is_retracted: {old_r} -> {new_r}')
-    added = sorted(set(new.get('relations', [])) - set(old.get('relations', [])))
-    removed = sorted(set(old.get('relations', [])) - set(new.get('relations', [])))
-    for rel in added:
-        changes.append(f'新增 Crossref 关系: {rel}')
-    for rel in removed:
-        changes.append(f'消失 Crossref 关系: {rel}')
+    added = sorted(set(new.get('signals', [])) - set(old.get('signals', [])))
+    removed = sorted(set(old.get('signals', [])) - set(new.get('signals', [])))
+    for sig in added:
+        changes.append(f'新增 Crossref 更新信号: {sig}')
+    for sig in removed:
+        changes.append(f'消失 Crossref 更新信号: {sig}')
     return changes
 
 
@@ -112,18 +123,18 @@ def get(url: str, timeout: int = 20) -> dict:
 
 
 def check_doi(doi: str) -> dict:
-    """live: 合并 OpenAlex is_retracted 与 Crossref relation 两个信号。"""
-    relations, is_retracted = [], False
+    """live: 合并 OpenAlex is_retracted 与 Crossref updates:<DOI> 反向查询信号。"""
+    signals, is_retracted = [], False
     try:
         data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=is_retracted')
         is_retracted = bool(data.get('is_retracted'))
     except HTTPError as exc:
         if exc.code != 404:
             raise
-    data = get(f'{CROSSREF}/works/{quote(doi, safe="")}?select=relation,type')
-    msg = data.get('message') or {}
-    relations = retraction_relations(msg.get('relation') or {})
-    return snapshot_from_signals(is_retracted, relations)
+    data = get(f'{CROSSREF}/works?filter=updates:{quote(doi, safe="")}&rows=100')
+    records = (data.get('message') or {}).get('items') or []
+    signals = update_signals_from_records(records, doi)
+    return snapshot_from_signals(is_retracted, signals)
 
 
 def run(watchlist_path, state_path) -> int:
@@ -139,7 +150,7 @@ def run(watchlist_path, state_path) -> int:
         old = state.get(doi)
         if old is None:
             print(f'- {doi}: 首次建档（is_retracted={new["is_retracted"]}, '
-                  f'relations={new["relations"] or "无"}）')
+                  f'signals={new["signals"] or "无"}）')
             reports += 1
         else:
             changes = diff_snapshots(old, new)
@@ -162,14 +173,19 @@ def self_test() -> int:
                        encoding='utf-8')
     assert load_watchlist(fixture) == ['10.1/abc', '10.2/def']
     fixture.unlink()
-    rel = {'is-retraction-of': [{'id': '10.9/x'}], 'cites': [{'id': '10.9/y'}],
-           'has-preprint': [{'id': '10.9/z'}]}
-    assert retraction_relations(rel) == ['is-retraction-of']
+    records = [
+        {'update-to': [{'DOI': '10.9/other', 'type': 'retraction', 'source': 'publisher'}]},
+        {'update-to': [{'DOI': '10.1/abc', 'type': 'retraction', 'source': 'retraction-watch'}]},
+        {'update-to': [{'DOI': '10.1/abc', 'type': 'correction', 'source': 'publisher'}]},
+    ]
+    assert update_signals_from_records(records, '10.1/abc') == [
+        'correction(publisher)', 'retraction(retraction-watch)']
+    assert update_signals_from_records(records, '10.9/other') == ['retraction(publisher)']
     old = snapshot_from_signals(False, [])
-    new = snapshot_from_signals(True, ['is-retraction-of'])
+    new = snapshot_from_signals(True, ['retraction(retraction-watch)'])
     changes = diff_snapshots(old, new)
     assert any('is_retracted' in c for c in changes), changes
-    assert any('is-retraction-of' in c for c in changes), changes
+    assert any('retraction(retraction-watch)' in c for c in changes), changes
     assert diff_snapshots(new, dict(new)) == [], '相同快照必须静默'
     print('SKIP live OpenAlex/Crossref checks (offline self-test)')
     print('retraction-watch self-test PASS')

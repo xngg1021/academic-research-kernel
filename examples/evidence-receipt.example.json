@@ -39,10 +39,10 @@
       "support_status": "supported"
     },
     {
-      "claim": "The work is not retracted as of the query date.",
+      "claim": "No retraction signal was found in the successfully queried Crossref update records as of the query date.",
       "evidence_type": "update_signal",
       "source": "Crossref",
-      "locator": "update-to",
+      "locator": "updates filter, update-to entries",
       "support_status": "supported"
     }
   ],

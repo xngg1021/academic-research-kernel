@@ -246,7 +246,7 @@ def trim_and_fill(yi, vi, side: str = 'left', maxiter: int = 100) -> dict:
 
 
 def egger_test(yi, vi) -> tuple[float, float, float]:
-    """Egger 回归检验:标准正态离差 SND = y/√v 对精度 1/√v 加权回归。
+    """Egger 回归检验:标准正态离差 SND = y/√v 对精度 1/√v 的 OLS 回归。
 
     返回 (截距, t 值, 双侧 p 值);截距显著偏离 0 提示漏斗图不对称。
     研究数 < 3 时自由度为 0,返回 p = nan。

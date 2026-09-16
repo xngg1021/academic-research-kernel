@@ -102,7 +102,31 @@ def test_watch_script_is_stdlib_only(name):
 
 def test_state_files_are_json_round_trippable(tmp_path):
     """两个脚本的状态写入格式都是 JSON，可被对方之外的工具读取。"""
-    for payload in ({'10.1/a': {'is_retracted': False, 'relations': []}}, ['doi:10.1/a']):
+    for payload in ({'10.1/a': {'is_retracted': False, 'signals': []}}, ['doi:10.1/a']):
         path = tmp_path / 'state.json'
         path.write_text(json.dumps(payload), encoding='utf-8')
         assert json.loads(path.read_text(encoding='utf-8')) == payload
+
+
+def test_retraction_watch_uses_update_to_not_relation():
+    """回归测试:撤稿信号必须来自 updates:<DOI> 的 update-to 条目。
+
+    早期版本曾查 Crossref relation 字段找 retract 键,漏掉 Retraction
+    Watch 数据模型里位于更新记录 update-to 的撤稿条目;relation 字段
+    本身不构成撤稿信号。
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        'watch', ROOT / 'skills' / 'retraction-watch' / 'scripts' / 'watch.py')
+    watch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(watch)
+
+    target = '10.1177/1758835920922055'
+    records = [
+        {'update-to': [{'DOI': target, 'type': 'retraction', 'source': 'retraction-watch'}]},
+        {'relation': {'is-retraction-of': [{'id': target}]}},
+        {'update-to': [{'DOI': '10.9/other', 'type': 'retraction', 'source': 'publisher'}]},
+    ]
+    signals = watch.update_signals_from_records(records, target)
+    assert signals == ['retraction(retraction-watch)'], signals
+    assert 'is-retraction-of' not in ''.join(signals)
