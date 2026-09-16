@@ -56,7 +56,7 @@ def normalize(kind: str, value: Any) -> str:
     if not text:
         return ''
     if kind == 'doi':
-        text = re.sub(r'^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)', '', text, flags=re.I)
+        text = re.sub(r'^(?:https?://(?:dx\.)?doi\.org/|doi:\s*|doi\.org/)', '', text, flags=re.I)
         return text.strip().lower()
     if kind == 'arxiv_id':
         text = re.sub(r'^https?://arxiv\.org/(?:abs|pdf)/', '', text, flags=re.I)
@@ -66,6 +66,8 @@ def normalize(kind: str, value: Any) -> str:
         return text.strip().lower()
     if kind == 'pmid':
         return re.sub(r'\D', '', text)
+    if kind == 'pmcid':
+        return re.sub(r'\s', '', text).upper()
     if kind == 'openalex_id':
         text = text.rstrip('/')
         if '/' in text:
@@ -73,14 +75,21 @@ def normalize(kind: str, value: Any) -> str:
         return text.strip().upper()
     if kind == 'orcid':
         text = re.sub(r'^https?://orcid\.org/', '', text, flags=re.I)
+        text = re.sub(r'[^0-9Xx]', '', text)
         return text.strip().upper()
+    if kind in ('isbn', 'issn'):
+        return re.sub(r'[^0-9Xx]', '', text).upper()
+    if kind == 'handle':
+        return re.sub(r'^https?://hdl\.handle\.net/', '', text, flags=re.I).strip()
+    if kind == 'url':
+        return text.rstrip('/').strip()
     return text
 
 
 def normalize_title(text: Any) -> str:
-    """标题规范文本：小写折叠、去标点（保留中日韩字符）、压缩空白。"""
+    """标题规范文本:小写折叠、去标点(保留中日韩字符)、压缩空白。"""
     text = str(text or '').casefold()
-    text = re.sub(r'[^a-z0-9一-鿿]+', ' ', text)
+    text = re.sub(r'[^a-z0-9\u4e00-\u9fff\uac00-\ud7af]+', ' ', text)
     return ' '.join(text.split())
 
 
@@ -125,14 +134,18 @@ def judge(facts: dict) -> str:
 
 
 def _record_identifiers(record: dict) -> list:
-    """提取记录的 (kind, raw, normalized) 三元组；normalized 一律重算。"""
+    """提取记录的 (kind, raw, normalized) 三元组;normalized 一律经 normalize 重算。"""
     out = []
     for item in record.get('identifiers') or []:
         if not isinstance(item, dict):
             continue
         kind = str(item.get('type') or '').strip()
         raw = str(item.get('value') or '').strip()
-        norm = normalize(kind, raw) if raw else str(item.get('normalized') or '').strip()
+        if raw:
+            norm = normalize(kind, raw)
+        else:
+            carried = str(item.get('normalized') or '').strip()
+            norm = normalize(kind, carried)
         if kind and norm:
             out.append((kind, raw or norm, norm))
     return out
@@ -158,15 +171,24 @@ def resolve(records: list) -> dict:
         'match_fields': [],
         'conflict_fields': [],
         'sources': [],
+        'uncertainty': [],
         'human_confirmed': False,
     }
     for r in records:
         if r.get('source'):
-            result['sources'].append({'source': r['source'], 'queried_at': r.get('queried_at')})
-        if result['object_type'] == 'Work' and r.get('object_type'):
-            result['object_type'] = r['object_type']
+            result['sources'].append({'source': r['source'], 'queried_at': r.get('queried_at'),
+                                      'status': 'ok'})
     if not records:
         return result
+    seen_types = {str(r.get('object_type') or '') for r in records}
+    seen_types.discard('')
+    if len(seen_types) > 1:
+        result['conflict_fields'].append('object_type')
+        result['uncertainty'].append({'item': 'object_type disagreement',
+                                      'kind': 'object_type_conflict', 'needs_human': True})
+        result['object_type'] = sorted(seen_types)[0]
+    elif seen_types:
+        result['object_type'] = sorted(seen_types)[0]
 
     by_kind: dict = {}
     per_record_pairs = []
@@ -174,13 +196,13 @@ def resolve(records: list) -> dict:
         pairs = _record_identifiers(r)
         per_record_pairs.append({(k, n) for k, _, n in pairs})
         for kind, raw, norm in pairs:
-            by_kind.setdefault(kind, {})[norm] = raw
+            by_kind.setdefault(kind, {}).setdefault(norm, set()).add(raw)
 
     conflict_fields = sorted(kind for kind, values in by_kind.items() if len(values) > 1)
     for kind in sorted(by_kind):
         for norm in sorted(by_kind[kind]):
             result['merged_identifiers'].append(
-                {'type': kind, 'value': by_kind[kind][norm], 'normalized': norm})
+                {'type': kind, 'value': sorted(by_kind[kind][norm])[0], 'normalized': norm})
 
     pair_counts: dict = {}
     for pairs in per_record_pairs:
@@ -193,7 +215,7 @@ def resolve(records: list) -> dict:
     years = [str(r.get('year') or '') for r in records]
 
     title_all = all(titles) and len(set(titles)) == 1
-    authors_all = all(authors) and all(a == authors[0] for a in authors)
+    authors_all = all(authors) and all(set(a) == set(authors[0]) for a in authors)
     year_all = all(years) and len(set(years)) == 1
 
     match_fields = list(shared_kinds)
@@ -227,21 +249,25 @@ def resolve(records: list) -> dict:
     }
     result['verdict'] = judge(facts)
     result['match_fields'] = sorted(set(match_fields))
-    result['conflict_fields'] = sorted(set(conflict_fields))
+    result['conflict_fields'] = sorted(set(conflict_fields) | set(result['conflict_fields']))
     return result
 
 
 def link(a: dict, b: dict, kind: str, evidence: dict) -> dict:
-    """在 a、b 两个对象之间建边并双向回填，返回所建的边。
+    """在 a 到 b 之间建有方向的边,返回所建的边。
 
-    kind 属于 RELATION_KINDS 时写入双方的 relations（互指对方 object_id）；
-    属于 LINEAGE_KINDS 时写入双方的 lineage（from=a，to=b，方向保留在边内）。
+    kind 属于 RELATION_KINDS 时只写入 a 的 relations(方向 a→b);
+    反向断言不自动回填,需要反向关系时由调用者显式 link(b, a)。
+    属于 LINEAGE_KINDS 时写入双方的 lineage(from=a,to=b,方向保留在边内)。
+    a 与 b 的 object_id 相同则抛 ValueError。
     evidence 必须含 source、queried_at、match_fields、conflict_fields、
-    human_confirmed 五个键，缺一抛 ValueError。
+    human_confirmed 五个键,缺一抛 ValueError。
     """
     missing = [key for key in EVIDENCE_KEYS if key not in (evidence or {})]
     if missing:
         raise ValueError(f'evidence missing keys: {missing}')
+    if (a or {}).get('object_id') == (b or {}).get('object_id'):
+        raise ValueError('cannot link an object to itself')
     ev = {
         'source': evidence['source'],
         'queried_at': evidence['queried_at'],
@@ -251,9 +277,7 @@ def link(a: dict, b: dict, kind: str, evidence: dict) -> dict:
     }
     if kind in RELATION_KINDS:
         forward = {'target_object_id': b['object_id'], 'kind': kind, 'evidence': dict(ev)}
-        backward = {'target_object_id': a['object_id'], 'kind': kind, 'evidence': dict(ev)}
         a.setdefault('relations', []).append(forward)
-        b.setdefault('relations', []).append(backward)
         return forward
     if kind in LINEAGE_KINDS:
         edge = {'from_object_id': a['object_id'], 'to_object_id': b['object_id'],
@@ -308,24 +332,42 @@ def from_canonical_work(cw: Any) -> dict:
 
 
 def consume_receipt(receipt: dict) -> dict:
-    """消费 Evidence Receipt 1.0，产出 source_observations 与 uncertainty。
+    """消费 Evidence Receipt 1.0,产出 source_observations 与 uncertainty。
 
-    映射规则（离散、无评分）：
-    - sources -> source_observations（source/queried_at/status/raw_identifier 直传）；
-    - support_status=contradicted 的 claim -> uncertainty，needs_human=True；
-    - support_status=unverifiable 的 claim -> uncertainty，needs_human=False；
-    - conflicts 每条 -> uncertainty(kind=receipt_conflict)，needs_human=True；
-    - failures 每条 -> uncertainty(kind=query_failure)，needs_human=False。
+    映射规则(离散、无评分):
+    - schema_version 非 1.0 时全部内容进 uncertainty,
+      kind=unsupported_schema_version,needs_human=True;
+    - sources -> source_observations(source/queried_at/status/coverage/
+      raw_identifier 直传);
+    - support_status=contradicted 的 claim -> uncertainty,needs_human=True;
+    - support_status=unverifiable 的 claim -> uncertainty,needs_human=False;
+    - support_status=out_of_scope 的 claim -> uncertainty,
+      kind=out_of_scope_claim,needs_human=False(不静默丢弃);
+    - conflicts 每条 -> uncertainty(kind=receipt_conflict),needs_human=True;
+    - failures 每条 -> uncertainty(kind=query_failure),needs_human=False。
     """
     observations = []
+    uncertainty = []
+    if (receipt or {}).get('schema_version') != '1.0':
+        for s in (receipt or {}).get('sources') or []:
+            observations.append({
+                'source': s.get('source', ''),
+                'queried_at': s.get('queried_at', ''),
+                'status': s.get('status', 'skipped'),
+                'coverage': s.get('coverage'),
+                'raw_identifier': s.get('raw_identifier'),
+            })
+        uncertainty.append({'item': 'unsupported schema_version',
+                            'kind': 'unsupported_schema_version', 'needs_human': True})
+        return {'source_observations': observations, 'uncertainty': uncertainty}
     for s in (receipt or {}).get('sources') or []:
         observations.append({
             'source': s.get('source', ''),
             'queried_at': s.get('queried_at', ''),
             'status': s.get('status', 'skipped'),
+            'coverage': s.get('coverage'),
             'raw_identifier': s.get('raw_identifier'),
         })
-    uncertainty = []
     for c in (receipt or {}).get('claims') or []:
         status = c.get('support_status')
         if status == 'contradicted':
@@ -334,6 +376,9 @@ def consume_receipt(receipt: dict) -> dict:
         elif status == 'unverifiable':
             uncertainty.append({'item': c.get('claim', ''),
                                 'kind': 'unverifiable_claim', 'needs_human': False})
+        elif status == 'out_of_scope':
+            uncertainty.append({'item': c.get('claim', ''),
+                                'kind': 'out_of_scope_claim', 'needs_human': False})
     for text in (receipt or {}).get('conflicts') or []:
         uncertainty.append({'item': text, 'kind': 'receipt_conflict', 'needs_human': True})
     for text in (receipt or {}).get('failures') or []:
@@ -347,7 +392,7 @@ if __name__ == '__main__':
     assert normalize('arxiv_id', 'arXiv:2310.15264v2') == '2310.15264'
     assert normalize('pmid', 'PMID: 38123654') == '38123654'
     assert normalize('openalex_id', 'https://openalex.org/W2123456789') == 'W2123456789'
-    assert normalize('orcid', 'https://orcid.org/0000-0002-1825-0097') == '0000-0002-1825-0097'
+    assert normalize('orcid', 'https://orcid.org/0000-0002-1825-0097') == '0000000218250097'
 
     _rec_a = {'identifiers': [{'type': 'doi', 'value': '10.1038/nature12373'}],
               'title': 'Attention Is All You Need', 'authors': ['Vaswani, Ashish'],
@@ -371,6 +416,19 @@ if __name__ == '__main__':
         'match_fields': ['title'], 'conflict_fields': [], 'human_confirmed': False})
     assert _obj_a['lineage'] and _obj_b['lineage'], 'lineage 双向回填'
     assert _edge['from_object_id'] == _obj_a['object_id']
+    _cite = link(_obj_a, _obj_b, 'cites', {
+        'source': 'Crossref', 'queried_at': '2026-09-17T00:02:01Z',
+        'match_fields': [], 'conflict_fields': [], 'human_confirmed': False})
+    assert _cite['target_object_id'] == _obj_b['object_id']
+    assert all(e['target_object_id'] != _obj_a['object_id'] or e['kind'] != 'cites'
+               for e in _obj_b['relations']), 'relations 不得反向回填'
+    try:
+        link(_obj_a, _obj_a, 'cites', {'source': 'x', 'queried_at': 't',
+                                       'match_fields': [], 'conflict_fields': [],
+                                       'human_confirmed': False})
+        raise AssertionError('self-link must raise')
+    except ValueError:
+        pass
 
     _out = consume_receipt({'sources': [{'source': 'OpenAlex', 'queried_at': '2026-09-17T00:03:00Z',
                                          'status': 'ok', 'raw_identifier': None}],

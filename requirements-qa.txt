@@ -13,4 +13,5 @@ networkx>=3,<4
 lifelines>=0.30,<0.31
 arch>=8,<9
 pingouin>=0.6,<0.7
+jsonschema>=4,<5
 # Install torch separately with the CPU wheel index in CI; no model weights required.

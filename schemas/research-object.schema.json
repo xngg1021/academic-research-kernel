@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/xngg1021/hermes-academic-skills/blob/main/schemas/research-object.schema.json",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/research-object.schema.json",
   "title": "ResearchObject",
   "description": "Deterministic research-object identity and lineage record. Produced by the research-object-identity skill and consumed by downstream layers (claim-evidence, method mining). Carries no confidence scores: every judgment is a discrete field value.",
   "type": "object",
@@ -21,6 +21,23 @@
     },
     "object_type": {
       "enum": ["Work", "Person", "Dataset", "CodeRepository", "Artifact"]
+    },
+    "title": {
+      "type": "string",
+      "description": "Primary title; optional informational field carried by drafts from canonical works."
+    },
+    "authors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Author name strings; optional informational field."
+    },
+    "year": {
+      "type": ["string", "integer", "null"],
+      "description": "Publication year; optional informational field."
+    },
+    "container": {
+      "type": "string",
+      "description": "Journal, proceedings or book title; optional informational field."
     },
     "identifiers": {
       "type": "array",

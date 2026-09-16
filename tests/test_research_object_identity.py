@@ -48,9 +48,9 @@ def _draft(object_id='ro:work:10.1/a'):
     ('pmid', 'pmid38123654.', '38123654'),
     ('openalex_id', 'https://openalex.org/W2123456789', 'W2123456789'),
     ('openalex_id', 'w2123456789', 'W2123456789'),
-    ('orcid', 'https://orcid.org/0000-0002-1825-0097', '0000-0002-1825-0097'),
-    ('orcid', '0000-0002-1825-009x', '0000-0002-1825-009X'),
-    ('isbn', ' 978-7-04-000000-0 ', '978-7-04-000000-0'),
+    ('orcid', 'https://orcid.org/0000-0002-1825-0097', '0000000218250097'),
+    ('orcid', '0000-0002-1825-009x', '000000021825009X'),
+    ('isbn', ' 978-7-04-000000-0 ', '9787040000000'),
 ])
 def test_normalize(kind, value, expected):
     assert identity.normalize(kind, value) == expected
@@ -189,16 +189,25 @@ def test_title_similarity_threshold():
 # link
 # ---------------------------------------------------------------------------
 
-def test_link_relation_bidirectional_backfill():
+def test_link_relation_directional_no_reverse_backfill():
+    """cites 是有向边:只在 a 侧建边,b 侧不得出现反向断言。"""
     a, b = _draft('ro:work:a'), _draft('ro:work:b')
     edge = identity.link(a, b, 'cites', EVIDENCE)
     assert edge['target_object_id'] == 'ro:work:b'
     assert a['relations'][0]['target_object_id'] == 'ro:work:b'
+    assert a['relations'][0]['kind'] == 'cites'
+    for key in identity.EVIDENCE_KEYS:
+        assert key in a['relations'][0]['evidence']
+    assert b['relations'] == [], 'b 侧不得伪造反向 cites 断言'
+    # 需要反向关系时调用者显式 link(b, a)
+    identity.link(b, a, 'cites', EVIDENCE)
     assert b['relations'][0]['target_object_id'] == 'ro:work:a'
-    for side in (a['relations'][0], b['relations'][0]):
-        assert side['kind'] == 'cites'
-        for key in identity.EVIDENCE_KEYS:
-            assert key in side['evidence']
+
+
+def test_link_rejects_self_loop():
+    a = _draft('ro:work:a')
+    with pytest.raises(ValueError):
+        identity.link(a, a, 'cites', EVIDENCE)
 
 
 def test_link_lineage_backfill_both_objects():
@@ -354,3 +363,92 @@ def test_draft_conforms_to_schema_structure():
     edge = draft['relations'][0]
     for key in schema['$defs']['edgeEvidence']['required']:
         assert key in edge['evidence']
+
+
+# ---------------------------------------------------------------------------
+# 交叉评审补强:jsonschema 真校验、版本拒绝、out_of_scope、顺序不敏感等
+# ---------------------------------------------------------------------------
+
+def _schema_obj():
+    import json
+    from pathlib import Path
+    return json.loads((Path(__file__).resolve().parent.parent
+                       / 'schemas' / 'research-object.schema.json').read_text(encoding='utf-8'))
+
+
+def test_drafts_validate_against_real_jsonschema():
+    """from_canonical_work 草案必须通过真实 jsonschema 校验(非手工键检查)。"""
+    import jsonschema
+    schema = _schema_obj()
+    draft = identity.from_canonical_work({'doi': '10.1038/nature12373',
+                                          'title': 'Attention Is All You Need',
+                                          'authors': ['Vaswani, Ashish'],
+                                          'year': 2017, 'container': 'NeurIPS'})
+    jsonschema.validate(draft, schema)
+    resolved = identity.resolve([{'identifiers': [{'type': 'doi', 'value': '10.1038/nature12373'}],
+                                  'title': 'Attention Is All You Need'}])
+    assert resolved['verdict'] == 'EXACT'
+
+
+def test_consume_receipt_rejects_unknown_schema_version():
+    out = identity.consume_receipt({'schema_version': '9.9', 'sources': [], 'claims': [],
+                                    'conflicts': [], 'failures': []})
+    assert out['uncertainty'][0]['kind'] == 'unsupported_schema_version'
+    assert out['uncertainty'][0]['needs_human'] is True
+
+
+def test_consume_receipt_keeps_out_of_scope_claims():
+    out = identity.consume_receipt({'schema_version': '1.0',
+                                    'sources': [],
+                                    'claims': [{'claim': 'x', 'evidence_type': 'metadata',
+                                                'source': 'OpenAlex', 'support_status': 'out_of_scope'}],
+                                    'conflicts': [], 'failures': []})
+    assert out['uncertainty'][0]['kind'] == 'out_of_scope_claim'
+    assert out['uncertainty'][0]['needs_human'] is False
+
+
+def test_consume_receipt_keeps_coverage():
+    out = identity.consume_receipt({'schema_version': '1.0',
+                                    'sources': [{'source': 'OpenAlex',
+                                                 'queried_at': '2026-09-17T00:00:00Z',
+                                                 'status': 'ok', 'coverage': 'identity, retraction flag',
+                                                 'raw_identifier': None}],
+                                    'claims': [], 'conflicts': [], 'failures': []})
+    assert out['source_observations'][0]['coverage'] == 'identity, retraction flag'
+
+
+def test_resolve_authors_order_insensitive():
+    a = {'identifiers': [], 'title': 'Same Title',
+         'authors': ['Vaswani, Ashish', 'Shazeer, Noam']}
+    b = {'identifiers': [], 'title': 'Same Title',
+         'authors': ['Shazeer, Noam', 'Vaswani, Ashish']}
+    out = identity.resolve([a, b])
+    assert out['verdict'] == 'STRONG_MATCH', out
+    assert 'authors' in out['match_fields']
+
+
+def test_resolve_object_type_disagreement_recorded():
+    a = {'identifiers': [{'type': 'doi', 'value': '10.1/a'}], 'object_type': 'Work'}
+    b = {'identifiers': [{'type': 'doi', 'value': '10.1/a'}], 'object_type': 'Dataset'}
+    out = identity.resolve([a, b])
+    assert 'object_type' in out['conflict_fields']
+    assert any(u['kind'] == 'object_type_conflict' for u in out['uncertainty'])
+
+
+def test_from_canonical_work_extracts_arxiv_id():
+    draft = identity.from_canonical_work({'doi': '', 'title': 'T', 'authors': [],
+                                          'extra': {'arxiv_id': 'arXiv:1706.03762v5'}})
+    kinds = [i['type'] for i in draft['identifiers']]
+    assert 'arxiv_id' in kinds
+    assert draft['identifiers'][0]['normalized'] == '1706.03762'
+
+
+def test_resolve_transitive_merge_stable():
+    """合并输出与输入顺序无关:同一组记录任意排列,merged_identifiers 一致。"""
+    records = [
+        {'identifiers': [{'type': 'doi', 'value': '10.1/a'}], 'title': 'T'},
+        {'identifiers': [{'type': 'arxiv_id', 'value': '1706.03762'}], 'title': 'T'},
+    ]
+    one = identity.resolve(records)['merged_identifiers']
+    two = identity.resolve(list(reversed(records)))['merged_identifiers']
+    assert one == two
