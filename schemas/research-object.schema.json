@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/research-object.schema.json",
+  "title": "ResearchObject",
+  "description": "Deterministic research-object identity and lineage record. Produced by the research-object-identity skill and consumed by downstream layers (claim-evidence, method mining). Carries no confidence scores: every judgment is a discrete field value.",
+  "type": "object",
+  "required": [
+    "object_id",
+    "object_type",
+    "identifiers",
+    "manifestations",
+    "relations",
+    "lineage",
+    "source_observations",
+    "uncertainty"
+  ],
+  "properties": {
+    "object_id": {
+      "type": "string",
+      "description": "Stable local identifier assigned by the producer, e.g. ro:work:10.1038/nature12373."
+    },
+    "object_type": {
+      "enum": ["Work", "Person", "Dataset", "CodeRepository", "Artifact"]
+    },
+    "title": {
+      "type": "string",
+      "description": "Primary title; optional informational field carried by drafts from canonical works."
+    },
+    "authors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Author name strings; optional informational field."
+    },
+    "year": {
+      "type": ["string", "integer", "null"],
+      "description": "Publication year; optional informational field."
+    },
+    "container": {
+      "type": "string",
+      "description": "Journal, proceedings or book title; optional informational field."
+    },
+    "identifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "value", "normalized"],
+        "properties": {
+          "type": {
+            "enum": ["doi", "arxiv_id", "pmid", "pmcid", "openalex_id", "orcid", "isbn", "issn", "handle", "url", "other"]
+          },
+          "value": {
+            "type": "string",
+            "description": "Identifier as observed at the source, verbatim."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Deterministic normalization of value; equal normalized strings mean the same identifier."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "manifestations": {
+      "type": "array",
+      "description": "Concrete expressions of the object; empty array is allowed when nothing is known.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "identifiers"],
+        "properties": {
+          "kind": {
+            "enum": ["preprint", "version_of_record", "author_manuscript", "publisher_pdf", "dataset_release", "commit"]
+          },
+          "identifiers": {
+            "type": "array",
+            "items": { "$ref": "#/properties/identifiers/items" }
+          },
+          "version": { "type": "string" },
+          "date": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target_object_id", "kind", "evidence"],
+        "properties": {
+          "target_object_id": { "type": "string" },
+          "kind": {
+            "enum": ["cites", "contradicts", "replicates", "derived_from"]
+          },
+          "evidence": { "$ref": "#/$defs/edgeEvidence" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "lineage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from_object_id", "to_object_id", "kind", "evidence"],
+        "properties": {
+          "from_object_id": { "type": "string" },
+          "to_object_id": { "type": "string" },
+          "kind": {
+            "enum": ["preprint_to_vor", "correction", "retraction", "version_chain"]
+          },
+          "evidence": { "$ref": "#/$defs/edgeEvidence" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "source_observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "queried_at", "status"],
+        "properties": {
+          "source": { "type": "string" },
+          "queried_at": { "type": "string", "format": "date-time" },
+          "status": { "enum": ["ok", "failed", "skipped"] },
+          "raw_identifier": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "uncertainty": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item", "kind", "needs_human"],
+        "properties": {
+          "item": { "type": "string" },
+          "kind": { "type": "string" },
+          "needs_human": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "edgeEvidence": {
+      "type": "object",
+      "required": ["source", "queried_at", "match_fields", "conflict_fields", "human_confirmed"],
+      "properties": {
+        "source": { "type": "string" },
+        "queried_at": { "type": "string", "format": "date-time" },
+        "match_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "conflict_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "human_confirmed": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
