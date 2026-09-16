@@ -94,6 +94,23 @@ The matrix maps all 235 pain-atlas items to the fourteen primitives, one to thre
 
 Primitive-level coverage is led by State Ledger (36), Deterministic Verifier (36), Canonical Identity Resolver (34), Normalization Layer (32), Cross-artifact Linker (32) and Provenance / Lineage (30). The top three directions are close (62.1, 58.7, 57.9); there is a steep drop to the fourth (35.3). The recorded recommendation is to start the next round with Research Object Identity and Lineage; the final choice belongs to the maintainer, and the matrix remains revisable as the atlas evolves.
 
+### 6.2 Phase 1.5: leverage gate (2026-09-17)
+
+Coverage share alone is not development priority: the top three directions differ by only 4.2 percentage points, and coverage counts favor abstract primitives. The gate adds eight parallel dimensions for the top three directions. These are recorded judgments, not measurements, and they are never combined into a score.
+
+| Dimension | Identity + Lineage | Claim-Evidence Graph | Method / Supplement Miner |
+| --- | --- | --- | --- |
+| Existing-asset reuse | High: CanonicalWork, both receipts, watch diff logic | Medium: receipts, resolver output | Medium: receipts, resolver output, interop |
+| Deterministic ratio | High: string normalization, graph matching; no model required | Medium: graph and locator logic deterministic; entailment judgment goes to the uncertainty queue | Medium: extraction deterministic but PDF parsing fragile |
+| Testability | High: identifier and version fixtures are easy ground truth | Medium: claim-citation fixtures buildable | Medium: supplement fixtures buildable, extraction drift-prone |
+| External fragility | Low: core has no API dependency; live queries isolated | Low to medium | Medium: parser dependency |
+| Schema centrality | Highest: every later direction consumes it | Medium | Medium |
+| Implementation surface | Medium: five object types, three operations | Large: graph model, locators, queue | Large: cross-artifact extraction |
+| Immediate user utility | Medium: normalization and dedup usable standalone | High: writing and review tasks | High: supplement navigation |
+| Downstream unlocks | High: unblocks both other directions | High: consumes resolver | High: consumes resolver and linker |
+
+The gate's conclusion: Identity + Lineage has the strongest execution position (deterministic, testable, reusable, low fragility, highest centrality) and is the recorded starting point; Claim-Evidence Graph and Method / Supplement Miner follow as consumers, not as competing products.
+
 ## 7. Design discipline
 
 The repository continues the discipline established in the 1.3 round.
