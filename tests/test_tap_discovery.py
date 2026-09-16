@@ -14,7 +14,7 @@ def test_pinned_source_integrity():
         assert hashlib.sha256((UPSTREAM / name).read_bytes()).hexdigest() == info['sha256']
 
 
-def test_actual_upstream_discovers_four_skills():
+def test_actual_upstream_discovers_five_skills():
     ns = {'List': list, 'SkillMeta': object, '_API': 'https://api.github.com/repos',
           '_cached_metas': lambda key: None, '_cache_metas': lambda key, values: None}
     exec(compile((UPSTREAM / 'tap_discovery.py').read_text(), 'pinned_tap_discovery', 'exec'), ns)
@@ -31,4 +31,5 @@ def test_actual_upstream_discovers_four_skills():
             return SimpleNamespace(name=path.parent.name, extra={}) if path.is_file() else None
     found = ns['_list_skills_in_repo'](Source(), 'xngg1021/hermes-academic-skills', 'skills/')
     assert {skill.name for skill in found} == {'academic-source-verification', 'academic-writing',
-                                              'literature-analysis', 'math-computation'}
+                                              'literature-analysis', 'math-computation',
+                                              'research-reproducibility'}

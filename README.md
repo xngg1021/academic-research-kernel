@@ -20,6 +20,7 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 | `skills/literature-analysis` | 1.2.0 | Twelve workflows: topic similarity, local text overlap, counter-evidence, author profiles, mock review, fallacy checks, review matrix, journal candidates, BibTeX, bilingual reading, research-gap screening, reproduction |
 | `skills/academic-writing` | 1.1.1 | Editing, citation guidance (APA, MLA, Chicago, IEEE, AMA, GB/T), journal instructions, optional detection services, submission materials, Chinese academic requirements |
 | `skills/math-computation` | 1.2.1 | Existing domain/task routing with corrected numerical/statistical examples; four domain/advanced reference files |
+| `skills/research-reproducibility` | 1.0.0 | Fourteen-stage reproduction audit pipeline with a structured checklist engine, five fact tiers and a four-state receipt |
 
 There are 15 Markdown reference files across the four skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
 
