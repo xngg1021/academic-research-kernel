@@ -1,0 +1,41 @@
+name: Live external contract checks
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  external-apis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-qa.txt
+      - run: python -m pip install -r requirements-qa.txt
+      - name: Run external API contract checks
+        run: |
+          set +e
+          python scripts/verify_external_apis.py
+          code=$?
+          if [ "$code" -eq 2 ]; then
+            echo "::warning::External API unavailability, quota or transport failure; not a repository defect."
+            exit 0
+          fi
+          exit "$code"
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pip-audit
+        run: python -m pip install pip-audit
+      - name: Audit QA requirements for known vulnerabilities
+        run: pip-audit -r requirements-qa.txt
