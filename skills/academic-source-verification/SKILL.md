@@ -22,9 +22,9 @@ metadata:
 
 # 学术来源核查 Skill
 
-验证一篇论文/文献是否真实存在、交叉核对它的元数据与被引数、核查撤稿与更正状态、下载可获得的开放获取全文做内容验证。与 `arxiv` skill 互补：`arxiv` 负责"检索发现论文"，本 skill 负责"核查论文 + 拿全文"。
+验证论文与文献的真实性，交叉核对元数据与各渠道被引数，检查撤稿与更正记录，并下载可获取的开放获取全文以核验内容。本技能与 `arxiv` 技能互补：`arxiv` 负责检索发现论文，本技能负责核对文献并获取全文。
 
-核心原则：引用一个科研结论前，先核对文献身份、已知撤稿信号、被引数口径和结论原文——而不是凭记忆或二手转述。
+核心原则：引用科研结论前，须核对文献身份、已知撤稿信号、被引数口径以及结论原文，避免凭记忆或二手转述下结论。
 
 ## When to Use
 
@@ -51,7 +51,7 @@ Don't use for: 纯检索发现论文（用 `arxiv` skill）、OCR/解析已下�
 
 ### 第一关：三库交叉核对（真实性 + 被引数）
 
-核对 DOI、标题、作者及版本，记录三个数据库的差异。数据库可能共享出版商/Crossref 数据，不能把一致性当作三个独立证明；被引数不用于判定身份。
+核对 DOI、标题、作者与版本，记录三个数据库的差异。数据库之间可能共享出版商或 Crossref 数据，不能将数据一致性视作三个独立证明；被引数不可用于判定文献身份。
 
 | 库 | 端点 | 关键字段 |
 | --- | --- | --- |
@@ -61,7 +61,12 @@ Don't use for: 纯检索发现论文（用 `arxiv` skill）、OCR/解析已下�
 
 请求要带 `User-Agent`（带 mailto 更礼貌），否则部分端点会拒。三库被引数必然不同（收录范围不同），分数量级差异也可来自版本合并/收录范围，须解释而不据此否定论文身份。
 
-用 `execute_code` 批量查并打印对照表；按各服务实际配额控制调用速率；固定 sleep 不能保证避免共享限额的 429。
+用 `execute_code` 批量查并打印对照表；按各服务实际配额控制调用速率；固定 sleep 不能保证避免共享限额的 429。标识符归一与 OpenAlex/Crossref 两库身份核对已抽为脚本：
+
+```bash
+python "${HERMES_SKILL_DIR}/scripts/normalize_identifier.py" <标识符>
+python "${HERMES_SKILL_DIR}/scripts/verify_work.py" --doi <DOI>   # 已有记录时 --openalex-json/--crossref-json 离线核对
+```
 
 ### 第二关：撤稿与更正核查（Crossref update 记录）
 
@@ -69,48 +74,26 @@ Crossref 于 2025-01 将 Retraction Watch 信号纳入 REST API（2023-09 是合
 
 1. 查原文 DOI 元数据；标题 `RETRACTED:` / `WITHDRAWN:` 前缀只作需核实信号，普通标题用词不是结论。
 2. 反向查 `https://api.crossref.org/works?filter=updates:<DOI>&rows=100`，逐项核对 `update-to[].DOI` 是否是目标 DOI。超过一页则用 Crossref 自己的 cursor 规则继续，记录截断。
-3. 区分 `retraction`、`withdrawal`、`correction`、`expression-of-concern`，记录 publisher / retraction-watch 来源；不同信号不合并成“撤稿”。
+3. 区分 `retraction`、`withdrawal`、`correction` 与 `expression-of-concern`，记录 publisher 或 retraction-watch 来源；不同信号不合并归为撤稿。
 4. OpenAlex `is_retracted=true` 表示数据库记录的撤稿信号；false 不排除遗漏。arXiv 另查 abs 页及版本历史的 withdrawal 状态；有疑问核对出版社通知或 Retraction Watch 原记录。
 
-以下离线逻辑只提取与目标关联的更新信号，输入须来自已成功查询的 Crossref 记录：
+更新信号的离线提取与反向查询已抽为 `scripts/check_updates.py`（离线输入须来自已成功查询的 Crossref 记录；retraction、withdrawal、correction 与 expression-of-concern 分类计数，不合并）：
 
-```python
-# smoke-test: true
-def update_signals(target_doi, records):
-    target = target_doi.lower().removeprefix('https://doi.org/')
-    signals = []
-    for record in records:
-        for update in record.get('update-to') or []:
-            updated_doi = str(update.get('DOI') or '').lower().removeprefix('https://doi.org/')
-            if updated_doi == target:
-                signals.append({'type': update.get('type'), 'source': update.get('source'),
-                                'record_doi': record.get('DOI'), 'target_doi': updated_doi})
-    return signals
-fixture = {'DOI': '10.1234/notice', 'update-to': [
-    {'DOI': '10.1234/original', 'type': 'retraction', 'source': 'publisher'}]}
-assert update_signals('10.1234/original', [fixture])[0]['type'] == 'retraction'
-assert update_signals('10.1234/notice', [fixture]) == []
-assert update_signals('10.1234/original', [{'DOI': '10.1234/original'}]) == []
+```bash
+python "${HERMES_SKILL_DIR}/scripts/check_updates.py" --doi <原始DOI>                        # 在线 filter=updates 反向查询
+python "${HERMES_SKILL_DIR}/scripts/check_updates.py" --doi <原始DOI> --records records.json # 离线信号提取
 ```
 
-查无信号时只报告“在已检查的数据源中未发现撤稿/撤回记录”，附来源、时间、失败/未查项。请求失败不算未发现记录。命中时说明“数据库标记/出版社通知确认”的证据层次；撤稿论文可作为撤稿事件研究对象，不能无说明地当作可靠结论依据。
+查无信号时仅报告“在已检查的数据源中未发现撤稿或撤回记录”，并注明数据来源、查询时间以及失败或未查项目。网络请求失败不等于未发现记录。命中撤稿信号时须说明证据层次；撤稿论文可作为撤稿事件的研究对象，不可在无说明的情况下当作可靠结论依据。
 
 官方依据：[Crossref 集成说明](https://www.crossref.org/blog/retraction-watch-retractions-now-in-the-crossref-api/)、[更新查询过滤器](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/)。
 
 ### 第三关：OA 全文定位（Unpaywall 首选）
 
-Unpaywall 是 OA 定位渠道之一，覆盖率和更新延迟与其他来源不同，未作普遍优劣保证。以下片段依赖 Verification 的 get() 与待查 doi：
+Unpaywall 是 OA 定位渠道之一，覆盖率和更新延迟与其他来源不同，未作普遍优劣保证。查询已抽为 `scripts/locate_oa.py`；`UNPAYWALL_EMAIL` 未配置时脚本明确 SKIP 不推断，`is_oa=false` 时 `best_oa_location` 为 null，先判再取：
 
-```python
-# fragment: 需 get、doi；UNPAYWALL_EMAIL 为用户真实联系邮箱。
-import os
-from urllib.parse import quote, urlencode
-email = os.environ['UNPAYWALL_EMAIL']
-r = get('https://api.unpaywall.org/v2/' + quote(doi, safe='') + '?' + urlencode({'email': email}))
-if r.get("is_oa"):
-    loc = r.get("best_oa_location")  # url_for_pdf / url，版本 published/accepted/submitted
-else:
-    loc = None  # 此服务未定位到 OA 版本，不证明不存在
+```bash
+python "${HERMES_SKILL_DIR}/scripts/locate_oa.py" --doi <DOI>   # 已保存记录时 --record 离线解析
 ```
 
 顺序：Unpaywall `best_oa_location` → OpenAlex `oa_url` → Semantic Scholar `openAccessPdf.url` → archive.org（公版书/专著）。付费墙 403 不要死磕。
@@ -120,30 +103,39 @@ else:
 - **arXiv（绿 OA）**：`https://arxiv.org/pdf/{id}`；可因限流、撤回或网络限制失败。
 - **公版书/专著（如 Ebbinghaus 1885）**：走 `archive.org` —— 先用 `https://archive.org/advancedsearch.php?q=<标题>&fl[]=identifier,title,year,mediatype&rows=3&output=json` 搜 identifier，再查 `https://archive.org/metadata/{identifier}` 的 files 选择实际 PDF 文件名；不假定文件名与 identifier 相同，并核对访问状态。
 
-```python
-# fragment: API reference; supply the named input variables and required imports.
-import pymupdf
-doc = pymupdf.open(path)
-print(" ".join(doc[0].get_text().split())[:400])  # 首页文字，核对标题/作者
-print(doc.page_count)
-doc.close()
+首页文字提取与身份核对已抽为 `scripts/verify_pdf_identity.py`（需 pymupdf，缺失时明确报错；下载成功 ≠ 内容正确）：
+
+```bash
+python "${HERMES_SKILL_DIR}/scripts/verify_pdf_identity.py" --pdf <路径> --title <标题> --doi <DOI>
 ```
 
 下载统一存到稳定目录（例如 `Path("~/papers").expanduser()` 并 `mkdir(parents=True, exist_ok=True)`，路径保证 UTF-8 可用），回报绝对路径 + 字节数 + 页数。
 
+## Helper Scripts
+
+`scripts/` 内置确定性逻辑脚本，均可 `--help` 查看参数；网络访问集中在明确标记的 live 函数，无 key 或离线时明确 SKIP 不推断：
+
+| 脚本 | 功能 |
+| --- | --- |
+| `scripts/normalize_identifier.py` | DOI/arXiv/PMID/OpenAlex ID 归一（纯离线） |
+| `scripts/verify_work.py` | OpenAlex/Crossref 身份核对与字段级对照（可离线） |
+| `scripts/check_updates.py` | Crossref update-to 撤稿/更正反向查询与信号分类 |
+| `scripts/locate_oa.py` | Unpaywall OA 定位（is_oa + best_oa_location） |
+| `scripts/verify_pdf_identity.py` | PDF 首页文字/元数据与声明标题、DOI 核对 |
+
 ## Procedure
 
-1. 确定论文的 DOI/arXiv ID/标题。期刊论文用 DOI，arXiv 预印本用 arXiv ID。
-2. `execute_code` 批量查 OpenAlex + Crossref（+ Semantic Scholar），打印三库标题/作者/年份/期刊/被引数对照表。
-3. 按第二关核查双向更新关系、OpenAlex 标记及出版社/arXiv 状态，分类记录，避免把通知记录判成被撤稿对象。
+1. 确定论文的 DOI/arXiv ID/标题。期刊论文用 DOI，arXiv 预印本用 arXiv ID；标识符用 `scripts/normalize_identifier.py` 归一。
+2. 用 `scripts/verify_work.py` 或 `execute_code` 批量查 OpenAlex + Crossref（+ Semantic Scholar），打印三库标题/作者/年份/期刊/被引数对照表。
+3. 按第二关核查双向更新关系（`scripts/check_updates.py`）、OpenAlex 标记及出版社/arXiv 状态，分类记录，避免把通知记录判成被撤稿对象。
 4. 判断真实性：DOI、元数据与版本匹配 → 报告身份已核对。不一致 → 记下差异，如实报告。
-5. 能下 OA 就下（Unpaywall/arXiv/archive.org），下完用 pymupdf 提首页文字核对内容。
+5. 能下 OA 就下（`scripts/locate_oa.py` → arXiv → archive.org），下完用 `scripts/verify_pdf_identity.py` 提首页文字核对内容。
 6. 付费墙 403 的，报告已完成的实际检查与“全文访问受限”；403 也可能是反爬/访问策略，不据此断定付费墙或撤稿状态，不反复尝试。
 
 ## Pitfalls
 
 1. **被引数有来源口径**。预印本与正式版本的合并、重复记录及数据库覆盖都会影响计数，标明来源和查询日；不把某库数值称为真实影响或严格下限。
-2. **Crossref 与 OpenAlex 查 arXiv 的 data-DOI 可能 404/滞后**。`10.48550/arXiv.<id>` 是 DataCite 注册的，Crossref 常返回 404，OpenAlex 偶有收录延迟。遇此情况直接调用 arXiv 官方 API（`http://export.arxiv.org/api/query?id_list=<id>` 或 `search_query=ti:<标题>`）核实标题、摘要、版本历史及撤回（withdrawn）状态。
+2. **Crossref 与 OpenAlex 查 arXiv 的 data-DOI 可能 404/滞后**。`10.48550/arXiv.<id>` 是 DataCite 注册的，Crossref 常返回 404，OpenAlex 偶有收录延迟。遇此情况直接调用 arXiv 官方 API（`http://export.arxiv.org/api/query?id_list=<id>` 或 `search_query=ti:<标题>`）核实标题、摘要、版本历史与撤回（withdrawn）状态。
 3. **经典奠基文献标题易与后继综述撞车**。以简短通用标题（如 "Working Memory"）检索时，极易命中作者多年后的同名回顾篇。核查奠基作须限定出版年份（Crossref `filter=from-pub-date:YYYY-01-01,until-pub-date:YYYY-12-31`）并核对作者序列表。
 4. **Semantic Scholar 无 key 极易 429**。请求间隔 ≥1.1s，失败退避重试；持续 429 就退回 OpenAlex + Crossref 两个来源，并如实说明。
 4. **update-to 非空 ≠ 撤稿**。还须核对更新方向、目标 DOI 与 update.type；更正和表达关注分别记录，不能见 update-to 就报撤稿。
@@ -202,3 +194,14 @@ else:
 ```
 
 无 key 时 OpenAlex 自检会实际走匿名路径；带 key 路径仅在配置 OPENALEX_API_KEY 后运行。未配置服务应明确 SKIP，不当作通过。Semantic Scholar 按任务与可用额度另行核对。
+
+## Evidence Receipt 输出约定
+
+核查结束时，将结论写成机器可读的 evidence receipt JSON，格式见 `schemas/evidence-receipt.schema.json`，示例见 `examples/evidence-receipt.example.json`。要点：
+
+- 每个来源单独记录查询时间、状态（ok/failed/skipped）与覆盖范围；失败的查询写进 `failures`，不得当作结果推断。
+- 每条 claim 标明证据类型、来源、定位与支持状态（supported/contradicted/unverifiable/out_of_scope）。
+- 互相矛盾的来源结论写入 `conflicts`，不在 receipt 里私自裁决。
+- 下游技能（literature-analysis、academic-writing、math-computation）优先消费 receipt，不重新用自然语言转述上一阶段结论。
+
+用户未要求落盘时，receipt 仅在对话中呈现；要求落盘时写入用户指定路径。

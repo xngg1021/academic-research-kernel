@@ -87,8 +87,11 @@ def static_checks(root=ROOT):
     errors, names = [], set()
     readme = (root / 'README.md').read_text(encoding='utf-8')
     paths = sorted(root.glob('skills/*/SKILL.md'))
-    if len(paths) != 4 or len(list(root.glob('skills/**/SKILL.md'))) != 4:
-        errors.append('expected four skills directly under default tap root skills/')
+    nested = list(root.glob('skills/**/SKILL.md'))
+    if not paths:
+        errors.append('no skills found directly under skills/')
+    if len(nested) != len(paths):
+        errors.append('skills must live directly under skills/, no nested skill directories')
     for path in paths:
         text = path.read_text(encoding='utf-8')
         try:

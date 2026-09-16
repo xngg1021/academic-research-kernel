@@ -18,7 +18,7 @@ metadata:
 
 # 文献分析 Skill
 
-围绕一篇论文或一个概念做六类分析：相似论文检索、查重比对、矛盾与反证查找、作者档案、模拟审稿、逻辑谬误标注。与 `academic-source-verification` 互补：那个 skill 负责"这篇论文是否真实、是否被撤稿、全文在哪"，本 skill 负责"围绕它做研究分析"。
+围绕目标论文或学术概念开展分析，涵盖相似论文检索、文本查重比对、矛盾与反证查找、作者学术档案、模拟同行评议以及逻辑谬误标注。本技能与 `academic-source-verification` 互补：后者专注于核验论文真实性、撤稿记录与获取全文，本技能专注于对文献展开实质性研究分析。
 
 核心原则：每一步结论都给出数据来源（哪个 API、哪个字段、哪段原文），能自动化的自动化，不能自动化的（审稿、谬误判断）交给模型按模板执行并保留可核对引文。
 
@@ -30,8 +30,8 @@ metadata:
 - 用户要求"模拟审稿""假装是审稿人审一下这篇"
 - 用户要求"标注这篇文章的逻辑谬误"
 - 用户给出作者姓名，要求查其学术档案
-- 用户要求批量文献综述（对比矩阵）、按主题反查候选期刊、生成 BibTeX 条目
-- 用户要求双语对照精读英文论文、分析研究空白、找论文官方代码与数据集复现
+- 用户要求构建批量文献综述对比矩阵、反查候选投稿期刊，或生成规范的 BibTeX 条目
+- 用户要求双语对照精读学术论文、梳理研究空白，或检索官方开源代码与数据集开展复现
 
 ## Prerequisites（渠道分层）
 
@@ -68,7 +68,15 @@ Concepts 已弃用且不再维护，不作为主要路径；旧数据回顾只�
    - 标题词组合搜索（用论文标题关键词再跑一次概念搜索）
 3. **PDF 文件** → pymupdf 提首页标题与摘要文本，用标题/摘要作概念搜索。
 
-输出格式：每个候选论文一行（标题、年份、被引数、DOI、相似依据），标注相似依据是哪一层（文本检索/算法推荐/主题交叉），并按依据强度排序。概念检索命中按 `relevance_score` 排序即可。
+输出格式：每个候选论文单列一行（包含标题、年份、被引数、DOI 以及相似判定依据），标明相似依据的来源层次（如文本检索、算法推荐或主题交叉），并依据相关强度排序。概念检索命中按 `relevance_score` 排序即可。
+
+多路候选合并与去重已抽为脚本（来源层次保留，DOI/标题归一）：
+
+```bash
+python "${HERMES_SKILL_DIR}/scripts/collect_corpus.py" --input layers.json    # 合并 text-search/algorithmic-related/topic-cross 候选
+python "${HERMES_SKILL_DIR}/scripts/collect_corpus.py" --query "<概念>"       # 在线概念搜索
+python "${HERMES_SKILL_DIR}/scripts/deduplicate_works.py" --input corpus.json # DOI/标题归一去重
+```
 
 ## 工作流 B：查重比对（本地句级）
 
@@ -78,7 +86,7 @@ Concepts 已弃用且不再维护，不作为主要路径；旧数据回顾只�
 
 1. 用工作流 A 拿到候选相似论文列表（10~20 篇），能下 OA 全文的尽量下。
 2. 目标论文提全文：`doc = pymupdf.open(path); text = " ".join(p.get_text() for p in doc)`。
-3. 句子切分与规范化：按句号/换行切句，去掉空白、页码、参考文献段，全小写，长度 20 字符以下的句子丢弃。
+3. 句子切分与规范化：按句号或换行符分句，滤除空白字符、页码以及参考文献列表，全部转为小写，并过滤长度不足 20 个字符的短句。
 4. 对每篇候选论文做同样的句子集合。
 5. 比对：完全相同的句子（逐字重复）与高度相似句子（difflib 的 `SequenceMatcher.ratio() > 0.85`）。
 6. 报告：重叠句对数、占目标论文总句数的比例、重叠句子原文与出处段落。
@@ -98,6 +106,11 @@ def overlap_ratio(a, b):
 
 1. **引用池甄别**（主路径）：分页获取目标论文引用者作为候选池，设定预算/页数上限并报告已取数量：
    `GET https://api.openalex.org/works?filter=cites:<OpenAlex-WID>&per_page=25&select=id,title,abstract_inverted_index,publication_year,doi`
+   引用池分页获取与语料内引文网络已抽为 `scripts/build_citation_graph.py`（预算上限内分页，达到上限标 truncated 只称部分样本）：
+   ```bash
+   python "${HERMES_SKILL_DIR}/scripts/build_citation_graph.py" --wid <OpenAlex-WID> --pages 4
+   python "${HERMES_SKILL_DIR}/scripts/build_citation_graph.py" --input works.json   # 离线建语料内引文网络
+   ```
    摘要三层兜底（缺失率依领域/时间而异，不能从三篇抽样外推）：第一层 `abstract_inverted_index` 重建；第二层缺失时查 Crossref `works/{DOI}` 的 `message.abstract`；第三层仍缺则标“证据不足”，尝试 OA 全文（academic-source-verification）；标题仅用于召回排序，不能据此确定支持/批评/无法复现。兜底后由模型逐篇判断引用性质（支持/中立/批评/无法复现），只保留批评与无法复现类，并标注每篇的判断依据（摘要/全文；仅标题者列待核）。
 2. **否定词搜索**（辅助）：用否定句式搜同主题论文：
    `search=fail to replicate <主题>`、`search=challenges <主题> findings`、`search=<主题> irreproducible`
@@ -123,7 +136,11 @@ def overlap_ratio(a, b):
 
 ## 工作流 G：批量综述矩阵
 
-20~50 篇论文压成五列对比表（方法/样本/核心结论/局限），按主题聚类分组。执行细节与输出规范见 `references/review-matrix.md`。
+20~50 篇论文压成五列对比表（方法/样本/核心结论/局限），按主题聚类分组。执行细节与输出规范见 `references/review-matrix.md`。矩阵骨架（摘要重建 + 五列表 + 覆盖声明）已抽为 `scripts/build_review_matrix.py`；方法/样本/结论/局限四列仍由模型逐篇填：
+
+```bash
+python "${HERMES_SKILL_DIR}/scripts/build_review_matrix.py" --input corpus.json --query "<检索词>" --date <YYYY-MM-DD>
+```
 
 ## 工作流 H：期刊匹配推荐
 
@@ -131,7 +148,11 @@ def overlap_ratio(a, b):
 
 ## 工作流 I：BibTeX 导出
 
-从 OpenAlex 元数据生成 BibTeX 条目（含中文文献的 biblatex-gb7714 建议）。见 `references/bibtex-guide.md`。
+从 OpenAlex 元数据生成 BibTeX 条目（含中文文献的 biblatex-gb7714 建议）。见 `references/bibtex-guide.md`。条目生成已抽为 `scripts/export_bibtex.py`（tex_escape、姓名格式化与 key 命名规则内置；未知字段留 TODO 不伪造）：
+
+```bash
+python "${HERMES_SKILL_DIR}/scripts/export_bibtex.py" --input works.json --source crossref   # 或 --source openalex
+```
 
 ## 工作流 J：双语对照精读
 
@@ -144,6 +165,18 @@ def overlap_ratio(a, b):
 ## 工作流 L：复现辅助
 
 找官方代码与数据集。旧 Papers with Code v1 API 不作可靠依赖，先核查当前服务状态，走 GitHub 搜索 + HuggingFace + 网页检索。见 `references/reproduction.md`。
+
+## Helper Scripts
+
+`scripts/` 内置各工作流的确定性层，均可 `--help` 查看参数；网络访问集中在明确标记的 live 函数：
+
+| 脚本 | 对应工作流 | 功能 |
+| --- | --- | --- |
+| `scripts/collect_corpus.py` | A | 多路候选合并（文本检索/算法推荐/主题交叉），保留来源层次 |
+| `scripts/deduplicate_works.py` | A/B | DOI/标题归一去重（纯离线） |
+| `scripts/build_citation_graph.py` | C | 引用者候选池分页获取与语料内引文网络 |
+| `scripts/build_review_matrix.py` | G | 摘要重建 + 五列矩阵骨架 + 覆盖声明（纯离线） |
+| `scripts/export_bibtex.py` | I | Crossref/OpenAlex 元数据 → BibTeX 条目（纯离线） |
 
 ## Procedure
 

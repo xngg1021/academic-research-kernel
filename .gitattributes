@@ -1,0 +1,4 @@
+# All text files normalize to LF in the working tree and repository.
+# License-credential hashes and pinned-source integrity tests are computed
+# against LF bytes; CRLF checkouts would make them fail on Windows.
+* text=auto eol=lf
