@@ -38,7 +38,7 @@ hermes skills search academic-source-verification
 hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
 ```
 
-Install the other three by substituting their directory name in the full identifier. A normal tap reads the default branch; these changes become its default only after this PR is merged. To inspect a work branch before merge, check out that branch locally and follow the installed Hermes version's local-folder installation instructions. Do not assume the tap command selects a PR branch.
+Install the others by substituting their directory name in the full identifier. A normal tap reads the default branch, so the skill set above is what a fresh tap installs. To inspect a work branch before merge, check out that branch locally and follow the installed Hermes version's local-folder installation instructions. Do not assume the tap command selects a PR branch.
 
 Bundled related skills checked at upstream `245e48008fa814b3251f50755eb656bd9fb86cb1`: arxiv, grounded-citations, docx, pdf, manim-video. huggingface-hub and llama-cpp are in the optional catalog and may need installation. ocr-and-documents and pc-hardware-benchmark were not found in that snapshot and are not dependencies. Session tools and document/browser backends depend on local configuration.
 
