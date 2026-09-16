@@ -1,5 +1,7 @@
 # hermes-academic-skills
 
+[English](README.md) · 简体中文 · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
+
 面向 Hermes Agent 的十一个中文学术技能：来源核验、文献分析、学术写作、数值计算、定量论文审计、复现审计、系统综述与元分析、研究对象身份与谱系、五人交叉评审编排，以及两个周更监控自动化。仓库附带可执行的示例检查；验证范围与外部服务限制记录于[审计文档](docs/audit-20260906.md)。
 
 作者：Junfu Shi（SJF，xngg1021），Hermes Agent。当前授权范围：[Source Lineage License 1.0](LICENSE)。

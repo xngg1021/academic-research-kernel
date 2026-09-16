@@ -1,6 +1,6 @@
 # hermes-academic-skills
 
-English · [简体中文](README.zh-CN.md)
+English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
 Eleven Chinese-language academic skills for Hermes Agent. They cover source verification, literature analysis, academic writing, numerical computation, quantitative paper audit, reproduction audits, systematic review and meta-analysis, research-object identity and lineage, cross-model review orchestration, plus two weekly monitoring automations. The repository includes executable example checks; validation scope and external-service limitations are recorded in [the audit](docs/audit-20260906.md).
 
@@ -71,7 +71,7 @@ git diff --check
 
 QA validates metadata, references, personal-path/known-secret patterns, Python syntax and marked executable fences. Each smoke example runs unchanged in a fresh subprocess. Plot examples accept `PLOT_DIR` (default `~/plots`, explicitly expanded); tests use a temporary directory. Unclassified Python fences are rejected; `fragment:` blocks are syntax-checked but require named inputs and are not executed standalone. `external-test:` blocks run only via the manual external command. It returns 0 on passed configured checks, 1 on code/schema/identity failure, and 2 on transport/authentication/quota unavailability; optional unconfigured services remain SKIP.
 
-Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks ten skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
+Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks eleven skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
 CI runs the full QA suite on Ubuntu (Python 3.12 and 3.13), Windows and macOS via GitHub Actions. A separate tap-integration workflow runs on main pushes: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. A fresh Hermes session and every dependency-version combination are not claimed. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
 
