@@ -1,5 +1,7 @@
 # hermes-academic-skills
 
+English · [简体中文](README.zh-CN.md)
+
 Nine Chinese-language academic skills for Hermes Agent. They cover source verification, literature analysis, academic writing, numerical computation, quantitative paper audit, reproduction audits, systematic review and meta-analysis, plus two weekly monitoring automations. The repository includes executable example checks; validation scope and external-service limitations are recorded in [the audit](docs/audit-20260906.md).
 
 Author: Junfu Shi (SJF, xngg1021), Hermes Agent. Current scoped offer: [Source Lineage License 1.0](LICENSE).
@@ -70,3 +72,8 @@ QA validates metadata, references, personal-path/known-secret patterns, Python s
 Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks nine skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
 Linux/Python 3.12 is tested in this pass. Linux, macOS and Windows remain intended platforms; native Windows/macOS execution, every dependency-version combination, and a fresh Hermes session are not claimed. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
+
+## Research and planning documents
+
+- [Pain atlas v0 (English)](docs/pain-atlas-v0.en.md), [中文版](docs/pain-atlas-v0.zh.md): friction points across the academic knowledge work life cycle, with source verification states for quantitative claims.
+- [Research plan v0 (English)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): fourteen architectural primitives, the Research Object model, four planes, candidate directions and the phase-one factor decomposition matrix.
