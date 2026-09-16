@@ -23,6 +23,12 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import sys as _sys
+if _sys.platform == "win32":
+    for _s in (_sys.stdout, _sys.stderr):
+        if _s and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8")
+
 SCHEMA_VERSION = '1.0'
 
 STAGES = (

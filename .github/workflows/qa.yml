@@ -52,3 +52,34 @@ jobs:
           git diff --check "$DIFF_BASE" "$DIFF_HEAD" --
       - run: python scripts/qa.py
       - run: python -m pytest -q tests
+  tap-lifecycle:
+    # Tap semantics resolve the default branch, so real Hermes integration
+    # runs on main pushes and manual dispatches, not on PR heads. PR-level
+    # discovery coverage stays with the pinned tap-discovery tests.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out pinned Hermes upstream
+        uses: actions/checkout@v4
+        with:
+          repository: NousResearch/hermes-agent
+          ref: 245e48008fa814b3251f50755eb656bd9fb86cb1
+          path: .hermes-upstream
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Hermes
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./.hermes-upstream
+      - name: Tap, search, install and list
+        run: |
+          hermes skills tap add xngg1021/hermes-academic-skills
+          hermes skills search academic-source-verification
+          hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
+          hermes skills install xngg1021/hermes-academic-skills/skills/quantitative-paper-audit
+          hermes skills install xngg1021/hermes-academic-skills/skills/retraction-watch
+          hermes skills list

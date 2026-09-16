@@ -19,6 +19,12 @@ import numpy as np
 from scipy import stats
 
 # d 与 log OR 之间的 logistic 分布桥接系数(Borenstein et al. 2009, Ch.7)
+import sys as _sys
+if _sys.platform == "win32":
+    for _s in (_sys.stdout, _sys.stderr):
+        if _s and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8")
+
 LOGISTIC_SCALE = math.pi / math.sqrt(3.0)  # ≈ 1.8138
 
 
