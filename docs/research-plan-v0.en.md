@@ -79,6 +79,21 @@ Before any new skill is built, the candidate selection is grounded in measuremen
 
 The matrix measures which primitives absorb the largest share of enumerated friction. It replaces intuition about which skill to build next with a recorded, revisable mapping.
 
+### 6.1 Phase 1 result (2026-09-17)
+
+The matrix maps all 235 pain-atlas items to the fourteen primitives, one to three primitives per item with a one-line rationale, programmatically verified as lossless against the atlas. Coverage leverage per candidate direction:
+
+| Direction | Items covered | Share |
+| --- | --- | --- |
+| Research Object Identity and Lineage | 146 / 235 | 62.1% |
+| Method and Supplement Miner | 138 / 235 | 58.7% |
+| Claim-Evidence Graph | 136 / 235 | 57.9% |
+| Decision and Negative Result Ledger | 83 / 235 | 35.3% |
+| Learning Error Taxonomy and Adaptive Practice | 77 / 235 | 32.8% |
+| Constraint Compiler | 57 / 235 | 24.3% |
+
+Primitive-level coverage is led by State Ledger (36), Deterministic Verifier (36), Canonical Identity Resolver (34), Normalization Layer (32), Cross-artifact Linker (32) and Provenance / Lineage (30). The top three directions are close (62.1, 58.7, 57.9); there is a steep drop to the fourth (35.3). The recorded recommendation is to start the next round with Research Object Identity and Lineage; the final choice belongs to the maintainer, and the matrix remains revisable as the atlas evolves.
+
 ## 7. Design discipline
 
 The repository continues the discipline established in the 1.3 round.
