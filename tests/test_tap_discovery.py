@@ -31,4 +31,5 @@ def test_actual_upstream_discovers_four_skills():
             return SimpleNamespace(name=path.parent.name, extra={}) if path.is_file() else None
     found = ns['_list_skills_in_repo'](Source(), 'xngg1021/hermes-academic-skills', 'skills/')
     assert {skill.name for skill in found} == {'academic-source-verification', 'academic-writing',
-                                              'literature-analysis', 'math-computation'}
+                                              'literature-analysis', 'math-computation',
+                                              'systematic-review-meta-analysis'}
