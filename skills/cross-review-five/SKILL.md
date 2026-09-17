@@ -17,15 +17,15 @@ metadata:
 
 ## 五人构成
 
-| 短名 | 模型 | 提供方 |
+| 短名 | 模型 | 提供方 (首选规范名 / 兼容别名) |
 | --- | --- | --- |
-| kimi-k3 | Kimi K3 | kimi |
+| kimi-k3 | Kimi K3 | kimi-coding (兼容 kimi) |
 | dsv4pro | DeepSeek V4 Pro | deepseek |
 | glm53 | GLM 5.3(始终思考推理模型) | zai |
-| gemini38flash | Gemini 3.8 Flash | google |
-| gemini31pro | Gemini 3.1 Pro | google |
+| gemini38flash | Gemini 3.8 Flash | gemini (兼容 google) |
+| gemini31pro | Gemini 3.1 Pro | gemini (兼容 google) |
 
-凭证要求:各提供方的密钥按 Hermes 常规配置(deepseek 在 auth.json 凭证池,kimi 用 MOONSHOT_API_KEY,GLM 用 GLM_API_KEY,Gemini 用 GOOGLE_API_KEY)。
+凭证要求:各提供方的密钥按 Hermes 常规配置(DeepSeek 在 auth.json 凭证池，Kimi 首选 KIMI_API_KEY 或 KIMI_CODING_API_KEY，兼容 MOONSHOT_API_KEY；GLM 用 GLM_API_KEY；Gemini 用 GEMINI_API_KEY 或 GOOGLE_API_KEY)。子进程已启用安全环境白名单隔离与 --ignore-rules 参数。
 
 ## 工作流 (v1 经典轮转)
 

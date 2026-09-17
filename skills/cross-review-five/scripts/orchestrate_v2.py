@@ -78,6 +78,24 @@ MODELS = {
     "gemini31pro": ("google", "gemini-3.1-pro-preview"),
 }
 
+CANONICAL_PROVIDERS = {
+    "kimi": "kimi-coding",
+    "google": "gemini",
+    "zai": "zai",
+    "deepseek": "deepseek",
+}
+
+
+def resolve_provider(model_key: str) -> str:
+    """优先使用环境变量指定，或按 CANONICAL_PROVIDERS 规范名解析，默认规范优先 (RV-12)。"""
+    env_override = os.environ.get(f"HERMES_{model_key.upper().replace('-', '_')}_PROVIDER")
+    if env_override:
+        return env_override
+    raw_provider, _ = MODELS[model_key]
+    if os.environ.get("HERMES_USE_CANONICAL_PROVIDERS", "1").strip().lower() in ("1", "true", "yes"):
+        return CANONICAL_PROVIDERS.get(raw_provider, raw_provider)
+    return raw_provider
+
 DEFAULT_MODELS = list(MODELS)
 
 MODE_PRESETS = {
@@ -200,29 +218,56 @@ def dedup_preserve_order(seq):
     return out
 
 
+def _minimal_child_env(model_key):
+    """构造最小 env allowlist，仅传基础系统变量与当前 provider 所需密钥 (RV-11)。"""
+    base_allow = {
+        "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "TEMP", "TMP",
+        "USERPROFILE", "HOME", "LANG", "LC_ALL", "SHELL", "COMSPEC",
+        "HERMES_HOME", "HERMES_CONFIG_DIR", "HERMES_LOG_LEVEL",
+    }
+    provider_keys = {
+        "kimi-k3": ["KIMI_API_KEY", "KIMI_CODING_API_KEY", "MOONSHOT_API_KEY"],
+        "dsv4pro": ["DEEPSEEK_API_KEY"],
+        "glm53": ["GLM_API_KEY", "ZAI_API_KEY"],
+        "gemini38flash": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+        "gemini31pro": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    }
+    allowed = base_allow | set(provider_keys.get(model_key, []))
+    env = {}
+    for k, v in os.environ.items():
+        if k in allowed or k.startswith("HERMES_"):
+            env[k] = v
+    return env
+
+
 def spawn(model_key, prompt_path, log_path):
-    provider, model = MODELS[model_key]
+    raw_provider, model = MODELS[model_key]
+    provider = resolve_provider(model_key)
     cmd = ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
-           "-m", model, "--provider", provider]
+           "--ignore-rules", "-m", model, "--provider", provider]
     if model_key == "glm53":
         cmd += ["--reasoning", "low"]
     with open(log_path, "wb") as log:
         return subprocess.Popen(
             cmd, stdout=log, stderr=subprocess.STDOUT,
             cwd=os.getcwd(),
+            env=_minimal_child_env(model_key),
         )
 
 
 def wait_for_outputs(out_paths, procs, timeout=TIMEOUT_SECONDS):
     """轮询产物落盘与进程退出 (RV-10):
     返回 {path: {"file": bool, "exit": int|None}}; 文件存在与退出码分开记录。
-    超时 terminate 后等待确认退出。
+    超时 terminate 后等待确认退出。采用自适应 0.2s-1.0s 间隔消除无效等待。
     """
     deadline = time.time() + timeout
+    poll_interval = 0.2
     while time.time() < deadline:
         if all(p.poll() is not None for p in procs):
             break
-        time.sleep(POLL_SECONDS)
+        time.sleep(poll_interval)
+        if poll_interval < 1.0:
+            poll_interval = min(1.0, poll_interval * 1.5)
     for p in procs:
         if p.poll() is None:
             p.terminate()
@@ -237,8 +282,11 @@ def wait_for_outputs(out_paths, procs, timeout=TIMEOUT_SECONDS):
 
 def _task_digest(task_path):
     try:
+        h = hashlib.sha256()
         with open(task_path, "rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()[:16]
+            while chunk := f.read(65536):
+                h.update(chunk)
+        return h.hexdigest()[:16]
     except OSError:
         return None
 

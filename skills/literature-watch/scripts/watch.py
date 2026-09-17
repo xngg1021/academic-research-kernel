@@ -19,10 +19,10 @@ import os
 import re
 import sys
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode, quote, urlsplit
 from urllib.request import Request, urlopen
 
 import sys as _sys
@@ -32,7 +32,7 @@ if _sys.platform == "win32":
             _s.reconfigure(encoding="utf-8")
 
 OPENALEX = 'https://api.openalex.org'
-CROSSREF = 'https://api.crossref.org'
+CROSSREF = 'https://api.crossref.org/v1'
 DEFAULT_DAYS = 7
 SELECT = 'id,doi,title,publication_year,authorships,primary_location,type'
 
@@ -87,11 +87,34 @@ def _headers() -> dict:
     return headers
 
 
+def _parse_retry_after(value: str | None, default_delay: float) -> float:
+    """支持 RFC 9110 秒数 (delta-seconds) 或 HTTP-date。"""
+    if not value:
+        return default_delay
+    val = value.strip()
+    try:
+        return max(0.0, min(float(val), 30.0))
+    except ValueError:
+        pass
+    try:
+        import email.utils
+        dt = email.utils.parsedate_to_datetime(val)
+        now = datetime.now(timezone.utc)
+        diff = (dt - now).total_seconds()
+        return max(0.0, min(diff, 30.0))
+    except Exception:
+        return default_delay
+
+
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
 def get(url: str, timeout: int = 20) -> dict:
-    """live: 真实 HTTPS GET，带 429/5xx 有界重试；OpenAlex key 只发给 OpenAlex。"""
+    """live: 真实 HTTPS GET，仅针对 429 与 5xx 有界重试；OpenAlex key 仅注入官方 HTTPS 域名。"""
     req = Request(url, headers=_headers())
     key = os.environ.get('OPENALEX_API_KEY', '').strip()
-    if key and url.startswith(OPENALEX):
+    parsed = urlsplit(url)
+    if key and parsed.scheme == 'https' and (parsed.hostname or '').lower() == 'api.openalex.org':
         req.add_header('Authorization', f'Bearer {key}')
     attempts, delay = 0, 1.0
     while True:
@@ -99,11 +122,11 @@ def get(url: str, timeout: int = 20) -> dict:
             with urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode('utf-8'))
         except HTTPError as exc:
-            attempts += 1
-            if exc.code == 401 or attempts >= 3:
+            if exc.code not in RETRY_STATUSES or attempts >= 3:
                 raise
+            attempts += 1
             retry_after = exc.headers.get('Retry-After') if exc.headers else None
-            wait = min(float(retry_after), 30.0) if retry_after else delay
+            wait = _parse_retry_after(retry_after, delay)
             time.sleep(wait)
             delay *= 2
         except URLError:
@@ -146,10 +169,16 @@ def fetch_author_works(author_id: str, since: date):
 
 def fetch_citing_works(doi: str, since: date):
     """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。
-    返回 (items, truncated)。OpenAlex 查不到 id 时接通 Crossref 兜底
+    返回 (items, truncated)。OpenAlex 查不到 id 或返回 404 时接通 Crossref 兜底
     (MW-05), 产出标记 crossref-fallback 的种子元数据记录。"""
-    data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=id')
-    wid = str(data.get('id') or '').rsplit('/', 1)[-1]
+    try:
+        data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=id')
+    except HTTPError as exc:
+        if exc.code == 404:
+            data = {}
+        else:
+            raise
+    wid = str((data or {}).get('id') or '').rsplit('/', 1)[-1]
     if not wid:
         record = fetch_crossref_record(doi)
         if record:
@@ -167,7 +196,7 @@ def fetch_citing_works(doi: str, since: date):
         'per_page': 100,
         'select': SELECT,
     })
-    data = get(f'{OPENALEX}/works?{params}')
+    data = get(f'{OPENALEX}/works?{params}') or {}
     return data.get('results') or [], _truncated(data)
 
 
@@ -182,7 +211,12 @@ def _crossref_year(record: dict):
 
 def fetch_crossref_record(doi: str) -> dict:
     """live: Crossref 单条元数据，作为 OpenAlex 缺失时的兜底。"""
-    data = get(f'{CROSSREF}/works/{quote(doi, safe="")}')
+    try:
+        data = get(f'{CROSSREF}/works/{quote(doi, safe="")}')
+    except HTTPError as exc:
+        if exc.code == 404:
+            return {}
+        raise
     return data.get('message') or {}
 
 

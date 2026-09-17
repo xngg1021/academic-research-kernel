@@ -57,8 +57,32 @@ def _probe_torch_cuda():
         import torch
         if not torch.cuda.is_available():
             return {"executable": False, "reason": "torch.cuda.is_available() == False"}
-        return {"executable": True, "device_name": torch.cuda.get_device_name(0),
-                "version": torch.__version__}
+        is_rocm = bool(getattr(torch.version, "hip", None))
+        runtime = "rocm" if is_rocm else "cuda"
+        return {
+            "executable": True,
+            "device_name": torch.cuda.get_device_name(0),
+            "version": torch.__version__,
+            "runtime": runtime,
+            "hip_version": getattr(torch.version, "hip", None),
+        }
+    except Exception as exc:
+        return {"executable": False, "reason": str(exc)}
+
+
+def _probe_torch_xpu():
+    try:
+        import torch
+        xpu = getattr(torch, "xpu", None)
+        if xpu is None or not xpu.is_available():
+            return {"executable": False, "reason": "torch.xpu.is_available() == False"}
+        dev_name = xpu.get_device_name(0) if hasattr(xpu, "get_device_name") else "Intel XPU"
+        return {
+            "executable": True,
+            "device_name": dev_name,
+            "version": torch.__version__,
+            "runtime": "xpu",
+        }
     except Exception as exc:
         return {"executable": False, "reason": str(exc)}
 
@@ -115,6 +139,10 @@ BACKENDS = {
         "cupy_cuda", "accelerator", ("float32", "float64", "complex64", "complex128"),
         "CuPy on CUDA when installed",
         _probe_cupy_cuda),
+    "torch_xpu": BackendSpec(
+        "torch_xpu", "accelerator", ("float32", "float16", "bfloat16"),
+        "PyTorch on Intel XPU when installed",
+        _probe_torch_xpu),
 }
 
 

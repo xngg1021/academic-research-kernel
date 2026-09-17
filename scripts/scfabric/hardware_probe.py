@@ -99,11 +99,15 @@ def _accelerators():
         try:
             import torch  # noqa: PLC0415
             if torch.cuda.is_available():
+                is_rocm = bool(getattr(torch.version, "hip", None))
+                runtime_name = "rocm" if is_rocm else "cuda"
                 out.append({
-                    "kind": "cuda",
+                    "kind": runtime_name,
+                    "runtime": runtime_name,
                     "available": True,
                     "device_name": torch.cuda.get_device_name(0),
                     "device_count": torch.cuda.device_count(),
+                    "hip_version": getattr(torch.version, "hip", None),
                 })
             else:
                 out.append({"kind": "cuda", "available": False})
