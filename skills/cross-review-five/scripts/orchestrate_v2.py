@@ -85,13 +85,82 @@ CANONICAL_PROVIDERS = {
     "deepseek": "deepseek",
 }
 
+CUSTOM_SPECS = {}
+
+
+def register_model_spec(key, provider, model, runner="hermes", cmd=None):
+    """动态注册一个模型或子代理评审者，支持任意模型与执行方式。"""
+    key = str(key).strip()
+    provider = str(provider).strip()
+    model = str(model).strip()
+    MODELS[key] = (provider, model)
+    CUSTOM_SPECS[key] = {
+        "provider": provider,
+        "model": model,
+        "runner": runner or "hermes",
+        "cmd": cmd,
+    }
+
+
+def parse_and_register_models(models_arg: str = None, models_file: str = None) -> list:
+    """解析用户指定的任意数量与种类模型/子代理 (支持三段式与外部配置清单)。"""
+    selected_keys = []
+    if models_file and os.path.exists(models_file):
+        with open(models_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            for item in data:
+                k = item.get("key") or item.get("name")
+                p = item.get("provider", "custom")
+                m = item.get("model", k)
+                r = item.get("runner", "hermes")
+                c = item.get("cmd")
+                register_model_spec(k, p, m, runner=r, cmd=c)
+                selected_keys.append(k)
+        elif isinstance(data, dict):
+            for k, val in data.items():
+                if isinstance(val, (list, tuple)):
+                    p, m = val[0], val[1]
+                    register_model_spec(k, p, m)
+                elif isinstance(val, dict):
+                    p = val.get("provider", "custom")
+                    m = val.get("model", k)
+                    r = val.get("runner", "hermes")
+                    c = val.get("cmd")
+                    register_model_spec(k, p, m, runner=r, cmd=c)
+                selected_keys.append(k)
+
+    if models_arg:
+        tokens = [t.strip() for t in models_arg.split(",") if t.strip()]
+        for tok in tokens:
+            parts = tok.split(":")
+            if len(parts) == 1:
+                k = parts[0]
+                if k not in MODELS:
+                    register_model_spec(k, k, k)
+                selected_keys.append(k)
+            elif len(parts) == 2:
+                k, m = parts[0], parts[1]
+                register_model_spec(k, k, m)
+                selected_keys.append(k)
+            elif len(parts) == 3:
+                k, p, m = parts[0], parts[1], parts[2]
+                register_model_spec(k, p, m)
+                selected_keys.append(k)
+            elif len(parts) >= 4:
+                k, p, m, r = parts[0], parts[1], parts[2], parts[3]
+                register_model_spec(k, p, m, runner=r)
+                selected_keys.append(k)
+
+    return dedup_preserve_order(selected_keys)
+
 
 def resolve_provider(model_key: str) -> str:
     """优先使用环境变量指定，或按 CANONICAL_PROVIDERS 规范名解析，默认规范优先 (RV-12)。"""
     env_override = os.environ.get(f"HERMES_{model_key.upper().replace('-', '_')}_PROVIDER")
     if env_override:
         return env_override
-    raw_provider, _ = MODELS[model_key]
+    raw_provider, _ = MODELS.get(model_key, (model_key, model_key))
     if os.environ.get("HERMES_USE_CANONICAL_PROVIDERS", "1").strip().lower() in ("1", "true", "yes"):
         return CANONICAL_PROVIDERS.get(raw_provider, raw_provider)
     return raw_provider
@@ -225,30 +294,53 @@ def _minimal_child_env(model_key):
         "USERPROFILE", "HOME", "LANG", "LC_ALL", "SHELL", "COMSPEC",
         "HERMES_HOME", "HERMES_CONFIG_DIR", "HERMES_LOG_LEVEL",
     }
-    provider_keys = {
-        "kimi-k3": ["KIMI_API_KEY", "KIMI_CODING_API_KEY", "MOONSHOT_API_KEY"],
-        "dsv4pro": ["DEEPSEEK_API_KEY"],
-        "glm53": ["GLM_API_KEY", "ZAI_API_KEY"],
-        "gemini38flash": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-        "gemini31pro": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    raw_provider, _ = MODELS.get(model_key, (model_key, model_key))
+    provider = resolve_provider(model_key).lower()
+    allowed_prefixes = {
+        raw_provider.upper().replace("-", "_"),
+        provider.upper().replace("-", "_"),
+        model_key.upper().replace("-", "_"),
     }
-    allowed = base_allow | set(provider_keys.get(model_key, []))
     env = {}
     for k, v in os.environ.items():
-        if k in allowed or k.startswith("HERMES_"):
+        if k in base_allow or k.startswith("HERMES_"):
             env[k] = v
-    if "MOONSHOT_API_KEY" in env and "KIMI_API_KEY" not in env:
-        env["KIMI_API_KEY"] = env["MOONSHOT_API_KEY"]
+        elif any(k.upper().startswith(p) for p in allowed_prefixes):
+            if any(term in k.upper() for term in ("API_KEY", "TOKEN", "SECRET")):
+                env[k] = v
+    # 针对已知的别名兼容
+    if "MOONSHOT_API_KEY" in os.environ and "KIMI_API_KEY" not in env:
+        env["KIMI_API_KEY"] = os.environ["MOONSHOT_API_KEY"]
+    if "GOOGLE_API_KEY" in os.environ and "GEMINI_API_KEY" not in env:
+        env["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
     return env
 
 
 def spawn(model_key, prompt_path, log_path):
-    raw_provider, model = MODELS[model_key]
-    provider = resolve_provider(model_key)
-    cmd = ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
-           "--ignore-rules", "-m", model, "--provider", provider]
-    if model_key == "glm53":
-        cmd += ["--reasoning", "low"]
+    spec = CUSTOM_SPECS.get(model_key, {})
+    runner = spec.get("runner", "hermes")
+    custom_cmd = spec.get("cmd") or os.environ.get(f"HERMES_REVIEW_CMD_{model_key.upper().replace('-', '_')}")
+
+    if runner in ("cli", "cmd") or custom_cmd:
+        # 用户指定了自定义 CLI 子代理命令模板
+        cmd_str = custom_cmd or "{model} --query {prompt_path}"
+        cmd_formatted = cmd_str.format(
+            model=spec.get("model", model_key),
+            prompt_path=prompt_path,
+            prompt=prompt_path,
+            log=log_path,
+        )
+        import shlex
+        cmd = shlex.split(cmd_formatted, posix=(sys.platform != "win32"))
+    else:
+        # 默认 Hermes CLI 方式
+        raw_provider, model = MODELS.get(model_key, (model_key, model_key))
+        provider = resolve_provider(model_key)
+        cmd = ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
+               "--ignore-rules", "-m", model, "--provider", provider]
+        if model_key == "glm53":
+            cmd += ["--reasoning", "low"]
+
     with open(log_path, "wb") as log:
         return subprocess.Popen(
             cmd, stdout=log, stderr=subprocess.STDOUT,
@@ -580,6 +672,9 @@ def max_weight_derangement(models, weights):
     n = len(models)
     if n < 2:
         return []
+    if n > 8:
+        # 当模型数量超过 8 时，降级为确定性循环位移错排，消除 O(N!) 阶乘排列耗时
+        return [(models[i], models[(i + 1) % n]) for i in range(n)]
     best_score = -1e9
     best_perm = None
     for perm in itertools.permutations(models):
@@ -1273,29 +1368,30 @@ def stage_status_v2(stream):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="五人异构模型交叉编排器 v2 (Sparse Adaptive Deliberation)")
+    parser = argparse.ArgumentParser(description="多模型与子代理交叉编排器 v2 (Sparse Adaptive Deliberation)")
     parser.add_argument("stream_dir", help="任务流目录")
     parser.add_argument("--task", default="task.md", help="任务书路径 (默认流目录内 task.md)")
     parser.add_argument("--stage", choices=["plan", "merge", "challenge", "synthesize", "status", "all"], required=True)
     parser.add_argument("--mode", choices=["economy", "standard", "audit"], default="standard",
                         help="评审拓扑与预算模式: economy (3模型/快速), standard (5模型/常规默认), audit (5模型/严格审计)")
     parser.add_argument("--models", default=None,
-                        help="手动覆盖模型列表 (逗号分隔短名)")
+                        help="手动指定模型列表 (逗号分隔短名或 key:provider:model[:runner] 规格)")
+    parser.add_argument("--models-file", default=None,
+                        help="外部模型与子代理配置文件路径 (JSON 格式)")
     args = parser.parse_args(argv)
 
     stream = os.path.abspath(args.stream_dir)
     os.makedirs(stream, exist_ok=True)
     task_path = args.task if os.path.isabs(args.task) else os.path.join(stream, args.task)
 
-    if args.models:
-        model_keys = [k.strip() for k in args.models.split(",") if k.strip()]
+    if args.models or args.models_file:
+        model_keys = parse_and_register_models(args.models, args.models_file)
     else:
         model_keys = MODE_PRESETS.get(args.mode, MODE_PRESETS["standard"])["models"]
 
-    for k in model_keys:
-        if k not in MODELS:
-            print(f"未知模型短名: {k}, 可用: {', '.join(MODELS)}", file=sys.stderr)
-            return 2
+    if len(model_keys) < 2 and args.stage in ("plan", "merge", "all"):
+        print(f"交叉评审至少需要 2 个模型或子代理，当前指定: {len(model_keys)}", file=sys.stderr)
+        return 2
 
     if args.stage == "status":
         stage_status_v2(stream)

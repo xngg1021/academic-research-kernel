@@ -23,6 +23,7 @@
 | `literature-watch/watch.py` & `retraction-watch/watch.py` | 404 错误触发三次无谓重试导致 Crossref 兜底受阻；Token 凭证校验依赖前缀匹配 | 404 直接抛出不参与重试；凭证注入限定为 HTTPS 与官方域名权威校验；端点显式指向 `/v1` | 兼容旧版调用，消除无谓重试延迟并杜绝凭证泄露 |
 | `cross-review-five/orchestrate_v2.py` | 子进程继承父进程全量环境变量；固定 15 秒轮询；依赖兼容别名 | 注入 `--ignore-rules` 参数与最小环境白名单；引入自适应轮询与规范提供方名称解析 | 隔离无关凭证并消除评审进程空等 |
 | `scfabric/backends.py` & `hardware_probe.py` | ROCm 平台误标为 CUDA；缺少 Intel XPU 执行后端 | 区分 `torch.version.hip` 并标记 `rocm` 运行环境；补齐 `torch_xpu` 执行后端与类型约束 | 准确反映各硬件运行时身份 |
+| `cross-review-five/orchestrate_v2.py` | 仅支持固定 5 种预置模型；不支持第三方子代理与动态配置 | 支持 `--models` 动态内联声明与 `--models-file` 外部清单；支持自定义 CLI 子代理模板；自适应 $N$ 阶错排降级 | 用户可自由指定任意数量与种类的模型及子代理 |
 
 ### 2. 发布身份清单 (Release Manifest)
 
@@ -45,6 +46,6 @@
   - `schemas/compute-receipt.schema.json`
   - `schemas/evidence-receipt.schema.json`
 - **Verification Matrix**:
-  - Unit & Regression Tests: 448 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 456 passed, 0 failures, 0 warnings
   - Static QA Fences: 38 independent executable blocks passed
   - CI Matrix Platforms: Ubuntu (Python 3.10, 3.11, 3.12, 3.13), macOS (Python 3.12), Windows (Python 3.12)

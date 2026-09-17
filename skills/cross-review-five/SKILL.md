@@ -77,7 +77,27 @@ python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --stage status
 python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task <任务书> --stage all --mode standard
 ```
 
---models 参数按短名选择子集,默认五人全上。任务书模板与约束见脚本内的 PLAN_PROMPT 与 REVIEW_PROMPT。
+### 任意数量与种类模型及子代理支持 (v2 动态扩展)
+
+编排器原生支持用户自由指定任意数量与种类的模型或独立子代理参与交叉审议：
+
+1. **命令行内联声明**（支持 `key:provider:model[:runner]` 规范）：
+   ```bash
+   # 指定自定义 3 模型组合:
+   python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task task.md --stage all \
+     --models "sonnet:anthropic:claude-3-7-sonnet,gpt4o:openai:gpt-4o,dsv4:deepseek:deepseek-v4-pro"
+   ```
+2. **JSON 配置文件定义**（支持第三方子代理 CLI 模板）：
+   ```json
+   [
+     {"key": "claude", "provider": "anthropic", "model": "claude-3-7-sonnet"},
+     {"key": "gemini-cli", "runner": "cli", "cmd": "gemini -p {prompt_path}"},
+     {"key": "codex-agent", "runner": "cli", "cmd": "codex run --query-file {prompt_path}"}
+   ]
+   ```
+   执行：`python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task task.md --stage all --models-file models.json`。
+
+--models 参数若传已有短名则从预设中选取子集。任务书模板与约束见脚本内的 PLAN_PROMPT 与 REVIEW_PROMPT。
 
 ## 纪律
 
