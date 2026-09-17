@@ -1,7 +1,7 @@
 ---
 name: systematic-review-meta-analysis
 description: "系统综述与元分析流水线:PRISMA 日志、效应量互转、异质性合并、发表偏倚诊断."
-version: 1.0.0
+version: 1.0.1
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]

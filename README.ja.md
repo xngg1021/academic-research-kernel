@@ -18,17 +18,17 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 
 | スキル | バージョン | 機能 |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.1.1 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証 |
-| `skills/literature-analysis` | 1.2.0 | 12 のワークフロー:トピック類似度、局所テキスト重複、反証、著者プロファイル、模擬査読、誤謬検査、レビューマトリクス、投稿先候補、BibTeX、バイリンガル読解、研究ギャップ探索、再現 |
+| `skills/academic-source-verification` | 1.2.0 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証 |
+| `skills/literature-analysis` | 1.3.0 | 12 のワークフロー:トピック類似度、局所テキスト重複、反証、著者プロファイル、模擬査読、誤謬検査、レビューマトリクス、投稿先候補、BibTeX、バイリンガル読解、研究ギャップ探索、再現 |
 | `skills/academic-writing` | 1.1.1 | 編集、引用ガイダンス(APA、MLA、Chicago、IEEE、AMA、GB/T)、ジャーナル指示、任意の検出サービス、投稿資料、中国語学術要件 |
 | `skills/math-computation` | 1.2.1 | 既存の領域・タスク経路と修正済みの数値・統計例題、領域別リファレンス 4 編 |
-| `skills/quantitative-paper-audit` | 1.0.0 | 論文が報告する統計量(効果量、p 値、信頼区間、OR/RR、検出力)の再計算と数値不整合の検出 |
-| `skills/research-reproducibility` | 1.0.0 | 構造化チェックリストエンジン、5 段階の事実、4 状態のレシートを備えた 14 段階の再現監査パイプライン |
-| `skills/systematic-review-meta-analysis` | 1.0.0 | PRISMA 検索ログ、スクリーニング台帳、効果量換算、異質性、固定・変量効果の統合、感度分析、出版バイアス診断 |
-| `skills/literature-watch` | 1.0.0 | 週次ブループリント:OpenAlex と Crossref でトピック、著者、DOI の新規作品を監視し、重複排除のうえ新規のみ報告 |
-| `skills/retraction-watch` | 1.0.0 | 週次ブループリント:OpenAlex の is_retracted と Crossref 更新レコード(update-to シグナル)に対して DOI 監視リストを再検査し、状態変化のみ報告 |
+| `skills/quantitative-paper-audit` | 1.1.0 | 論文が報告する統計量(効果量、p 値、信頼区間、OR/RR、検出力)の再計算と数値不整合の検出 |
+| `skills/research-reproducibility` | 1.0.1 | 構造化チェックリストエンジン、5 段階の事実、4 状態のレシートを備えた 14 段階の再現監査パイプライン |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 検索ログ、スクリーニング台帳、効果量換算、異質性、固定・変量効果の統合、感度分析、出版バイアス診断 |
+| `skills/literature-watch` | 1.1.0 | 週次ブループリント:OpenAlex と Crossref でトピック、著者、DOI の新規作品を監視し、重複排除のうえ新規のみ報告 |
+| `skills/retraction-watch` | 1.1.0 | 週次ブループリント:OpenAlex の is_retracted と Crossref 更新レコード(update-to シグナル)に対して DOI 監視リストを再検査し、状態変化のみ報告 |
 | `skills/research-object-identity` | 1.0.0 | 決定的な研究オブジェクト同一性層:識別子の正規化、5 状態判定(信頼度スコアなし)、関係・系譜エッジ。Evidence Receipt を消費 |
-| `skills/cross-review-five` | 1.0.0 | 5 モデル異種レビューパネル（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：v2 4段階 Sparse Deliberation パイプライン（独立プラン、主張レベルのクラスタリング/統合、匿名反論、未決台帳突合） |
+| `skills/cross-review-five` | 2.0.0 | 5 モデル異種レビューパネル（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：v2 4段階 Sparse Deliberation パイプライン（独立プラン、主張レベルのクラスタリング/統合、匿名反論、未決台帳突合） |
 
 11 のスキルには 21 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれる。GB/T 7714-2025 が施行されており、執筆リファレンスは検証済みの発効日と明示的に 2015 年例とラベル付けされたものを区別する。2025 年版への完全準拠には対象機関のテンプレートまたは標準本文が必要である。
 

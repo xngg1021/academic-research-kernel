@@ -18,17 +18,17 @@ SLL 廣泛允許使用、研究、修改、商用、分發與專有增補，受�
 
 | 技能 | 版本 | 功能 |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.1.1 | 交叉核對身份與來源特定的被引數；檢查更新與撤稿訊號；定位開放獲取文本並核驗 PDF 身份 |
-| `skills/literature-analysis` | 1.2.0 | 十二個工作流：主題相似、局部文本重疊、反證、作者檔案、模擬評審、謬誤檢查、評審矩陣、期刊候選、BibTeX、雙語閱讀、研究空白篩查、復現 |
+| `skills/academic-source-verification` | 1.2.0 | 交叉核對身份與來源特定的被引數；檢查更新與撤稿訊號；定位開放獲取文本並核驗 PDF 身份 |
+| `skills/literature-analysis` | 1.3.0 | 十二個工作流：主題相似、局部文本重疊、反證、作者檔案、模擬評審、謬誤檢查、評審矩陣、期刊候選、BibTeX、雙語閱讀、研究空白篩查、復現 |
 | `skills/academic-writing` | 1.1.1 | 編輯、引文規範（APA、MLA、Chicago、IEEE、AMA、GB/T）、期刊須知、可選檢測服務、投稿材料、中文學術要求 |
 | `skills/math-computation` | 1.2.1 | 既有領域與任務路由及修正後的數值與統計示例；四篇領域參考文件 |
-| `skills/quantitative-paper-audit` | 1.0.0 | 反算論文報告的統計量（效應量、p 值、信賴區間、OR/RR、實現功效）並檢測數值錯配 |
-| `skills/research-reproducibility` | 1.0.0 | 十四階段復現審計流水線，含結構化清單引擎、五層事實與四態回執 |
-| `skills/systematic-review-meta-analysis` | 1.0.0 | PRISMA 檢索日誌、篩選台帳、效應量換算、異質性、固定與隨機效應合併、敏感性與發表偏倚診斷 |
-| `skills/literature-watch` | 1.0.0 | 週更藍圖：監控主題、作者與 DOI 在 OpenAlex 與 Crossref 的新作品；去重並只報告新增 |
-| `skills/retraction-watch` | 1.0.0 | 週更藍圖：對照 OpenAlex is_retracted 與 Crossref 更新記錄（update-to 訊號）複查 DOI 監控清單；只報告狀態變化 |
+| `skills/quantitative-paper-audit` | 1.1.0 | 反算論文報告的統計量（效應量、p 值、信賴區間、OR/RR、實現功效）並檢測數值錯配 |
+| `skills/research-reproducibility` | 1.0.1 | 十四階段復現審計流水線，含結構化清單引擎、五層事實與四態回執 |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 檢索日誌、篩選台帳、效應量換算、異質性、固定與隨機效應合併、敏感性與發表偏倚診斷 |
+| `skills/literature-watch` | 1.1.0 | 週更藍圖：監控主題、作者與 DOI 在 OpenAlex 與 Crossref 的新作品；去重並只報告新增 |
+| `skills/retraction-watch` | 1.1.0 | 週更藍圖：對照 OpenAlex is_retracted 與 Crossref 更新記錄（update-to 訊號）複查 DOI 監控清單；只報告狀態變化 |
 | `skills/research-object-identity` | 1.0.0 | 確定性研究物件身份層：標識符歸一、五態判定（無信心分數）、關係與譜系建邊；消費 Evidence Receipt |
-| `skills/cross-review-five` | 1.0.0 | 五人異構模型評審小組（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：v2 四階段 Sparse Deliberation 流（盲審產出、斷言級聚類合併、定向匿名質詢、對賬與未決保護賬本） |
+| `skills/cross-review-five` | 2.0.0 | 五人異構模型評審小組（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：v2 四階段 Sparse Deliberation 流（盲審產出、斷言級聚類合併、定向匿名質詢、對賬與未決保護賬本） |
 
 十一個技能共含 21 篇 Markdown 參考文件，按需加載。GB/T 7714-2025 已生效；寫作參考區分其已核實生效日期與顯式標註的 2015 示例。完全符合 2025 版需以目標機構的模板或標準文本為準。
 

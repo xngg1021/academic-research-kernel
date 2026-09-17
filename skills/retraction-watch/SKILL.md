@@ -1,7 +1,7 @@
 ---
 name: retraction-watch
 description: "每周核查 DOI 清单的撤稿信号：OpenAlex 与 Crossref 双源比对，只在状态变化时报告."
-version: 1.0.0
+version: 1.1.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]

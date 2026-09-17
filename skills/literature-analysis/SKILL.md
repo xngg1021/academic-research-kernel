@@ -1,7 +1,7 @@
 ---
 name: literature-analysis
 description: "文献分析:相似论文检索、查重比对、矛盾与反证、作者档案、模拟审稿、谬误标注."
-version: 1.2.0
+version: 1.3.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]

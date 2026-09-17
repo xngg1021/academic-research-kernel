@@ -261,3 +261,40 @@ def test_p1_scfabric_torch_xpu_backend_registered():
         assert probe_res["executable"] is True
         assert probe_res["runtime"] == "xpu"
         assert probe_res["device_name"] == "Intel Data Center GPU Max 1550"
+
+
+# =========================================================================
+# 5. OpenAlex Capped Cursor Paging
+# =========================================================================
+
+def test_p1_openalex_capped_cursor_paging():
+    """fetch_topic_works must respect max_pages and use cursors when pagination is requested."""
+    page_urls = []
+
+    def fake_urlopen(req, timeout=20):
+        url = req.full_url
+        page_urls.append(url)
+        if "cursor=%2A" in url or "cursor=*" in url:
+            # 第一页，返回 2 条，带 next_cursor，总数 4
+            resp_body = b'{"meta": {"count": 4, "next_cursor": "cursor_page_2"}, "results": [{"id": "W1", "title": "P1"}, {"id": "W2", "title": "P2"}]}'
+        elif "cursor=cursor_page_2" in url:
+            # 第二页，返回剩余 2 条，next_cursor 为 None
+            resp_body = b'{"meta": {"count": 4, "next_cursor": null}, "results": [{"id": "W3", "title": "P3"}, {"id": "W4", "title": "P4"}]}'
+        else:
+            resp_body = b'{"meta": {"count": 0, "next_cursor": null}, "results": []}'
+        return _make_mock_response(resp_body)
+
+    # 1. 默认 max_pages=1 -> 仅取第一页，且标记截断
+    with patch.object(lit_watch, "urlopen", side_effect=fake_urlopen):
+        items_1, tr_1 = lit_watch.fetch_topic_works("agent", date(2026, 1, 1), max_pages=1)
+    assert len(page_urls) == 1
+    assert len(items_1) == 2
+    assert tr_1 is True
+
+    # 2. 深度翻页 max_pages=2 -> 取两页共 4 条，且翻完后截断标记为 False
+    page_urls.clear()
+    with patch.object(lit_watch, "urlopen", side_effect=fake_urlopen):
+        items_2, tr_2 = lit_watch.fetch_topic_works("agent", date(2026, 1, 1), max_pages=2)
+    assert len(page_urls) == 2
+    assert len(items_2) == 4
+    assert tr_2 is False

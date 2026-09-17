@@ -18,17 +18,17 @@ SLL erlaubt weitgehend Nutzung, Studium, Änderung, kommerzielle Nutzung, Verbre
 
 | Skill | Version | Funktion |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.1.1 | Identität und quellenspezifische Zitationszahlen gegenprüfen; Aktualisierungs-/Rücknahmesignale prüfen; OA-Text auffinden und PDF-Identität verifizieren |
-| `skills/literature-analysis` | 1.2.0 | Zwölf Workflows: Themenähnlichkeit, lokale Textüberschneidung, Gegenbeweise, Autorenprofile, Probegutachten, Fehlschlussprüfung, Review-Matrix, Zeitschriftenkandidaten, BibTeX, zweisprachiges Lesen, Forschungslücken-Screening, Reproduktion |
+| `skills/academic-source-verification` | 1.2.0 | Identität und quellenspezifische Zitationszahlen gegenprüfen; Aktualisierungs-/Rücknahmesignale prüfen; OA-Text auffinden und PDF-Identität verifizieren |
+| `skills/literature-analysis` | 1.3.0 | Zwölf Workflows: Themenähnlichkeit, lokale Textüberschneidung, Gegenbeweise, Autorenprofile, Probegutachten, Fehlschlussprüfung, Review-Matrix, Zeitschriftenkandidaten, BibTeX, zweisprachiges Lesen, Forschungslücken-Screening, Reproduktion |
 | `skills/academic-writing` | 1.1.1 | Redigieren, Zitierhilfe (APA, MLA, Chicago, IEEE, AMA, GB/T), Zeitschriftenvorgaben, optionale Erkennungsdienste, Einreichungsmaterialien, chinesische akademische Anforderungen |
 | `skills/math-computation` | 1.2.1 | Bestehendes Domänen-/Aufgaben-Routing mit korrigierten numerischen und statistischen Beispielen; vier domänenspezifische Referenzdateien |
-| `skills/quantitative-paper-audit` | 1.0.0 | Berichtete Statistiken neu berechnen (Effektgröße, p-Werte, Konfidenzintervalle, OR/RR, erreichte Power) und numerische Abweichungen erkennen |
-| `skills/research-reproducibility` | 1.0.0 | Vierzehnstufige Reproduktionsaudit-Pipeline mit strukturierter Checklisten-Engine, fünf Faktenstufen und vierteiligem Beleg |
-| `skills/systematic-review-meta-analysis` | 1.0.0 | PRISMA-Suchprotokolle, Screening-Ledger, Effektgrößenkonversion, Heterogenität, gepoolte feste/zufällige Effekte, Sensitivitäts- und Publikationsbias-Diagnostik |
-| `skills/literature-watch` | 1.0.0 | Wöchentlicher Blueprint: Themen, Autoren und DOI-zitierende Werke auf OpenAlex und Crossref überwachen; deduplizieren und nur Neues melden |
-| `skills/retraction-watch` | 1.0.0 | Wöchentlicher Blueprint: DOI-Beobachtungsliste gegen OpenAlex is_retracted und Crossref-Aktualisierungsdatensätze (update-to-Signale) erneut prüfen; nur Statusänderungen melden |
+| `skills/quantitative-paper-audit` | 1.1.0 | Berichtete Statistiken neu berechnen (Effektgröße, p-Werte, Konfidenzintervalle, OR/RR, erreichte Power) und numerische Abweichungen erkennen |
+| `skills/research-reproducibility` | 1.0.1 | Vierzehnstufige Reproduktionsaudit-Pipeline mit strukturierter Checklisten-Engine, fünf Faktenstufen und vierteiligem Beleg |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA-Suchprotokolle, Screening-Ledger, Effektgrößenkonversion, Heterogenität, gepoolte feste/zufällige Effekte, Sensitivitäts- und Publikationsbias-Diagnostik |
+| `skills/literature-watch` | 1.1.0 | Wöchentlicher Blueprint: Themen, Autoren und DOI-zitierende Werke auf OpenAlex und Crossref überwachen; deduplizieren und nur Neues melden |
+| `skills/retraction-watch` | 1.1.0 | Wöchentlicher Blueprint: DOI-Beobachtungsliste gegen OpenAlex is_retracted und Crossref-Aktualisierungsdatensätze (update-to-Signale) erneut prüfen; nur Statusänderungen melden |
 | `skills/research-object-identity` | 1.0.0 | Deterministische Identitätsschicht für Forschungsobjekte: Kennungsnormalisierung, fünfstufiges Urteil (ohne Konfidenzwerte), Relations-/Herkunftskanten; konsumiert Evidence Receipts |
-| `skills/cross-review-five` | 1.0.0 | Heterogenes Fünf-Modell-Reviewgremium (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 Vier-Stufen-Sparse-Deliberation-Pipeline (unabhängiger Plan, Clustering/Zusammenführung auf Behauptungsebene, gezielte anonyme Anfechtung und Abstimmung mit Ledger) |
+| `skills/cross-review-five` | 2.0.0 | Heterogenes Fünf-Modell-Reviewgremium (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 Vier-Stufen-Sparse-Deliberation-Pipeline (unabhängiger Plan, Clustering/Zusammenführung auf Behauptungsebene, gezielte anonyme Anfechtung und Abstimmung mit Ledger) |
 
 Die elf Skills umfassen 21 Markdown-Referenzdateien, die nur bei Bedarf geladen werden. GB/T 7714-2025 ist in Kraft; die Schreibreferenz unterscheidet das verifizierte Inkrafttretensdatum von ausdrücklich gekennzeichneten Beispielen von 2015. Volle Konformität mit der Fassung 2025 erfordert die Vorlage oder den Standardtext der Zielinstitution.
 

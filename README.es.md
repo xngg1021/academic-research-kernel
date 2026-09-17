@@ -18,17 +18,17 @@ SLL permite ampliamente el uso, el estudio, la modificación, el uso comercial, 
 
 | Competencia | Versión | Función |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.1.1 | Contrastar identidad y recuentos de citas por fuente; inspeccionar señales de actualización y retractación; localizar texto en acceso abierto y verificar la identidad de los PDF |
-| `skills/literature-analysis` | 1.2.0 | Doce flujos: similitud temática, solapamiento local de texto, contraevidencia, perfiles de autores, revisión simulada, comprobación de falacias, matriz de revisión, revistas candidatas, BibTeX, lectura bilingüe, cribado de lagunas, reproducción |
+| `skills/academic-source-verification` | 1.2.0 | Contrastar identidad y recuentos de citas por fuente; inspeccionar señales de actualización y retractación; localizar texto en acceso abierto y verificar la identidad de los PDF |
+| `skills/literature-analysis` | 1.3.0 | Doce flujos: similitud temática, solapamiento local de texto, contraevidencia, perfiles de autores, revisión simulada, comprobación de falacias, matriz de revisión, revistas candidatas, BibTeX, lectura bilingüe, cribado de lagunas, reproducción |
 | `skills/academic-writing` | 1.1.1 | Edición, orientación de citas (APA, MLA, Chicago, IEEE, AMA, GB/T), instrucciones de revistas, servicios de detección opcionales, materiales de envío, requisitos académicos chinos |
 | `skills/math-computation` | 1.2.1 | Enrutamiento de dominio y tarea existente con ejemplos numéricos y estadísticos corregidos; cuatro archivos de referencia por dominio |
-| `skills/quantitative-paper-audit` | 1.0.0 | Recalcular las estadísticas declaradas (tamaño del efecto, valores p, intervalos de confianza, OR/RR, potencia alcanzada) y detectar discrepancias numéricas |
-| `skills/research-reproducibility` | 1.0.0 | Cadena de auditoría de reproducción en catorce etapas con motor de lista de comprobación estructurado, cinco niveles de hechos y recibo de cuatro estados |
-| `skills/systematic-review-meta-analysis` | 1.0.0 | Registros de búsqueda PRISMA, libros de cribado, conversión de tamaños del efecto, heterogeneidad, agrupación de efectos fijos y aleatorios, diagnósticos de sensibilidad y sesgo de publicación |
-| `skills/literature-watch` | 1.0.0 | Plano semanal: vigilar temas, autores y obras que citan DOI en OpenAlex y Crossref; deduplicar y notificar solo novedades |
-| `skills/retraction-watch` | 1.0.0 | Plano semanal: reverificar una lista de DOI contra OpenAlex is_retracted y los registros de actualización de Crossref (señales update-to); notificar solo cambios de estado |
+| `skills/quantitative-paper-audit` | 1.1.0 | Recalcular las estadísticas declaradas (tamaño del efecto, valores p, intervalos de confianza, OR/RR, potencia alcanzada) y detectar discrepancias numéricas |
+| `skills/research-reproducibility` | 1.0.1 | Cadena de auditoría de reproducción en catorce etapas con motor de lista de comprobación estructurado, cinco niveles de hechos y recibo de cuatro estados |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Registros de búsqueda PRISMA, libros de cribado, conversión de tamaños del efecto, heterogeneidad, agrupación de efectos fijos y aleatorios, diagnósticos de sensibilidad y sesgo de publicación |
+| `skills/literature-watch` | 1.1.0 | Plano semanal: vigilar temas, autores y obras que citan DOI en OpenAlex y Crossref; deduplicar y notificar solo novedades |
+| `skills/retraction-watch` | 1.1.0 | Plano semanal: reverificar una lista de DOI contra OpenAlex is_retracted y los registros de actualización de Crossref (señales update-to); notificar solo cambios de estado |
 | `skills/research-object-identity` | 1.0.0 | Capa de identidad determinista de objetos de investigación: normalización de identificadores, veredicto de cinco estados (sin puntuaciones de confianza), aristas de relación y linaje; consume recibos de evidencia |
-| `skills/cross-review-five` | 1.0.0 | Panel de revisión heterogéneo de cinco modelos (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): canalización de cuatro etapas Sparse Deliberation v2 (plan independiente, agrupación/fusión a nivel de afirmación, desafío anónimo dirigido y conciliación con libro mayor no resuelto) |
+| `skills/cross-review-five` | 2.0.0 | Panel de revisión heterogéneo de cinco modelos (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): canalización de cuatro etapas Sparse Deliberation v2 (plan independiente, agrupación/fusión a nivel de afirmación, desafío anónimo dirigido y conciliación con libro mayor no resuelto) |
 
 Las once competencias incluyen 21 archivos de referencia Markdown, cargados solo cuando se necesitan. GB/T 7714-2025 está en vigor; la referencia de redacción distingue su fecha de entrada en vigor verificada de los ejemplos explícitamente etiquetados de 2015. La conformidad plena con la edición de 2025 exige la plantilla o el texto estándar de la institución de destino.
 

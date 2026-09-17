@@ -143,31 +143,66 @@ def _truncated(data: dict) -> bool:
     return int(total) > len(data.get('results') or [])
 
 
-def fetch_topic_works(topic: str, since: date):
+def fetch_topic_works(topic: str, since: date, max_pages: int = 1):
     """live: OpenAlex 主题检索，from_publication_date 限定新增窗口。
-    返回 (items, truncated); truncated=True 表示还有未取回的分页。"""
-    params = urlencode({
-        'search': topic,
-        'filter': f'from_publication_date:{since.isoformat()}',
-        'per_page': 100,
-        'select': SELECT,
-    })
-    data = get(f'{OPENALEX}/works?{params}')
-    return data.get('results') or [], _truncated(data)
+    支持受控游标分页 (max_pages)。返回 (items, truncated)。"""
+    all_results = []
+    cursor = "*"
+    page = 1
+    truncated = False
+    while page <= max_pages:
+        params = urlencode({
+            'search': topic,
+            'filter': f'from_publication_date:{since.isoformat()}',
+            'per_page': 100,
+            'select': SELECT,
+            'cursor': cursor,
+        })
+        data = get(f'{OPENALEX}/works?{params}') or {}
+        results = data.get('results') or []
+        all_results.extend(results)
+        meta = data.get('meta') or {}
+        next_cursor = meta.get('next_cursor')
+        count = meta.get('count') or 0
+        if not next_cursor or not results or len(all_results) >= count:
+            truncated = False
+            break
+        cursor = next_cursor
+        page += 1
+        truncated = True
+    return all_results, truncated
 
 
-def fetch_author_works(author_id: str, since: date):
-    """live: OpenAlex 按 author id 过滤新作。返回 (items, truncated)。"""
-    params = urlencode({
-        'filter': f'authorships.author.id:{author_id},from_publication_date:{since.isoformat()}',
-        'per_page': 100,
-        'select': SELECT,
-    })
-    data = get(f'{OPENALEX}/works?{params}')
-    return data.get('results') or [], _truncated(data)
+def fetch_author_works(author_id: str, since: date, max_pages: int = 1):
+    """live: OpenAlex 按 author id 过滤新作。
+    支持受控游标分页 (max_pages)。返回 (items, truncated)。"""
+    all_results = []
+    cursor = "*"
+    page = 1
+    truncated = False
+    while page <= max_pages:
+        params = urlencode({
+            'filter': f'authorships.author.id:{author_id},from_publication_date:{since.isoformat()}',
+            'per_page': 100,
+            'select': SELECT,
+            'cursor': cursor,
+        })
+        data = get(f'{OPENALEX}/works?{params}') or {}
+        results = data.get('results') or []
+        all_results.extend(results)
+        meta = data.get('meta') or {}
+        next_cursor = meta.get('next_cursor')
+        count = meta.get('count') or 0
+        if not next_cursor or not results or len(all_results) >= count:
+            truncated = False
+            break
+        cursor = next_cursor
+        page += 1
+        truncated = True
+    return all_results, truncated
 
 
-def fetch_citing_works(doi: str, since: date):
+def fetch_citing_works(doi: str, since: date, max_pages: int = 1):
     """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。
     返回 (items, truncated)。OpenAlex 查不到 id 或返回 404 时接通 Crossref 兜底
     (MW-05), 产出标记 crossref-fallback 的种子元数据记录。"""
@@ -191,13 +226,30 @@ def fetch_citing_works(doi: str, since: date):
             }
             return [fallback], False
         return [], False
-    params = urlencode({
-        'filter': f'cites:{wid},from_publication_date:{since.isoformat()}',
-        'per_page': 100,
-        'select': SELECT,
-    })
-    data = get(f'{OPENALEX}/works?{params}') or {}
-    return data.get('results') or [], _truncated(data)
+    all_results = []
+    cursor = "*"
+    page = 1
+    truncated = False
+    while page <= max_pages:
+        params = urlencode({
+            'filter': f'cites:{wid},from_publication_date:{since.isoformat()}',
+            'per_page': 100,
+            'select': SELECT,
+            'cursor': cursor,
+        })
+        data = get(f'{OPENALEX}/works?{params}') or {}
+        results = data.get('results') or []
+        all_results.extend(results)
+        meta = data.get('meta') or {}
+        next_cursor = meta.get('next_cursor')
+        count = meta.get('count') or 0
+        if not next_cursor or not results or len(all_results) >= count:
+            truncated = False
+            break
+        cursor = next_cursor
+        page += 1
+        truncated = True
+    return all_results, truncated
 
 
 def _crossref_year(record: dict):
@@ -220,23 +272,23 @@ def fetch_crossref_record(doi: str) -> dict:
     return data.get('message') or {}
 
 
-def collect(watchlist: dict, since: date):
+def collect(watchlist: dict, since: date, max_pages: int = 1):
     """live: 聚合三个来源的候选新作并预去重。
-    返回 (items, truncations); truncations 非空表示对应来源达到首批上限。
+    返回 (items, truncations); truncations 非空表示对应来源达到翻页上限。
     """
     items, seen, truncations = [], set(), []
     for topic in watchlist['topics']:
-        its, tr = fetch_topic_works(topic, since)
+        its, tr = fetch_topic_works(topic, since) if max_pages == 1 else fetch_topic_works(topic, since, max_pages=max_pages)
         items.extend(its)
         if tr:
             truncations.append(f'topic={topic!r}')
     for author_id in watchlist['authors']:
-        its, tr = fetch_author_works(author_id, since)
+        its, tr = fetch_author_works(author_id, since) if max_pages == 1 else fetch_author_works(author_id, since, max_pages=max_pages)
         items.extend(its)
         if tr:
             truncations.append(f'author={author_id!r}')
     for doi in watchlist['dois']:
-        its, tr = fetch_citing_works(doi, since)
+        its, tr = fetch_citing_works(doi, since) if max_pages == 1 else fetch_citing_works(doi, since, max_pages=max_pages)
         # M01: 排除被监控论文自身 Crossref 兜底记录, 仅保留真实引用者
         citing_items = [it for it in its if it.get('source') != 'crossref-fallback']
         items.extend(citing_items)
@@ -305,15 +357,15 @@ def _atomic_write_json(path, payload) -> None:
             pass
 
 
-def run(watchlist_path, state_path, days: int) -> int:
-    """live 入口：查新、跨周去重、只输出新增。"""
+def run(watchlist_path, state_path, days: int, max_pages: int = 1) -> int:
+    """live 入口：查新、跨周去重、只输出新增。支持分页上限 max_pages。"""
     watchlist = load_watchlist(watchlist_path)
     state_file = Path(state_path).expanduser()
     seen = set()
     if state_file.is_file():
         seen = set(json.loads(state_file.read_text(encoding='utf-8')))
     since = date.today() - timedelta(days=days)
-    collected, truncations = collect(watchlist, since)
+    collected, truncations = collect(watchlist, since, max_pages=max_pages)
     if truncations:
         print(f'⚠ 完整性警告: 以下来源达到首批上限, 存在漏报风险: {truncations}')
     fresh = filter_unseen(collected, seen)
@@ -366,7 +418,8 @@ def main(argv) -> int:
         return 2
     state = option('--state', os.environ.get('LITERATURE_WATCH_STATE',
                                             str(Path(watchlist).with_suffix('.seen.json'))))
-    return run(watchlist, state, int(option('--days', DEFAULT_DAYS)))
+    max_pages = int(option('--max-pages', 1))
+    return run(watchlist, state, int(option('--days', DEFAULT_DAYS)), max_pages=max_pages)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 ---
 name: research-reproducibility
 description: "论文可复现性核对流水线：身份、代码、版本、依赖、构建与指标四态判定."
-version: 1.0.0
+version: 1.0.1
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]

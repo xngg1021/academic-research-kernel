@@ -28,22 +28,23 @@
 
 - **Repository**: `xngg1021/hermes-academic-skills`
 - **Protocol**: `compute-receipt-1.0` / `evidence-receipt-1.0`
-- **Skills Count**: 11
-  - `skills/academic-source-verification` (1.0.0)
-  - `skills/academic-writing` (1.0.0)
-  - `skills/literature-analysis` (1.0.0)
-  - `skills/math-computation` (1.0.0)
-  - `skills/quantitative-paper-audit` (1.0.0)
-  - `skills/research-reproducibility` (1.0.0)
-  - `skills/systematic-review-meta-analysis` (1.0.0)
-  - `skills/literature-watch` (1.0.0)
-  - `skills/retraction-watch` (1.0.0)
-  - `skills/research-object-identity` (1.0.0)
-  - `skills/cross-review-five` (1.0.0)
+- **Skills & Components**:
+  - `skills/cross-review-five` (2.0.0) — v2 四阶段 Sparse Deliberation 稀疏审议流重大升级
+  - `skills/academic-source-verification` (1.2.0) — 增加全 Unicode 分词与词元集合匹配算法
+  - `skills/academic-writing` (1.1.1) — 写作规范与引文参考
+  - `skills/literature-analysis` (1.3.0) — 并查集两遍归并与 LaTeX 对称反转义
+  - `skills/math-computation` (1.2.1) — 全领域计算中枢与分流
+  - `skills/quantitative-paper-audit` (1.1.0) — 0% 欠定判定与有效数字尾随零保留
+  - `skills/research-reproducibility` (1.0.1) — 复现审计流水线与排版修复
+  - `skills/systematic-review-meta-analysis` (1.0.1) — trim-and-fill 固定点收敛判断修复
+  - `skills/literature-watch` (1.1.0) — Crossref 兜底、凭证域名权威校验与并发锁租约
+  - `skills/retraction-watch` (1.1.0) — 状态合并、并发租约锁与分页截断检测
+  - `skills/research-object-identity` (1.0.0) — 确定性研究对象身份层
+  - `scripts/scfabric` (1.0.0) — 科学计算执行层薄层与严格数值门禁
 - **Schemas**:
   - `schemas/compute-receipt.schema.json`
   - `schemas/evidence-receipt.schema.json`
 - **Verification Matrix**:
-  - Unit & Regression Tests: 439 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 448 passed, 0 failures, 0 warnings
   - Static QA Fences: 38 independent executable blocks passed
   - CI Matrix Platforms: Ubuntu (Python 3.10, 3.11, 3.12, 3.13), macOS (Python 3.12), Windows (Python 3.12)

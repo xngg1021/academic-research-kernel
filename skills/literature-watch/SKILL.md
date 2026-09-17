@@ -1,7 +1,7 @@
 ---
 name: literature-watch
 description: "每周监控新文献：按主题、作者、DOI 清单查 OpenAlex 与 Crossref，只报新增."
-version: 1.0.0
+version: 1.1.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]

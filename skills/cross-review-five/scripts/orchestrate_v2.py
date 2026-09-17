@@ -237,6 +237,8 @@ def _minimal_child_env(model_key):
     for k, v in os.environ.items():
         if k in allowed or k.startswith("HERMES_"):
             env[k] = v
+    if "MOONSHOT_API_KEY" in env and "KIMI_API_KEY" not in env:
+        env["KIMI_API_KEY"] = env["MOONSHOT_API_KEY"]
     return env
 
 

@@ -18,17 +18,17 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 
 | Skill | Version | What it does |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.1.1 | Cross-check identity and source-specific citation counts; inspect update/retraction signals; locate OA text and verify PDF identity |
-| `skills/literature-analysis` | 1.2.0 | Twelve workflows: topic similarity, local text overlap, counter-evidence, author profiles, mock review, fallacy checks, review matrix, journal candidates, BibTeX, bilingual reading, research-gap screening, reproduction |
+| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and source-specific citation counts; inspect update/retraction signals; locate OA text and verify PDF identity |
+| `skills/literature-analysis` | 1.3.0 | Twelve workflows: topic similarity, local text overlap, counter-evidence, author profiles, mock review, fallacy checks, review matrix, journal candidates, BibTeX, bilingual reading, research-gap screening, reproduction |
 | `skills/academic-writing` | 1.1.1 | Editing, citation guidance (APA, MLA, Chicago, IEEE, AMA, GB/T), journal instructions, optional detection services, submission materials, Chinese academic requirements |
 | `skills/math-computation` | 1.2.1 | Existing domain/task routing with corrected numerical/statistical examples; four domain/advanced reference files |
-| `skills/quantitative-paper-audit` | 1.0.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, achieved power) and detect numerical mismatches |
-| `skills/research-reproducibility` | 1.0.0 | Fourteen-stage reproduction audit pipeline with a structured checklist engine, five fact tiers and a four-state receipt |
-| `skills/systematic-review-meta-analysis` | 1.0.0 | PRISMA search logs, screening ledgers, effect-size conversion, heterogeneity, fixed/random pooling, sensitivity and publication-bias diagnostics |
-| `skills/literature-watch` | 1.0.0 | Weekly blueprint: watch topics, authors and DOI citing works on OpenAlex and Crossref; deduplicate and report only new items |
-| `skills/retraction-watch` | 1.0.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref update records (update-to signals); report only status changes |
+| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, achieved power) and detect numerical mismatches |
+| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with a structured checklist engine, five fact tiers and a four-state receipt |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening ledgers, effect-size conversion, heterogeneity, fixed/random pooling, sensitivity and publication-bias diagnostics |
+| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors and DOI citing works on OpenAlex and Crossref; deduplicate and report only new items |
+| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref update records (update-to signals); report only status changes |
 | `skills/research-object-identity` | 1.0.0 | Deterministic research-object identity layer: identifier normalization, five-state verdict (no confidence scores), relation/lineage edges; consumes Evidence Receipts |
-| `skills/cross-review-five` | 1.0.0 | Five-model heterogeneous review panel (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 four-stage Sparse Deliberation pipeline (independent plan, assertion-level clustering/merge, targeted anonymous challenge, and reconciliation with unresolved ledger) |
+| `skills/cross-review-five` | 2.0.0 | Five-model heterogeneous review panel (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 four-stage Sparse Deliberation pipeline (independent plan, assertion-level clustering/merge, targeted anonymous challenge, and reconciliation with unresolved ledger) |
 
 There are 21 Markdown reference files across the eleven skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
 
