@@ -41,7 +41,7 @@ One workstation: 36 hardware threads with AVX-512, 96 GB RAM, one consumer GPU w
 Recorded findings:
 
 1. There is no universal fastest backend. Small workloads stay on CPU because accelerator overhead dominates. Element-wise autodiff stays on CPU at every tested scale because the computation is too light.
-2. On the measured machine, the 36-thread AVX-512 CPU beats its consumer GPU for float64 dense linear algebra and FFT: consumer GPUs throttle FP64 to roughly 1/64 of FP32, while the CPU's multi-threaded torch kernels win. This confirmed the maintainer's prior expectation and refutes any GPU-first router.
+2. On the measured machine, the 36-thread AVX-512 CPU beats its consumer GPU for float64 dense linear algebra and FFT: consumer GPUs throttle FP64 throughput relative to FP32, while the workstation CPU's multi-threaded torch kernels win on this specific workload. This confirmed the maintainer's prior expectation on this specific hardware configuration and demonstrates that a naive GPU-first dispatch rule is invalid for double precision on systems with throttled FP64 hardware.
 3. The GPU wins where the workload is wide and parallel at float32 statistics: Monte Carlo and bootstrap with large resample counts.
 4. The admission gate rejected real cases that a naive router would have shipped: torch_cpu FFT at the largest scale failed the sized parity contract before a complex-dtype comparison bug was fixed; the bug itself (casting complex results to float64 and silently comparing real parts only) is exactly the class of silent semantic drift this layer exists to catch, and it is now pinned by a regression test.
 

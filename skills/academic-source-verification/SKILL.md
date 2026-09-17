@@ -138,10 +138,10 @@ python "${HERMES_SKILL_DIR}/scripts/verify_pdf_identity.py" --pdf <路径> --tit
 2. **Crossref 与 OpenAlex 查 arXiv 的 data-DOI 可能 404/滞后**。`10.48550/arXiv.<id>` 是 DataCite 注册的，Crossref 常返回 404，OpenAlex 偶有收录延迟。遇此情况直接调用 arXiv 官方 API（`http://export.arxiv.org/api/query?id_list=<id>` 或 `search_query=ti:<标题>`）核实标题、摘要、版本历史与撤回（withdrawn）状态。
 3. **经典奠基文献标题易与后继综述撞车**。以简短通用标题（如 "Working Memory"）检索时，极易命中作者多年后的同名回顾篇。核查奠基作须限定出版年份（Crossref `filter=from-pub-date:YYYY-01-01,until-pub-date:YYYY-12-31`）并核对作者序列表。
 4. **Semantic Scholar 无 key 极易 429**。请求间隔 ≥1.1s，失败退避重试；持续 429 就退回 OpenAlex + Crossref 两个来源，并如实说明。
-4. **update-to 非空 ≠ 撤稿**。还须核对更新方向、目标 DOI 与 update.type；更正和表达关注分别记录，不能见 update-to 就报撤稿。
-5. **出版商 PDF 付费墙，脚本下载 403**。OpenAlex 的 `oa_status: "bronze"` 只表示"在出版商网站免费可读"，不代表能脚本下载（Wiley 的 pdfdirect 就是 403）。403 后报告访问受限，不循环重试。
-6. **下载成功 ≠ 内容正确**。必须提取 PDF 首页文字核对标题/作者，防止下到同名错误文件。
-7. **Unpaywall 的 email 参数有硬校验**。使用自己的真实联系邮箱；服务可用 422 拒绝缺失/示例邮箱，不推断邮箱域名的 DNS 行为。`is_oa=false` 时 `best_oa_location` 为 null，先判再取。
+5. **update-to 非空 ≠ 撤稿**。还须核对更新方向、目标 DOI 与 update.type；更正和表达关注分别记录，不能见 update-to 就报撤稿。
+6. **出版商 PDF 付费墙，脚本下载 403**。OpenAlex 的 `oa_status: "bronze"` 只表示"在出版商网站免费可读"，不代表能脚本下载（Wiley 的 pdfdirect 就是 403）。403 后报告访问受限，不循环重试。
+7. **下载成功 ≠ 内容正确**。必须提取 PDF 首页文字核对标题/作者，防止下到同名错误文件。
+8. **Unpaywall 的 email 参数有硬校验**。使用自己的真实联系邮箱；服务可用 422 拒绝缺失/示例邮箱，不推断邮箱域名的 DNS 行为。`is_oa=false` 时 `best_oa_location` 为 null，先判再取。
 
 输出语言：默认跟随用户输入语言（用户用什么语言问就用什么语言答）；论文标题与引文保留原文，译名首次出现时附原文。
 

@@ -25,7 +25,7 @@ USER_AGENT = 'hermes-academic-skills/1.2'
 
 
 def _norm_title(title) -> str:
-    """小写、去标点、折叠空白;保留 Unicode 字母数字 (AV-03):
+    r"""小写、去标点、折叠空白;保留 Unicode 字母数字 (AV-03):
     西里尔、假名、重音字符等不丢失, 规则 [^\W_]+ 覆盖全部文字系统。"""
     return ' '.join(re.findall(r'[^\W_]+', (title or '').lower()))
 

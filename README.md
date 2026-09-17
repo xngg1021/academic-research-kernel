@@ -28,7 +28,7 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 | `skills/literature-watch` | 1.0.0 | Weekly blueprint: watch topics, authors and DOI citing works on OpenAlex and Crossref; deduplicate and report only new items |
 | `skills/retraction-watch` | 1.0.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref update records (update-to signals); report only status changes |
 | `skills/research-object-identity` | 1.0.0 | Deterministic research-object identity layer: identifier normalization, five-state verdict (no confidence scores), relation/lineage edges; consumes Evidence Receipts |
-| `skills/cross-review-five` | 1.0.0 | Five-model heterogeneous review panel (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): plan and rotating cross-review stages |
+| `skills/cross-review-five` | 1.0.0 | Five-model heterogeneous review panel (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 four-stage Sparse Deliberation pipeline (independent plan, assertion-level clustering/merge, targeted anonymous challenge, and reconciliation with unresolved ledger) |
 
 There are 21 Markdown reference files across the eleven skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
 
