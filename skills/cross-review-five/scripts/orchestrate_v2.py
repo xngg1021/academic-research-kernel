@@ -53,6 +53,7 @@ canonical target (RV-02):
     python orchestrate_v2.py <stream_dir> --task <task.md> --stage all [--mode standard]
 """
 import argparse
+import concurrent.futures
 import glob
 import hashlib
 import itertools
@@ -64,6 +65,26 @@ import subprocess
 import sys
 import time
 import uuid
+from pathlib import Path
+
+try:
+    from contracts import (
+        ParticipantSpec, PanelSpec, ReviewRequest, ChallengeRequest,
+        ReviewResult, ChallengeResult, Finding
+    )
+    from adapters import (
+        ReviewerAdapter, CommandReviewerAdapter, HermesCliReviewerAdapter, MockReviewerAdapter
+    )
+except ImportError:
+    _cur_dir = Path(__file__).resolve().parent
+    sys.path.insert(0, str(_cur_dir))
+    from contracts import (
+        ParticipantSpec, PanelSpec, ReviewRequest, ChallengeRequest,
+        ReviewResult, ChallengeResult, Finding
+    )
+    from adapters import (
+        ReviewerAdapter, CommandReviewerAdapter, HermesCliReviewerAdapter, MockReviewerAdapter
+    )
 
 if sys.platform == "win32":
     for _s in (sys.stdout, sys.stderr):
@@ -86,6 +107,42 @@ CANONICAL_PROVIDERS = {
 }
 
 CUSTOM_SPECS = {}
+
+
+def get_participant_spec(key: str) -> ParticipantSpec:
+    """根据 key 构造或获取 ParticipantSpec。"""
+    if key in CUSTOM_SPECS:
+        c = CUSTOM_SPECS[key]
+        return ParticipantSpec(
+            id=key,
+            executor=c.get("runner", "command" if c.get("cmd") else "hermes"),
+            provider=c.get("provider", "custom"),
+            model=c.get("model", key),
+            cmd=c.get("cmd"),
+            role=c.get("role", "reviewer"),
+            toolsets=c.get("toolsets", ["default"]),
+        )
+    if key in MODELS:
+        prov, mod = MODELS[key]
+        return ParticipantSpec(
+            id=key,
+            executor="hermes",
+            provider=prov,
+            model=mod,
+            role="reviewer",
+            toolsets=["default"],
+        )
+    return ParticipantSpec(id=key, executor="hermes", provider="custom", model=key)
+
+
+def get_reviewer_adapter(spec: ParticipantSpec) -> ReviewerAdapter:
+    """根据 ParticipantSpec 调度对应的中立 ReviewerAdapter 执行器。"""
+    runner = (spec.executor or "").lower()
+    if runner == "mock":
+        return MockReviewerAdapter()
+    if runner in ("cli", "cmd", "command") or spec.cmd:
+        return CommandReviewerAdapter()
+    return HermesCliReviewerAdapter(spawn_fn=spawn)
 
 
 def register_model_spec(key, provider, model, runner="hermes", cmd=None):
@@ -668,25 +725,101 @@ def compute_complementarity_matrix(models, findings_by_model):
     return weights
 
 
+def _hungarian_min_cost_assignment(cost_matrix):
+    """Kuhn-Munkres (Hungarian) algorithm for minimum-cost bipartite matching in O(N^3)."""
+    n = len(cost_matrix)
+    u = [0.0] * (n + 1)
+    v = [0.0] * (n + 1)
+    p = [0] * (n + 1)
+    way = [0] * (n + 1)
+
+    for i in range(1, n + 1):
+        p[0] = i
+        j0 = 0
+        minv = [float('inf')] * (n + 1)
+        used = [False] * (n + 1)
+        while True:
+            used[j0] = True
+            i0 = p[j0]
+            delta = float('inf')
+            j1 = 0
+            for j in range(1, n + 1):
+                if not used[j]:
+                    cur = cost_matrix[i0 - 1][j - 1] - u[i0] - v[j]
+                    if cur < minv[j]:
+                        minv[j] = cur
+                        way[j] = j0
+                    if minv[j] < delta:
+                        delta = minv[j]
+                        j1 = j
+            for j in range(n + 1):
+                if used[j]:
+                    u[p[j]] += delta
+                    v[j] -= delta
+                else:
+                    minv[j] -= delta
+            j0 = j1
+            if p[j0] == 0:
+                break
+        while True:
+            j1 = way[j0]
+            p[j0] = p[j1]
+            j0 = j1
+            if j0 == 0:
+                break
+
+    ans = [0] * n
+    for j in range(1, n + 1):
+        if p[j] > 0:
+            ans[p[j] - 1] = j - 1
+    return ans
+
+
 def max_weight_derangement(models, weights):
+    """求解全局最大权重错排 (Maximum-Weight Derangement)。
+    在 O(N^3) 复杂度内基于匈牙利算法求解最优二分图匹配，
+    对角线施加负极大惩罚杜绝自审查，适用于任意规模席位 (2 到 50+)。
+    """
     n = len(models)
     if n < 2:
         return []
-    if n > 8:
-        # 当模型数量超过 8 时，降级为确定性循环位移错排，消除 O(N!) 阶乘排列耗时
-        return [(models[i], models[(i + 1) % n]) for i in range(n)]
-    best_score = -1e9
-    best_perm = None
-    for perm in itertools.permutations(models):
-        if any(m == t for m, t in zip(models, perm)):
-            continue
-        score = sum(weights.get((m, t), 0.0) for m, t in zip(models, perm))
-        if score > best_score:
-            best_score = score
-            best_perm = perm
-    if best_perm is None:
-        return [(models[i], models[(i + 1) % n]) for i in range(n)]
-    return list(zip(models, best_perm))
+    if n == 2:
+        return [(models[0], models[1]), (models[1], models[0])]
+
+    # N <= 8 且追求绝对全局最高分的场景保持排列求精，
+    # 当 N > 8 或大规模 panel 时无缝切换为 O(N^3) 匈牙利算法
+    if n <= 8:
+        best_score = -1e9
+        best_perm = None
+        for perm in itertools.permutations(models):
+            if any(m == t for m, t in zip(models, perm)):
+                continue
+            score = sum(weights.get((m, t), 0.0) for m, t in zip(models, perm))
+            if score > best_score:
+                best_score = score
+                best_perm = perm
+        if best_perm is not None:
+            return list(zip(models, best_perm))
+
+    # O(N^3) 匈牙利算法构造成本矩阵 (求最大权等价于求 -w 的最小成本)
+    HIGH_PENALTY = 1e7
+    cost_matrix = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            if i == j:
+                row.append(HIGH_PENALTY)
+            else:
+                w = weights.get((models[i], models[j]), 0.0)
+                row.append(-float(w))
+        cost_matrix.append(row)
+
+    match = _hungarian_min_cost_assignment(cost_matrix)
+    if all(match[i] != i for i in range(n)):
+        return [(models[i], models[match[i]]) for i in range(n)]
+
+    # 极端退化情况保底循环位移
+    return [(models[i], models[(i + 1) % n]) for i in range(n)]
 
 
 def _has_polarity_contradiction(items):
@@ -790,48 +923,65 @@ def cluster_issues(models, findings_by_model):
 
 
 def stage_plan_v2(stream, task_path, model_keys):
-    """Phase 1: 独立盲审与生成 (新 run: 清理全部旧产物 + 重算 manifest 身份 + 退出码判定)。"""
+    """Phase 1: 独立盲审与生成 (基于中立 ReviewerAdapter 统一分发与执行)。"""
     _clean_stale_plan_outputs(stream, model_keys, task_path=task_path)
     manifest = _write_manifest(stream, task_path, model_keys, "plan")
     run_id = manifest["run_id"]
     started_at = manifest["started_at"]
 
-    out_paths, procs = [], []
+    requests = []
     for k in model_keys:
         prompt_path = os.path.join(stream, f"prompt-{k}.txt")
         out_path = os.path.join(stream, f"review-{k}.md")
         findings_path = os.path.join(stream, f"findings-{k}.json")
-        log_path = os.path.join(stream, f"log-{k}.txt")
         with open(prompt_path, "w", encoding="utf-8") as f:
             f.write(PLAN_PROMPT_V2.format(
                 task_path=task_path,
                 out_path=out_path,
                 findings_path=findings_path
             ))
-        procs.append(spawn(k, prompt_path, log_path))
-        out_paths.append(out_path)
-        print(f"[plan-v2] {k} 已启动 pid={procs[-1].pid}")
+        spec = get_participant_spec(k)
+        req = ReviewRequest(
+            task_path=prompt_path,
+            out_path=out_path,
+            findings_path=findings_path,
+            participant=spec
+        )
+        requests.append((k, req))
 
-    results = wait_for_outputs(out_paths, procs)
-    missing = [k for k, p in zip(model_keys, out_paths) if not results[p]["file"]]
-    bad_exit = {k: results[p]["exit"] for k, p in zip(model_keys, out_paths)
-                if results[p]["exit"] not in (0, None)}
+    # 基于中立 ReviewerAdapter 协议统一调度评审
+    results: dict[str, ReviewResult] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(requests), 10)) as pool:
+        future_map = {
+            pool.submit(get_reviewer_adapter(req.participant).review, req): k
+            for k, req in requests
+        }
+        for fut in concurrent.futures.as_completed(future_map):
+            k = future_map[fut]
+            try:
+                res = fut.result()
+                results[k] = res
+            except Exception as exc:
+                results[k] = ReviewResult(participant_id=k, success=False, error=str(exc))
+
+    missing = [k for k in model_keys if not os.path.isfile(os.path.join(stream, f"review-{k}.md"))]
+    bad_exit = {k: results[k].error for k in model_keys if not results[k].success}
     if missing:
         print(f"[plan-v2] 警告: 无产出模型: {', '.join(missing)}", file=sys.stderr)
     if bad_exit:
-        print(f"[plan-v2] 警告: 非零退出: {bad_exit}", file=sys.stderr)
+        print(f"[plan-v2] 警告: 异常退出: {bad_exit}", file=sys.stderr)
     failed_models = sorted(list(set(missing) | set(bad_exit.keys())))
     _write_manifest(stream, task_path, model_keys, "plan", missing_models=failed_models,
                     run_id=run_id, started_at=started_at)
 
     for k in model_keys:
-        if k in bad_exit:
+        if k in failed_models:
             continue
         extract_findings_json(stream, k)
 
-    ok = any(r["file"] and r["exit"] in (0, None) for r in results.values())
+    ok = any(r.success and os.path.isfile(os.path.join(stream, f"review-{k}.md")) for k, r in results.items())
     print(f"[plan-v2] {'完成' if ok else '全部失败'} "
-          f"{json.dumps({os.path.basename(p): v['file'] for p, v in results.items()}, ensure_ascii=False)}")
+          f"{json.dumps({k: results[k].success for k in model_keys}, ensure_ascii=False)}")
     return ok
 
 
@@ -999,7 +1149,7 @@ def stage_merge_v2(stream, model_keys, mode="standard"):
 
 
 def stage_challenge_v2(stream, task_path):
-    """Phase 3: 定向匿名质询执行 (清理陈旧答复 + 退出码/文件分开判定)。"""
+    """Phase 3: 定向匿名质询执行 (基于中立 ReviewerAdapter 统一分发与执行)。"""
     plan_path = os.path.join(stream, "challenge-plan.json")
     if not os.path.exists(plan_path):
         print("[challenge-v2] 缺失质询计划，请先运行 --stage merge", file=sys.stderr)
@@ -1014,14 +1164,14 @@ def stage_challenge_v2(stream, task_path):
 
     _clean_stale_challenge_outputs(stream)
 
-    out_paths, procs = [], []
+    challenge_requests = []
     for item in challenges:
         cid = item["challenge_id"]
-        reviewer = item["reviewer"]
+        reviewer_key = item["reviewer"]
+        target_id = item.get("target", "")
         bundle_path = os.path.join(stream, f"bundle-{cid}.json")
-        out_path = os.path.join(stream, f"challenge-reply-{cid}-{reviewer}.md")
-        log_path = os.path.join(stream, f"log-challenge-{cid}-{reviewer}.txt")
-        prompt_path = os.path.join(stream, f"prompt-challenge-{cid}-{reviewer}.txt")
+        out_path = os.path.join(stream, f"challenge-reply-{cid}-{reviewer_key}.md")
+        prompt_path = os.path.join(stream, f"prompt-challenge-{cid}-{reviewer_key}.txt")
 
         with open(bundle_path, "w", encoding="utf-8") as f:
             json.dump(item["bundle"], f, ensure_ascii=False, indent=2)
@@ -1031,21 +1181,43 @@ def stage_challenge_v2(stream, task_path):
                 bundle_path=bundle_path,
                 out_path=out_path,
             ))
-        procs.append(spawn(reviewer, prompt_path, log_path))
-        out_paths.append(out_path)
-        print(f"[challenge-v2] 启动质询 {cid}: 由 {reviewer} 审查 pid={procs[-1].pid}")
 
-    results = wait_for_outputs(out_paths, procs)
-    for item, p in zip(challenges, out_paths):
-        r = results[p]
-        if not r["file"]:
-            print(f"[challenge-v2] 警告: 质询 {item['challenge_id']} ({item['reviewer']}) 无答复", file=sys.stderr)
-        elif r["exit"] not in (0, None):
-            print(f"[challenge-v2] 警告: 质询 {item['challenge_id']} 非零退出 {r['exit']}", file=sys.stderr)
+        spec = get_participant_spec(reviewer_key)
+        req = ChallengeRequest(
+            task_path=prompt_path,
+            bundle_path=bundle_path,
+            out_path=out_path,
+            reviewer=spec,
+            target_participant_id=target_id,
+        )
+        challenge_requests.append((cid, reviewer_key, req))
 
-    ok = any(r["file"] for r in results.values())
-    print(f"[challenge-v2] {'完成' if ok else '全部失败'} "
-          f"{json.dumps({os.path.basename(p): v['file'] for p, v in results.items()}, ensure_ascii=False)}")
+    results: dict[str, ChallengeResult] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(challenge_requests), 10)) as pool:
+        future_map = {
+            pool.submit(get_reviewer_adapter(req.reviewer).challenge, req): (cid, rev)
+            for cid, rev, req in challenge_requests
+        }
+        for fut in concurrent.futures.as_completed(future_map):
+            cid, rev = future_map[fut]
+            try:
+                res = fut.result()
+                results[f"{cid}:{rev}"] = res
+            except Exception as exc:
+                results[f"{cid}:{rev}"] = ChallengeResult(
+                    reviewer_id=rev, target_id="", success=False, error=str(exc)
+                )
+
+    for item in challenges:
+        cid = item["challenge_id"]
+        rev = item["reviewer"]
+        res = results.get(f"{cid}:{rev}")
+        out_file = os.path.join(stream, f"challenge-reply-{cid}-{rev}.md")
+        if not os.path.isfile(out_file) or (res and not res.success):
+            print(f"[challenge-v2] 警告: 质询 {cid} ({rev}) 无有效答复: {getattr(res, 'error', None)}", file=sys.stderr)
+
+    ok = any(r.success for r in results.values())
+    print(f"[challenge-v2] {'完成' if ok else '全部失败'} 答复数={sum(1 for r in results.values() if r.success)}/{len(challenges)}")
     return ok
 
 

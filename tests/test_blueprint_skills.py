@@ -27,7 +27,8 @@ def frontmatter(name):
 @pytest.mark.parametrize('name', SKILLS)
 def test_blueprint_block_matches_official_fields(name):
     fm, _ = frontmatter(name)
-    blueprint = fm['metadata']['hermes']['blueprint']
+    blueprint = fm.get('blueprint') or fm.get('metadata', {}).get('hermes', {}).get('blueprint')
+    assert blueprint, f'{name}: blueprint 未找到'
     assert set(blueprint) <= BLUEPRINT_FIELDS, f'未知 blueprint 字段: {set(blueprint) - BLUEPRINT_FIELDS}'
     schedule = blueprint['schedule']
     assert isinstance(schedule, str) and schedule.strip()
@@ -59,7 +60,8 @@ def test_sll_frontmatter_and_required_env(name):
 @pytest.mark.parametrize('name', SKILLS)
 def test_watchlist_config_declared_and_documented(name):
     fm, text = frontmatter(name)
-    config = fm['metadata']['hermes']['config']
+    config = fm.get('config') or fm.get('metadata', {}).get('hermes', {}).get('config')
+    assert config, f'{name}: config 未找到'
     keys = {entry['key'] for entry in config}
     prefix = name.replace('-', '_')
     assert f'{prefix}.watchlist' in keys

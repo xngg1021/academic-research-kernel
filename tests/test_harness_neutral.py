@@ -163,13 +163,23 @@ def test_agent_plugins_v1_manifests_exist():
 
     p_data = json.loads(p_json.read_text(encoding="utf-8"))
     assert p_data["name"] == "academic-skills"
-    assert len(p_data["skills"]) == 11
-    for s_rel in p_data["skills"]:
-        assert (ROOT / s_rel).is_dir(), f"Referenced skill dir missing: {s_rel}"
+    assert p_data["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+    allowed_plugin_fields = {
+        "$schema", "name", "version", "description", "author",
+        "homepage", "repository", "license", "keywords", "extensions"
+    }
+    assert set(p_data).issubset(allowed_plugin_fields), f"Unexpected plugin fields: {set(p_data) - allowed_plugin_fields}"
+
+    skill_files = list((ROOT / "skills").glob("*/SKILL.md"))
+    assert len(skill_files) == 11, f"Expected 11 skills, found {len(skill_files)}"
 
     m_data = json.loads(m_json.read_text(encoding="utf-8"))
-    assert "mcpServers" in m_data
+    assert m_data["$schema"] == "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
+    assert set(m_data) == {"$schema", "mcpServers"}
     assert "academic-skills" in m_data["mcpServers"]
+    srv = m_data["mcpServers"]["academic-skills"]
+    assert srv.get("type") == "stdio"
+    assert set(srv).issubset({"type", "command", "args", "env", "cwd"})
 
 
 def test_mcp_server_protocol_messages():
@@ -206,3 +216,27 @@ def test_mcp_server_protocol_messages():
     content_text = call_resp["result"]["content"][0]["text"]
     result_data = json.loads(content_text)
     assert result_data["consistent"] is True
+
+
+def test_agent_plugins_v1_skills_and_manifest_compatibility():
+    """Verify all 11 skills have strictly portable metadata and pass Agent Plugins v1 checks."""
+    import yaml
+    skill_files = sorted(list((ROOT / "skills").glob("*/SKILL.md")))
+    assert len(skill_files) == 11
+
+    for sf in skill_files:
+        text = sf.read_text(encoding="utf-8")
+        parts = text.split("---", 2)
+        assert len(parts) >= 3, f"{sf.name} missing YAML frontmatter"
+        fm = yaml.safe_load(parts[1])
+        assert isinstance(fm, dict), f"{sf.name} invalid frontmatter"
+        assert "name" in fm
+        assert "description" in fm
+
+        # Agent Plugins v1 metadata check: must be flat string -> string map
+        if "metadata" in fm:
+            meta = fm["metadata"]
+            assert isinstance(meta, dict), f"{sf.name}: metadata must be a dictionary"
+            for k, v in meta.items():
+                assert isinstance(k, str), f"{sf.name}: metadata key {k!r} not string"
+                assert isinstance(v, str), f"{sf.name}: metadata value {v!r} not string"

@@ -108,9 +108,14 @@ def static_checks(root=ROOT):
             assert isinstance(fm['description'], str) and 0 < len(fm['description']) <= 60
             assert fm['description'].endswith('.')
             assert isinstance(fm['platforms'], list) and set(fm['platforms']) <= {'linux', 'macos', 'windows'} and fm['platforms']
-            hermes = fm['metadata']['hermes']
-            assert isinstance(hermes['tags'], list) and hermes['tags'] and all(isinstance(t, str) and t for t in hermes['tags'])
-            assert isinstance(hermes.get('related_skills', []), list)
+            tags = fm.get('tags') or (fm.get('metadata', {}).get('hermes', {}).get('tags') if isinstance(fm.get('metadata'), dict) else None)
+            if isinstance(tags, str):
+                tags = [t.strip() for t in tags.split(',') if t.strip()]
+            assert isinstance(tags, list) and tags and all(isinstance(t, str) and t for t in tags), 'tags missing or invalid'
+            rel = fm.get('related_skills') or (fm.get('metadata', {}).get('hermes', {}).get('related_skills', []) if isinstance(fm.get('metadata'), dict) else [])
+            if isinstance(rel, str):
+                rel = [r.strip() for r in rel.split(',') if r.strip()]
+            assert isinstance(rel, list), 'related_skills invalid'
             assert f'| `skills/{name}` | {fm["version"]} |' in readme, 'README version mismatch'
             section = text.split('## Verification', 1)[1]
             assert re.search(r'# (?:smoke|external)-test: true', section), 'Verification not executable'

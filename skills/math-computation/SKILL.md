@@ -1,15 +1,30 @@
 ---
 name: math-computation
-description: "全领域计算中枢:数学、金融、社科、生物医学、物理工程计算与两层自动路由."
+description: 全领域计算中枢:数学、金融、社科、生物医学、物理工程计算与两层自动路由.
 version: 1.2.1
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
+tags:
+- math
+- symbolic
+- numeric
+- statistics
+- sympy
+- scipy
+- statsmodels
+- matplotlib
+- pandas
+- torch
 metadata:
-  hermes:
-    tags: [math, symbolic, numeric, statistics, sympy, scipy, statsmodels, matplotlib, pandas, torch]
-    related_skills: [manim-video, huggingface-hub]
+  tags: math, symbolic, numeric, statistics, sympy, scipy, statsmodels, matplotlib,
+    pandas, torch
+  related_skills: manim-video, huggingface-hub
 ---
+
 
 # 数理计算 Skill
 

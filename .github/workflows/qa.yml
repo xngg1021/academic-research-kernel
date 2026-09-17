@@ -113,7 +113,8 @@ jobs:
           hermes skills list
   upstream-canary:
     # Canary integration against Hermes upstream main branch for forward compatibility
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    # Runs on main, manual dispatch, and PRs touching plugins/skills/adapters
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -135,3 +136,20 @@ jobs:
           hermes --version
           hermes chat --help | grep -E -- '--query-file'
           hermes chat --help | grep -E -- '--ignore-rules'
+      - name: Validate Agent Plugins v1 live loading under Hermes loader
+        run: |
+          python -c "
+          import sys
+          from pathlib import Path
+          from hermes_cli import agent_plugins
+          root = Path('.').resolve()
+          diag = []
+          manifest, m_diag = agent_plugins._validate_manifest(root)
+          diag.extend(m_diag)
+          assert manifest is not None and not diag, f'Manifest errors: {diag}'
+          mcp = agent_plugins._discover_mcp(root, root / '.data', diag, create_data=False)
+          assert 'academic-skills' in mcp and not diag, f'MCP errors: {diag}'
+          skills = agent_plugins._discover_skills(root, diag)
+          assert len(skills) == 11 and not diag, f'Skill errors: {diag}'
+          print('Hermes Agent Plugins v1 live validation SUCCESS: 11 skills, MCP, and manifest clean!')
+          "

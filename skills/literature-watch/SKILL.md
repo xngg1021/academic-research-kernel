@@ -1,34 +1,44 @@
 ---
 name: literature-watch
-description: "每周监控新文献：按主题、作者、DOI 清单查 OpenAlex 与 Crossref，只报新增."
+description: 每周监控新文献：按主题、作者、DOI 清单查 OpenAlex 与 Crossref，只报新增.
 version: 1.1.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
 required_environment_variables:
-  - name: OPENALEX_API_KEY
-    prompt: "OpenAlex API key（可跳过，使用匿名查询）"
-    help: "在 OpenAlex 官方账户中获取免费 key；不要把 key 写进技能或聊天。"
-    required_for: "Authenticated OpenAlex requests; anonymous queries remain available."
+- name: OPENALEX_API_KEY
+  prompt: OpenAlex API key（可跳过，使用匿名查询）
+  help: 在 OpenAlex 官方账户中获取免费 key；不要把 key 写进技能或聊天。
+  required_for: Authenticated OpenAlex requests; anonymous queries remain available.
+blueprint:
+  schedule: 0 9 * * 1
+  deliver: origin
+  prompt: 运行 literature-watch：读取监控清单（topics/authors/dois），用 scripts/watch.py --run
+    查 OpenAlex 与 Crossref 窗口内的新作品，与去重状态比对后只报告新增条目；无新增则明确说无新增。更新状态文件后结束。
+  no_agent: false
+config:
+- key: literature_watch.watchlist
+  description: 监控清单 JSON 路径（含 topics/authors/dois 三个数组）
+  default: ~/.hermes/literature-watch.json
+  prompt: literature-watch 监控清单文件路径
+- key: literature_watch.state
+  description: 已见作品去重状态文件路径（自动维护，勿手改）
+  default: ~/.hermes/literature-watch.seen.json
+  prompt: literature-watch 去重状态文件路径
+tags:
+- blueprint
+- literature
+- openalex
+- crossref
+- monitoring
 metadata:
-  hermes:
-    tags: [blueprint, literature, openalex, crossref, monitoring]
-    related_skills: [literature-analysis, academic-source-verification, retraction-watch]
-    config:
-      - key: literature_watch.watchlist
-        description: 监控清单 JSON 路径（含 topics/authors/dois 三个数组）
-        default: "~/.hermes/literature-watch.json"
-        prompt: literature-watch 监控清单文件路径
-      - key: literature_watch.state
-        description: 已见作品去重状态文件路径（自动维护，勿手改）
-        default: "~/.hermes/literature-watch.seen.json"
-        prompt: literature-watch 去重状态文件路径
-    blueprint:
-      schedule: "0 9 * * 1"
-      deliver: origin
-      prompt: "运行 literature-watch：读取监控清单（topics/authors/dois），用 scripts/watch.py --run 查 OpenAlex 与 Crossref 窗口内的新作品，与去重状态比对后只报告新增条目；无新增则明确说无新增。更新状态文件后结束。"
-      no_agent: false
+  tags: blueprint, literature, openalex, crossref, monitoring
+  related_skills: literature-analysis, academic-source-verification, retraction-watch
 ---
+
 
 # literature-watch
 

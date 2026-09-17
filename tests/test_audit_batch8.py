@@ -52,17 +52,22 @@ def test_dynamic_model_registration_via_json_file(tmp_path):
     assert orch_v2.CUSTOM_SPECS["gemini-agent"]["cmd"] == "gemini -p {prompt_path}"
 
 
-def test_derangement_fallback_for_large_model_counts():
-    """When N > 8, max_weight_derangement safely falls back to circular shift without O(N!) factorial search."""
+def test_derangement_scaling_large_n_hungarian():
+    """When N > 8, max_weight_derangement uses Hungarian algorithm to solve optimal matching in O(N^3)."""
     large_panel = [f"m_{i}" for i in range(12)]
-    weights = {(f"m_{i}", f"m_{j}"): 1.0 for i in range(12) for j in range(12)}
+    weights = {}
+    for i in range(12):
+        for j in range(12):
+            if i != j:
+                weights[(large_panel[i], large_panel[j])] = float((i * 3 + j) % 11 + 1)
     pairs = orch_v2.max_weight_derangement(large_panel, weights)
     assert len(pairs) == 12
     for r, t in pairs:
         assert r != t
-    # 验证循环位移性
-    for i in range(12):
-        assert pairs[i] == (large_panel[i], large_panel[(i + 1) % 12])
+    challengers = {c for c, _ in pairs}
+    assert challengers == set(large_panel)
+    targets = {t for _, t in pairs}
+    assert targets == set(large_panel)
 
 
 def test_minimal_child_env_matches_dynamic_providers():

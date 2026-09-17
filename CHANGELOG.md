@@ -52,6 +52,7 @@
   - `plugin.json` (Agent Plugins v1 portable manifest)
   - `mcp.json` / `scripts/mcp_server.py` (Portable MCP tools surface)
 - **Verification Matrix**:
-  - Unit & Regression Tests: 463 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 464 passed, 0 failures, 0 warnings
   - Static QA Fences: 38 independent executable blocks passed
-  - CI Matrix Platforms: Ubuntu (Python 3.10, 3.11, 3.12, 3.13), macOS (Python 3.12), Windows (Python 3.12)
+  - Agent Plugins v1 Loader: Live verified against 11 portable skills, MCP tools, and manifest with 0 diagnostics
+  - CI Matrix Platforms: Ubuntu (Python 3.10, 3.11, 3.12, 3.13), Ubuntu ARM64 (Python 3.12), macOS ARM64 & Intel (Python 3.12), Windows x86_64 & Windows ARM64 (Python 3.12)

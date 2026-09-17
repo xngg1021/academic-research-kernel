@@ -28,8 +28,9 @@ from contracts import (
 class HermesCliReviewerAdapter(ReviewerAdapter):
     """Executes hermes chat CLI subagent processes."""
 
-    def __init__(self, timeout_seconds: int = 2400):
+    def __init__(self, timeout_seconds: int = 2400, spawn_fn=None):
         self.timeout_seconds = timeout_seconds
+        self.spawn_fn = spawn_fn
 
     def capabilities(self, participant: ParticipantSpec) -> ReviewerCapabilities:
         return ReviewerCapabilities(
@@ -80,15 +81,25 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
         log_path = Path(req.out_path).with_suffix(".log.txt")
         t0 = time.perf_counter()
         try:
-            with open(log_path, "wb") as log:
-                proc = subprocess.Popen(
-                    cmd, stdout=log, stderr=subprocess.STDOUT,
-                    cwd=os.getcwd(),
-                    env=self._minimal_child_env(p),
-                )
-                proc.wait(timeout=self.timeout_seconds)
-            success = proc.returncode == 0
-            err = None if success else f"Hermes process exited with code {proc.returncode}"
+            if self.spawn_fn is not None:
+                proc = self.spawn_fn(p.id, req.task_path, str(log_path))
+                if hasattr(proc, "wait"):
+                    proc.wait(timeout=self.timeout_seconds)
+                elif hasattr(proc, "poll"):
+                    proc.poll()
+                rc = getattr(proc, "returncode", 0)
+                success = (rc == 0 or rc is None) and Path(req.out_path).is_file()
+                err = None if success else f"Hermes process exited with code {rc}"
+            else:
+                with open(log_path, "wb") as log:
+                    proc = subprocess.Popen(
+                        cmd, stdout=log, stderr=subprocess.STDOUT,
+                        cwd=os.getcwd(),
+                        env=self._minimal_child_env(p),
+                    )
+                    proc.wait(timeout=self.timeout_seconds)
+                success = proc.returncode == 0
+                err = None if success else f"Hermes process exited with code {proc.returncode}"
         except Exception as exc:
             success = False
             err = f"Execution exception: {type(exc).__name__}: {exc}"
@@ -139,15 +150,25 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
         log_path = Path(req.out_path).with_suffix(".challenge-log.txt")
         t0 = time.perf_counter()
         try:
-            with open(log_path, "wb") as log:
-                proc = subprocess.Popen(
-                    cmd, stdout=log, stderr=subprocess.STDOUT,
-                    cwd=os.getcwd(),
-                    env=self._minimal_child_env(p),
-                )
-                proc.wait(timeout=self.timeout_seconds)
-            success = proc.returncode == 0
-            err = None if success else f"Hermes process exited with code {proc.returncode}"
+            if self.spawn_fn is not None:
+                proc = self.spawn_fn(p.id, req.task_path, str(log_path))
+                if hasattr(proc, "wait"):
+                    proc.wait(timeout=self.timeout_seconds)
+                elif hasattr(proc, "poll"):
+                    proc.poll()
+                rc = getattr(proc, "returncode", 0)
+                success = (rc == 0 or rc is None) and Path(req.out_path).is_file()
+                err = None if success else f"Hermes process exited with code {rc}"
+            else:
+                with open(log_path, "wb") as log:
+                    proc = subprocess.Popen(
+                        cmd, stdout=log, stderr=subprocess.STDOUT,
+                        cwd=os.getcwd(),
+                        env=self._minimal_child_env(p),
+                    )
+                    proc.wait(timeout=self.timeout_seconds)
+                success = proc.returncode == 0
+                err = None if success else f"Hermes process exited with code {proc.returncode}"
         except Exception as exc:
             success = False
             err = f"Execution exception: {type(exc).__name__}: {exc}"

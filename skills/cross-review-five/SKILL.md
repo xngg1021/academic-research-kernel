@@ -1,15 +1,25 @@
 ---
 name: cross-review-five
-description: "五人异构模型小组:交叉评审、红队、生成对比,v2 四阶段 Sparse Deliberation 稀疏审议流."
+description: 五人异构模型小组:交叉评审、红队、生成对比,v2 四阶段 Sparse Deliberation 稀疏审议流.
 version: 2.0.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
+tags:
+- cross-review
+- red-team
+- multi-model
+- orchestration
+- five-models
 metadata:
-  hermes:
-    tags: [cross-review, red-team, multi-model, orchestration, five-models]
-    related_skills: [research-object-identity, academic-source-verification]
+  tags: cross-review, red-team, multi-model, orchestration, five-models
+  related_skills: ''
 ---
+
+
 
 # cross-review-five
 
