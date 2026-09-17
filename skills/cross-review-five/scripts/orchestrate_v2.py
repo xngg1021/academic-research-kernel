@@ -63,6 +63,7 @@ import re
 import subprocess
 import sys
 import time
+import uuid
 
 if sys.platform == "win32":
     for _s in (sys.stdout, sys.stderr):
@@ -248,7 +249,7 @@ def _write_manifest(stream, task_path, model_keys, mode, missing_models=None):
     """
     manifest_path = os.path.join(stream, "run-manifest.json")
     manifest = {
-        "run_id": time.strftime("%Y%m%d-%H%M%S") + "-" + str(time.time_ns() % 1_000_000).zfill(6),
+        "run_id": time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8],
         "task_sha256": _task_digest(task_path),
         "model_set": model_keys,
         "mode": mode,
