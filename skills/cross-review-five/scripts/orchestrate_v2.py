@@ -269,10 +269,10 @@ POLL_SECONDS = 15
 TIMEOUT_SECONDS = 40 * 60
 RNG_SEED = 20260917
 
-VALID_SEVERITY = {"P0", "P1", "P2"}
+VALID_SEVERITY = {"P0", "P1", "P2", "P3"}
 VALID_KINDS = {"bug", "security", "invariant", "perf", "spec_mismatch", "suggestion"}
 VALID_POLARITY = {"present", "absent", "positive", "negative"}
-_SEV_RANK = {"P0": 3, "P1": 2, "P2": 1}
+_SEV_RANK = {"P0": 3, "P1": 2, "P2": 1, "P3": 0}
 
 PLAN_PROMPT_V2 = """任务：评审任务书并独立产出方案与结构化发现。
 

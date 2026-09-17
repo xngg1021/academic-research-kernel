@@ -291,6 +291,10 @@ def collect(watchlist: dict, since: date, max_pages: int = 1):
         its, tr = fetch_citing_works(doi, since) if max_pages == 1 else fetch_citing_works(doi, since, max_pages=max_pages)
         # M01: 排除被监控论文自身 Crossref 兜底记录, 仅保留真实引用者
         citing_items = [it for it in its if it.get('source') != 'crossref-fallback']
+        # 记录不可观测 DOI: OpenAlex 缺失反向引用关系, 不得伪装成 0 新引用
+        if its and not citing_items:
+            truncations.append(f'citing-unobservable={doi!r}')
+            print(f'⚠ 覆盖率警告: 被监控 DOI {doi} 缺乏反向引用索引，不可观测其引用动态 (非 0 引用)', file=sys.stderr)
         items.extend(citing_items)
         if tr:
             truncations.append(f'citing-doi={doi!r}')
@@ -367,7 +371,7 @@ def run(watchlist_path, state_path, days: int, max_pages: int = 1) -> int:
     since = date.today() - timedelta(days=days)
     collected, truncations = collect(watchlist, since, max_pages=max_pages)
     if truncations:
-        print(f'⚠ 完整性警告: 以下来源达到首批上限, 存在漏报风险: {truncations}')
+        print(f'⚠ 完整性警告: 以下来源达到首批上限或存在覆盖缺口: {truncations}')
     fresh = filter_unseen(collected, seen)
     if fresh:
         print(f'## 新增 {len(fresh)} 条（窗口 {since.isoformat()} 起）')

@@ -36,7 +36,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "t_stat": {"type": "number", "description": "Reported t-statistic"},
-                "df": {"type": "integer", "description": "Degrees of freedom"},
+                "df": {"type": "number", "description": "Degrees of freedom (integer or Welch fractional)"},
                 "p_value": {"type": "number", "description": "Reported p-value"},
                 "mean1": {"type": "number", "description": "Group 1 mean"},
                 "sd1": {"type": "number", "description": "Group 1 SD"},
@@ -80,16 +80,33 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
         p = arguments.get("p_value")
         res = {}
         if t is not None and df is not None:
-            recomputed_p = recompute.p_from_t(t, df)
-            res["recomputed_p"] = recomputed_p
-            if p is not None:
-                res["p_match"] = recompute.check_p_value_match(p, recomputed_p)
-        if "mean1" in arguments and "mean2" in arguments:
-            d = recompute.cohens_d(
-                arguments["mean1"], arguments.get("sd1", 1.0), arguments.get("n1", 10),
-                arguments["mean2"], arguments.get("sd2", 1.0), arguments.get("n2", 10)
-            )
-            res["cohens_d"] = d
+            try:
+                p_receipt = recompute.p_from_t(float(t), float(df), reported=p)
+                recomputed_val = p_receipt["recomputed"]
+                res["recomputed_p"] = recomputed_val
+                res["p_receipt"] = p_receipt
+                if p is not None:
+                    res["p_match"] = recompute.check_p_match(float(p), recomputed_val)
+            except Exception as exc:
+                res["t_test_error"] = str(exc)
+
+        # 仅当两组均值、标准差与样本量全量提供时才计算，杜绝学术造假与默认参数伪造
+        d_keys = ("mean1", "sd1", "n1", "mean2", "sd2", "n2")
+        provided_d_keys = [k for k in d_keys if k in arguments and arguments[k] is not None]
+        if provided_d_keys:
+            missing_d = [k for k in d_keys if k not in arguments or arguments[k] is None]
+            if missing_d:
+                res["cohens_d_error"] = f"Missing required parameters for Cohen's d: {', '.join(missing_d)}"
+            else:
+                try:
+                    d_res = recompute.cohens_d(
+                        float(arguments["mean1"]), float(arguments["sd1"]), int(arguments["n1"]),
+                        float(arguments["mean2"]), float(arguments["sd2"]), int(arguments["n2"])
+                    )
+                    res["cohens_d"] = d_res["recomputed"]
+                    res["hedges_g"] = d_res.get("difference")  # hedges_g is in receipt
+                except Exception as exc:
+                    res["cohens_d_error"] = str(exc)
         return res
 
     elif name == "academic_check_percentage":

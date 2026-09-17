@@ -22,6 +22,7 @@ from contracts import (
     ReviewerCapabilities,
     ReviewRequest,
     ReviewResult,
+    build_isolated_child_env,
 )
 
 
@@ -44,29 +45,18 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
             harness="hermes_cli",
         )
 
-    def _minimal_child_env(self, participant: ParticipantSpec) -> dict[str, str]:
-        base_allow = {
-            "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "TEMP", "TMP",
-            "USERPROFILE", "HOME", "LANG", "LC_ALL", "SHELL", "COMSPEC",
-            "HERMES_HOME", "HERMES_CONFIG_DIR", "HERMES_LOG_LEVEL",
-        }
-        prov = (participant.provider or "").upper().replace("-", "_")
-        mod_k = participant.id.upper().replace("-", "_")
-        allowed_prefixes = {prov, mod_k}
-
-        env = {}
-        for k, v in os.environ.items():
-            if k in base_allow or k.startswith("HERMES_"):
-                env[k] = v
-            elif any(k.upper().startswith(p) for p in allowed_prefixes if p):
-                if any(term in k.upper() for term in ("API_KEY", "TOKEN", "SECRET")):
-                    env[k] = v
-
-        if "MOONSHOT_API_KEY" in os.environ and "KIMI_API_KEY" not in env:
-            env["KIMI_API_KEY"] = os.environ["MOONSHOT_API_KEY"]
-        if "GOOGLE_API_KEY" in os.environ and "GEMINI_API_KEY" not in env:
-            env["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
-        return env
+    @staticmethod
+    def _kill_proc_tree(proc: subprocess.Popen) -> None:
+        """Safely terminate and kill subprocess to prevent orphan processes."""
+        try:
+            proc.terminate()
+            proc.wait(timeout=5)
+        except Exception:
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+            except Exception:
+                pass
 
     def review(self, req: ReviewRequest) -> ReviewResult:
         p = req.participant
@@ -80,6 +70,7 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
 
         log_path = Path(req.out_path).with_suffix(".log.txt")
         t0 = time.perf_counter()
+        proc = None
         try:
             if self.spawn_fn is not None:
                 proc = self.spawn_fn(p.id, req.task_path, str(log_path))
@@ -95,14 +86,21 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
                     proc = subprocess.Popen(
                         cmd, stdout=log, stderr=subprocess.STDOUT,
                         cwd=os.getcwd(),
-                        env=self._minimal_child_env(p),
+                        env=build_isolated_child_env(p),
                     )
                     proc.wait(timeout=self.timeout_seconds)
                 success = proc.returncode == 0
                 err = None if success else f"Hermes process exited with code {proc.returncode}"
+        except subprocess.TimeoutExpired:
+            success = False
+            err = f"Hermes reviewer process timed out after {self.timeout_seconds}s"
+            if proc and hasattr(proc, "terminate"):
+                self._kill_proc_tree(proc)
         except Exception as exc:
             success = False
             err = f"Execution exception: {type(exc).__name__}: {exc}"
+            if proc and hasattr(proc, "terminate"):
+                self._kill_proc_tree(proc)
 
         wall = time.perf_counter() - t0
         findings_path = Path(req.findings_path)
@@ -130,11 +128,13 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
 
         return ReviewResult(
             participant_id=p.id,
+            phase="plan",
             success=success and bool(review_text or findings),
             text=review_text,
             findings=findings,
             error=err,
-            wall_time_seconds=round(wall, 3),
+            wall_time_seconds=round(wall, 4),
+            telemetry={"wall_time_seconds": round(wall, 4)},
         )
 
     def challenge(self, req: ChallengeRequest) -> ChallengeResult:
@@ -142,13 +142,15 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
         provider = p.provider or "custom"
         model = p.model or p.id
 
-        cmd = ["hermes", "chat", "--query-file", req.bundle_path, "--oneshot",
+        # 修复：query-file 严格使用包含质询规则与指令的 task_path
+        cmd = ["hermes", "chat", "--query-file", req.task_path, "--oneshot",
                "--ignore-rules", "-m", model, "--provider", provider]
         if model == "glm-5.3":
             cmd += ["--reasoning", "low"]
 
         log_path = Path(req.out_path).with_suffix(".challenge-log.txt")
         t0 = time.perf_counter()
+        proc = None
         try:
             if self.spawn_fn is not None:
                 proc = self.spawn_fn(p.id, req.task_path, str(log_path))
@@ -164,14 +166,21 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
                     proc = subprocess.Popen(
                         cmd, stdout=log, stderr=subprocess.STDOUT,
                         cwd=os.getcwd(),
-                        env=self._minimal_child_env(p),
+                        env=build_isolated_child_env(p),
                     )
                     proc.wait(timeout=self.timeout_seconds)
                 success = proc.returncode == 0
                 err = None if success else f"Hermes process exited with code {proc.returncode}"
+        except subprocess.TimeoutExpired:
+            success = False
+            err = f"Hermes challenge process timed out after {self.timeout_seconds}s"
+            if proc and hasattr(proc, "terminate"):
+                self._kill_proc_tree(proc)
         except Exception as exc:
             success = False
             err = f"Execution exception: {type(exc).__name__}: {exc}"
+            if proc and hasattr(proc, "terminate"):
+                self._kill_proc_tree(proc)
 
         wall = time.perf_counter() - t0
         out_path = Path(req.out_path)
@@ -190,5 +199,6 @@ class HermesCliReviewerAdapter(ReviewerAdapter):
             reply_text=reply_text,
             stances=stances,
             error=err,
-            wall_time_seconds=round(wall, 3),
+            wall_time_seconds=round(wall, 4),
+            telemetry={"wall_time_seconds": round(wall, 4)},
         )

@@ -280,14 +280,16 @@ def test_command_adapter_challenge_receives_prompt_not_just_bundle(tmp_path):
 def test_command_adapter_environment_isolation(tmp_path, monkeypatch):
     """CommandReviewerAdapter must not leak unrelated secrets to child subagent CLI processes."""
     monkeypatch.setenv("SUPER_SECRET_TOKEN", "leak_me_if_you_can")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "«redacted:sk-ant-valid»")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-valid-sample-key-12345")
 
     helper = tmp_path / "env_check.py"
     helper.write_text(
+        "# -*- coding: utf-8 -*-\n"
         "import os, sys, pathlib\n"
         "assert 'SUPER_SECRET_TOKEN' not in os.environ, 'Secret token leaked!'\n"
-        "assert os.environ.get('ANTHROPIC_API_KEY') == '«redacted:sk-ant-valid»'\n"
-        "pathlib.Path(sys.argv[1]).write_text('ok', encoding='utf-8')\n"
+        "assert os.environ.get('ANTHROPIC_API_KEY') == 'sk-ant-valid-sample-key-12345'\n"
+        "pathlib.Path(sys.argv[1]).write_text('ok', encoding='utf-8')\n",
+        encoding="utf-8"
     )
 
     out_file = tmp_path / "out.md"
@@ -346,3 +348,59 @@ def test_review_result_matches_json_schema(tmp_path):
     }
     resolver = jsonschema.RefResolver.from_schema(schema, store=schema_store)
     jsonschema.validate(instance=payload, schema=schema, resolver=resolver)
+
+
+def test_panel_spec_matches_json_schema():
+    """PanelSpec dataclass must strictly validate against review-panel-spec.schema.json."""
+    import jsonschema
+
+    schema_file = ROOT / "schemas/review-panel-spec.schema.json"
+    schema = json.loads(schema_file.read_text(encoding="utf-8"))
+
+    p1 = ct.ParticipantSpec(id="p1", executor="command", model="claude-3-7-sonnet")
+    p2 = ct.ParticipantSpec(id="p2", executor="hermes.cli", model="gpt-4o")
+    panel = ct.PanelSpec(
+        panel_id="panel_test",
+        participants=[p1, p2],
+        budget_max_calls=15,
+        budget_max_cost_usd=5.0,
+        budget_max_seconds=1800
+    )
+
+    payload = panel.to_dict()
+    resolver = jsonschema.RefResolver.from_schema(schema)
+    jsonschema.validate(instance=payload, schema=schema, resolver=resolver)
+
+
+def test_mcp_recompute_scientific_integrity():
+    """academic_recompute_statistics must refuse to forge Cohen's d and correctly check p value."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import mcp_server
+
+    # 1. t_stat, df, p_value 计算真实接通，不报 AttributeError
+    req = {
+        "jsonrpc": "2.0", "id": 10, "method": "tools/call",
+        "params": {
+            "name": "academic_recompute_statistics",
+            "arguments": {"t_stat": 2.101, "df": 18.5, "p_value": 0.05}
+        }
+    }
+    resp = mcp_server.process_message(req)
+    data = json.loads(resp["result"]["content"][0]["text"])
+    assert "recomputed_p" in data
+    assert "p_match" in data
+    assert "t_test_error" not in data
+
+    # 2. 缺失参数时拒绝伪造 Cohen's d
+    req_missing_d = {
+        "jsonrpc": "2.0", "id": 11, "method": "tools/call",
+        "params": {
+            "name": "academic_recompute_statistics",
+            "arguments": {"mean1": 10.0, "mean2": 8.0}  # missing sd1, n1, sd2, n2
+        }
+    }
+    resp_missing = mcp_server.process_message(req_missing_d)
+    data_missing = json.loads(resp_missing["result"]["content"][0]["text"])
+    assert "cohens_d" not in data_missing
+    assert "cohens_d_error" in data_missing
+    assert "Missing required parameters" in data_missing["cohens_d_error"]

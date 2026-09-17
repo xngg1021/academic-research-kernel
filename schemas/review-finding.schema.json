@@ -37,7 +37,7 @@
     },
     "severity": {
       "type": "string",
-      "enum": ["P0", "P1", "P2"]
+      "enum": ["P0", "P1", "P2", "P3"]
     },
     "blocking": {
       "type": "boolean",

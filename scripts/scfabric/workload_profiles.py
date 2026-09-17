@@ -22,17 +22,20 @@ SCALES = {
 }
 
 PARITY_TOL = {
-    # deterministic ops: element-wise relative tolerance, sized by scale
-    # because floating-point accumulation error grows with problem size.
-    "matmul_eig": {"small": 1e-10, "medium": 5e-10, "large": 2e-9},
-    "fft": {"small": 1e-10, "medium": 1e-9, "large": 3e-9},
-    "autodiff": {"small": 1e-10, "medium": 1e-10, "large": 1e-10},
-    # statistical ops: absolute tolerance for the reported statistics.
-    # Different backends draw from different RNG streams; two independent
-    # draws of the same distribution must agree within a few standard
-    # errors, so the tolerance is set at several SE for the smallest scale.
-    "monte_carlo": {"small": 0.05, "medium": 0.02, "large": 0.01},
-    "bootstrap": {"small": 0.05, "medium": 0.02, "large": 0.01},
+    "float64": {
+        "matmul_eig": {"small": 1e-10, "medium": 5e-10, "large": 2e-9},
+        "fft": {"small": 1e-10, "medium": 1e-9, "large": 3e-9},
+        "autodiff": {"small": 1e-10, "medium": 1e-10, "large": 1e-10},
+        "monte_carlo": {"small": 0.05, "medium": 0.02, "large": 0.01},
+        "bootstrap": {"small": 0.05, "medium": 0.02, "large": 0.01},
+    },
+    "float32": {
+        "matmul_eig": {"small": 1e-5, "medium": 5e-5, "large": 2e-4},
+        "fft": {"small": 1e-5, "medium": 5e-5, "large": 2e-4},
+        "autodiff": {"small": 1e-5, "medium": 1e-5, "large": 1e-5},
+        "monte_carlo": {"small": 0.05, "medium": 0.02, "large": 0.01},
+        "bootstrap": {"small": 0.05, "medium": 0.02, "large": 0.01},
+    },
 }
 
 
@@ -43,6 +46,8 @@ def _torch_device(name):
         return "cuda"
     if name == "torch_mps":
         return "mps"
+    if name == "torch_xpu":
+        return "xpu"
     raise ValueError(name)
 
 
@@ -193,7 +198,7 @@ def parity_kind(workload):
     return "statistical"
 
 
-def check_parity(workload, scale, ref_result, cand_result):
+def check_parity(workload, scale, ref_result, cand_result, dtype="float64"):
     """C01: 严格数值等价门禁。
     - 键集合必须非空且严格一致;
     - 数组形状必须严格匹配, 拒绝隐式广播;
@@ -207,7 +212,8 @@ def check_parity(workload, scale, ref_result, cand_result):
     if set(ref_result.keys()) != set(cand_result.keys()):
         return False
 
-    tol = PARITY_TOL[workload][scale]
+    dt_key = "float32" if str(dtype) in ("float32", "complex64") else "float64"
+    tol = PARITY_TOL[dt_key][workload][scale]
     if workload in ("matmul_eig", "fft", "autodiff"):
         for key in ref_result:
             a = np.asarray(ref_result[key])

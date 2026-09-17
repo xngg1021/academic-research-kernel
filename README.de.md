@@ -28,7 +28,7 @@ SLL erlaubt weitgehend Nutzung, Studium, Änderung, kommerzielle Nutzung, Verbre
 | `skills/literature-watch` | 1.1.0 | Wöchentlicher Blueprint: Themen, Autoren und DOI-zitierende Werke auf OpenAlex und Crossref überwachen; deduplizieren und nur Neues melden |
 | `skills/retraction-watch` | 1.1.0 | Wöchentlicher Blueprint: DOI-Beobachtungsliste gegen OpenAlex is_retracted und Crossref-Aktualisierungsdatensätze (update-to-Signale) erneut prüfen; nur Statusänderungen melden |
 | `skills/research-object-identity` | 1.0.0 | Deterministische Identitätsschicht für Forschungsobjekte: Kennungsnormalisierung, fünfstufiges Urteil (ohne Konfidenzwerte), Relations-/Herkunftskanten; konsumiert Evidence Receipts |
-| `skills/cross-review-five` | 2.0.0 | Heterogenes Fünf-Modell-Reviewgremium (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 Vier-Stufen-Sparse-Deliberation-Pipeline (unabhängiger Plan, Clustering/Zusammenführung auf Behauptungsebene, gezielte anonyme Anfechtung und Abstimmung mit Ledger) |
+| `skills/cross-review-five` | 2.0.0 | Dynamisches Multi-Reviewer-Panel für heterogene Modelle und Subagenten (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini usw.): v2 4-Stufen Sparse-Deliberation-Pipeline mit Kuhn-Munkres-Ungarischer Zuordnung und P0-P3-Schweregraden |
 
 Die elf Skills umfassen 21 Markdown-Referenzdateien, die nur bei Bedarf geladen werden. GB/T 7714-2025 ist in Kraft; die Schreibreferenz unterscheidet das verifizierte Inkrafttretensdatum von ausdrücklich gekennzeichneten Beispielen von 2015. Volle Konformität mit der Fassung 2025 erfordert die Vorlage oder den Standardtext der Zielinstitution.
 

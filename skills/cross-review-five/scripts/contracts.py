@@ -50,33 +50,54 @@ def validate_participant_id(key: str) -> str:
     return slug
 
 
+PROVIDER_ALLOWED_KEYS: dict[str, list[str]] = {
+    "anthropic": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"],
+    "openai": ["OPENAI_API_KEY", "OPENAI_ORG_ID", "OPENAI_BASE_URL"],
+    "google": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    "gemini": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    "kimi": ["KIMI_API_KEY", "KIMI_CODING_API_KEY", "MOONSHOT_API_KEY"],
+    "kimi-coding": ["KIMI_API_KEY", "KIMI_CODING_API_KEY", "MOONSHOT_API_KEY"],
+    "deepseek": ["DEEPSEEK_API_KEY"],
+    "zai": ["GLM_API_KEY", "ZAI_API_KEY"],
+}
+
+
 def build_isolated_child_env(participant: ParticipantSpec) -> dict[str, str]:
     """Harness-neutral environment isolation for any subprocess or CLI runner.
 
-    Whitelists core operating system environment variables and only passes the
-    credentials required by the participant's specified provider.
+    Strictly scopes environment to base OS variables and only the explicit API
+    credentials required by the participant's declared provider. Does not leak
+    cross-provider tokens, seat IDs, or arbitrary host secrets.
     """
     base_allow = {
         "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "TEMP", "TMP",
         "USERPROFILE", "HOME", "LANG", "LC_ALL", "SHELL", "COMSPEC",
-        "HERMES_HOME", "HERMES_CONFIG_DIR", "HERMES_LOG_LEVEL",
+        "TERM", "TZ", "HERMES_HOME", "HERMES_CONFIG_DIR",
     }
-    prov = (participant.provider or "").upper().replace("-", "_")
-    mod_k = participant.id.upper().replace("-", "_")
-    allowed_prefixes = {p for p in (prov, mod_k) if p}
-
     env: dict[str, str] = {}
     for k, v in os.environ.items():
-        if k in base_allow or k.startswith("HERMES_"):
+        if k in base_allow:
             env[k] = v
-        elif any(k.upper().startswith(p) for p in allowed_prefixes):
-            if any(term in k.upper() for term in ("API_KEY", "TOKEN", "SECRET")):
-                env[k] = v
 
-    if "MOONSHOT_API_KEY" in os.environ and "KIMI_API_KEY" not in env:
-        env["KIMI_API_KEY"] = os.environ["MOONSHOT_API_KEY"]
-    if "GOOGLE_API_KEY" in os.environ and "GEMINI_API_KEY" not in env:
-        env["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
+    prov = (participant.provider or "").strip().lower()
+    allowed_keys = PROVIDER_ALLOWED_KEYS.get(prov, [])
+    # 自定义 Provider 仅允许严格以 PROVIDER_API_KEY 或 PROVIDER_TOKEN 命名的变量
+    if not allowed_keys and prov:
+        custom_prefix = prov.upper().replace("-", "_")
+        allowed_keys = [f"{custom_prefix}_API_KEY", f"{custom_prefix}_TOKEN"]
+
+    for key_name in allowed_keys:
+        if key_name in os.environ:
+            env[key_name] = os.environ[key_name]
+
+    # 仅针对对应 Provider 进行向下兼容别名填充，绝不跨 Provider 注入
+    if prov in ("kimi", "kimi-coding"):
+        if "MOONSHOT_API_KEY" in os.environ and "KIMI_API_KEY" not in env:
+            env["KIMI_API_KEY"] = os.environ["MOONSHOT_API_KEY"]
+    elif prov in ("gemini", "google"):
+        if "GOOGLE_API_KEY" in os.environ and "GEMINI_API_KEY" not in env:
+            env["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
+
     return env
 
 
@@ -140,13 +161,40 @@ class ParticipantSpec:
 
 
 @dataclass
+class PanelBudget:
+    max_calls: int = 20
+    max_wall_seconds: int = 3600
+    max_cost_usd: Optional[float] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {
+            "max_calls": self.max_calls,
+            "max_wall_seconds": self.max_wall_seconds,
+        }
+        if self.max_cost_usd is not None:
+            d["max_cost_usd"] = float(self.max_cost_usd)
+        return d
+
+
+@dataclass
 class PanelSpec:
     panel_id: str
     participants: List[ParticipantSpec]
     description: Optional[str] = None
     topology: str = "sparse_deliberation"
+    budget: PanelBudget = field(default_factory=PanelBudget)
     budget_max_calls: int = 20
     budget_max_seconds: int = 3600
+    budget_max_cost_usd: Optional[float] = None
+
+    def __post_init__(self):
+        # 兼容传统扁平参数注入
+        if self.budget_max_calls != 20 or self.budget_max_seconds != 3600 or self.budget_max_cost_usd is not None:
+            self.budget = PanelBudget(
+                max_calls=self.budget_max_calls,
+                max_wall_seconds=self.budget_max_seconds,
+                max_cost_usd=self.budget_max_cost_usd,
+            )
 
     def get_participant(self, participant_id: str) -> Optional[ParticipantSpec]:
         for p in self.participants:
@@ -159,8 +207,7 @@ class PanelSpec:
             "panel_id": self.panel_id,
             "participants": [p.to_dict() for p in self.participants],
             "topology": self.topology,
-            "budget_max_calls": self.budget_max_calls,
-            "budget_max_seconds": self.budget_max_seconds,
+            "budget": self.budget.to_dict(),
         }
         if self.description:
             d["description"] = self.description

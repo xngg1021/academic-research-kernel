@@ -100,7 +100,7 @@ def run_admission(workload, scale, dtype="float64", gain_threshold=1.5,
             })
             continue
 
-        parity_ok = wp.check_parity(workload, scale, ref_result, cand_result)
+        parity_ok = wp.check_parity(workload, scale, ref_result, cand_result, dtype=dtype)
         if not parity_ok:
             candidates.append({
                 "backend": name,
