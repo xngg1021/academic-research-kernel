@@ -311,7 +311,11 @@ from scipy.integrate import quad
 import statsmodels.api as sm
 import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import pandas as pd, networkx as nx, torch
+import pandas as pd, networkx as nx
+try:
+    import torch
+except ImportError:
+    torch = None
 import lifelines, arch, pingouin
 
 x = sp.symbols('x')
@@ -323,9 +327,10 @@ assert abs(rng.normal(0, 1, 100).mean()) < 0.5
 assert pd.DataFrame({'a': [1, 2]}).a.sum() == 3    # pandas
 G = nx.Graph(); G.add_edge(1, 2)                   # networkx
 assert nx.shortest_path_length(G, 1, 2) == 1
-t = torch.tensor(2.0, requires_grad=True)          # torch 自动微分
-(t**2).backward()
-assert abs(t.grad.item() - 4.0) < 1e-6
+if torch is not None:
+    t = torch.tensor(2.0, requires_grad=True)          # torch 自动微分
+    (t**2).backward()
+    assert abs(t.grad.item() - 4.0) < 1e-6
 p = os.path.join(tempfile.gettempdir(), '_v.png')
 fig, ax = plt.subplots(); ax.plot([0, 1], [0, 1]); fig.savefig(p); os.remove(p)  # 出图
 plt.close(fig)
