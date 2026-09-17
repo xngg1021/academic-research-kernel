@@ -256,7 +256,10 @@ def _load_works(path: str, source: str) -> list:
         return data
     if isinstance(data, dict):
         if source == 'crossref' and isinstance(data.get('message'), dict):
-            return [data['message']]
+            msg = data['message']
+            if isinstance(msg.get('items'), list):
+                return msg['items']
+            return [msg]
         if isinstance(data.get('results'), list):
             return data['results']
         if isinstance(data.get('items'), list):

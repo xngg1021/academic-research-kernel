@@ -219,22 +219,49 @@ def summarize(item: dict) -> str:
 
 
 def _atomic_write_json(path, payload) -> None:
-    """MW-04: 锁文件互斥 + 临时写入 + 原子替换, 中断/并发不留下损坏状态。"""
+    """MW-04 / M04 / M05: 锁租期回收 + 临时写入 + 原子替换 + 重读合并。"""
     target = Path(path).expanduser()
     target.parent.mkdir(parents=True, exist_ok=True)
     lock = target.with_suffix(target.suffix + '.lock')
-    for _ in range(40):
+    lock_lease_seconds = 30.0
+
+    for _ in range(60):
         try:
-            with open(lock, 'x'):
-                pass
+            with open(lock, 'x') as f:
+                f.write(f'{os.getpid()}:{time.time()}')
             break
         except FileExistsError:
+            try:
+                content = lock.read_text(encoding='utf-8').strip()
+                if ':' in content:
+                    pid_str, ts_str = content.split(':', 1)
+                    lock_ts = float(ts_str)
+                    if time.time() - lock_ts > lock_lease_seconds:
+                        lock.unlink(missing_ok=True)
+                        continue
+            except Exception:
+                pass
             time.sleep(0.05)
     else:
         raise RuntimeError(f'state lock timeout: {lock}')
+
     try:
+        final_payload = list(payload) if isinstance(payload, (list, set)) else payload
+        if isinstance(final_payload, list) and target.is_file():
+            try:
+                disk_state = json.loads(target.read_text(encoding='utf-8'))
+                if isinstance(disk_state, list):
+                    seen = set(disk_state)
+                    for it in final_payload:
+                        if it not in seen:
+                            disk_state.append(it)
+                            seen.add(it)
+                    final_payload = disk_state
+            except Exception:
+                pass
+
         tmp = target.with_suffix(target.suffix + '.tmp')
-        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1),
+        tmp.write_text(json.dumps(final_payload, ensure_ascii=False, indent=1),
                        encoding='utf-8')
         os.replace(tmp, target)
     finally:

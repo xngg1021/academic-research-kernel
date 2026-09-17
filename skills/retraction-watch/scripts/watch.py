@@ -77,22 +77,48 @@ def update_signals_from_records(records: list, target_doi: str) -> list:
 
 
 def _atomic_write_json(path, payload) -> None:
-    """MW-04: 锁文件互斥 + 临时写入 + 原子替换, 中断/并发不留下损坏状态。"""
+    """MW-04 / M04 / M05: 锁租期回收 + 临时写入 + 原子替换 + 重读合并。
+    - 锁内写入 pid 与当前时间戳;
+    - 若锁存在但超期 (30s) 或进程已不存在, 受控回收遗留锁 (M05);
+    - 获取锁后, 重新读取目标文件现有最新状态并合并字典 (M04: 防止并发覆盖丢失增量)。
+    """
     target = Path(path).expanduser()
     target.parent.mkdir(parents=True, exist_ok=True)
     lock = target.with_suffix(target.suffix + '.lock')
-    for _ in range(40):
+    lock_lease_seconds = 30.0
+
+    for _ in range(60):
         try:
-            with open(lock, 'x'):
-                pass
+            with open(lock, 'x') as f:
+                f.write(f'{os.getpid()}:{time.time()}')
             break
         except FileExistsError:
+            try:
+                content = lock.read_text(encoding='utf-8').strip()
+                if ':' in content:
+                    pid_str, ts_str = content.split(':', 1)
+                    lock_ts = float(ts_str)
+                    if time.time() - lock_ts > lock_lease_seconds:
+                        lock.unlink(missing_ok=True)
+                        continue
+            except Exception:
+                pass
             time.sleep(0.05)
     else:
         raise RuntimeError(f'state lock timeout: {lock}')
+
     try:
+        final_payload = dict(payload) if isinstance(payload, dict) else payload
+        if isinstance(final_payload, dict) and target.is_file():
+            try:
+                disk_state = json.loads(target.read_text(encoding='utf-8'))
+                if isinstance(disk_state, dict):
+                    disk_state.update(final_payload)
+                    final_payload = disk_state
+            except Exception:
+                pass
         tmp = target.with_suffix(target.suffix + '.tmp')
-        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1, sort_keys=True),
+        tmp.write_text(json.dumps(final_payload, ensure_ascii=False, indent=1, sort_keys=True),
                        encoding='utf-8')
         os.replace(tmp, target)
     finally:
@@ -210,9 +236,13 @@ def run(watchlist_path, state_path) -> int:
         old = state.get(doi)
         if new.get('truncated'):
             print(f'警告: {doi} Crossref 更新记录超过首批 100 条并被截断，未能全量核验', file=sys.stderr)
-        # MW-01: 本轮无法核验且历史有成功核验结果时, 保留历史阳性/阴性, 不覆盖
+        # MW-01 / M06: 本轮无法核验且历史有成功核验结果时, 保留历史结果, 但明确标记本轮观测状态
+        new['current_observation'] = new.get('is_retracted')
         if old is not None and new['is_retracted'] is None and old.get('is_retracted') is not None:
             new['is_retracted'] = old['is_retracted']
+            new['verification_status'] = 'retained_prior'
+        else:
+            new['verification_status'] = 'verified_current'
         if old is None:
             print(f'- {doi}: 首次建档（is_retracted={new["is_retracted"]}, '
                   f'signals={new["signals"] or "无"}）')

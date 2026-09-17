@@ -52,72 +52,101 @@ def _work_key(work: dict):
 def merge_candidates(layers: dict) -> dict:
     """合并 {来源层次: [work, ...]}，同一候选只保留一条并累计 source_layers。
 
-    LA-02: DOI 与 OpenAlex ID 建立别名映射——同一文献在一层只有 OpenAlex ID、
-    另一层才有完整 DOI 记录时, 两条记录合并为同一条候选, 不再各留一条。
+    LA-02 / L02: 并查集等价关系归并——消除三条记录别名桥接引入的输入顺序依赖;
     L01: 若别名匹配到的候选已具有不同且非空的 DOI, 判定为 DOI 冲突,
     保留为独立候选, 绝不静默吞并冲突标识。
+    L07: 保留 authors, abstract, referenced_works 等下游分析必需的全部材料。
     排序:有 relevance_score 的按得分降序(概念检索命中), 其余按被引数降序。
     """
-    merged = {}
-    order = []
-    doi_alias = {}
-    oa_alias = {}
+    all_items = []
     skipped = 0
     for layer, works in layers.items():
         if not isinstance(layer, str) or not layer:
             raise ValueError('layer names must be non-empty strings')
-        for work in works or []:
-            key = _work_key(work)
-            if key is None:
+        for work in (works or []):
+            k = _work_key(work)
+            if k is None:
                 skipped += 1
                 continue
             doi = normalize_doi(work.get('doi')) or None
             oa_id = (str(work.get('id') or work.get('openalex_id') or '').split('/')[-1]
                      or None)
-            canonical = key
-            if doi and doi in doi_alias:
-                canonical = doi_alias[doi]
-            elif oa_id and oa_id in oa_alias:
-                candidate_canonical = oa_alias[oa_id]
-                existing_entry = merged.get(candidate_canonical)
-                if existing_entry and doi and existing_entry.get('doi') and existing_entry.get('doi') != doi:
-                    # L01: DOI 冲突! 不盲目合并, 作为独立候选保留
-                    canonical = key
-                else:
-                    canonical = candidate_canonical
-            entry = merged.get(canonical)
-            if entry is None:
-                entry = {
-                    'key': canonical,
-                    'title': work.get('title'),
-                    'year': work.get('publication_year') or work.get('year'),
-                    'doi': doi,
-                    'openalex_id': oa_id,
-                    'cited_by_count': work.get('cited_by_count'),
-                    'relevance_score': work.get('relevance_score'),
-                    'source_layers': [],
-                }
-                merged[canonical] = entry
-                order.append(canonical)
-                if doi:
-                    doi_alias[doi] = canonical
-                if oa_id:
-                    oa_alias[oa_id] = canonical
+            all_items.append({
+                'work': work,
+                'layer': layer,
+                'key': k,
+                'doi': doi,
+                'oa_id': oa_id,
+            })
+
+    parent = {}
+
+    def find(x):
+        if parent.setdefault(x, x) != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+
+    def union(x, y):
+        rx, ry = find(x), find(y)
+        if rx != ry:
+            if rx.startswith('doi:'):
+                parent[ry] = rx
             else:
-                for field, value in (('title', work.get('title')),
-                                     ('year', work.get('publication_year') or work.get('year')),
-                                     ('doi', doi),
-                                     ('openalex_id', oa_id),
-                                     ('cited_by_count', work.get('cited_by_count')),
-                                     ('relevance_score', work.get('relevance_score'))):
-                    if entry.get(field) is None and value is not None:
-                        entry[field] = value
-                if doi:
-                    doi_alias[doi] = canonical
-                if oa_id:
-                    oa_alias[oa_id] = canonical
-            if layer not in entry['source_layers']:
-                entry['source_layers'].append(layer)
+                parent[rx] = ry
+
+    for item in all_items:
+        find(item['key'])
+
+    oa_to_dois = {}
+    for item in all_items:
+        if item['oa_id'] and item['doi']:
+            oa_to_dois.setdefault(item['oa_id'], set()).add(item['doi'])
+
+    for item in all_items:
+        doi = item['doi']
+        oa_id = item['oa_id']
+        if doi and oa_id:
+            if len(oa_to_dois.get(oa_id, set())) <= 1:
+                union(f'doi:{doi}', f'openalex:{oa_id}')
+
+    merged = {}
+    order = []
+    for item in all_items:
+        work = item['work']
+        layer = item['layer']
+        canonical = find(item['key'])
+        entry = merged.get(canonical)
+        if entry is None:
+            entry = {
+                'key': canonical,
+                'title': work.get('title'),
+                'year': work.get('publication_year') or work.get('year'),
+                'doi': item['doi'],
+                'openalex_id': item['oa_id'],
+                'cited_by_count': work.get('cited_by_count'),
+                'relevance_score': work.get('relevance_score'),
+                'authors': work.get('authors'),
+                'abstract': work.get('abstract'),
+                'referenced_works': work.get('referenced_works'),
+                'source_layers': [],
+            }
+            merged[canonical] = entry
+            order.append(canonical)
+        else:
+            if entry.get('doi') is None and item['doi']:
+                entry['doi'] = item['doi']
+            if entry.get('openalex_id') is None and item['oa_id']:
+                entry['openalex_id'] = item['oa_id']
+            for field in ('title', 'year', 'cited_by_count',
+                          'relevance_score', 'authors', 'abstract', 'referenced_works'):
+                val = work.get(field)
+                if field == 'year':
+                    val = work.get('publication_year') or work.get('year')
+                if entry.get(field) is None and val is not None:
+                    entry[field] = val
+        if layer not in entry['source_layers']:
+            entry['source_layers'].append(layer)
+
     candidates = [merged[key] for key in order]
     candidates.sort(key=lambda c: (c['relevance_score'] is not None,
                                    c['relevance_score'] or 0,

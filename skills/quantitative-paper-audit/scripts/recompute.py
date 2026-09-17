@@ -277,8 +277,12 @@ def required_n_ttest(d, power=0.8, alpha=0.05, ratio=1.0, reported=None):
 # ---------------------------------------------------------------------------
 
 def _decimals(value):
-    """由浮点字面量推断报告的小数位数(0.04 → 2)。"""
-    return max(0, -Decimal(str(value)).as_tuple().exponent)
+    """由数值或字符串推断报告的小数位数 (Q03: 优先从原始字符串提取, 恢复尾随零)。"""
+    s = str(value).strip()
+    if "." in s:
+        base = s.split("e")[0].split("E")[0]
+        return len(base.split(".")[1])
+    return 0
 
 
 def check_p_match(reported_p, recomputed_p, decimals=None):
@@ -288,15 +292,17 @@ def check_p_match(reported_p, recomputed_p, decimals=None):
     decimals 省略时由 reported_p 的字面精度推断。p 以 "< .05" 形式报告时
     本函数不适用(改用方向性核对,见 SKILL.md 工作流 4)。
     """
-    _require(0 <= reported_p <= 1 and 0 <= recomputed_p <= 1, 'p 值须在 [0,1]')
     k = _decimals(reported_p) if decimals is None else decimals
+    p_rep = float(reported_p)
+    p_rec = float(recomputed_p)
+    _require(0 <= p_rep <= 1 and 0 <= p_rec <= 1, 'p 值须在 [0,1]')
     tol = 0.5 * 10 ** (-k)
-    diff = abs(recomputed_p - reported_p)
+    diff = abs(p_rec - p_rep)
     return {
         'consistent': bool(diff <= tol + 1e-12),
-        'reported': reported_p,
-        'recomputed': float(recomputed_p),
-        'difference': float(recomputed_p - reported_p),
+        'reported': p_rep,
+        'recomputed': p_rec,
+        'difference': float(p_rec - p_rep),
         'tolerance': float(tol),
         'decimals': int(k),
         'formula': '|p_recomputed - p_reported| <= 0.5 * 10^-decimals',
@@ -315,48 +321,61 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000,
 
     QA-03: percent=0 是合法输入——count=0 且给了分母时直接核对;
     未给分母时 0% 与 0 计数自洽但分母欠定(consistent=None),count>0 判不一致。
-    QA-04: decimals 显式传入可恢复 float 无法保留的尾随零(报告 0.050 应传
-    decimals=3);省略时按 float 字面量推断。
+    QA-04 / Q03: decimals 显式传入或传入字符串可恢复 float 无法保留的尾随零(报告 0.050 应传
+    "0.050" 或 decimals=3);省略时按字面量推断。
     """
     _require(count >= 0, '计数须非负')
-    _require(0 <= percent <= 100, '百分比须在 [0,100]')
     k = _decimals(percent) if decimals is None else decimals
+    p_val = float(percent)
+    _require(0 <= p_val <= 100, '百分比须在 [0,100]')
     tol = 0.5 * 10 ** (-k) + 1e-12
     out = {
-        'inputs': {'count': count, 'percent': percent},
+        'inputs': {'count': count, 'percent': p_val, 'raw_percent': str(percent)},
         'tolerance': float(tol),
         'formula': 'percent ?= 100*count/denominator (按报告精度容差)',
         'library': 'pure python',
         'confidence': 'high',
     }
-    if percent == 0:
+    if p_val == 0:
         if denominator is not None:
             _require(denominator > 0, '分母须为正')
             recomputed = 100.0 * count / denominator
             out.update({
-                'consistent': bool(abs(recomputed - percent) <= tol),
+                'consistent': bool(abs(recomputed - p_val) <= tol),
                 'denominator': denominator,
                 'recomputed_percent': float(recomputed),
-                'difference': float(recomputed - percent),
+                'difference': float(recomputed - p_val),
             })
         elif count == 0:
             out.update({'consistent': None,
                         'note': '0% 与 0 计数自洽, 但未给分母时无法确定分母'})
         else:
-            out.update({'consistent': False,
-                        'note': 'percent=0 但 count>0, 两者不可能同时成立'})
+            # Q01: 按报告精度处理零边界——count>0 且 percent=0 时，若存在合理分母使 100*count/D <= tol，
+            # 则在四舍五入下可能成立，属于分母未知的欠定状态，不能判定为绝对不可能
+            min_denom = int(np.ceil(100.0 * count / tol))
+            if min_denom <= max_denominator:
+                out.update({
+                    'consistent': None,
+                    'min_possible_denominator': min_denom,
+                    'note': f'报告 0% 但 count={count} 在四舍五入下可能成立 (要求分母 >= {min_denom}); 未声明分母因此欠定',
+                })
+            else:
+                out.update({
+                    'consistent': False,
+                    'note': f'percent=0 且 count={count} 所需分母超过最大上限 {max_denominator}',
+                })
         return out
     if denominator is not None:
         _require(denominator > 0, '分母须为正')
         recomputed = 100.0 * count / denominator
         out.update({
-            'consistent': bool(abs(recomputed - percent) <= tol),
+            'consistent': bool(abs(recomputed - p_val) <= tol),
             'denominator': denominator,
             'recomputed_percent': float(recomputed),
-            'difference': float(recomputed - percent),
+            'difference': float(recomputed - p_val),
         })
         return out
-    implied = 100.0 * count / percent
+    implied = 100.0 * count / p_val
     nearest = int(round(implied))
     if not (1 <= nearest <= max_denominator):
         out.update({'consistent': False, 'implied_denominator': float(implied),
@@ -364,11 +383,11 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000,
         return out
     recomputed = 100.0 * count / nearest
     out.update({
-        'consistent': bool(abs(recomputed - percent) <= tol),
+        'consistent': bool(abs(recomputed - p_val) <= tol),
         'implied_denominator': float(implied),
         'nearest_denominator': nearest,
         'recomputed_percent': float(recomputed),
-        'difference': float(recomputed - percent),
+        'difference': float(recomputed - p_val),
     })
     return out
 
