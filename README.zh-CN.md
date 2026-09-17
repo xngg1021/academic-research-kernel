@@ -60,6 +60,8 @@ CI 经 GitHub Actions 在 Ubuntu（Python 3.12 与 3.13）、Windows 与 macOS �
 
 tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
 
+scripts/scfabric/ 是科学计算执行层：硬件探针、带 dtype 门禁的后端目录、五个工作负载画像、带数值等价检查的配对基准与 ComputeReceipt。本机首轮实测见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；经验规则是默认 CPU，加速器只凭 receipt 启用。
+
 ## 研究与规划文档
 
 这两份文档是探索性规划参考，不是强制路线图。其中的方向数字按 docs/direction-primitive-mapping.json 的入库归组重算。

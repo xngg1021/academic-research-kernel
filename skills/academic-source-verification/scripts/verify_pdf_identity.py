@@ -45,10 +45,26 @@ def compare_title(expected_title: str, page_text: str, threshold: float = DEFAUL
     }
 
 
+DOI_PATTERN = re.compile(r"\b10\.\d{4,9}/[^\s<>\"']+")
+
+
+def extract_dois(text) -> list:
+    """从文本提取完整 DOI 字符串列表 (去尾随标点), 用于精确身份比对。"""
+    found = []
+    for m in DOI_PATTERN.finditer((text or '').lower()):
+        candidate = m.group(0).rstrip('.,;:)]}')
+        if candidate and candidate not in found:
+            found.append(candidate)
+    return found
+
+
 def find_doi(doi: str, page_text: str) -> bool:
-    """DOI 在首页文字中的出现判定（忽略大小写与空白折行）。"""
-    squashed = re.sub(r'\s+', '', (page_text or '').lower())
-    return (doi or '').lower() in squashed if doi else False
+    """DOI 在首页文字中的出现判定 (AV-02): 提取完整 DOI 后精确匹配,
+    目标 10.1234/abc 不再命中仅含 10.1234/abcd 的文本。"""
+    if not doi:
+        return False
+    target = (doi or '').lower().strip().rstrip('.,;:)]}')
+    return target in extract_dois(page_text)
 
 
 def read_pdf(path: str, max_pages: int = 1) -> dict:

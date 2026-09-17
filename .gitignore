@@ -2,3 +2,6 @@ __pycache__/
 .pytest_cache/
 *.pyc
 .venv/
+# Machine-specific benchmark snapshots: receipts carry hardware
+# fingerprints and must never enter the shared repository.
+scripts/scfabric/receipts-*.json

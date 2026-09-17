@@ -74,6 +74,13 @@ class ChecklistError(ValueError):
     """Raised when a checklist or evidence receipt is structurally invalid."""
 
 
+def _strict_bool(value, field):
+    """严格 JSON 布尔: 只接受 bool, 字符串 'true'/'false' 一律拒绝 (RP-01)。"""
+    if isinstance(value, bool):
+        return value
+    raise ChecklistError(f'{field} 必须是 JSON 布尔值, got {value!r}')
+
+
 def normalize(checklist):
     """Validate a checklist dict and return a canonical form with all 14 stages.
 
@@ -101,12 +108,21 @@ def normalize(checklist):
         if status not in STAGE_STATUSES:
             raise ChecklistError(f'stage {sid}: invalid status {status!r}; '
                                  f'expected one of {STAGE_STATUSES}')
-        if entry.get('waived') and status != 'skipped':
-            raise ChecklistError(f'stage {sid}: waived is only valid with status "skipped"')
+        # RP-01: 豁免契约 = 严格布尔 + 允许阶段 + skipped 状态 + 非空理由
+        waived = False
+        if entry.get('waived') is not None:
+            waived = _strict_bool(entry.get('waived'), f'stage {sid}.waived')
+        if waived:
+            if status != 'skipped':
+                raise ChecklistError(f'stage {sid}: waived is only valid with status "skipped"')
+            if sid not in WAIVABLE_STAGES:
+                raise ChecklistError(f'stage {sid}: 不在可豁免阶段 {sorted(WAIVABLE_STAGES)}')
+            if not str(entry.get('reason') or '').strip():
+                raise ChecklistError(f'stage {sid}: waived 必须附带非空 reason')
         record = {'id': sid, 'status': status}
         for key in _STAGE_OPTIONAL:
             if key in entry:
-                record[key] = entry[key]
+                record[key] = (waived if key == 'waived' else entry[key])
         by_id[sid] = record
     stages = [by_id.get(sid) or {'id': sid, 'status': 'unknown', 'detail': '未提供该阶段记录'}
               for sid in STAGE_IDS]
@@ -165,7 +181,7 @@ def adjudicate(checklist, generated_at=None):
     contradictions = [e['id'] for e in cl['stages'] if e['status'] == 'mismatch']
 
     def waived_ok(e):
-        return e['status'] == 'skipped' and bool(e.get('waived')) and e['id'] in WAIVABLE_STAGES
+        return e['status'] == 'skipped' and e.get('waived') is True and e['id'] in WAIVABLE_STAGES
 
     blocking = [e['id'] for e in cl['stages']
                 if e['id'] in HARD_STAGES and e['status'] != 'pass']

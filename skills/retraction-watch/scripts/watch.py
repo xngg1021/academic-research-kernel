@@ -71,18 +71,29 @@ def update_signals_from_records(records: list, target_doi: str) -> list:
 
 
 def snapshot_from_signals(is_retracted, signals) -> dict:
-    """把两个来源的信号合并为可比较的状态快照。"""
+    """把两个来源的信号合并为可比较的状态快照。
+    is_retracted 支持三态: True/False/None (None = 本轮无法核验, 不冒充阴性)。
+    """
+    if is_retracted is None:
+        retracted = None
+    elif isinstance(is_retracted, bool):
+        retracted = is_retracted
+    else:
+        raise ValueError(f'is_retracted 必须是 JSON 布尔或 None, got {is_retracted!r}')
     return {
-        'is_retracted': bool(is_retracted),
+        'is_retracted': retracted,
         'signals': sorted(set(signals)),
     }
 
 
 def diff_snapshots(old: dict, new: dict) -> list:
-    """逐项比较状态快照，返回人类可读的变化列表；无变化返回空列表。"""
+    """逐项比较状态快照 (三态), 返回人类可读的变化列表；无变化返回空列表。"""
     changes = []
-    old_r, new_r = bool(old.get('is_retracted')), bool(new.get('is_retracted'))
-    if old_r != new_r:
+    old_r = old.get('is_retracted')
+    new_r = new.get('is_retracted')
+    if old_r is not None and new_r is None:
+        changes.append('is_retracted: 本轮无法核验 (OpenAlex 无记录), 保留上次成功核验结果')
+    elif old_r != new_r:
         changes.append(f'is_retracted: {old_r} -> {new_r}')
     added = sorted(set(new.get('signals', [])) - set(old.get('signals', [])))
     removed = sorted(set(old.get('signals', [])) - set(new.get('signals', [])))
@@ -129,8 +140,12 @@ def get(url: str, timeout: int = 20) -> dict:
 
 
 def check_doi(doi: str) -> dict:
-    """live: 合并 OpenAlex is_retracted 与 Crossref updates:<DOI> 反向查询信号。"""
-    signals, is_retracted = [], False
+    """live: 合并 OpenAlex is_retracted 与 Crossref updates:<DOI> 反向查询信号。
+
+    MW-01: OpenAlex 404 (查不到记录) 时 is_retracted=None (未知三态),
+    不得折叠成 False; 保留上次成功核验结果由 run 负责。
+    """
+    signals, is_retracted = [], None
     try:
         data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=is_retracted')
         is_retracted = bool(data.get('is_retracted'))
@@ -154,6 +169,9 @@ def run(watchlist_path, state_path) -> int:
     for doi in dois:
         new = check_doi(doi)
         old = state.get(doi)
+        # MW-01: 本轮无法核验且历史有成功核验结果时, 保留历史阳性/阴性, 不覆盖
+        if old is not None and new['is_retracted'] is None and old.get('is_retracted') is not None:
+            new['is_retracted'] = old['is_retracted']
         if old is None:
             print(f'- {doi}: 首次建档（is_retracted={new["is_retracted"]}, '
                   f'signals={new["signals"] or "无"}）')

@@ -73,8 +73,13 @@ def parse_crossref_work(message: dict) -> dict:
     }
 
 
-def compare_works(works: list) -> dict:
-    """字段级对照两份以上已解析记录；被引数仅记录不比对。"""
+def compare_works(works: list, target_doi: str = None) -> dict:
+    """字段级对照两份以上已解析记录；被引数仅记录不比对。
+
+    target_doi 提供时先做身份绑定校验: 每份记录的 DOI 必须与请求 DOI 归一
+    一致, 不一致的记入 identity_binding_mismatch (AV-01: 来源互证不得在
+    目标身份冲突未被拦住时通过)。
+    """
     fields = {}
     for name in ('doi', 'title', 'year'):
         values = {}
@@ -90,10 +95,19 @@ def compare_works(works: list) -> dict:
             'values': values,
             'match': len(set(present)) == 1 if len(present) > 1 else None,
         }
+    binding = []
+    if target_doi is not None:
+        expected = _norm_doi(target_doi)
+        for work in works:
+            found = _norm_doi(work.get('doi'))
+            if found and found != expected:
+                binding.append({'source': work['source'], 'expected': expected, 'found': found})
     return {
         'fields': fields,
+        'identity_binding_mismatch': binding,
         'citation_counts': {w['source']: w.get('cited_by_count') for w in works},
-        'note': '被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。',
+        'note': '被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。'
+                'identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。',
     }
 
 
@@ -179,7 +193,7 @@ def main(argv=None) -> int:
                 sources[name] = {'status': 'failed', 'error': f'{type(error).__name__}: {error}'}
 
     report = {'target_doi': doi, 'sources': sources,
-              'comparison': compare_works(parsed) if parsed else None}
+              'comparison': compare_works(parsed, target_doi=doi) if parsed else None}
     print(json.dumps(report, ensure_ascii=False, indent=2))
     ok = sum(1 for s in sources.values() if s['status'] == 'ok')
     return 0 if ok else 1

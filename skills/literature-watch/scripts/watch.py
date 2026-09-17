@@ -114,8 +114,15 @@ def get(url: str, timeout: int = 20) -> dict:
             delay *= 2
 
 
-def fetch_topic_works(topic: str, since: date) -> list:
-    """live: OpenAlex 主题检索，from_publication_date 限定新增窗口。"""
+def _truncated(data: dict) -> bool:
+    """MW-02: 首批结果条数小于 meta.count 时标记截断, 提示漏报风险。"""
+    total = ((data.get('meta') or {}).get('count') or 0)
+    return int(total) > len(data.get('results') or [])
+
+
+def fetch_topic_works(topic: str, since: date):
+    """live: OpenAlex 主题检索，from_publication_date 限定新增窗口。
+    返回 (items, truncated); truncated=True 表示还有未取回的分页。"""
     params = urlencode({
         'search': topic,
         'filter': f'from_publication_date:{since.isoformat()}',
@@ -123,32 +130,34 @@ def fetch_topic_works(topic: str, since: date) -> list:
         'select': SELECT,
     })
     data = get(f'{OPENALEX}/works?{params}')
-    return data.get('results') or []
+    return data.get('results') or [], _truncated(data)
 
 
-def fetch_author_works(author_id: str, since: date) -> list:
-    """live: OpenAlex 按 author id 过滤新作。"""
+def fetch_author_works(author_id: str, since: date):
+    """live: OpenAlex 按 author id 过滤新作。返回 (items, truncated)。"""
     params = urlencode({
         'filter': f'authorships.author.id:{author_id},from_publication_date:{since.isoformat()}',
         'per_page': 100,
         'select': SELECT,
     })
     data = get(f'{OPENALEX}/works?{params}')
-    return data.get('results') or []
+    return data.get('results') or [], _truncated(data)
 
 
-def fetch_citing_works(doi: str, since: date) -> list:
-    """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。"""
+def fetch_citing_works(doi: str, since: date):
+    """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。
+    返回 (items, truncated)。"""
     data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=id')
     wid = str(data.get('id') or '').rsplit('/', 1)[-1]
     if not wid:
-        return []
+        return [], False
     params = urlencode({
         'filter': f'cites:{wid},from_publication_date:{since.isoformat()}',
         'per_page': 100,
         'select': SELECT,
     })
-    return (get(f'{OPENALEX}/works?{params}')).get('results') or []
+    data = get(f'{OPENALEX}/works?{params}')
+    return data.get('results') or [], _truncated(data)
 
 
 def fetch_crossref_record(doi: str) -> dict:
@@ -157,16 +166,27 @@ def fetch_crossref_record(doi: str) -> dict:
     return data.get('message') or {}
 
 
-def collect(watchlist: dict, since: date) -> list:
-    """live: 聚合三个来源的候选新作并预去重。"""
-    items, seen = [], set()
+def collect(watchlist: dict, since: date):
+    """live: 聚合三个来源的候选新作并预去重。
+    返回 (items, truncations); truncations 非空表示对应来源达到首批上限。
+    """
+    items, seen, truncations = [], set(), []
     for topic in watchlist['topics']:
-        items.extend(fetch_topic_works(topic, since))
+        its, tr = fetch_topic_works(topic, since)
+        items.extend(its)
+        if tr:
+            truncations.append(f'topic={topic!r}')
     for author_id in watchlist['authors']:
-        items.extend(fetch_author_works(author_id, since))
+        its, tr = fetch_author_works(author_id, since)
+        items.extend(its)
+        if tr:
+            truncations.append(f'author={author_id!r}')
     for doi in watchlist['dois']:
-        items.extend(fetch_citing_works(doi, since))
-    return filter_unseen(items, seen)
+        its, tr = fetch_citing_works(doi, since)
+        items.extend(its)
+        if tr:
+            truncations.append(f'citing-doi={doi!r}')
+    return filter_unseen(items, seen), truncations
 
 
 def summarize(item: dict) -> str:
@@ -184,7 +204,10 @@ def run(watchlist_path, state_path, days: int) -> int:
     if state_file.is_file():
         seen = set(json.loads(state_file.read_text(encoding='utf-8')))
     since = date.today() - timedelta(days=days)
-    fresh = filter_unseen(collect(watchlist, since), seen)
+    collected, truncations = collect(watchlist, since)
+    if truncations:
+        print(f'⚠ 完整性警告: 以下来源达到首批上限, 存在漏报风险: {truncations}')
+    fresh = filter_unseen(collected, seen)
     if fresh:
         print(f'## 新增 {len(fresh)} 条（窗口 {since.isoformat()} 起）')
         for item in fresh:
