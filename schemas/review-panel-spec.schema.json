@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/review-panel-spec.schema.json",
+  "title": "ReviewPanelSpec",
+  "description": "Harness-neutral declaration of a multi-reviewer panel for peer review and red-teaming.",
+  "type": "object",
+  "required": ["panel_id", "participants"],
+  "properties": {
+    "panel_id": {
+      "type": "string",
+      "description": "Unique identifier for this panel run configuration"
+    },
+    "description": {
+      "type": "string"
+    },
+    "topology": {
+      "type": "string",
+      "enum": ["sparse_deliberation", "round_robin", "independent"],
+      "default": "sparse_deliberation"
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "max_calls": {"type": "integer", "minimum": 1, "default": 20},
+        "max_cost_usd": {"type": "number", "minimum": 0.0},
+        "max_wall_seconds": {"type": "integer", "minimum": 1, "default": 3600}
+      }
+    },
+    "participants": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "executor"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique participant seat ID (e.g. 'claude-reviewer', 'gemini-challenger-1')"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role or specialty of this reviewer"
+          },
+          "executor": {
+            "type": "string",
+            "enum": ["hermes.cli", "hermes.llm", "hermes.subagent", "command", "api", "mock"],
+            "description": "Harness executor to handle this participant"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Underlying model provider (anthropic, openai, deepseek, gemini, etc.)"
+          },
+          "model": {
+            "type": "string",
+            "description": "Model identifier"
+          },
+          "cmd": {
+            "type": "string",
+            "description": "Command template for 'command' executor (e.g. 'claude -p {prompt_path}')"
+          },
+          "toolsets": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

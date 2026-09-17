@@ -1,0 +1,27 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.json",
+  "name": "academic-skills",
+  "version": "2.0.0",
+  "description": "Harness-neutral academic research and multi-model deliberation skills.",
+  "author": {
+    "name": "Junfu Shi",
+    "url": "https://github.com/xngg1021"
+  },
+  "license": "LicenseRef-Source-Lineage-1.0",
+  "homepage": "https://github.com/xngg1021/hermes-academic-skills",
+  "repository": "https://github.com/xngg1021/hermes-academic-skills.git",
+  "skills": [
+    "./skills/academic-source-verification",
+    "./skills/academic-writing",
+    "./skills/literature-analysis",
+    "./skills/math-computation",
+    "./skills/quantitative-paper-audit",
+    "./skills/research-reproducibility",
+    "./skills/systematic-review-meta-analysis",
+    "./skills/literature-watch",
+    "./skills/retraction-watch",
+    "./skills/research-object-identity",
+    "./skills/cross-review-five"
+  ],
+  "mcp": "./mcp.json"
+}

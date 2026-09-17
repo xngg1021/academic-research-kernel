@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/review-result.schema.json",
+  "title": "ReviewResult",
+  "description": "Standard output of an individual review phase (plan or challenge).",
+  "type": "object",
+  "required": ["participant_id", "phase", "success"],
+  "properties": {
+    "participant_id": {"type": "string"},
+    "phase": {"type": "string", "enum": ["plan", "challenge", "synthesize"]},
+    "success": {"type": "boolean"},
+    "text": {"type": "string"},
+    "findings": {
+      "type": "array",
+      "items": {"$ref": "review-finding.schema.json"}
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "error": {"type": "string"},
+    "telemetry": {
+      "type": "object",
+      "properties": {
+        "wall_time_seconds": {"type": "number"},
+        "prompt_tokens": {"type": "integer"},
+        "completion_tokens": {"type": "integer"},
+        "cost_usd": {"type": "number"}
+      }
+    }
+  }
+}

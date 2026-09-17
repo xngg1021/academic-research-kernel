@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.json",
+  "mcpServers": {
+    "academic-skills": {
+      "command": "python",
+      "args": ["scripts/mcp_server.py"],
+      "description": "Universal academic verification, statistical recompute, and deliberation tools"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/review-finding.schema.json",
+  "title": "ReviewFinding",
+  "description": "Structured finding emitted by a reviewer participant during peer review.",
+  "type": "object",
+  "required": ["id", "target", "claim", "kind", "severity"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Finding identifier unique within the reviewer's output (e.g. F1, F2)"
+    },
+    "target": {
+      "type": "string",
+      "description": "Target file path or entity relative to the repository root"
+    },
+    "issue_key": {
+      "type": "string",
+      "description": "Clustering key for identical issues across reviewers"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["bug", "security", "invariant", "perf", "spec_mismatch", "suggestion"]
+    },
+    "claim": {
+      "type": "string",
+      "description": "Core assertion explaining the finding in 1-2 sentences"
+    },
+    "polarity": {
+      "type": "string",
+      "enum": ["present", "absent", "positive", "negative"]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Concrete code lines, tests, or logic proofs supporting the claim"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["P0", "P1", "P2"]
+    },
+    "blocking": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

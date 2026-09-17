@@ -42,10 +42,16 @@
   - `skills/retraction-watch` (1.1.0) — 状态合并、并发租约锁与分页截断检测
   - `skills/research-object-identity` (1.0.0) — 确定性研究对象身份层
   - `scripts/scfabric` (1.0.0) — 科学计算执行层薄层与严格数值门禁
-- **Schemas**:
+- **Schemas & Protocols**:
   - `schemas/compute-receipt.schema.json`
   - `schemas/evidence-receipt.schema.json`
+  - `schemas/review-panel-spec.schema.json`
+  - `schemas/review-finding.schema.json`
+  - `schemas/review-result.schema.json`
+  - `schemas/review-run-receipt.schema.json`
+  - `plugin.json` (Agent Plugins v1 portable manifest)
+  - `mcp.json` / `scripts/mcp_server.py` (Portable MCP tools surface)
 - **Verification Matrix**:
-  - Unit & Regression Tests: 456 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 463 passed, 0 failures, 0 warnings
   - Static QA Fences: 38 independent executable blocks passed
   - CI Matrix Platforms: Ubuntu (Python 3.10, 3.11, 3.12, 3.13), macOS (Python 3.12), Windows (Python 3.12)
