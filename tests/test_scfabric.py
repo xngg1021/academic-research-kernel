@@ -250,4 +250,3 @@ def test_c09_admission_handles_timing_exception_gracefully(monkeypatch):
     for c in receipt["candidates"]:
         assert c["verdict"] == "REFERENCE"
         assert "timing_failed" in c["fallback_reason"]
-
