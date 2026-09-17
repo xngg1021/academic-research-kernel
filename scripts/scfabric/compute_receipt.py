@@ -8,12 +8,28 @@ parity outcome, verdict and fallback reason. A receipt with no accelerator
 simply records that fact; it does not reason about why.
 """
 
+import os
 import platform
 from datetime import datetime, timezone
 
 import hardware_probe as hp
 
 PROTOCOL = "compute-receipt-1.0"
+
+
+def _thread_fingerprint():
+    """采集当前进程关联的 BLAS 与 PyTorch 线程数指纹。"""
+    out = {
+        "omp_num_threads": os.environ.get("OMP_NUM_THREADS"),
+        "mkl_num_threads": os.environ.get("MKL_NUM_THREADS"),
+        "openblas_num_threads": os.environ.get("OPENBLAS_NUM_THREADS"),
+    }
+    try:
+        import torch
+        out["torch_num_threads"] = torch.get_num_threads()
+    except Exception:
+        pass
+    return out
 
 
 def _lib_versions():
@@ -38,6 +54,7 @@ def build_receipt(workload, scale, dtype, gain_threshold, warmup, repeat,
             "python": platform.python_version(),
             "platform": platform.platform(),
             "libraries": _lib_versions(),
+            "threads": _thread_fingerprint(),
         },
         "operation": workload,
         "scale": scale,

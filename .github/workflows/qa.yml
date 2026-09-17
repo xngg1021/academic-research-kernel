@@ -19,25 +19,42 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux x86_64 across Python versions
           - os: ubuntu-latest
+            arch: x86_64
             python: '3.10'
           - os: ubuntu-latest
+            arch: x86_64
             python: '3.11'
           - os: ubuntu-latest
+            arch: x86_64
             python: '3.12'
           - os: ubuntu-latest
+            arch: x86_64
             python: '3.13'
-          - os: windows-latest
+          # Linux ARM64
+          - os: ubuntu-24.04-arm
+            arch: arm64
             python: '3.12'
+          # Windows x86_64
+          - os: windows-latest
+            arch: x86_64
+            python: '3.12'
+          # macOS Apple Silicon (ARM64)
           - os: macos-latest
+            arch: arm64
+            python: '3.12'
+          # macOS Intel (x86_64)
+          - os: macos-13
+            arch: x86_64
             python: '3.12'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -66,15 +83,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Check out pinned Hermes upstream
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: NousResearch/hermes-agent
           ref: 245e48008fa814b3251f50755eb656bd9fb86cb1
           path: .hermes-upstream
           fetch-depth: 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: '3.12'
       - name: Install pinned Hermes
@@ -88,4 +105,29 @@ jobs:
           hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
           hermes skills install xngg1021/hermes-academic-skills/skills/quantitative-paper-audit
           hermes skills install xngg1021/hermes-academic-skills/skills/retraction-watch
+          hermes skills install xngg1021/hermes-academic-skills/skills/cross-review-five
           hermes skills list
+  upstream-canary:
+    # Canary integration against Hermes upstream main branch for forward compatibility
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check out latest Hermes main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: NousResearch/hermes-agent
+          ref: main
+          path: .hermes-latest
+          fetch-depth: 1
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.12'
+      - name: Install latest Hermes and test CLI smoke
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./.hermes-latest
+          hermes --version
+          hermes chat --help | grep -E -- '--query-file'
+          hermes chat --help | grep -E -- '--ignore-rules'

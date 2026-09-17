@@ -250,3 +250,22 @@ def test_c09_admission_handles_timing_exception_gracefully(monkeypatch):
     for c in receipt["candidates"]:
         assert c["verdict"] == "REFERENCE"
         assert "timing_failed" in c["fallback_reason"]
+
+
+def test_c13_time_call_computes_mad():
+    import admission as ad
+    res = ad.time_call(lambda: None, warmup=1, repeat=5)
+    assert "median" in res
+    assert "mad" in res
+    assert isinstance(res["mad"], float)
+    assert res["mad"] >= 0.0
+
+
+def test_c14_receipt_includes_thread_fingerprint():
+    import admission as ad
+    receipt = ad.run_admission("matmul_eig", "small", dtype="float64", warmup=1, repeat=1)
+    env = receipt.get("environment") or {}
+    assert "threads" in env
+    threads = env["threads"]
+    assert "omp_num_threads" in threads
+    assert "mkl_num_threads" in threads

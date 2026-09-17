@@ -35,7 +35,8 @@
       "properties": {
         "python": {"type": "string"},
         "platform": {"type": "string"},
-        "libraries": {"type": "object"}
+        "libraries": {"type": "object"},
+        "threads": {"type": "object"}
       }
     },
     "operation": {"type": "string"},
