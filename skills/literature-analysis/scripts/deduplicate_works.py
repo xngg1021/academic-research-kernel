@@ -87,8 +87,8 @@ def deduplicate_works(works: list) -> dict:
         duplicate = None
         for earlier in matches:
             author_overlap = bool(_norm_authors(work) & _norm_authors(earlier))
-            work_year = str(work.get('year') or '').strip()
-            earlier_year = str(earlier.get('year') or '').strip()
+            work_year = str(work.get('year') or work.get('publication_year') or '').strip()
+            earlier_year = str(earlier.get('year') or earlier.get('publication_year') or '').strip()
             year_ok = (work_year == earlier_year) or not (work_year and earlier_year)
             if author_overlap and year_ok:
                 duplicate = earlier

@@ -56,17 +56,18 @@ def update_signals_from_records(records: list, target_doi: str) -> list:
     """从 Crossref 反向查询结果提取指向目标 DOI 的更新信号。
 
     语义与 check_updates.py 的 update_signals 一致:只看 update-to 中
-    DOI 等于目标 DOI 的条目。MW-03: 信号带独立事件身份 (更新 DOI 与日期),
-    同类型不同更新 DOI 的第二次更正不再被压缩成同一事件。
+    DOI 等于目标 DOI 的条目。MW-03 / M03: 信号身份优先绑定通知记录自身 DOI,
+    同类型不同通知 DOI 的多次更正拥有独立身份。
     """
     target = normalize_doi(target_doi)
     found = []
     for record in records:
+        notice_doi = normalize_doi(record.get('DOI') or '')
         for update in record.get('update-to') or []:
             if normalize_doi(update.get('DOI') or '') == target:
                 kind = str(update.get('type') or 'update')
                 source = str(update.get('source') or 'unknown')
-                upd_doi = normalize_doi(update.get('DOI') or '') or '?'
+                upd_doi = notice_doi or normalize_doi(update.get('DOI') or '') or '?'
                 stamp = str(update.get('date') or update.get('timestamp') or '').strip()
                 sig = f'{kind}({source}) update-doi={upd_doi}'
                 if stamp:
@@ -101,9 +102,10 @@ def _atomic_write_json(path, payload) -> None:
             pass
 
 
-def snapshot_from_signals(is_retracted, signals) -> dict:
+def snapshot_from_signals(is_retracted, signals, truncated: bool = False) -> dict:
     """把两个来源的信号合并为可比较的状态快照。
     is_retracted 支持三态: True/False/None (None = 本轮无法核验, 不冒充阴性)。
+    M02: truncated 标明是否达到上限截断。
     """
     if is_retracted is None:
         retracted = None
@@ -111,10 +113,13 @@ def snapshot_from_signals(is_retracted, signals) -> dict:
         retracted = is_retracted
     else:
         raise ValueError(f'is_retracted 必须是 JSON 布尔或 None, got {is_retracted!r}')
-    return {
+    res = {
         'is_retracted': retracted,
         'signals': sorted(set(signals)),
     }
+    if truncated:
+        res['truncated'] = True
+    return res
 
 
 def diff_snapshots(old: dict, new: dict) -> list:
@@ -184,9 +189,12 @@ def check_doi(doi: str) -> dict:
         if exc.code != 404:
             raise
     data = get(f'{CROSSREF}/works?filter=updates:{quote(doi, safe="")}&rows=100')
-    records = (data.get('message') or {}).get('items') or []
+    message = data.get('message') or {}
+    records = message.get('items') or []
+    total_results = message.get('total-results', len(records))
+    truncated = bool(total_results > len(records))
     signals = update_signals_from_records(records, doi)
-    return snapshot_from_signals(is_retracted, signals)
+    return snapshot_from_signals(is_retracted, signals, truncated=truncated)
 
 
 def run(watchlist_path, state_path) -> int:
@@ -200,6 +208,8 @@ def run(watchlist_path, state_path) -> int:
     for doi in dois:
         new = check_doi(doi)
         old = state.get(doi)
+        if new.get('truncated'):
+            print(f'警告: {doi} Crossref 更新记录超过首批 100 条并被截断，未能全量核验', file=sys.stderr)
         # MW-01: 本轮无法核验且历史有成功核验结果时, 保留历史阳性/阴性, 不覆盖
         if old is not None and new['is_retracted'] is None and old.get('is_retracted') is not None:
             new['is_retracted'] = old['is_retracted']

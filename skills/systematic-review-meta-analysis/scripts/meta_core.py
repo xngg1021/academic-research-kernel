@@ -239,6 +239,9 @@ def trim_and_fill(yi, vi, side: str = 'left', maxiter: int = 100) -> dict:
         it += 1
         prev = k0
         k0 = min(l0_count(y[idx], v[idx], side), k - 3)
+        if k0 == prev:
+            # S01: 连续两轮 k0 一致, 成功到达固定点
+            break
         if k0 > 0:
             theta = float(np.sum(y[idx] / v[idx]) / np.sum(1.0 / v[idx]))
             x_full = y - theta
@@ -247,7 +250,7 @@ def trim_and_fill(yi, vi, side: str = 'left', maxiter: int = 100) -> dict:
             idx = order[k0:]
         else:
             idx = np.arange(k)
-        state = tuple(sorted(idx.tolist()))
+        state = (int(k0), tuple(sorted(idx.tolist())))
         if state in seen_states:
             return {'k0': None, 'adjusted': None, 'se': None,
                     'theta_observed': float(pool_fixed(y, v).estimate),

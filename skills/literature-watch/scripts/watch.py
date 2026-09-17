@@ -147,7 +147,7 @@ def fetch_author_works(author_id: str, since: date):
 def fetch_citing_works(doi: str, since: date):
     """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。
     返回 (items, truncated)。OpenAlex 查不到 id 时接通 Crossref 兜底
-    (MW-05), 产出该 DOI 的元数据记录并标记来源。"""
+    (MW-05), 产出标记 crossref-fallback 的种子元数据记录。"""
     data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=id')
     wid = str(data.get('id') or '').rsplit('/', 1)[-1]
     if not wid:
@@ -203,7 +203,9 @@ def collect(watchlist: dict, since: date):
             truncations.append(f'author={author_id!r}')
     for doi in watchlist['dois']:
         its, tr = fetch_citing_works(doi, since)
-        items.extend(its)
+        # M01: 排除被监控论文自身 Crossref 兜底记录, 仅保留真实引用者
+        citing_items = [it for it in its if it.get('source') != 'crossref-fallback']
+        items.extend(citing_items)
         if tr:
             truncations.append(f'citing-doi={doi!r}')
     return filter_unseen(items, seen), truncations

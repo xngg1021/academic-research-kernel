@@ -165,7 +165,10 @@ if len(se) >= 3:
     intercept, t, p = mc.egger_test(yi, vi)   # 截距偏离 0 提示不对称
 if len(se) >= 10:
     tf = mc.trim_and_fill(yi, vi, side='left')  # L0 估计量;k0 为估计缺失数
-    print(f"trim-and-fill: k0={tf['k0']}, 校正后 {tf['adjusted']:.3f}")
+    if tf['converged']:
+        print(f"trim-and-fill: k0={tf['k0']}, 校正后 {tf['adjusted']:.3f}")
+    else:
+        print(f"trim-and-fill: 未收敛 ({tf.get('note', '')})")
 
 import matplotlib
 matplotlib.use('Agg')

@@ -43,7 +43,10 @@ def _work_key(work: dict):
     if openalex_id:
         return 'openalex:' + str(openalex_id).split('/')[-1]
     title = normalize_title(work.get('title'))
-    return 'title:' + title if title else None
+    if not title:
+        return None
+    year = str(work.get('publication_year') or work.get('year') or '').strip()
+    return f'title:{title}#{year}' if year else f'title:{title}'
 
 
 def merge_candidates(layers: dict) -> dict:
@@ -51,6 +54,8 @@ def merge_candidates(layers: dict) -> dict:
 
     LA-02: DOI 与 OpenAlex ID 建立别名映射——同一文献在一层只有 OpenAlex ID、
     另一层才有完整 DOI 记录时, 两条记录合并为同一条候选, 不再各留一条。
+    L01: 若别名匹配到的候选已具有不同且非空的 DOI, 判定为 DOI 冲突,
+    保留为独立候选, 绝不静默吞并冲突标识。
     排序:有 relevance_score 的按得分降序(概念检索命中), 其余按被引数降序。
     """
     merged = {}
@@ -73,7 +78,13 @@ def merge_candidates(layers: dict) -> dict:
             if doi and doi in doi_alias:
                 canonical = doi_alias[doi]
             elif oa_id and oa_id in oa_alias:
-                canonical = oa_alias[oa_id]
+                candidate_canonical = oa_alias[oa_id]
+                existing_entry = merged.get(candidate_canonical)
+                if existing_entry and doi and existing_entry.get('doi') and existing_entry.get('doi') != doi:
+                    # L01: DOI 冲突! 不盲目合并, 作为独立候选保留
+                    canonical = key
+                else:
+                    canonical = candidate_canonical
             entry = merged.get(canonical)
             if entry is None:
                 entry = {
