@@ -237,10 +237,12 @@ def test_deduplicate_works_by_doi_and_title():
     ]
     result = mod.deduplicate_works(works)
     assert result['summary']['input'] == 5
-    assert result['summary']['kept'] == 3
-    assert result['summary']['removed'] == 2
+    # 无作者无年份的同标题不再直接判重 (LA-01), 降级为候选关系
+    assert result['summary']['kept'] == 4
+    assert result['summary']['removed'] == 1
+    assert result['summary']['title_candidates'] == 1
     reasons = {r['reason'] for r in result['removed']}
-    assert reasons == {'same-doi', 'same-title'}
+    assert reasons == {'same-doi'}
 
 
 def test_deduplicate_works_main_stdin(capsys):
@@ -253,7 +255,8 @@ def test_deduplicate_works_main_stdin(capsys):
     finally:
         sys.stdin = stdin
     report = json.loads(capsys.readouterr().out)
-    assert report['summary'] == {'input': 2, 'kept': 1, 'removed': 1, 'unidentifiable_kept': 0}
+    assert report['summary'] == {'input': 2, 'kept': 1, 'removed': 1,
+                                 'unidentifiable_kept': 0, 'title_candidates': 0}
 
 
 # --- literature-analysis: build_citation_graph.py ---

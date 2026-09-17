@@ -75,9 +75,9 @@ Python 3.11+,numpy、scipy。漏斗图另需 matplotlib(无头环境先 `matplot
 
 ### 4. 研究特征提取与偏倚风险表
 
-提取表每行一个 study_id:设计、样本量(分组)、人群要点、干预与对照细节、随访时长、结局定义与测量时点、效应数据(均值/SD 或四格表)、资金来源。效应数据缺失时按指南换算(中位数/四分位→均值/SD 用 Wan 法;SE→SD 乘 √n;95% CI→SE 除以 1.96×2 再乘 √n),换算全部记 `converted_from` 列。
+提取表每行一个 study_id:设计、样本量(分组)、人群要点、干预与对照细节、随访时长、结局定义与测量时点、效应数据(均值/SD 或四格表)、资金来源。效应数据缺失时按指南换算(中位数/四分位→均值/SD 用 Wan 法;SE→SD 乘 √n;差值尺度 95% CI→SE = (upper−lower)/(2×1.96),不得再乘 √n——再乘 √n 得到的是 SD,会污染方差与权重;仅当 CI 属于单组均值且目标是 SD 时才乘 √n,并在提取表写明尺度),换算全部记 `converted_from` 列。
 
-偏倚风险按设计选工具:RCT 用 RoB 2(五域:随机化、偏离既定干预、结局数据缺失、结局测量、结果报告选择),非随机用 ROBINS-I,诊断准确性用 QUADAS-2。每域判 low / some concerns / high,判定必须附原文引句。偏倚风险表是敏感性分析(剔除 high-risk)与亚组分析的分层变量。
+偏倚风险按设计选工具:RCT 用 RoB 2(五域:随机化、偏离既定干预、结局数据缺失、结局测量、结果报告选择),非随机用 ROBINS-I,诊断准确性用 QUADAS-2。判定必须附原文引句。各工具保留原生档位,不得压成同一三档:RoB 2 各域 low / some concerns / high;ROBINS-I 判 low / moderate / serious / critical / no information;QUADAS-2 各域经 signaling questions 判 low / high / unclear。敏感性分析剔除标准按工具档位:RoB 2 剔除 high,ROBINS-I 剔除 serious 与 critical,QUADAS-2 剔除 high。偏倚风险表是敏感性分析与亚组分析的分层变量。
 
 ### 5. 效应量归一与互转
 
@@ -97,7 +97,7 @@ d2 = mc.log_or_to_d(lor)                   # log OR → d
 rr = mc.or_to_rr(2.0, p0=0.2)              # OR → RR(需对照组事件率)
 ```
 
-连续结局归一到 Hedges' g;二分类结局归一到 log OR(罕见事件可接受 RR);混合来源的 r 只在探索性合并时转 d。方向约定(如"正值=干预获益")写进提取表表头。
+连续结局归一到 Hedges' g;二分类结局统一到 log OR,仅当满足相对偏差界(见 effect-size-conversions:给定 p0 与 OR 后 |1−RR/OR| ≤ 5%)才允许保留 RR 混用并注明。方向约定(如"正值=干预获益")写进提取表表头。
 
 ### 6. 合并估计与异质性
 

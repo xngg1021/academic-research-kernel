@@ -17,6 +17,8 @@
 """
 from decimal import Decimal
 
+import math
+
 import numpy as np
 from scipy import stats
 from statsmodels.stats.power import TTestIndPower
@@ -389,7 +391,36 @@ def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=Non
     if kind in ('ttest_1sample', 'ttest_paired'):
         implied = df + 1
     elif kind == 'ttest_2sample':
+        # QA-02: N = df + 2 只对 pooled Student t 成立且要求整数 df;
+        # 非整数 df 是 Welch-Satterthwaite 自由度的特征, 不能反推 N。
+        if float(df) != int(df):
+            return {
+                'consistent': None,
+                'implied_n': None,
+                'reported_n': int(reported_n),
+                'difference': None,
+                'inputs': {'df': df, 'reported_n': reported_n, 'kind': kind,
+                           'n_params': n_params},
+                'formula': 'Student t: N = df+2 (仅整数 df); 非整数 df 属于 Welch',
+                'library': 'pure python',
+                'confidence': 'medium',
+                'note': '非整数自由度属于 Welch 情形, N = df+2 不成立, 不得据此判定样本量错误; '
+                        '用 kind="ttest_2sample_welch" 显式声明, 或核对论文是否报告了 Welch 校正',
+            }
         implied = df + 2
+    elif kind == 'ttest_2sample_welch':
+        return {
+            'consistent': None,
+            'implied_n': None,
+            'reported_n': int(reported_n),
+            'difference': None,
+            'inputs': {'df': df, 'reported_n': reported_n, 'kind': kind,
+                       'n_params': n_params},
+            'formula': 'Welch df 依赖两组方差与样本量, 无法仅由 df 反推 N',
+            'library': 'pure python',
+            'confidence': 'medium',
+            'note': 'Welch 自由度无法反推样本量, 本函数不做判定',
+        }
     elif kind == 'regression':
         _require(n_params is not None and n_params >= 1,
                  "kind='regression' 须提供 n_params(含截距)")
@@ -404,7 +435,8 @@ def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=Non
         'inputs': {'df': df, 'reported_n': reported_n, 'kind': kind,
                    'n_params': n_params},
         'formula': {'ttest_1sample': 'N = df+1', 'ttest_paired': 'N = df+1',
-                    'ttest_2sample': 'N = df+2',
+                    'ttest_2sample': 'N = df+2 (pooled Student, 整数 df)',
+                    'ttest_2sample_welch': 'Welch df 不可反推 N',
                     'regression': 'N = df_residual + n_params'}[kind],
         'library': 'pure python',
         'confidence': 'high',
@@ -415,7 +447,15 @@ def values_agree(value_a, value_b, rel_tol=1e-3, abs_tol=None):
     """两处报告值(正文 vs 表格、摘要 vs 结果)是否一致。
 
     默认相对容差 1e-3(容忍排版四舍五入);跨量级或近零值用 abs_tol。
+    QA-01: 输入与容差必须为有限数, inf/nan 一律 ValueError, 不得判成一致。
     """
+    for name, val in (('value_a', value_a), ('value_b', value_b)):
+        if not math.isfinite(float(val)):
+            raise ValueError(f'{name} 必须是有限数, got {val!r}')
+    if not math.isfinite(float(rel_tol)) or float(rel_tol) < 0:
+        raise ValueError(f'rel_tol 必须是有限非负数, got {rel_tol!r}')
+    if abs_tol is not None and (not math.isfinite(float(abs_tol)) or float(abs_tol) < 0):
+        raise ValueError(f'abs_tol 必须是有限非负数, got {abs_tol!r}')
     diff = abs(value_a - value_b)
     scale = max(abs(value_a), abs(value_b))
     tol = abs_tol if abs_tol is not None else rel_tol * scale
