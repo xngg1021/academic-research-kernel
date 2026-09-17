@@ -799,7 +799,7 @@ def _hungarian_min_cost_assignment(cost_matrix):
 
 def max_weight_derangement(models, weights):
     """求解全局最大权重错排 (Maximum-Weight Derangement)。
-    在 O(N^3) 复杂度内基于匈牙利算法求解最优二分图匹配，
+    全量基于 O(N^3) 匈牙利算法 (Kuhn-Munkres) 求解最优完全二分图匹配，
     对角线施加负极大惩罚杜绝自审查，适用于任意规模席位 (2 到 50+)。
     """
     n = len(models)
@@ -807,21 +807,6 @@ def max_weight_derangement(models, weights):
         return []
     if n == 2:
         return [(models[0], models[1]), (models[1], models[0])]
-
-    # N <= 8 且追求绝对全局最高分的场景保持排列求精，
-    # 当 N > 8 或大规模 panel 时无缝切换为 O(N^3) 匈牙利算法
-    if n <= 8:
-        best_score = -1e9
-        best_perm = None
-        for perm in itertools.permutations(models):
-            if any(m == t for m, t in zip(models, perm)):
-                continue
-            score = sum(weights.get((m, t), 0.0) for m, t in zip(models, perm))
-            if score > best_score:
-                best_score = score
-                best_perm = perm
-        if best_perm is not None:
-            return list(zip(models, best_perm))
 
     # O(N^3) 匈牙利算法构造成本矩阵 (求最大权等价于求 -w 的最小成本)
     HIGH_PENALTY = 1e7
