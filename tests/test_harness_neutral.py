@@ -240,3 +240,109 @@ def test_agent_plugins_v1_skills_and_manifest_compatibility():
             for k, v in meta.items():
                 assert isinstance(k, str), f"{sf.name}: metadata key {k!r} not string"
                 assert isinstance(v, str), f"{sf.name}: metadata value {v!r} not string"
+
+
+def test_command_adapter_challenge_receives_prompt_not_just_bundle(tmp_path):
+    """CommandReviewerAdapter.challenge must pass task_path as prompt_path so instructions are retained."""
+    prompt_file = tmp_path / "prompt.txt"
+    prompt_file.write_text("FULL_CHALLENGE_INSTRUCTIONS", encoding="utf-8")
+    bundle_file = tmp_path / "bundle.json"
+    bundle_file.write_text('{"target": "dummy"}', encoding="utf-8")
+    out_file = tmp_path / "reply.md"
+
+    helper = tmp_path / "agent.py"
+    helper.write_text(
+        "import sys, pathlib\n"
+        "p_content = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')\n"
+        "assert 'FULL_CHALLENGE_INSTRUCTIONS' in p_content\n"
+        "pathlib.Path(sys.argv[2]).write_text('CONCEDE: verified', encoding='utf-8')\n"
+    )
+
+    p = ct.ParticipantSpec(
+        id="cmd_reviewer",
+        executor="command",
+        provider="custom",
+        cmd=f"python {helper} {{prompt_path}} {{out_path}}"
+    )
+    adapter = CommandReviewerAdapter()
+    req = ct.ChallengeRequest(
+        task_path=str(prompt_file),
+        bundle_path=str(bundle_file),
+        out_path=str(out_file),
+        reviewer=p,
+        target_participant_id="target_x"
+    )
+    res = adapter.challenge(req)
+    assert res.success is True
+    assert "CONCEDE" in res.stances
+
+
+def test_command_adapter_environment_isolation(tmp_path, monkeypatch):
+    """CommandReviewerAdapter must not leak unrelated secrets to child subagent CLI processes."""
+    monkeypatch.setenv("SUPER_SECRET_TOKEN", "leak_me_if_you_can")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "«redacted:sk-ant-valid»")
+
+    helper = tmp_path / "env_check.py"
+    helper.write_text(
+        "import os, sys, pathlib\n"
+        "assert 'SUPER_SECRET_TOKEN' not in os.environ, 'Secret token leaked!'\n"
+        "assert os.environ.get('ANTHROPIC_API_KEY') == '«redacted:sk-ant-valid»'\n"
+        "pathlib.Path(sys.argv[1]).write_text('ok', encoding='utf-8')\n"
+    )
+
+    out_file = tmp_path / "out.md"
+    p = ct.ParticipantSpec(
+        id="anthropic_agent",
+        executor="command",
+        provider="anthropic",
+        cmd=f"python {helper} {{out_path}}"
+    )
+    adapter = CommandReviewerAdapter()
+    req = ct.ReviewRequest(
+        task_path=str(tmp_path / "task.txt"),
+        out_path=str(out_file),
+        findings_path=str(tmp_path / "f.json"),
+        participant=p
+    )
+    res = adapter.review(req)
+    assert res.success is True
+
+
+def test_participant_id_slug_validation_and_path_containment(tmp_path):
+    """Participant IDs must be validated slugs, rejecting path traversal attempts."""
+    for bad_id in ("../evil", "foo/bar", "-flag", "has space", "evil;rm -rf", "a" * 65):
+        with pytest.raises(ValueError):
+            ct.validate_participant_id(bad_id)
+
+        with pytest.raises(ValueError):
+            ct.ParticipantSpec(id=bad_id, executor="command")
+
+
+def test_review_result_matches_json_schema(tmp_path):
+    """ReviewResult dataclass must strictly validate against review-result.schema.json."""
+    import jsonschema
+
+    schema_file = ROOT / "schemas/review-result.schema.json"
+    finding_file = ROOT / "schemas/review-finding.schema.json"
+    schema = json.loads(schema_file.read_text(encoding="utf-8"))
+    finding_schema = json.loads(finding_file.read_text(encoding="utf-8"))
+
+    finding = ct.Finding(id="F01", target="foo.py", claim="broken logic", severity="P0", blocking=True)
+    res = ct.ReviewResult(
+        participant_id="sonnet",
+        phase="plan",
+        success=True,
+        text="Review done",
+        findings=[finding],
+        wall_time_seconds=1.2345
+    )
+
+    payload = res.to_dict()
+    # 本地离线 Schema 解析，阻断外部网络请求
+    schema_store = {
+        schema.get("$id", "review-result.schema.json"): schema,
+        finding_schema.get("$id", "review-finding.schema.json"): finding_schema,
+        "review-finding.schema.json": finding_schema,
+    }
+    resolver = jsonschema.RefResolver.from_schema(schema, store=schema_store)
+    jsonschema.validate(instance=payload, schema=schema, resolver=resolver)

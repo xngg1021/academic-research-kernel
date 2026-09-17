@@ -24,6 +24,7 @@ from contracts import (
     ReviewerCapabilities,
     ReviewRequest,
     ReviewResult,
+    build_isolated_child_env,
 )
 
 
@@ -69,12 +70,14 @@ class CommandReviewerAdapter(ReviewerAdapter):
 
         t0 = time.perf_counter()
         args = shlex.split(cmd_str, posix=(sys.platform != "win32"))
+        child_env = build_isolated_child_env(p)
         try:
             res = subprocess.run(
                 args,
                 capture_output=True,
                 text=True,
                 cwd=str(prompt_path.parent),
+                env=child_env,
                 timeout=1800,
             )
             success = res.returncode == 0
@@ -109,35 +112,42 @@ class CommandReviewerAdapter(ReviewerAdapter):
 
         return ReviewResult(
             participant_id=p.id,
+            phase="plan",
             success=success and bool(review_text or findings),
             text=review_text,
             findings=findings,
             error=err,
-            wall_time_seconds=round(wall, 3),
+            wall_time_seconds=round(wall, 4),
+            telemetry={"wall_time_seconds": round(wall, 4)},
         )
 
     def challenge(self, req: ChallengeRequest) -> ChallengeResult:
         p = req.reviewer
         cmd_template = p.cmd or os.environ.get(f"HERMES_REVIEW_CMD_{p.id.upper().replace('-', '_')}") or self.default_cmd_template
+        # 正确传递包含质询纪律与规范的 prompt 文件
+        prompt_path = Path(req.task_path).resolve()
         bundle_path = Path(req.bundle_path).resolve()
         out_path = Path(req.out_path).resolve()
 
         cmd_str = self._safe_format_cmd(cmd_template, {
             "model": p.model or p.id,
             "provider": p.provider or "custom",
-            "prompt_path": str(bundle_path),
+            "prompt_path": str(prompt_path),
+            "bundle_path": str(bundle_path),
             "out_path": str(out_path),
             "findings_path": str(out_path.with_suffix(".findings.json")),
         })
 
         t0 = time.perf_counter()
         args = shlex.split(cmd_str, posix=(sys.platform != "win32"))
+        child_env = build_isolated_child_env(p)
         try:
             res = subprocess.run(
                 args,
                 capture_output=True,
                 text=True,
-                cwd=str(bundle_path.parent),
+                cwd=str(prompt_path.parent),
+                env=child_env,
                 timeout=1800,
             )
             success = res.returncode == 0
@@ -162,5 +172,6 @@ class CommandReviewerAdapter(ReviewerAdapter):
             reply_text=reply_text,
             stances=stances,
             error=err,
-            wall_time_seconds=round(wall, 3),
+            wall_time_seconds=round(wall, 4),
+            telemetry={"wall_time_seconds": round(wall, 4)},
         )

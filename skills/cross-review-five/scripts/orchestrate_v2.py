@@ -70,7 +70,7 @@ from pathlib import Path
 try:
     from contracts import (
         ParticipantSpec, PanelSpec, ReviewRequest, ChallengeRequest,
-        ReviewResult, ChallengeResult, Finding
+        ReviewResult, ChallengeResult, Finding, validate_participant_id
     )
     from adapters import (
         ReviewerAdapter, CommandReviewerAdapter, HermesCliReviewerAdapter, MockReviewerAdapter
@@ -80,7 +80,7 @@ except ImportError:
     sys.path.insert(0, str(_cur_dir))
     from contracts import (
         ParticipantSpec, PanelSpec, ReviewRequest, ChallengeRequest,
-        ReviewResult, ChallengeResult, Finding
+        ReviewResult, ChallengeResult, Finding, validate_participant_id
     )
     from adapters import (
         ReviewerAdapter, CommandReviewerAdapter, HermesCliReviewerAdapter, MockReviewerAdapter
@@ -132,29 +132,51 @@ def get_participant_spec(key: str) -> ParticipantSpec:
             role="reviewer",
             toolsets=["default"],
         )
-    return ParticipantSpec(id=key, executor="hermes", provider="custom", model=key)
+    return ParticipantSpec(id=key, executor="hermes.cli", provider="custom", model=key)
 
 
 def get_reviewer_adapter(spec: ParticipantSpec) -> ReviewerAdapter:
     """根据 ParticipantSpec 调度对应的中立 ReviewerAdapter 执行器。"""
-    runner = (spec.executor or "").lower()
-    if runner == "mock":
+    executor = (spec.executor or "").lower()
+    if executor == "mock":
         return MockReviewerAdapter()
-    if runner in ("cli", "cmd", "command") or spec.cmd:
+    if executor in ("command", "cli", "cmd") or spec.cmd:
         return CommandReviewerAdapter()
-    return HermesCliReviewerAdapter(spawn_fn=spawn)
+    if executor in ("hermes.cli", "hermes", "hermes_cli"):
+        return HermesCliReviewerAdapter(spawn_fn=spawn)
+    if executor in ("hermes.llm", "hermes.subagent", "api"):
+        raise NotImplementedError(
+            f"Executor {executor!r} requires an active native host runtime (e.g. PluginContext). "
+            f"Use 'command' or 'hermes.cli' in standalone CLI mode."
+        )
+    raise ValueError(f"Unknown executor: {executor!r}")
 
 
-def register_model_spec(key, provider, model, runner="hermes", cmd=None):
+def _safe_stream_path(stream: str, filename: str) -> str:
+    """Path containment guard to prevent path traversal when formatting reviewer filenames."""
+    s_path = Path(stream).resolve()
+    target = (s_path / filename).resolve()
+    if not target.is_relative_to(s_path):
+        raise ValueError(f"Path containment violation: {filename!r} escapes {stream!r}")
+    return str(target)
+
+
+def register_model_spec(key, provider, model, runner="hermes.cli", cmd=None):
     """动态注册一个模型或子代理评审者，支持任意模型与执行方式。"""
     key = str(key).strip()
+    # 严格校验合法 slug 标识符，杜绝路径穿越与 shell 逃逸
+    if not re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_-]{0,63}", key):
+        raise ValueError(
+            f"Invalid participant key: {key!r}. Must match '^[a-zA-Z0-9_][a-zA-Z0-9_-]{{0,63}}$' "
+            f"and not start with a hyphen or contain path separators."
+        )
     provider = str(provider).strip()
     model = str(model).strip()
     MODELS[key] = (provider, model)
     CUSTOM_SPECS[key] = {
         "provider": provider,
         "model": model,
-        "runner": runner or "hermes",
+        "runner": runner or "hermes.cli",
         "cmd": cmd,
     }
 
@@ -484,7 +506,7 @@ def _clean_stale_plan_outputs(stream, model_keys, task_path=None):
     targets_to_clean = set()
     for k in (model_keys or []):
         for pattern in (f"review-{k}.md", f"findings-{k}.json", f"prompt-{k}.txt", f"log-{k}.txt"):
-            targets_to_clean.add(os.path.join(stream, pattern))
+            targets_to_clean.add(_safe_stream_path(stream, pattern))
     fixed_outputs = [
         "issue-registry.json", "graph-summary.md", "challenge-plan.json",
         "challenge-skipped.json", "consensus-report.md", "unresolved-ledger.json",
@@ -931,23 +953,24 @@ def stage_plan_v2(stream, task_path, model_keys):
 
     requests = []
     for k in model_keys:
-        prompt_path = os.path.join(stream, f"prompt-{k}.txt")
-        out_path = os.path.join(stream, f"review-{k}.md")
-        findings_path = os.path.join(stream, f"findings-{k}.json")
+        k_slug = validate_participant_id(k)
+        prompt_path = _safe_stream_path(stream, f"prompt-{k_slug}.txt")
+        out_path = _safe_stream_path(stream, f"review-{k_slug}.md")
+        findings_path = _safe_stream_path(stream, f"findings-{k_slug}.json")
         with open(prompt_path, "w", encoding="utf-8") as f:
             f.write(PLAN_PROMPT_V2.format(
                 task_path=task_path,
                 out_path=out_path,
                 findings_path=findings_path
             ))
-        spec = get_participant_spec(k)
+        spec = get_participant_spec(k_slug)
         req = ReviewRequest(
             task_path=prompt_path,
             out_path=out_path,
             findings_path=findings_path,
             participant=spec
         )
-        requests.append((k, req))
+        requests.append((k_slug, req))
 
     # 基于中立 ReviewerAdapter 协议统一调度评审
     results: dict[str, ReviewResult] = {}
@@ -1166,12 +1189,12 @@ def stage_challenge_v2(stream, task_path):
 
     challenge_requests = []
     for item in challenges:
-        cid = item["challenge_id"]
-        reviewer_key = item["reviewer"]
+        cid = validate_participant_id(item["challenge_id"])
+        reviewer_key = validate_participant_id(item["reviewer"])
         target_id = item.get("target", "")
-        bundle_path = os.path.join(stream, f"bundle-{cid}.json")
-        out_path = os.path.join(stream, f"challenge-reply-{cid}-{reviewer_key}.md")
-        prompt_path = os.path.join(stream, f"prompt-challenge-{cid}-{reviewer_key}.txt")
+        bundle_path = _safe_stream_path(stream, f"bundle-{cid}.json")
+        out_path = _safe_stream_path(stream, f"challenge-reply-{cid}-{reviewer_key}.md")
+        prompt_path = _safe_stream_path(stream, f"prompt-challenge-{cid}-{reviewer_key}.txt")
 
         with open(bundle_path, "w", encoding="utf-8") as f:
             json.dump(item["bundle"], f, ensure_ascii=False, indent=2)

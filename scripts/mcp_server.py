@@ -112,11 +112,14 @@ def process_message(msg: dict) -> dict | None:
     msg_id = msg.get("id")
 
     if method == "initialize":
+        client_version = (msg.get("params") or {}).get("protocolVersion", "2026-07-28")
+        # 协商协议版本: 优先使用 2026-07-28 官方最新规范, 兼容 2024-11-05
+        negotiated_version = client_version if client_version in ("2026-07-28", "2024-11-05") else "2026-07-28"
         return {
             "jsonrpc": "2.0",
             "id": msg_id,
             "result": {
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": negotiated_version,
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "hermes-academic-skills",
