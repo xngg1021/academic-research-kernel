@@ -225,7 +225,15 @@ def fetch_citing_works(doi: str, since: date, max_pages: int = 1):
                 'source': 'crossref-fallback',
             }
             return [fallback], False
-        return [], False
+        # 双源皆缺失: 返回不可观测种子标记, 确保 collect 显式捕获并发出 coverage 警告
+        fallback_unobs = {
+            'id': None,
+            'doi': normalize_doi(doi),
+            'title': None,
+            'publication_year': None,
+            'source': 'crossref-fallback-unobservable',
+        }
+        return [fallback_unobs], False
     all_results = []
     cursor = "*"
     page = 1
@@ -289,8 +297,8 @@ def collect(watchlist: dict, since: date, max_pages: int = 1):
             truncations.append(f'author={author_id!r}')
     for doi in watchlist['dois']:
         its, tr = fetch_citing_works(doi, since) if max_pages == 1 else fetch_citing_works(doi, since, max_pages=max_pages)
-        # M01: 排除被监控论文自身 Crossref 兜底记录, 仅保留真实引用者
-        citing_items = [it for it in its if it.get('source') != 'crossref-fallback']
+        # M01: 排除被监控论文自身 Crossref 兜底记录及不可观测标记, 仅保留真实引用者
+        citing_items = [it for it in its if it.get('source') not in ('crossref-fallback', 'crossref-fallback-unobservable')]
         # 记录不可观测 DOI: OpenAlex 缺失反向引用关系, 不得伪装成 0 新引用
         if its and not citing_items:
             truncations.append(f'citing-unobservable={doi!r}')

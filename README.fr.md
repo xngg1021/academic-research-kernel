@@ -32,7 +32,12 @@ SLL autorise largement l'utilisation, l'étude, la modification, l'usage commerc
 
 Les onze compétences comprennent 21 fichiers de référence Markdown, chargés uniquement à la demande. GB/T 7714-2025 est en vigueur ; la référence d'écriture distingue sa date d'entrée en vigueur vérifiée des exemples explicitement étiquetés de 2015. La conformité complète à l'édition 2025 exige le modèle ou le texte standard de l'institution cible.
 
-## Installation dans Hermes
+## Intégration & Installation
+
+### 1. Agent Plugins v1 & Serveur MCP
+Supporte stdio MCP (`python scripts/mcp_server.py`) et Agent Plugins v1 portable (`plugin.json`).
+
+### 2. Installation dans Hermes
 
 La découverte de tap amont actuelle inspecte les sous-répertoires immédiats de `skills/`. Chaque compétence vit donc directement sous cette racine. Depuis une installation Hermes :
 

@@ -103,8 +103,11 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                         float(arguments["mean1"]), float(arguments["sd1"]), int(arguments["n1"]),
                         float(arguments["mean2"]), float(arguments["sd2"]), int(arguments["n2"])
                     )
-                    res["cohens_d"] = d_res["recomputed"]
-                    res["hedges_g"] = d_res.get("difference")  # hedges_g is in receipt
+                    stats_payload = d_res["recomputed"]
+                    res["cohens_d"] = stats_payload["cohens_d"]
+                    res["hedges_g"] = stats_payload["hedges_g"]
+                    res["pooled_sd"] = stats_payload["pooled_sd"]
+                    res["df"] = stats_payload["df"]
                 except Exception as exc:
                     res["cohens_d_error"] = str(exc)
         return res

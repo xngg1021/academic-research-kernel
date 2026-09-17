@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · 繁體中文 · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
-面向 Hermes Agent 的十一個中文學術技能：來源核驗、文獻分析、學術寫作、數值計算、定量論文審計、復現審計、系統綜述與統合分析、研究物件身份與譜系、跨模型評審編排，以及兩個週更監控自動化。倉庫附帶可執行的示例檢查；驗證範圍與外部服務限制記錄於[審計文檔](docs/audit-20260906.md)。
+跨宿主中立的學術能力內核與多智能體交叉審議工具套件。倉庫提供 11 個學術技能與核驗工具，支援便攜式 Agent Plugins v1 規範與 MCP (Model Context Protocol) 服務入口，原生相容 Hermes Agent、Claude Code、Cursor 與終端獨立子代理。涵蓋來源核驗、文獻分析、學術寫作、數值計算、定量論文審計、復現審計、系統綜述與統合分析、研究物件身份與譜系、動態多模型交叉審議，以及兩套週更監控自動化。倉庫附帶可執行的示例檢查；驗證範圍與外部服務限制記錄於[審計文檔](docs/audit-20260906.md)。
 
 作者：Junfu Shi（SJF，xngg1021），Hermes Agent。當前授權範圍：[Source Lineage License 1.0](LICENSE)。
 
@@ -32,9 +32,18 @@ SLL 廣泛允許使用、研究、修改、商用、分發與專有增補，受�
 
 十一個技能共含 21 篇 Markdown 參考文件，按需加載。GB/T 7714-2025 已生效；寫作參考區分其已核實生效日期與顯式標註的 2015 示例。完全符合 2025 版需以目標機構的模板或標準文本為準。
 
-## 在 Hermes 中安裝
+## 安裝與集成
 
-當前上游 tap 發現機制檢查 `skills/` 的直接子目錄，因此每個技能直接位於該根目錄下。在 Hermes 安裝環境中執行：
+### 1. 便攜式 Agent Plugins v1 與 MCP 工具服務
+本倉庫遵循廠商中立的 **Agent Plugins v1** 規範（`plugin.json`），並通過 stdio 協議暴露通用的 **MCP 伺服器**（`mcp.json` / `scripts/mcp_server.py`），原生相容 Claude Code、Cursor、Gemini CLI 與任意現代智能體宿主：
+
+```bash
+# 在您的智能體宿主中直接作為 stdio MCP 服務加載
+python scripts/mcp_server.py
+```
+
+### 2. 在 Hermes 中安裝
+在 Hermes 安裝環境中執行：
 
 ```bash
 hermes skills tap add xngg1021/hermes-academic-skills

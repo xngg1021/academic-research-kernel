@@ -340,14 +340,17 @@ def test_review_result_matches_json_schema(tmp_path):
     )
 
     payload = res.to_dict()
-    # 本地离线 Schema 解析，阻断外部网络请求
-    schema_store = {
-        schema.get("$id", "review-result.schema.json"): schema,
-        finding_schema.get("$id", "review-finding.schema.json"): finding_schema,
-        "review-finding.schema.json": finding_schema,
-    }
-    resolver = jsonschema.RefResolver.from_schema(schema, store=schema_store)
-    jsonschema.validate(instance=payload, schema=schema, resolver=resolver)
+    # 本地离线 Schema 解析，阻断外部网络请求并消除已弃用的 RefResolver 警告
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT7
+
+    finding_resource = Resource.from_contents(finding_schema, default_specification=DRAFT7)
+    registry = Registry().with_resources([
+        ("review-finding.schema.json", finding_resource),
+        (finding_schema.get("$id", ""), finding_resource),
+    ])
+    validator = jsonschema.Draft7Validator(schema, registry=registry)
+    validator.validate(payload)
 
 
 def test_panel_spec_matches_json_schema():
@@ -368,8 +371,8 @@ def test_panel_spec_matches_json_schema():
     )
 
     payload = panel.to_dict()
-    resolver = jsonschema.RefResolver.from_schema(schema)
-    jsonschema.validate(instance=payload, schema=schema, resolver=resolver)
+    validator = jsonschema.Draft7Validator(schema)
+    validator.validate(payload)
 
 
 def test_mcp_recompute_scientific_integrity():
@@ -404,3 +407,22 @@ def test_mcp_recompute_scientific_integrity():
     assert "cohens_d" not in data_missing
     assert "cohens_d_error" in data_missing
     assert "Missing required parameters" in data_missing["cohens_d_error"]
+
+    # 3. 完整六参数成功计算且返回值 shape 规范，hedges_g 绝不为 None
+    req_full_d = {
+        "jsonrpc": "2.0", "id": 12, "method": "tools/call",
+        "params": {
+            "name": "academic_recompute_statistics",
+            "arguments": {
+                "mean1": 15.0, "sd1": 3.0, "n1": 25,
+                "mean2": 12.0, "sd2": 3.2, "n2": 25
+            }
+        }
+    }
+    resp_full = mcp_server.process_message(req_full_d)
+    data_full = json.loads(resp_full["result"]["content"][0]["text"])
+    assert isinstance(data_full["cohens_d"], float)
+    assert isinstance(data_full["hedges_g"], float)
+    assert isinstance(data_full["pooled_sd"], float)
+    assert data_full["df"] == 48
+    assert abs(data_full["cohens_d"] - 0.967) < 0.05

@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · 日本語 · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
-Hermes Agent 向けの 11 の中国語学術スキル。出典検証、文献分析、学術執筆、数値計算、定量論文監査、再現性監査、系統的レビューとメタ分析、研究オブジェクトの同一性と系譜、クロスモデルレビュー編成、さらに週次監視自動化 2 件をカバーする。リポジトリには実行可能な例題チェックが含まれ、検証範囲と外部サービス上の制約は[監査文書](docs/audit-20260906.md)に記録されている。
+ハーネス中立な学術研究コアおよびマルチエージェント協調クロスレビューツールスイート。11の学術スキルと検証ツールを提供し、ベンダー中立なAgent Plugins v1仕様およびstdio MCP（Model Context Protocol）サーバーに対応。Hermes Agent、Claude Code、Cursor、スタンドアロンCLIサブエージェントをネイティブにサポートします。
 
 著者:Junfu Shi(SJF,xngg1021)、Hermes Agent。現在の提供範囲:[Source Lineage License 1.0](LICENSE)。
 
@@ -32,9 +32,17 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 
 11 のスキルには 21 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれる。GB/T 7714-2025 が施行されており、執筆リファレンスは検証済みの発効日と明示的に 2015 年例とラベル付けされたものを区別する。2025 年版への完全準拠には対象機関のテンプレートまたは標準本文が必要である。
 
-## Hermes へのインストール
+## 統合とポータブル利用
 
-現在の上流 tap 検出は `skills/` 直下の子ディレクトリを検査するため、各スキルはそのルート直下に置かれる。Hermes インストール環境で:
+### 1. Agent Plugins v1 および MCP サーバー
+本リポジトリは標準 Agent Plugins v1（`plugin.json`）および stdio MCP サーバー（`mcp.json` / `scripts/mcp_server.py`）を提供し、Claude Code、Cursor、Gemini CLI などとネイティブに連携可能です:
+
+```bash
+python scripts/mcp_server.py
+```
+
+### 2. Hermes でのインストール
+Hermes 環境で実行:
 
 ```bash
 hermes skills tap add xngg1021/hermes-academic-skills

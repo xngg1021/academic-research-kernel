@@ -32,7 +32,12 @@ SLL erlaubt weitgehend Nutzung, Studium, Änderung, kommerzielle Nutzung, Verbre
 
 Die elf Skills umfassen 21 Markdown-Referenzdateien, die nur bei Bedarf geladen werden. GB/T 7714-2025 ist in Kraft; die Schreibreferenz unterscheidet das verifizierte Inkrafttretensdatum von ausdrücklich gekennzeichneten Beispielen von 2015. Volle Konformität mit der Fassung 2025 erfordert die Vorlage oder den Standardtext der Zielinstitution.
 
-## Installation in Hermes
+## Integration & Installation
+
+### 1. Agent Plugins v1 & MCP-Server
+Unterstützt stdio MCP (`python scripts/mcp_server.py`) und portable Agent Plugins v1 (`plugin.json`).
+
+### 2. Installation in Hermes
 
 Die aktuelle Upstream-Tap-Erkennung prüft unmittelbare Unterverzeichnisse von `skills/`. Jeder Skill liegt daher direkt unter diesem Stamm. In einer Hermes-Installation:
 

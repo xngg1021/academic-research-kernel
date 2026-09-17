@@ -32,7 +32,12 @@ SLL permite ampliamente el uso, el estudio, la modificación, el uso comercial, 
 
 Las once competencias incluyen 21 archivos de referencia Markdown, cargados solo cuando se necesitan. GB/T 7714-2025 está en vigor; la referencia de redacción distingue su fecha de entrada en vigor verificada de los ejemplos explícitamente etiquetados de 2015. La conformidad plena con la edición de 2025 exige la plantilla o el texto estándar de la institución de destino.
 
-## Instalación en Hermes
+## Integración e Instalación
+
+### 1. Agent Plugins v1 y Servidor MCP
+Soporta stdio MCP (`python scripts/mcp_server.py`) y Agent Plugins v1 portable (`plugin.json`).
+
+### 2. Instalación en Hermes
 
 La detección de tap actual inspecciona los subdirectorios inmediatos de `skills/`. Cada competencia vive por tanto directamente bajo esa raíz. Desde una instalación de Hermes:
 
