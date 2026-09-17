@@ -1,0 +1,134 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "orchestrate_v2.py:310-345 (cluster_issues)",
+      "kind": "bug",
+      "claim": "聚类按 findings 条数而非去重模型数判定多模型状态,同一模型对同一 target 的多条 findings 被错误标为 consensus 或 contradiction,最终报告将单模型观点呈现为“高度共识项 (Verified Consensus)”。",
+      "evidence": ["orchestrate_v2.py:311 len(items)==1 与第 325 行注释“2 个及以上模型命中同一 target”不符", "issue-registry.json I12/I14(state=consensus,raised_by 单模型),I06/I08/I16(state=contradiction,raised_by 单模型)", "consensus-report.md:13-22 I12、I14 列入“高度共识项”且提出方各仅一个模型", "探针复现:单模型双 findings 同 target -> [('a.py', ['m1'], 'consensus')]"],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F2",
+      "target": "orchestrate_v2.py:326-332 (contradiction 判定)",
+      "kind": "bug",
+      "claim": "矛盾启发式(kinds 不同或 claim 含“不/错”字)把语义一致的意见标为对立,生产 run 的 8 条 contradictions 无一条是断言级对立;伪矛盾占满 max_challenges=3 配额,导致 P0 高危单例 I05 未获质询。",
+      "evidence": ["orchestrate_v2.py:328-331 is_conflict 实现", "issue-registry.json I01 五模型同向确认 Windows 规则缺口仍标 contradiction;I02/I04 同理", "challenge-plan.json C01-C03 全部为 contradiction 类型,singleton_audit 轮空", "challenge-reply-C01-gemini38flash.md:19-26 真正分歧存在于子断言级(kill -9 -1 层级归属),target 级聚类不可见"],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "orchestrate_v2.py:215-222 (normalize_target) 与 192 (fallback 正则)",
+      "kind": "bug",
+      "claim": "目标归一化不做路径等价归一且 fallback 正则不匹配盘符冒号,同一文件裂变为多个 target,正则片段被误认为文件路径,产生幽灵 target 并撕裂真共识。",
+      "evidence": ["探针:normalize_target('cli\\\\.py') -> 'cli/.py'", "issue-registry.json:approval_detection.py 裂为 3 个 target(I01/I13/I14),test_approval_windows.py 3 个,scan_history.py 与 approval.py 各 2 个;16 issue 按 basename 归并仅 10 个真实文件", "unresolved-ledger.json 与 consensus-report.md:32-36 幽灵路径 cli/.py 以 P0 入账并入报告"],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "orchestrate_v2.py:186-212 (extract_findings_json 启发式兜底) 与 158-164",
+      "kind": "bug",
+      "claim": "结构化 findings 层在生产中 100% 由正则启发式合成(该 run 的 prompt 与 task.md 均未要求结构化产出,五模型无一补写),兜底把流程说明与规则引用行抓成 finding;兜底落盘的 sidecar 与模型亲笔 JSON 无来源区分。",
+      "evidence": ["stop-process-20260917/prompt-kimi-k3.txt 全文 11 行为 v1 PLAN_PROMPT,无 findings/JSON 字样;task.md 检索同样为零", "review-*.md 检索 findings/severity/代码围栏零命中", "五份 findings-*.json 呈现同一兜底签名:kind 仅 bug/observation、claim 第 140 字符硬截断(如 'fork bom'、'定向 PI')、evidence 单定位符、unknowns/assumptions 全空", "findings-kimi-k3.json F1“材料范围……”流程说明成为 P2 finding 并混入 C01 bundle Proposal-1;findings-gemini38flash.json F9 规则引用行成为 P0", "orchestrate_v2.py:180-181、210-211 兜底落盘无任何 provenance 标记"],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F5",
+      "target": "orchestrate_v2.py:419-421 (质询者选取) 与 challenge bundle 生成",
+      "kind": "invariant",
+      "claim": "匿名质询不匿名:质询者恒为争议当事人(注释承诺的回避逻辑未实现且 raised[0] 依赖不稳定的集合序),bundle 提案顺序与 models 阵容顺序逐项对齐可直接解码作者,claim 保留第一人称叙事指纹。",
+      "evidence": ["challenge-plan.json:C01/C02/C03 reviewer 均在各自 issue raised_by 内(self_review=True)", "challenge-reply-C01-gemini38flash.md:13“已在我方独立评审中完成覆盖”——质询者认出自己文字", "C01 bundle 28 提案按 kimi-k3×9、dsv4pro×6、glm53×6、gemini38flash×4、gemini31pro×3 排列,与 MODE_PRESETS standard models 顺序一致", "探针:四种 PYTHONHASHSEED 下 list(raised_set)[0] 出现三种取值"],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F6",
+      "target": "orchestrate_v2.py:589-594 (表态解析 elif 链)",
+      "kind": "bug",
+      "claim": "表态按文件级单标签 elif 归类,与提示词要求的逐断言表态粒度错配;生产 run 中含 CONCEDE+REFUTED+UNRESOLVED 三种表态的答复只被记为 Conceded,最有价值的 REFUTED 纠偏与 UNRESOLVED 项在报告与账本中消失。",
+      "evidence": ["challenge-reply-C01-gemini38flash.md:43/48/52 三种表态并存", "consensus-report.md:7-8 Conceded: 1、Refuted: 0;ledger 仅含两条单例保护项", "orchestrate_v2.py:589 'CONCEDE' in text 子串匹配,“我方不 CONCEDE”亦命中"],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F7",
+      "target": "orchestrate_v2.py:596-608 (少数派证据保护)",
+      "kind": "invariant",
+      "claim": "保护实现与注释承诺不符:注释限定“未被质询直接证伪”,实现无条件收录全部带非空 evidence 的 P0/P1 单例,无证据质量门槛,亦不检查质询驳回结果;幽灵路径因此获得机制背书。",
+      "evidence": ["orchestrate_v2.py:596-597 注释 vs 598-608 无条件 append", "unresolved-ledger.json I11 cli/.py P0(fallback 噪声)被保护入账", "consensus-report.md:32-36 同一幽灵项呈现于终报"],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F8",
+      "target": "SKILL.md:60-62 与 orchestrate_v2.py:46-63、472-492 (三档模式拓扑)",
+      "kind": "spec_mismatch",
+      "claim": "文档声明的调用次数与代码拓扑不符:standard 实为 5-8 次(文档 7-8),audit 实为 5-10 次(文档 10-12),错排匹配与矛盾、单例质询共享 max_challenges=5 配额而非文档暗示的叠加;“压降 60%+”无测量对应物。",
+      "evidence": ["探针按 MODE_PRESETS 推算:economy 3-4、standard 5-8、audit 5-10", "SKILL.md:60-62 次数声明原文", "orchestrate_v2.py:472-492 derangement 仅在 len(challenges)<max_challenges 时补充,共用配额"],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F9",
+      "target": "orchestrate_v2.py:614-645 (stage_synthesize_v2 报告生成)",
+      "kind": "bug",
+      "claim": "最终报告只写共识与未决账本两节,矛盾项(含真五模型共识 I01)与质询答复内容整体缺席,conceded/refuted 仅以头部计数出现;报告对读者呈现的是系统性变形的评审结论。",
+      "evidence": ["orchestrate_v2.py:626-645 仅 consensus 与 unresolved_ledger 两节", "consensus-report.md 全文无矛盾/分歧章节(探针检索确认),8 条 contradictions 无一呈现", "C01 答复的 CONCEDE/REFUTED 细节在报告中无对应章节"],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F10",
+      "target": "orchestrate_v2.py:577-581 (synthesize 对账缺失)、142-153 (wait_for_outputs)、158-164 (陈旧 sidecar 优先)",
+      "kind": "bug",
+      "claim": "流程容错链薄弱:synthesize 不核对质询计划与答复的对应关系(3 计划 1 答复静默通过);单模型失败即整阶段判负且无降级续跑;重跑时旧 sidecar 无条件压过新产出,幂等性不成立;合法但非对象的 sidecar JSON 致下游 AttributeError。",
+      "evidence": ["challenge-plan.json 三项 vs 目录仅 challenge-reply-C01-gemini38flash.md 一份,报告无缺失提示", "orchestrate_v2.py:722-723 all 模式 plan 失败即 return 1", "orchestrate_v2.py:158-164 sidecar 存在即直接采用,不重提取", "探针:json 数组 sidecar 下游触发 AttributeError: 'list' object has no attribute 'get'"],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F11",
+      "target": "tests/test_cross_review_five_v2.py:57-93、96-129、132-177",
+      "kind": "spec_mismatch",
+      "claim": "测试覆盖绕开了全部生产失效路径:聚类测试让各模型 target 互不相交(漏掉同模型多条 findings);兜底启发式路径零测试;端到端测试注释承诺验证少数派保护但断言只查报告标题字符串。",
+      "evidence": ["test_cross_review_five_v2.py:62-75 三模型 target 两两不同", "第 96-129 行仅测 ```json 块提取,186-212 行启发式无对应用例", "第 174 行注释“验证少数派保护”与第 176-177 行断言内容不符", "无质询者回避、表态解析、缺失答复、sidecar 结构校验、幂等性测试"],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F12",
+      "target": "orchestrate_v2.py:68-100 (PLAN_PROMPT_V2) 与 102-125 (CHALLENGE_PROMPT_V2)",
+      "kind": "suggestion",
+      "claim": "CHALLENGE_PROMPT_V2 四步结构质量高且实证有效,但无 bundle 体量指引(实测 28 条提案含噪声)且表态令牌与文件级解析错配;PLAN_PROMPT_V2 的 findings 引导效果无生产证据(唯一 run 未送达该提示词),建议将结构化产出拆为独立短指令并在 merge 前对 sidecar 缺失显式告警。",
+      "evidence": ["challenge-plan.json C01 bundle 28 条提案,Proposal-1 为流程说明噪声", "stop-process-20260917/prompt-kimi-k3.txt 为 v1 模板,PLAN_PROMPT_V2 从未被送达", "challenge-reply-C01-gemini38flash.md 四步结构完整,证明质询提示词设计有效"],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F13",
+      "target": "orchestrate_v2.py:264-266、288-289、337 (互补矩阵与错排细节)",
+      "kind": "suggestion",
+      "claim": "三处低危实现瑕疵:互补矩阵“检查是否有矛盾”注释下为无条件加 0.5 分;错排的 fallback 分支为死代码(n≥2 错排必然存在);severity 最大值比较对小写字母按 0 计。",
+      "evidence": ["orchestrate_v2.py:264-266 注释与实现不符", "orchestrate_v2.py:288-289 best_perm is None 分支不可达", "orchestrate_v2.py:337 {'P0':3,...}.get(s, 0)"],
+      "severity": "P2",
+      "blocking": false
+    }
+  ],
+  "unknowns": [
+    "challenge 阶段为何仅一份答复且无 bundle/prompt/log 痕迹:超时、手动补跑还是事后清理,产物无法判定",
+    "gemini31pro findings 仅 7 条(其他模型 15 条顶格)是正文提及面窄还是提取截断",
+    "SKILL.md“压降 60%+ 上下文消耗”无任何测量代码或基准数据可核对",
+    "该次运行的完整命令行与分步顺序(是否 --stage all、是否手动补跑 synthesize)无记录",
+    "PLAN_PROMPT_V2 的结构化产出引导能力:唯一生产 run 送达的是 v1 提示词,该提示词的效果零证据"
+  ],
+  "assumptions": [
+    "认定 stop-process-20260917 运行使用 standard 模式(issue-registry.json metadata 明示)",
+    "认定任务流目录内 prompt-*.txt 即 plan 阶段实际送达的提示词,其内容为 v1 模板",
+    "五份 review-*.md 正文质量不在本次评审范围内,仅检索其 findings 相关特征以判定结构化层来源",
+    "评审探针在系统临时目录运行,只读导入被审代码与产物,未修改任何现有文件"
+  ]
+}

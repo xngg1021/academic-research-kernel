@@ -1,0 +1,32 @@
+任务：评审任务书并独立产出方案与结构化发现。
+
+您是一名独立评审者。请在完全不参考其他任何外部评审者意见的前提下，独立完成以下工作：
+
+一、阅读任务书文件 <WORKSPACE>\cross-reviews\self-review-v2-20260917\task.md。
+二、阅读任务书中指定的全部材料。
+三、按任务书要求完成工作，将完整文字产出写入文件 <WORKSPACE>\cross-reviews\self-review-v2-20260917\review-gemini31pro.md。
+四、同时在产出文件末尾（或同目录写入 <WORKSPACE>\cross-reviews\self-review-v2-20260917\findings-gemini31pro.json）提供严格的 JSON 格式结构化发现块，格式如下：
+
+```json
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "涉及的具体文件、模块、行号范围或规范接口",
+      "kind": "bug|security|invariant|perf|spec_mismatch|suggestion",
+      "claim": "发现的核心断言（一两句话说明问题实体与结论）",
+      "evidence": ["支持该断言的具体文件行号、测试用例或逻辑推导"],
+      "severity": "P0|P1|P2",
+      "blocking": true
+    }
+  ],
+  "unknowns": ["材料中未明示或当前无法独立求证的事项"],
+  "assumptions": ["您在评估中做出的关键假设"]
+}
+```
+
+约束：
+- 只读任务书与指定材料，不得修改任何现有文件；不得修改其他评审者的产出文件；
+- 输出用简体中文，按您自然的文风写作；
+- 产出必须基于您实际读到的内容，严禁虚构不存在的文件、接口或测试结果；
+- 必须包含结构化 JSON 块，确保 target、claim、evidence 真实明确。

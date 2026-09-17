@@ -1,0 +1,171 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "1. 目标绑定严重失配：模型的既定意图非常清晰，即清理刚刚因逐个 blob 启动 `git.exe` 进程而耗时 420 秒超时的自写脚本 `scan_history.py` 及其残留。然而，模型在决策时却把针对单一孤立脚本的清理需求，粗暴放大为全系统范围的 Python 运行时",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F2",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "1. 会话级放行存在粒度漏洞：框架的 `approval_detection.py` 将 `Stop-Process -Force` 归纳为单一静态 key，使得先前的单次授权直接退化为对该类型命令的无条件全局豁免。",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F3",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "在 `approval_detection.py` 第 238 行，框架定义了 Windows 强杀规则：",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "tests/tools/test_approval_windows.py",
+      "kind": "observation",
+      "claim": "对应的测试用例见 `tests/tools/test_approval_windows.py` 第 38 行（`\"Stop-Process -Force -Name explorer\"`）与第 66 行（`\"Stop-Process -Name notepad\"`）。",
+      "evidence": [
+        "tests/tools/test_approval_windows.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F5",
+      "target": "hermes_cli/cli_modal_mixin.py",
+      "kind": "observation",
+      "claim": "在 `hermes_cli/cli_modal_mixin.py`（第 29 行、第 813-826 行）中，交互界面提供 `once`、`session`、`always`、`deny` 四种审批选项。当用户选择 `session` 时，`tools/approval.py` ",
+      "evidence": [
+        "hermes_cli/cli_modal_mixin.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F6",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "风险源于 `approval_detection.py` 第 1474 行与第 1476 行：`detect_dangerous_command` 返回的 `pattern_key` 直接取自静态描述字符串 `\"force kill processes (Stop-Process",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F7",
+      "target": "tools/approval.py",
+      "kind": "bug",
+      "claim": "这一实现造成了关键的语义漂移：一旦会话内此前针对某一个具体的无害进程执行过 `Stop-Process -Force` 并获得了会话级授权，该放行凭证便无视具体目标与参数变化，全面覆盖后续所有包含该组合的命令。在事故发生时，`tools/approval.py` 第 1153-1",
+      "evidence": [
+        "tools/approval.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F8",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "2. 守护进程自杀识别缺失：框架在 `approval_detection.py` 第 358 行虽然编写了自终止保护规则：",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F9",
+      "target": "cli\\.py",
+      "kind": "bug",
+      "claim": "`(r'\\b(pkill|killall)\\b.*\\b(hermes|gateway|cli\\.py)\\b', \"kill hermes/gateway process (self-termination)\")`",
+      "evidence": [
+        "cli\\.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F10",
+      "target": "tools/terminal_tool.py",
+      "kind": "observation",
+      "claim": "1. 工具定义无安全规范：查阅 `tools/terminal_tool.py` 第 159-168 行的 `TERMINAL_TOOL_DESCRIPTION`，内容集中于基础 shell 规范、前后台运行模式与工作目录指导，完全未包含对进程终止、宿主共享服务保护以及定向 PI",
+      "evidence": [
+        "tools/terminal_tool.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F11",
+      "target": "tools/approval.py",
+      "kind": "observation",
+      "claim": "2. 审批交互无受影响范围推演：框架的安全检测层纯粹基于静态文本特征匹配，不执行动态环境评估。在拦截发生时，框架仅返回笼统结论（`tools/approval.py` 第 762-763 行、第 1042 行）；在会话级放行生效时，模型与用户更无法获得任何潜在后果反馈。",
+      "evidence": [
+        "tools/approval.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F12",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "模型清醒认知到当前困境由 `scan_history.py` 引起，但在生成解决动作时，发生了动作目标与其问题实体的严重脱节。模型没有选择精确匹配脚本名称或进程 PID，而是随意扩展作用范围，将清理目标错误绑定至宿主机全部 Python 解释器。",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F13",
+      "target": "tools/approval.py",
+      "kind": "observation",
+      "claim": "- 细化会话级放行的凭证粒度（修改 `tools/approval.py` 与 `tools/approval_detection.py`）：",
+      "evidence": [
+        "tools/approval.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F14",
+      "target": "tools/approval_detection.py",
+      "kind": "observation",
+      "claim": "- 建立 Windows 环境下核心运行时的保护机制（修改 `tools/approval_detection.py`）：",
+      "evidence": [
+        "tools/approval_detection.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F15",
+      "target": "tools/terminal_tool.py",
+      "kind": "observation",
+      "claim": "- 补全终端安全说明与受限清理机制（修改 `tools/terminal_tool.py`）：",
+      "evidence": [
+        "tools/terminal_tool.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    }
+  ],
+  "unknowns": [],
+  "assumptions": []
+}

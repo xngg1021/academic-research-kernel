@@ -1,0 +1,146 @@
+[
+  {
+    "challenge_id": "C01",
+    "type": "contradiction",
+    "issue_id": "I37",
+    "target": "orchestrate_v2.py",
+    "reviewer": "gemini31pro",
+    "bundle": {
+      "title": "关于 orchestrate_v2.py 的对立断言裁决",
+      "target": "orchestrate_v2.py",
+      "proposals": [
+        {
+          "source_alias": "Proposal-1",
+          "claim": "cluster_issues 仅依据条目数量而非独立模型数量判断共识，导致单一模型针对同一目标提出的多项发现被错误升级为五人全员高度共识。",
+          "evidence": [
+            "orchestrate_v2.py:311,325 中使用 len(items) == 1 判断单例，else 分支未校验 len({x['model'] for x in items}) > 1",
+            "stop-process-20260917/consensus-report.md:18-23 中由 gemini31pro 单独提出的 I14 approval_detection.py 被归入 Verified Consensus"
+          ]
+        },
+        {
+          "source_alias": "Proposal-2",
+          "claim": "冲突判定依赖 kind 差异与中文否定字符匹配，导致正常的互补分类和客观技术描述被大面积误判为对立矛盾并粗暴合并为超大议题包。",
+          "evidence": [
+            "orchestrate_v2.py:328-331 使用 len(kinds) > 1 or any('不' in claim or '错' in claim) 作为矛盾判定标准",
+            "stop-process-20260917/challenge-plan.json:1-210 将 28 个不同模型的发现全部打包为单一矛盾议题 C01"
+          ]
+        },
+        {
+          "source_alias": "Proposal-3",
+          "claim": "矛盾质询计划直接选取 raised[0] 作为审查者，导致编排器要求提案模型审查包含其自身原话的议题包，破坏了交叉审查的独立性。",
+          "evidence": [
+            "orchestrate_v2.py:420-421 中 reviewer = raised[0] if len(raised) > 0 else model_keys[0]",
+            "stop-process-20260917/challenge-plan.json:7 中 C01 由 gemini38flash 审查，但议题包内第 21 个提案即为其自身意见"
+          ]
+        },
+        {
+          "source_alias": "Proposal-4",
+          "claim": "合议解析采用互斥的 if-elif 结构匹配全文关键字，导致同时包含吸收、驳回与未决的复合质询答复中，后面的 REFUTED 和 UNRESOLVED 表态被完全吞噬。",
+          "evidence": [
+            "orchestrate_v2.py:588-595 中 if 'CONCEDE' ... elif 'REFUTED' ... elif 'UNRESOLVED' 互斥执行",
+            "stop-process-20260917/challenge-reply-C01-gemini38flash.md:43-53 明确包含三类表态，但 consensus-report.md:7-9 显示 Refuted 为 0 项"
+          ]
+        },
+        {
+          "source_alias": "Proposal-5",
+          "claim": "少数派证据保护逻辑未检查单例在质询阶段的驳回状态，导致已被确凿证据证伪的错误观点依然无条件进入最终未决账本。",
+          "evidence": [
+            "orchestrate_v2.py:598-609 无条件将所有带 evidence 的 P0/P1 单例加入账本，未过滤 refuted_items",
+            "stop-process-20260917/unresolved-ledger.json:9-11 中仅包含无行号文件名 AGENTS.md 的条目被无条件保护"
+          ]
+        },
+        {
+          "source_alias": "Proposal-6",
+          "claim": "normalize_target 缺失绝对路径向相对路径的转换对齐，导致不同模型针对同一代码文件的发现被切分为不同目标并产生聚类分裂。",
+          "evidence": [
+            "orchestrate_v2.py:219 仅执行 strip、replace 与行号正则截断",
+            "stop-process-20260917/consensus-report.md:18 中绝对路径成为独立 target I14，与相对路径 I01 割裂"
+          ]
+        },
+        {
+          "source_alias": "Proposal-7",
+          "claim": "cluster_issues 聚类逻辑未能对模型身份去重，单模型在同一目标的多条发现被误判为跨模型共识。",
+          "evidence": [
+            "issue-registry.json 确凿记录了 I12（仅由 gemini38flash 提出）和 I14（仅由 gemini31pro 提出）被错误归入 consensus 分组。"
+          ]
+        },
+        {
+          "source_alias": "Proposal-8",
+          "claim": "少数派证据保护逻辑未过滤已证伪项，被成功反驳的高危单例仍会被强制保留。",
+          "evidence": [
+            "stage_synthesize_v2 函数在遍历 registry.get(\"singletons\", []) 时，直接判断 severity 和 evidence 附加到未决账本，缺乏针对 refuted_items 的拦截排查。"
+          ]
+        },
+        {
+          "source_alias": "Proposal-9",
+          "claim": "is_conflict 冲突判定规则易造成假阳性误判，包含“错”字的共识表述会被错误标记为矛盾。",
+          "evidence": [
+            "代码使用 any(\"不\" in ... or \"错\" in ...) 会无差别匹配“代码写错了”等指出缺陷的肯定性共识断言。"
+          ]
+        },
+        {
+          "source_alias": "Proposal-10",
+          "claim": "normalize_target 未统一绝对与相对路径，导致同文件目标被拆分为多个独立议题。",
+          "evidence": [
+            "issue-registry.json 中 I14 (绝对路径) 与 I01 (相对路径) 指向同一 approval_detection.py 文件，却在图中形成了两个独立的顶点。"
+          ]
+        },
+        {
+          "source_alias": "Proposal-11",
+          "claim": "wait_for_outputs 缺乏局部容错机制，任一子进程缺失产出会导致后续链路全盘中断。",
+          "evidence": [
+            "当 procs_ok and not files_ok 成立时直接 return False，无视其余正常完成的审查结果。"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "challenge_id": "C02",
+    "type": "singleton_audit",
+    "issue_id": "I01",
+    "target": "orchestrate_v2.py:310-345 (cluster_issues)",
+    "reviewer": "dsv4pro",
+    "bundle": {
+      "title": "对未覆盖单例高危断言的独立核验: orchestrate_v2.py:310-345 (cluster_issues)",
+      "target": "orchestrate_v2.py:310-345 (cluster_issues)",
+      "proposals": [
+        {
+          "source_alias": "Proposal-A",
+          "claim": "聚类按 findings 条数而非去重模型数判定多模型状态,同一模型对同一 target 的多条 findings 被错误标为 consensus 或 contradiction,最终报告将单模型观点呈现为“高度共识项 (Verified Consensus)”。",
+          "evidence": [
+            "orchestrate_v2.py:311 len(items)==1 与第 325 行注释“2 个及以上模型命中同一 target”不符",
+            "issue-registry.json I12/I14(state=consensus,raised_by 单模型),I06/I08/I16(state=contradiction,raised_by 单模型)",
+            "consensus-report.md:13-22 I12、I14 列入“高度共识项”且提出方各仅一个模型",
+            "探针复现:单模型双 findings 同 target -> [('a.py', ['m1'], 'consensus')]"
+          ],
+          "severity": "P0"
+        }
+      ]
+    }
+  },
+  {
+    "challenge_id": "C03",
+    "type": "singleton_audit",
+    "issue_id": "I02",
+    "target": "orchestrate_v2.py:326-332 (contradiction 判定)",
+    "reviewer": "dsv4pro",
+    "bundle": {
+      "title": "对未覆盖单例高危断言的独立核验: orchestrate_v2.py:326-332 (contradiction 判定)",
+      "target": "orchestrate_v2.py:326-332 (contradiction 判定)",
+      "proposals": [
+        {
+          "source_alias": "Proposal-A",
+          "claim": "矛盾启发式(kinds 不同或 claim 含“不/错”字)把语义一致的意见标为对立,生产 run 的 8 条 contradictions 无一条是断言级对立;伪矛盾占满 max_challenges=3 配额,导致 P0 高危单例 I05 未获质询。",
+          "evidence": [
+            "orchestrate_v2.py:328-331 is_conflict 实现",
+            "issue-registry.json I01 五模型同向确认 Windows 规则缺口仍标 contradiction;I02/I04 同理",
+            "challenge-plan.json C01-C03 全部为 contradiction 类型,singleton_audit 轮空",
+            "challenge-reply-C01-gemini38flash.md:19-26 真正分歧存在于子断言级(kill -9 -1 层级归属),target 级聚类不可见"
+          ],
+          "severity": "P0"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,300 @@
+[
+  {
+    "challenge_id": "C01",
+    "type": "contradiction",
+    "issue_id": "I01",
+    "target": "approval_detection.py",
+    "reviewer": "gemini38flash",
+    "bundle": {
+      "title": "关于 approval_detection.py 的对立断言裁决",
+      "target": "approval_detection.py",
+      "proposals": [
+        {
+          "source_alias": "Proposal-1",
+          "claim": "材料范围:任务书指定材料全部实读(approval_detection.py 全文 1482 行、test_approval_windows.py 全文 110 行、scan_history.py 全文 117 行、三处日志的指定时间窗切片);另附两条评审过程中对本机同一套部署的",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-2",
+          "claim": "- `approval_detection.py:238`:`(r'\\bstop-process\\b[^\\n]*\\s-force\\b', \"force kill processes (Stop-Process -Force)\")`。肇事命令 `powershell -Comman",
+          "evidence": [
+            "approval_detection.py:238"
+          ]
+        },
+        {
+          "source_alias": "Proposal-3",
+          "claim": "- hardline 档(`approval_detection.py:88-121`,不可豁免层)只有 POSIX 的 `kill -1`(116 行,\"kill all processes\")。通读全部 hardline 条目——mkfs、dd、块设备重定向、fork bom",
+          "evidence": [
+            "approval_detection.py:88-121"
+          ]
+        },
+        {
+          "source_alias": "Proposal-4",
+          "claim": "- detection 侧的键设计:`approval_detection.py:453-454` 注释说明批准条目按\"描述串与历史 regex 键\"双键存储,\"kept for backwards compatibility with stored allowlist/sess",
+          "evidence": [
+            "approval_detection.py:453-454"
+          ]
+        },
+        {
+          "source_alias": "Proposal-5",
+          "claim": "- 框架自知无沙箱:`gateway-stdio.log`(<PROFILE_DAD>):664 启动警告明说 \"the terminal backend is 'local' (unsandboxed) ... runs as the host user with full terminal/fi",
+          "evidence": [
+            "approval_detection.py:52-54"
+          ]
+        },
+        {
+          "source_alias": "Proposal-6",
+          "claim": "- 检测层无归属概念:`approval_detection.py:1-4` 的 docstring 自述 \"Pure command classification ... no approval state, config reads, or prompting live he",
+          "evidence": [
+            "approval_detection.py:1-4"
+          ]
+        },
+        {
+          "source_alias": "Proposal-7",
+          "claim": "- 自毁保护的不对称:`approval_detection.py:358` 的 `(r'\\b(pkill|killall)\\b.*\\b(hermes|gateway|cli\\.py)\\b', \"kill hermes/gateway process (self-terminat",
+          "evidence": [
+            "approval_detection.py:358"
+          ]
+        },
+        {
+          "source_alias": "Proposal-8",
+          "claim": "1. 拆分并升档\"无差别杀进程\"规则。在 `approval_detection.py` 237-238 行附近新增独立规则,匹配 `Get-Process ... | Stop-Process` 管道形态与不带 -Id 的 `Stop-Process -Force -Name ",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-9",
+          "claim": "1. 肇事命令命中危险档而非不可豁免档:`approval_detection.py:238`(stop-process -force 规则原文);对照 88-121 行 hardline 清单无 Windows 杀进程条目;实时观察——本机同一部署拦下含肇事命令原文的调用,返回",
+          "evidence": [
+            "approval_detection.py:238"
+          ]
+        },
+        {
+          "source_alias": "Proposal-10",
+          "claim": "POSIX 侧分层完整。kill -1 在硬线层(approval_detection.py:116,\"kill all processes\"),不可绕过,连 --yolo 都不放行;kill -9 -1 在危险层(approval_detection.py:278);pkill",
+          "evidence": [
+            "approval_detection.py:116"
+          ]
+        },
+        {
+          "source_alias": "Proposal-11",
+          "claim": "approval_detection.py 的模块 docstring 声明自己是纯分类模块,不存审批状态(第 2-4 行)。但第 448-460 行的 _PATTERN_KEY_ALIASES 机制暴露了审批系统的存储语义:审批条目按 pattern key(即规则描述)持久化",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-12",
+          "claim": "检测层面,approval_detection.py 是纯函数,输入命令字符串,输出 key 与描述,不接触本机进程清单,没有任何\"本机还跑着什么\"的上下文注入点。它对进程归属的唯一启发式是第 358-362 行的自终止保护:三条规则要求命令文本中出现 hermes、gatewa",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-13",
+          "claim": "没有。approval_detection.py 全文不产出提示词,检测结果只有一句静态描述(\"force kill processes (Stop-Process -Force)\")。模块内不存在任何主机上下文注入点,审批交互层(不在指定材料内)能拿到的也只有这句描述。框架没有",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-14",
+          "claim": "1. 给 Windows 补\"全量杀\"的范围识别,与 POSIX 的 kill -1 分层对齐。在 approval_detection.py 第 236-238 行的 Windows 强杀规则处新增独立 key,识别 `Get-Process <name> | Stop-Pro",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-15",
+          "claim": "2. 给自终止保护补 Windows 对应物,并注入主机上下文。approval_detection.py 第 358 行的 pkill/killall 自终止规则只有 POSIX 形态,应增加 taskkill /F /IM 与 Stop-Process -Force -Nam",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-16",
+          "claim": "approval_detection.py:238 有专门规则:",
+          "evidence": [
+            "approval_detection.py:238"
+          ]
+        },
+        {
+          "source_alias": "Proposal-17",
+          "claim": "其二,POSIX 侧的无差别杀有更细的分级先例可参照:approval_detection.py:116 的硬线规则 `kill -1` 单列(硬线,永不可放行),:278-284 对 pkill -9、killall -KILL、killall -r 单列。而 Windows ",
+          "evidence": [
+            "approval_detection.py:116"
+          ]
+        },
+        {
+          "source_alias": "Proposal-18",
+          "claim": "不存在隔离,也不存在归属识别。这台机器上 CLI agent 的 terminal 与三个 gateway worker 同跑在一个 Windows 用户下,agent 的子进程与网关 worker 同为 python.exe。approval_detection.py 的全部规",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-19",
+          "claim": "没有。approval_detection.py 是纯命令分类(文件头注释 :3-4 自述),产出只有一个 description 字符串如 \"force kill processes (Stop-Process -Force)\",不含后果范围。terminal 工具描述层面(本",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-20",
+          "claim": "1. 给 `Get-Process <name> | Stop-Process -Force` 这类\"管道全量强杀\"形态单列一档更重的规则(可参照 POSIX 侧 killall -r 的先例,approval_detection.py:284),其 pattern_key 与单",
+          "evidence": [
+            "approval_detection.py:284"
+          ]
+        },
+        {
+          "source_alias": "Proposal-21",
+          "claim": "- approval_detection.py:125(_RE_FLAGS 含 IGNORECASE)、:237-238(taskkill/Stop-Process -Force 规则)、:88-121(HARDLINE_PATTERNS 无 Stop-Process)、:116",
+          "evidence": [
+            "approval_detection.py:125"
+          ]
+        },
+        {
+          "source_alias": "Proposal-22",
+          "claim": "1. 会话级放行存在粒度漏洞：框架的 `approval_detection.py` 将 `Stop-Process -Force` 归纳为单一静态 key，使得先前的单次授权直接退化为对该类型命令的无条件全局豁免。",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-23",
+          "claim": "在 `approval_detection.py` 第 238 行，框架定义了 Windows 强杀规则：",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-24",
+          "claim": "风险源于 `approval_detection.py` 第 1474 行与第 1476 行：`detect_dangerous_command` 返回的 `pattern_key` 直接取自静态描述字符串 `\"force kill processes (Stop-Process",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-25",
+          "claim": "2. 守护进程自杀识别缺失：框架在 `approval_detection.py` 第 358 行虽然编写了自终止保护规则：",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-26",
+          "claim": "这表明当前的 agent 环境与三大 gateway 进程处于同一宿主环境及相同的用户权限下，毫无沙箱隔离。同时，`approval_detection.py` 中虽然在第 358 行设有 `kill hermes/gateway process (self-terminatio",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-27",
+          "claim": "*证据*：在 `approval_detection.py` 代码逻辑中，硬编码的只有纯文本字符串形式的危险类型描述（如 `\"force kill processes (Stop-Process -Force)\"`）。没有任何解析逻辑会去计算影响多少个实际进程或者提醒模型“这将影",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-28",
+          "claim": "2. **强化自保规则（`approval_detection.py`）**：在防自我终止的规则中（当前第 358 行），对于未隔离的 `local` 模式环境，应当补充拦截对解释器基座无差别屠杀的模式，例如：拦截所有不带特定 ID 或特定精确脚本名的 `Stop-Process",
+          "evidence": [
+            "approval_detection.py"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "challenge_id": "C02",
+    "type": "contradiction",
+    "issue_id": "I02",
+    "target": "test_approval_windows.py",
+    "reviewer": "glm53",
+    "bundle": {
+      "title": "关于 test_approval_windows.py 的对立断言裁决",
+      "target": "test_approval_windows.py",
+      "proposals": [
+        {
+          "source_alias": "Proposal-1",
+          "claim": "- 测试侧:`test_approval_windows.py:38` 钉住的用例是 `Stop-Process -Force -Name explorer`(单进程);66 行的豁免用例是 `Stop-Process -Name notepad`(无 -Force)。全文件没有",
+          "evidence": [
+            "test_approval_windows.py:38"
+          ]
+        },
+        {
+          "source_alias": "Proposal-2",
+          "claim": "关键缺口在范围识别。\"Stop-Process -Force -Name explorer\" 与 \"Get-Process python | Stop-Process -Force\" 在检测层是同一个 key、同一句描述、同一个严重级别。前者的后果是杀一个桌面程序,后者的后果是杀",
+          "evidence": [
+            "test_approval_windows.py:38"
+          ]
+        },
+        {
+          "source_alias": "Proposal-3",
+          "claim": "4. 补测试。test_approval_windows.py 增加三个断言:Get-Process 管道形态被标记、-Name * 通配形态被标记、且二者的 key 与单目标形态(现第 38 行)不同。",
+          "evidence": [
+            "test_approval_windows.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-4",
+          "claim": "事故命令 `powershell -Command \"Get-Process python | Stop-Process -Force\"` 中,\"Stop-Process -Force\"子串满足 `\\bstop-process\\b` 加 `\\s-force`(检测用 re.IGN",
+          "evidence": [
+            "test_approval_windows.py:38"
+          ]
+        },
+        {
+          "source_alias": "Proposal-5",
+          "claim": "- test_approval_windows.py:38(\"Stop-Process -Force -Name explorer\" 必须提示)、:65-66(无强制标志不提示)。",
+          "evidence": [
+            "test_approval_windows.py:38"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "challenge_id": "C03",
+    "type": "contradiction",
+    "issue_id": "I03",
+    "target": "tools/approval.py",
+    "reviewer": "gemini38flash",
+    "bundle": {
+      "title": "关于 tools/approval.py 的对立断言裁决",
+      "target": "tools/approval.py",
+      "proposals": [
+        {
+          "source_alias": "Proposal-1",
+          "claim": "- 语义推断(批准状态的实现文件 tools/approval.py 不在指定材料内,此处如实标注推断边界):同一会话内,任一命令以某规则键获批后,后续命中同一规则键的命令不再提示。风险正出在键的粒度——规则键不区分半径。早先一次小半径的 Stop-Process -Force ",
+          "evidence": [
+            "tools/approval.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-2",
+          "claim": "这一实现造成了关键的语义漂移：一旦会话内此前针对某一个具体的无害进程执行过 `Stop-Process -Force` 并获得了会话级授权，该放行凭证便无视具体目标与参数变化，全面覆盖后续所有包含该组合的命令。在事故发生时，`tools/approval.py` 第 1153-1",
+          "evidence": [
+            "tools/approval.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-3",
+          "claim": "2. 审批交互无受影响范围推演：框架的安全检测层纯粹基于静态文本特征匹配，不执行动态环境评估。在拦截发生时，框架仅返回笼统结论（`tools/approval.py` 第 762-763 行、第 1042 行）；在会话级放行生效时，模型与用户更无法获得任何潜在后果反馈。",
+          "evidence": [
+            "tools/approval.py"
+          ]
+        },
+        {
+          "source_alias": "Proposal-4",
+          "claim": "- 细化会话级放行的凭证粒度（修改 `tools/approval.py` 与 `tools/approval_detection.py`）：",
+          "evidence": [
+            "tools/approval.py"
+          ]
+        }
+      ]
+    }
+  }
+]

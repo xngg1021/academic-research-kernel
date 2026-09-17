@@ -1,0 +1,120 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "orchestrate_v2.py:311-347",
+      "kind": "bug",
+      "claim": "cluster_issues 仅依据条目数量而非独立模型数量判断共识，导致单一模型针对同一目标提出的多项发现被错误升级为五人全员高度共识。",
+      "evidence": [
+        "orchestrate_v2.py:311,325 中使用 len(items) == 1 判断单例，else 分支未校验 len({x['model'] for x in items}) > 1",
+        "stop-process-20260917/consensus-report.md:18-23 中由 gemini31pro 单独提出的 I14 approval_detection.py 被归入 Verified Consensus"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F2",
+      "target": "orchestrate_v2.py:328-332",
+      "kind": "bug",
+      "claim": "冲突判定依赖 kind 差异与中文否定字符匹配，导致正常的互补分类和客观技术描述被大面积误判为对立矛盾并粗暴合并为超大议题包。",
+      "evidence": [
+        "orchestrate_v2.py:328-331 使用 len(kinds) > 1 or any('不' in claim or '错' in claim) 作为矛盾判定标准",
+        "stop-process-20260917/challenge-plan.json:1-210 将 28 个不同模型的发现全部打包为单一矛盾议题 C01"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "orchestrate_v2.py:420-421",
+      "kind": "bug",
+      "claim": "矛盾质询计划直接选取 raised[0] 作为审查者，导致编排器要求提案模型审查包含其自身原话的议题包，破坏了交叉审查的独立性。",
+      "evidence": [
+        "orchestrate_v2.py:420-421 中 reviewer = raised[0] if len(raised) > 0 else model_keys[0]",
+        "stop-process-20260917/challenge-plan.json:7 中 C01 由 gemini38flash 审查，但议题包内第 21 个提案即为其自身意见"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "orchestrate_v2.py:588-595",
+      "kind": "bug",
+      "claim": "合议解析采用互斥的 if-elif 结构匹配全文关键字，导致同时包含吸收、驳回与未决的复合质询答复中，后面的 REFUTED 和 UNRESOLVED 表态被完全吞噬。",
+      "evidence": [
+        "orchestrate_v2.py:588-595 中 if 'CONCEDE' ... elif 'REFUTED' ... elif 'UNRESOLVED' 互斥执行",
+        "stop-process-20260917/challenge-reply-C01-gemini38flash.md:43-53 明确包含三类表态，但 consensus-report.md:7-9 显示 Refuted 为 0 项"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F5",
+      "target": "orchestrate_v2.py:598-609",
+      "kind": "spec_mismatch",
+      "claim": "少数派证据保护逻辑未检查单例在质询阶段的驳回状态，导致已被确凿证据证伪的错误观点依然无条件进入最终未决账本。",
+      "evidence": [
+        "orchestrate_v2.py:598-609 无条件将所有带 evidence 的 P0/P1 单例加入账本，未过滤 refuted_items",
+        "stop-process-20260917/unresolved-ledger.json:9-11 中仅包含无行号文件名 AGENTS.md 的条目被无条件保护"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F6",
+      "target": "orchestrate_v2.py:215-223",
+      "kind": "bug",
+      "claim": "normalize_target 缺失绝对路径向相对路径的转换对齐，导致不同模型针对同一代码文件的发现被切分为不同目标并产生聚类分裂。",
+      "evidence": [
+        "orchestrate_v2.py:219 仅执行 strip、replace 与行号正则截断",
+        "stop-process-20260917/consensus-report.md:18 中绝对路径成为独立 target I14，与相对路径 I01 割裂"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F7",
+      "target": "orchestrate_v2.py:174,187-212",
+      "kind": "bug",
+      "claim": "extract_findings_json 采用非贪婪正则匹配 JSON 块，遭遇嵌套大括号时解析崩溃，且降级机制依赖中文关键词硬编码截断并生成低质伪发现。",
+      "evidence": [
+        "orchestrate_v2.py:174 中正则 r'```(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*```' 在内部嵌套闭合括号处提前截断",
+        "orchestrate_v2.py:196-207 依据崩溃、误杀等字样强行切词构造 fallback findings"
+      ],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F8",
+      "target": "orchestrate_v2.py:59,417,445,475 与 SKILL.md:62",
+      "kind": "spec_mismatch",
+      "claim": "audit 模式最大质询数被硬编码为 5，导致错排匹配质询被配额耗尽提前截断，与文档声明的 10 至 12 次调用及拓扑保证存在冲突。",
+      "evidence": [
+        "orchestrate_v2.py:59 设置 audit 模式 max_challenges 为 5",
+        "orchestrate_v2.py:475 在 len(challenges) >= max_challenges 时跳过错排生成，实际调用次数上限严格为 10 次"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F9",
+      "target": "tests/test_cross_review_five_v2.py:57-95,132-177",
+      "kind": "spec_mismatch",
+      "claim": "离线单元测试套件的数据构造过于理想化，未覆盖单模型多条发现、复合表态响应与否定字符干扰等已知边界，呈现假绿特征。",
+      "evidence": [
+        "test_cross_review_five_v2.py:57-95 中输入数据规避了相同 target 的多重输入与中文字符冲突",
+        "test_cross_review_five_v2.py:161-164 仅使用纯 CONCEDE 字符串作为质询响应模拟"
+      ],
+      "severity": "P2",
+      "blocking": false
+    }
+  ],
+  "unknowns": [
+    "在真实的 Hermes CLI 运行环境中，各个外部 LLM 模型是否会稳定生成格式严格合规的 findings JSON 侧车文件",
+    "各子进程在 Windows 环境中超时并被终止后，底层 Python 与网络连接进程的具体资源清理行为与残留状态"
+  ],
+  "assumptions": [
+    "评估基于当前提供的 orchestrate_v2.py 源码以及 stop-process-20260917 目录下的真实静态产物记录",
+    "假设评审系统的核心目标在于客观发现系统真实缺陷，而非追求表面上的流程收敛或格式统一"
+  ]
+}

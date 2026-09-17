@@ -1,0 +1,147 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "orchestrate_v2.py:293-347 cluster_issues",
+      "kind": "bug",
+      "claim": "聚类单元是条目而非模型，同一模型对同一 target 的多条 finding 会被判为跨模型 consensus/contradiction，state 判定从未校验 raised_by 是否含多个不同模型。",
+      "evidence": [
+        "orchestrate_v2.py:310-311 仅按 len(items)==1 分单例/多例",
+        "stop-process issue-registry.json: I14 标签 consensus 但 raised_by 仅 ['gemini31pro'] 且三条 claims 全为 gemini31pro",
+        "stop-process issue-registry.json: I06 标签 contradiction 但 raised_by 仅 ['dsv4pro']",
+        "stop-process issue-registry.json: I12 标签 consensus 但 raised_by 仅 ['gemini38flash']",
+        "consensus-report.md:18-22 将 I14 列为 'Verified Consensus' 实为单模型观点"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F2",
+      "target": "orchestrate_v2.py:328-331 cluster_issues 矛盾判定启发式",
+      "kind": "bug",
+      "claim": "用 kind 集合大于 1 或 claim 含『不』『错』二字判矛盾，中文技术评述几乎必然含『不』，导致大量同向观点被误判为矛盾并涌入质询包。",
+      "evidence": [
+        "orchestrate_v2.py:328-331 is_conflict 判定原文",
+        "stop-process challenge-plan.json: C01 的 I01 被判 contradiction 且塞入 28 条 Proposal，而五方 claim 实际高度同向（均指向 approval_detection.py:238 规则粒度）"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "orchestrate_v2.py:215-222 normalize_target",
+      "kind": "bug",
+      "claim": "归一化只去行号与小写化路径，不折叠绝对路径与相对路径，同一文件以不同路径书写会被聚成多个独立 issue，制造伪单例并稀释真实共识簇。",
+      "evidence": [
+        "orchestrate_v2.py:219-222 无路径折叠逻辑",
+        "stop-process issue-registry.json: approval_detection.py 同时出现为 I01（相对名）与 I14（<USER_HOME>/.../approval_detection.py）",
+        "stop-process issue-registry.json: 同一测试文件出现三个 target——I02 test_approval_windows.py、I09 tests/tools/test_approval_windows.py、I15 绝对全路径"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "orchestrate_v2.py:577-594 stage_synthesize_v2 质询对账与表态解析",
+      "kind": "bug",
+      "claim": "synthesize 只 glob 已存在的答复文件、不与 challenge-plan 对账，缺席的质询在报告中不可见；且 CONCEDE/REFUTED 按整文件 if/elif 归一类，混合表态的答复被压成单一类别。",
+      "evidence": [
+        "orchestrate_v2.py:577-581 仅 glob challenge-reply-*.md",
+        "orchestrate_v2.py:588-594 文件级 if/elif 解析",
+        "stop-process challenge-plan.json 规划 C01/C02/C03 三组，目录仅存在 challenge-reply-C01-gemini38flash.md 一份答复",
+        "challenge-reply-C01-gemini38flash.md:43/48/52 同一文件含 CONCEDE、REFUTED、UNRESOLVED 三种表态",
+        "consensus-report.md:8 显示 Conceded 1、Refuted 0，与答复实际内容不符"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F5",
+      "target": "orchestrate_v2.py:186-212 extract_findings_json 启发式降级路径",
+      "kind": "bug",
+      "claim": "fallback 启发式把含文件名引用的任意行截前 140 字符当 claim、kind 只赋 bug/observation，产物为残句；该路径在 stop-process 真实运行中承载了大量 findings 并直接污染 registry 与未决账本。",
+      "evidence": [
+        "orchestrate_v2.py:203 claim 取 line.strip()[:140]",
+        "orchestrate_v2.py:202 kind 赋 'observation'（PLAN_PROMPT_V2 第 83 行枚举中不存在该值）",
+        "findings-glm53.json: F1 claim 为 'approval_detection.py:238 有专门规则:'，多条 claim 在 140 字符处截断成半句",
+        "unresolved-ledger.json: I11 target 为正则误捕的伪文件名 'cli/.py'，claim 为裸正则字面量，仍以 P0+blocking 进入账本"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F6",
+      "target": "orchestrate_v2.py:419-421 contradiction 质询 reviewer 选取",
+      "kind": "invariant",
+      "claim": "矛盾质询的 reviewer 直接取 raised[0]，即被审断言的作者本人，匿名性对质询者不成立并引入自证偏置；同时 claim 原文逐字进 bundle，跨模型文风可推断身份。",
+      "evidence": [
+        "orchestrate_v2.py:421 reviewer = raised[0]",
+        "stop-process challenge-plan.json: C01 reviewer 为 gemini38flash，而 issue-registry I01 的 claims 中含 gemini38flash 的原话",
+        "质询子进程为全功能 hermes 会话，review-*.md 就在同一 stream 目录，无任何隔离机制阻止读取原文"
+      ],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F7",
+      "target": "orchestrate_v2.py:596-608 少数派证据保护",
+      "kind": "suggestion",
+      "claim": "少数派保护只校验 evidence 列表非空，不校验定位符是否指向真实存在的文件或可解析路径，fallback 伪证据同样享受 P0 保护进入账本。",
+      "evidence": [
+        "orchestrate_v2.py:599 判定条件仅为 s.get('severity') in ('P0','P1') and s.get('evidence')",
+        "unresolved-ledger.json: I11 的 evidence 为 'cli\\.py'（正则字面量片段），仍被保护入账"
+      ],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F8",
+      "target": "orchestrate_v2.py:142-153 wait_for_outputs 与 369-371/558-560 超时清理",
+      "kind": "bug",
+      "claim": "产物齐全但子进程未退时会轮询满 40 分钟才返回；超时后 p.terminate() 在 Windows 上不杀子进程树，hermes 包装的孙进程可能残留。challenge 阶段重跑不跳过已有答复，无断点续传，中断等于全量重跑。",
+      "evidence": [
+        "orchestrate_v2.py:146-148 files_ok 而 procs 未全退时不返回",
+        "orchestrate_v2.py:557-560 无差别重跑全部 challenges，无已存在产物检查",
+        "v1 orchestrate.py:100-107/122-124 同样的组合判定与 terminate，属沿袭缺陷而非 v2 退化"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F9",
+      "target": "SKILL.md:62 与 :78",
+      "kind": "spec_mismatch",
+      "claim": "文档两处与实际不符：audit 档声明 10-12 次调用但实际拓扑封顶 10 次；v2 部分称模板见脚本内 PLAN_PROMPT 与 REVIEW_PROMPT，而 v2 脚本无 REVIEW_PROMPT（实为 CHALLENGE_PROMPT_V2）。",
+      "evidence": [
+        "SKILL.md:62 'audit…共 10-12 次调用'，MODE_PRESETS audit 为 5 模型+max_challenges 5=10 次",
+        "SKILL.md:78 '任务书模板与约束见脚本内的 PLAN_PROMPT 与 REVIEW_PROMPT'",
+        "orchestrate_v2.py:102 提示词名为 CHALLENGE_PROMPT_V2"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F10",
+      "target": "tests/test_cross_review_five_v2.py（全文件 6 项）",
+      "kind": "suggestion",
+      "claim": "测试遗漏了本次真实运行全部踩中的雷区：伪共识（无多模型断言）、路径混用聚类、fallback 启发式路径、混合表态解析、质询缺席对账、wait_for_outputs 超时分支。",
+      "evidence": [
+        "test_cluster_issues:57-93 的样例中各模型 target 互不重叠除 core.py（且为两模型），测不出单模型多条同 target 的伪共识",
+        "test_extract_findings_fallback_markdown:96-129 只测 markdown 代码块路径，未测 186-212 的行级启发式",
+        "test_merge_and_synthesize_end_to_end:132-177 的答复文件只含 CONCEDE，未覆盖混合表态与缺席对账"
+      ],
+      "severity": "P1",
+      "blocking": false
+    }
+  ],
+  "unknowns": [
+    "C02、C03 两组质询的子进程是超时被 terminate 还是模型侧失败，本次仅能从产物缺失反推，log-*.txt 未逐一核验内容",
+    "stop-process 各模型 findings-*.json 中走 fallback 的确切比例（我只实读了 findings-glm53.json 全文与其余四份的存在性，registry 残句特征强烈提示多模型走 fallback，但未逐份统计）",
+    "hermes chat --oneshot 子进程树在 Windows 上被 terminate 后孙进程是否实际残留，属静态推导未经实验验证"
+  ],
+  "assumptions": [
+    "stop-process-20260917 目录的产物确实由 orchestrate_v2.py 生成（issue-registry/challenge-plan/unresolved-ledger 的字段结构与脚本 :388-408/:494-496/:610-612 的写入逻辑吻合，且 prompt-*.txt 内容与 PLAN_PROMPT_V2 模板一致）",
+    "评审运行环境与 stop-process 运行时配置一致（五模型、standard 模式），不影响算法层结论",
+    "'observation' kind 只可能来自 fallback 路径，依据是 PLAN_PROMPT_V2 枚举与测试样例均无此值，而 :202 硬编码产出它"
+  ]
+}

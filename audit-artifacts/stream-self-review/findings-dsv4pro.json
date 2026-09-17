@@ -1,0 +1,189 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "orchestrate_v2.py:326-332 (cluster_issues 矛盾判定), 佐证产物 issue-registry.json I01/I04/I12/I14",
+      "kind": "bug",
+      "claim": "cluster_issues 用 claim 是否含\"不\"字或\"错\"字及 kinds 异同判定 contradiction,中文 claim 极常见这两个字,导致全员共识被判矛盾、单模型自聚被判共识,Consensus/Contradiction 标签系统性失真。",
+      "evidence": [
+        "orchestrate_v2.py:328-331 判定式 len(kinds) > 1 or any(\"不\" in claim or \"错\" in claim)",
+        "验证实验: 两模型同 kind(bug)、实质相同,claim 含一个\"不\"字即被误判 contradiction",
+        "重放实测: I01 五模型全部指向 approval_detection.py、28 条 claim 中 12 条含\"不/错\",被标 contradiction; I04 四模型一致认定目标绑定错误,同样被标 contradiction",
+        "issue-registry.json: I12 与 I14 的 raised_by 各只有 1 个模型(自身多条 findings 撞同 target),却被标为 consensus,consensus-report.md 称之为\"高度共识项 (Verified Consensus)\"",
+        "tests/test_cross_review_five_v2.py:57-93 test_cluster_issues 的两个 claim 均不含\"不/错\"字,矛盾路径零断言"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F2",
+      "target": "orchestrate_v2.py:336 (raised_by 用 set 去重)、orchestrate_v2.py:420-421 (reviewer = raised[0]); 佐证产物 challenge-plan.json C01/C03",
+      "kind": "bug",
+      "claim": "矛盾质询的 reviewer 取 raised_by[0],即争议第一提出者;本次三组质询中 C01 与 C03 的 reviewer 均为 gemini38flash,且 bundle 内含其本人 findings 原文,匿名质询在制度层面失效。raised_by 由 set 去重生成,顺序受哈希随机化影响,重跑 merge 时质询分配不确定,幂等性不成立。",
+      "evidence": [
+        "orchestrate_v2.py:336 raised_by = list({x[\"model\"] for x in items}),set 迭代顺序跨进程不稳定",
+        "orchestrate_v2.py:420-421 reviewer = raised[0] if len(raised) > 0 else model_keys[0]",
+        "challenge-plan.json: C01 reviewer=gemini38flash,其 proposals 第 22-25 条与 findings-gemini38flash.json F2/F3/F6/F8 的 claim 文本一致; C03 reviewer=gemini38flash,proposals 第 2-4 条同样出自其本人 findings",
+        "challenge-reply-C01-gemini38flash.md:13 写明\"已在我方独立评审中完成覆盖,不属于新增量\",证明质询者识别出包内观点来自自己"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "orchestrate_v2.py:588-594 (synthesize 表态解析 if-elif 链); 佐证产物 consensus-report.md:8 与 challenge-reply-C01-gemini38flash.md:43,48,52",
+      "kind": "bug",
+      "claim": "synthesize 对质询答复的表态解析用 if-elif 链,一个文件先命中 CONCEDE 后同文件的 REFUTED 与 UNRESOLVED 被整体丢弃。四步法提示词要求逐断言表态,混合表态是常态,本次 C01 答复同时含三种标记,报告显示 Refuted: 0,两条 REFUTED 与一条 UNRESOLVED 全部丢失。",
+      "evidence": [
+        "orchestrate_v2.py:588-594 if CONCEDE elif REFUTED elif UNRESOLVED 链式结构",
+        "challenge-reply-C01-gemini38flash.md:43 含【CONCEDE】、:48 含【REFUTED】、:52 含【UNRESOLVED_REQUIRES_CODE_VERIFICATION】",
+        "consensus-report.md:8 \"质询证伪驳回 (Refuted): 0 项\",与答复实际含 2 条 REFUTED 矛盾"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "orchestrate_v2.py:596-608 (少数派保护逻辑)",
+      "kind": "bug",
+      "claim": "少数派证据保护只检查 singleton 的 severity 与 evidence 非空,不检查该 singleton 是否已在质询阶段被证伪;被 REFUTED 的 P0/P1 单例仍会无条件进入 unresolved-ledger.json,\"未被证伪\"的保护条件在实现中退化为\"存在即保护\"。",
+      "evidence": [
+        "orchestrate_v2.py:598-599 for s in registry.get(\"singletons\", []): if s.get(\"severity\") in (\"P0\", \"P1\") and s.get(\"evidence\")",
+        "orchestrate_v2.py:583-595 已解析出 refuted_items 列表,但 598-608 行没有任何与之求交集的逻辑",
+        "本次运行无 singleton_audit 质询(unresolved-ledger.json 两项均未质询),缺陷未在本次实例中触发,由代码路径静态可证"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F5",
+      "target": "orchestrate_v2.py:215-222 (normalize_target); 佐证产物 issue-registry.json I01/I14、I04/I16",
+      "kind": "bug",
+      "claim": "normalize_target 不统一绝对路径与裸文件名,同一实体分裂为多个 cluster,产生假单例与假共识;本次运行中同一 approval_detection.py 被拆成 I01(矛盾)与 I14(单模型\"共识\"),scan_history.py 被拆成 I04 与 I16。",
+      "evidence": [
+        "orchestrate_v2.py:219-222 仅做 replace(\"\\\\\",\"/\")、lower、截行号,无 basename 或绝对化处理",
+        "验证实测: \"<HERMES_HOME>/hermes-agent/tools/approval_detection.py\" 与 \"approval_detection.py\" 归一化后不相等",
+        "issue-registry.json: I01 target=approval_detection.py(五模型)与 I14 target=<HERMES_HOME>/hermes-agent/tools/approval_detection.py(仅 gemini31pro)并存; I04 与 I16 同型分裂",
+        "findings-gemini31pro.json F8/F9 用绝对路径,其 F3/F4/F6 用裸文件名,同一模型同一主题被拆散"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F6",
+      "target": "orchestrate_v2.py:186-212 (extract_findings_json 降级启发路径); 佐证产物五份 findings-*.json",
+      "kind": "bug",
+      "claim": "降级提取路径把证据引用行、修复建议行、材料说明行一律当作 finding,claim 硬截断 140 字符;本次运行五个模型无一自觉落盘 findings JSON,五份 findings 全部呈现降级产物特征(带 md 行前缀、140 字处截断、纯引用行收录),噪声直接进入聚类输入。",
+      "evidence": [
+        "orchestrate_v2.py:189-207 逐行扫描含文件名引用的行,claim = line.strip()[:140],按关键词猜 severity",
+        "findings-dsv4pro.json F15 claim 为\"- 事故命令原文:task.md:7。\"(纯证据引用行被当 finding); F1 claim 结尾停在\"按进\"二字,是 140 字符截断特征",
+        "findings-kimi-k3.json F1 claim 为\"材料范围:任务书指定材料全部实读……\"(材料说明被当 finding)",
+        "findings-dsv4pro.json 无一份来自模型自觉落盘:review-dsv4pro.md 全文无 json 代码块,findings 文件 id 连续 F1-F15、target 为裸文件名,与降级路径生成逻辑完全吻合",
+        "issue-registry.json I05 以 P0 进入少数派账本,实质是 kimi-k3 提出的\"写进 AGENTS.md 的纪律\"修复建议而非缺陷发现"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F7",
+      "target": "orchestrate_v2.py:350-379 (stage_plan_v2) 与 156-168 (extract 优先级)",
+      "kind": "bug",
+      "claim": "stage_plan_v2 重跑时不清理旧 findings-<model>.json,而 extract_findings_json 优先读 findings json、读不到才从 md 提取;某轮模型未落 json 而上轮落过时,merge 会静默消费上一轮旧数据,与当轮 review 文本脱节。中断重跑幂等性不成立。",
+      "evidence": [
+        "orchestrate_v2.py:350-379 stage_plan_v2 全文无删除旧 findings-*.json 的逻辑",
+        "orchestrate_v2.py:158-164 json_path 存在且非空即直接 json.load 返回,不比对时间戳或内容新旧"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F8",
+      "target": "SKILL.md:61-62,78 对照 orchestrate_v2.py:46-63,472 (MODE_PRESETS 与 derangement 触发条件)",
+      "kind": "spec_mismatch",
+      "claim": "文档三处与实现不符:audit 声称\"10-12 次调用\"而上界 5+5=10 不可达;声称含\"关键弦质询\"而代码无对应实现;行 78 指引读者查看的 REVIEW_PROMPT 在 v2 脚本中不存在(仅有 PLAN_PROMPT_V2 与 CHALLENGE_PROMPT_V2)。",
+      "evidence": [
+        "SKILL.md:62 \"共 10–12 次调用\"对照 MODE_PRESETS audit 5 模型 + max_challenges 5 = 至多 10 次",
+        "SKILL.md:62 \"关键弦质询\"在 orchestrate_v2.py 全文无对应类型,仅有 contradiction/singleton_audit/derangement_peer 三类",
+        "SKILL.md:78 \"见脚本内的 PLAN_PROMPT 与 REVIEW_PROMPT\"对照 orchestrate_v2.py:68,102 常量名为 PLAN_PROMPT_V2、CHALLENGE_PROMPT_V2"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F9",
+      "target": "orchestrate_v2.py:567-648 (stage_synthesize_v2)",
+      "kind": "suggestion",
+      "claim": "质询答复的四步法内容(提取增量、核验反例、分歧归因)在 synthesize 中除三个关键词 grep 外全部丢弃,质询结果不回写 issue-registry,consensus-report 不含任何质询内容;三次 LLM 调用的产出仅化为两个计数,challenge 阶段的价值未进入最终产物。",
+      "evidence": [
+        "orchestrate_v2.py:588-594 对答复全文只做 CONCEDE/REFUTED/UNRESOLVED 子串匹配,存前 300 字符 excerpt",
+        "orchestrate_v2.py:614-645 consensus-report 只写 registry 数据与账本,无 challenge_replies 内容引用",
+        "orchestrate_v2.py:598-608 账本来源仅 registry.get(\"singletons\"),质询答复中的 UNRESOLVED 最小实验建议未被消费"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F10",
+      "target": "orchestrate_v2.py:142-153 (wait_for_outputs)",
+      "kind": "perf",
+      "claim": "部分失败快速判定要求所有进程全部退出(procs_ok and not files_ok)才返回 False;五个模型中一个卡死、其余四个早早完成时,编排器白等满 40 分钟 deadline,无法提前止损。",
+      "evidence": [
+        "orchestrate_v2.py:150 if procs_ok and not files_ok: return False,procs_ok = all(p.poll() is not None for p in procs)",
+        "orchestrate_v2.py:144-153 循环至 deadline 才返回 False,无\"任一进程退出且无产物即失败\"的判定"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F11",
+      "target": "tests/test_cross_review_five_v2.py (全文 6 项测试)",
+      "kind": "suggestion",
+      "claim": "测试覆盖缺口:compute_complementarity_matrix 零测试;cluster_issues 矛盾判定路径零测试(用例刻意避开含\"不/错\"字的 claim);降级启发路径零测试;synthesize 表态解析零测试;wait_for_outputs 超时与部分失败零测试;重跑幂等性零测试;normalize_target 绝对对相对路径零测试。端到端测试断言仅检查文件存在与子串,不断言账本内容正确性。",
+      "evidence": [
+        "test_cross_review_five_v2.py:16-28,31-35,38-54,57-93,96-129,132-177 六个测试函数覆盖范围如上",
+        "test_cross_review_five_v2.py:172-177 e2e 断言仅 (stream/\"unresolved-ledger.json\").exists() 与 \"CONCEDE\" in report_text 或 \"认同/认输\" in report_text,未断言 crypto.py P0 单例进入账本",
+        "test_cross_review_five_v2.py:62-63 的 claim \"资源未释放\"与\"资源句柄泄漏\"均无\"不/错\"字,矛盾分支无法被该测试触发"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F12",
+      "target": "orchestrate_v2.py:337 对照 257",
+      "kind": "bug",
+      "claim": "cluster_issues 行 337 取最高 severity 时字典键未做 upper 归一,而 compute_complementarity_matrix 行 257 做了 .upper();模型给出小写 \"p0\" 时聚类侧静默失分。验证实测:小写 \"p0\" 与 \"P2\" 同 target,聚类取到的 severity 为 P2。",
+      "evidence": [
+        "orchestrate_v2.py:337 max((...), key=lambda s: {\"P0\": 3, \"P1\": 2, \"P2\": 1}.get(s, 0)),无 upper",
+        "orchestrate_v2.py:257 sev = item.get(\"severity\", \"P2\").upper(),有 upper",
+        "验证实验六: findings 中 severity 为 \"p0\" 与 \"P2\" 同 target 时,cluster 输出 severity 为 \"P2\""
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F13",
+      "target": "orchestrate_v2.py:415-469 (质询配额分配) 对照 unresolved-ledger.json",
+      "kind": "suggestion",
+      "claim": "standard 模式质询配额被 contradictions 优先占满,P0/P1 单例可能一组质询都得不到即直接进入少数派账本;本次 I05(P0)未经任何 singleton_audit 质询即入账,而该项实质是修复建议而非缺陷发现,账本保护了噪声。",
+      "evidence": [
+        "orchestrate_v2.py:416-440 contradictions 优先占满 max_challenges 后,442-469 的单例质询循环因 len(challenges) >= max_challenges 跳过",
+        "challenge-plan.json 三组质询 C01/C02/C03 类型全部为 contradiction,singleton_audit 为 0 组",
+        "unresolved-ledger.json I05 claim 为\"写进 AGENTS.md 的硬纪律……\"修复建议文本,severity P0"
+      ],
+      "severity": "P2",
+      "blocking": false
+    }
+  ],
+  "unknowns": [
+    "approval_detection.py、tools/approval.py、main.py 本体不在指定材料内,五位评审者对其中行号(238、116、278、358、448-460、1474/1476 等)的引用我无法直接核实;五家引用行号高度一致且互相独立给出,交叉印证可信度较高,但仍属间接证据",
+    "五份 findings-*.json 是否全部由降级路径生成,由内容特征(- 前缀、140 字截断、纯引用行收录)高置信推断,无法排除模型故意模仿降级格式的可能",
+    "challenge-reply 对\"kill -9 -1 归属危险层\"的 REFUTED 是否技术成立,取决于 approval_detection.py 116 行硬线正则的真实语义,该文件超出指定材料范围",
+    "本次 self-review 运行中除我之外四位评审者的产出文件,按任务书独立评审纪律未予阅读,无法交叉比对评审质量"
+  ],
+  "assumptions": [
+    "假设仓库中的 orchestrate_v2.py 即本次运行所用版本:产物时间戳(2026-09-17 16:12)与文件一致,且用该文件重放 cluster_issues 得到的 2/6/8 计数与 issue-registry.json 完全吻合",
+    "假设 Windows 上 Python 3.11 默认哈希随机化开启(PYTHONHASHSEED 未固定),raised_by 的 set 去重顺序跨进程不稳定",
+    "假设 findings JSON 规范中 blocking: true 的语义为\"该缺陷修复前不宜用于生产评审\"",
+    "假设验证脚本的只读重放不构成对指定材料的修改,符合任务书只读纪律(脚本存放于系统临时目录,运行不落盘任何产物)"
+  ]
+}

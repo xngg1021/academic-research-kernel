@@ -1,0 +1,28 @@
+[
+  {
+    "issue_id": "I05",
+    "target": "agents.md",
+    "raised_by": [
+      "kimi-k3"
+    ],
+    "claim": "1. 写进 AGENTS.md 的硬纪律:清理 agent 自己起的子进程一律按 PID 或进程树(taskkill /PID <pid> /T /F;PowerShell 侧用 Get-CimInstance Win32_Process 按 CommandLine 或 Pare",
+    "evidence": [
+      "AGENTS.md"
+    ],
+    "severity": "P0",
+    "reason": "少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)"
+  },
+  {
+    "issue_id": "I11",
+    "target": "cli/.py",
+    "raised_by": [
+      "gemini38flash"
+    ],
+    "claim": "`(r'\\b(pkill|killall)\\b.*\\b(hermes|gateway|cli\\.py)\\b', \"kill hermes/gateway process (self-termination)\")`",
+    "evidence": [
+      "cli\\.py"
+    ],
+    "severity": "P0",
+    "reason": "少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)"
+  }
+]

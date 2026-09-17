@@ -1,0 +1,17 @@
+{
+  "title": "对未覆盖单例高危断言的独立核验: orchestrate_v2.py:326-332 (contradiction 判定)",
+  "target": "orchestrate_v2.py:326-332 (contradiction 判定)",
+  "proposals": [
+    {
+      "source_alias": "Proposal-A",
+      "claim": "矛盾启发式(kinds 不同或 claim 含“不/错”字)把语义一致的意见标为对立,生产 run 的 8 条 contradictions 无一条是断言级对立;伪矛盾占满 max_challenges=3 配额,导致 P0 高危单例 I05 未获质询。",
+      "evidence": [
+        "orchestrate_v2.py:328-331 is_conflict 实现",
+        "issue-registry.json I01 五模型同向确认 Windows 规则缺口仍标 contradiction;I02/I04 同理",
+        "challenge-plan.json C01-C03 全部为 contradiction 类型,singleton_audit 轮空",
+        "challenge-reply-C01-gemini38flash.md:19-26 真正分歧存在于子断言级(kill -9 -1 层级归属),target 级聚类不可见"
+      ],
+      "severity": "P0"
+    }
+  ]
+}

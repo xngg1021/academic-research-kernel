@@ -1,0 +1,171 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "approval_detection.py",
+      "kind": "observation",
+      "claim": "approval_detection.py:238 有专门规则:",
+      "evidence": [
+        "approval_detection.py:238"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F2",
+      "target": "test_approval_windows.py",
+      "kind": "bug",
+      "claim": "事故命令 `powershell -Command \"Get-Process python | Stop-Process -Force\"` 中,\"Stop-Process -Force\"子串满足 `\\bstop-process\\b` 加 `\\s-force`(检测用 re.IGN",
+      "evidence": [
+        "test_approval_windows.py:38"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "其二,POSIX 侧的无差别杀有更细的分级先例可参照:approval_detection.py:116 的硬线规则 `kill -1` 单列(硬线,永不可放行),:278-284 对 pkill -9、killall -KILL、killall -r 单列。而 Windows ",
+      "evidence": [
+        "approval_detection.py:116"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "approval.py",
+      "kind": "observation",
+      "claim": "approval.py:326-332 的 is_approved 显示,放行按 (session_key, pattern_key) 二元组记账:会话内批准过某个 pattern_key,本会话内所有命中同一 pattern_key 的命令都不再提示。_persist_choi",
+      "evidence": [
+        "approval.py:326-332"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F5",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "不存在隔离,也不存在归属识别。这台机器上 CLI agent 的 terminal 与三个 gateway worker 同跑在一个 Windows 用户下,agent 的子进程与网关 worker 同为 python.exe。approval_detection.py 的全部规",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F6",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "没有。approval_detection.py 是纯命令分类(文件头注释 :3-4 自述),产出只有一个 description 字符串如 \"force kill processes (Stop-Process -Force)\",不含后果范围。terminal 工具描述层面(本",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F7",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "目标绑定错误(主因):目标是\"停掉我起的扫描子进程\"。这批子进程是它自己 fork 的,git cat-file 每次调用都是它在 scan_history.py:44 的 subprocess.run 里亲手创建的。要停自己创建的进程,PID 是可得的(改脚本记录 PID 即可",
+      "evidence": [
+        "scan_history.py:44"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F8",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "还有一层前置失误值得记:scan_history.py 本身。:75-79 对每个 blob 起一个 git 子进程,大仓库几千 blob 就是几千次进程创建,Windows 上进程创建成本高,这直接导致了 420 秒超时,把 agent 逼进了\"必须清理\"的处境。脚本写法先埋雷",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F9",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "1. 给 `Get-Process <name> | Stop-Process -Force` 这类\"管道全量强杀\"形态单列一档更重的规则(可参照 POSIX 侧 killall -r 的先例,approval_detection.py:284),其 pattern_key 与单",
+      "evidence": [
+        "approval_detection.py:284"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F10",
+      "target": "main.py",
+      "kind": "bug",
+      "claim": "2. 把 self-termination 保护(:358)扩展出 Windows 形态:检测 `\\bstop-process\\b[^\\n]*\\bpython\\b` 或 taskkill /IM python.exe 时,先枚举本机是否有命令行含 gateway run 的 Py",
+      "evidence": [
+        "main.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F11",
+      "target": "scan_history.py",
+      "kind": "bug",
+      "claim": "2. scan_history.py 这类自写脚本的纪律:批量外部命令调用必须用 --batch 类流式接口(git cat-file --batch)或进程池上限,起进程数与 blob 数线性相等的脚本在评审阶段就应否决。本次事故里脚本缺陷是第一因,清理失控是第二因,只修第二因",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F12",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "- approval_detection.py:125(_RE_FLAGS 含 IGNORECASE)、:237-238(taskkill/Stop-Process -Force 规则)、:88-121(HARDLINE_PATTERNS 无 Stop-Process)、:116",
+      "evidence": [
+        "approval_detection.py:125"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F13",
+      "target": "test_approval_windows.py",
+      "kind": "observation",
+      "claim": "- test_approval_windows.py:38(\"Stop-Process -Force -Name explorer\" 必须提示)、:65-66(无强制标志不提示)。",
+      "evidence": [
+        "test_approval_windows.py:38"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F14",
+      "target": "approval.py",
+      "kind": "observation",
+      "claim": "- approval.py:326-332(is_approved 的 session+pattern 二元组)、:356-368(_persist_choice 的 session/always 记账)、:342(approve_permanent)。",
+      "evidence": [
+        "approval.py:326-332"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F15",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "- scan_history.py:44(blob_lines 每个 blob 一次 subprocess.run)、:75-79(逐 blob 循环调用)。",
+      "evidence": [
+        "scan_history.py:44"
+      ],
+      "severity": "P2",
+      "blocking": false
+    }
+  ],
+  "unknowns": [],
+  "assumptions": []
+}

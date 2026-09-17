@@ -1,0 +1,76 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "orchestrate_v2.py:311-344",
+      "kind": "bug",
+      "claim": "cluster_issues 聚类逻辑未能对模型身份去重，单模型在同一目标的多条发现被误判为跨模型共识。",
+      "evidence": [
+        "issue-registry.json 确凿记录了 I12（仅由 gemini38flash 提出）和 I14（仅由 gemini31pro 提出）被错误归入 consensus 分组。"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F2",
+      "target": "orchestrate_v2.py:598-608",
+      "kind": "bug",
+      "claim": "少数派证据保护逻辑未过滤已证伪项，被成功反驳的高危单例仍会被强制保留。",
+      "evidence": [
+        "stage_synthesize_v2 函数在遍历 registry.get(\"singletons\", []) 时，直接判断 severity 和 evidence 附加到未决账本，缺乏针对 refuted_items 的拦截排查。"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "orchestrate_v2.py:328-331",
+      "kind": "spec_mismatch",
+      "claim": "is_conflict 冲突判定规则易造成假阳性误判，包含“错”字的共识表述会被错误标记为矛盾。",
+      "evidence": [
+        "代码使用 any(\"不\" in ... or \"错\" in ...) 会无差别匹配“代码写错了”等指出缺陷的肯定性共识断言。"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "orchestrate_v2.py:215-222",
+      "kind": "bug",
+      "claim": "normalize_target 未统一绝对与相对路径，导致同文件目标被拆分为多个独立议题。",
+      "evidence": [
+        "issue-registry.json 中 I14 (绝对路径) 与 I01 (相对路径) 指向同一 approval_detection.py 文件，却在图中形成了两个独立的顶点。"
+      ],
+      "severity": "P1",
+      "blocking": true
+    },
+    {
+      "id": "F5",
+      "target": "orchestrate_v2.py:150-151",
+      "kind": "robustness",
+      "claim": "wait_for_outputs 缺乏局部容错机制，任一子进程缺失产出会导致后续链路全盘中断。",
+      "evidence": [
+        "当 procs_ok and not files_ok 成立时直接 return False，无视其余正常完成的审查结果。"
+      ],
+      "severity": "P1",
+      "blocking": false
+    },
+    {
+      "id": "F6",
+      "target": "SKILL.md",
+      "kind": "spec_mismatch",
+      "claim": "SKILL.md 关于 audit 模式的 API 调用消耗估计与代码实际硬编码上限冲突。",
+      "evidence": [
+        "文档声称 audit 模式消耗 10-12 次调用，但代码配置 max_challenges 值为 5，因此总调用硬上限被封顶在 10，无法触达 11-12 的标称区间。"
+      ],
+      "severity": "P2",
+      "blocking": false
+    }
+  ],
+  "unknowns": [
+    "模型在 challenge 阶段输出 REFUTED/CONCEDE 等表态的具体格式容错边界（例如是否混杂了 markdown 无序列表或外层引号）未经大规模实盘数据验证，纯文本模糊匹配可能存在漏判隐患。"
+  ],
+  "assumptions": [
+    "假设各个子模型产出的 JSON 结构能够被 `extract_findings_json` 稳定解析（未遭上下文截断破坏），以便聚类逻辑获取完整可用的底层断言数据。"
+  ]
+}

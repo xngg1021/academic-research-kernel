@@ -1,0 +1,166 @@
+# 五人交叉评审合议报告 (v2 Sparse Deliberation)
+
+- 合议生成时间: 2026-09-17 17:06:41
+- 评审模式: standard
+- 模型阵容: kimi-k3, dsv4pro, glm53, gemini38flash, gemini31pro
+- 共识项 (Consensus): 0 项
+- 质询认同/认输 (Conceded): 3 项
+- 质询证伪驳回 (Refuted): 0 项
+- 未决保护账本 (Unresolved Ledger): 25 项
+
+## 一、高度共识项 (Verified Consensus)
+
+（无全员一致项）
+
+## 二、未决项与少数派保护账本 (Unresolved Ledger)
+
+### `orchestrate_v2.py:310-345 (cluster_issues)` [P0]
+- 来源: ['kimi-k3']
+- 断言: 聚类按 findings 条数而非去重模型数判定多模型状态,同一模型对同一 target 的多条 findings 被错误标为 consensus 或 contradiction,最终报告将单模型观点呈现为“高度共识项 (Verified Consensus)”。
+- 证据: `orchestrate_v2.py:311 len(items)==1 与第 325 行注释“2 个及以上模型命中同一 target”不符, issue-registry.json I12/I14(state=consensus,raised_by 单模型),I06/I08/I16(state=contradiction,raised_by 单模型), consensus-report.md:13-22 I12、I14 列入“高度共识项”且提出方各仅一个模型, 探针复现:单模型双 findings 同 target -> [('a.py', ['m1'], 'consensus')]`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:326-332 (contradiction 判定)` [P0]
+- 来源: ['kimi-k3']
+- 断言: 矛盾启发式(kinds 不同或 claim 含“不/错”字)把语义一致的意见标为对立,生产 run 的 8 条 contradictions 无一条是断言级对立;伪矛盾占满 max_challenges=3 配额,导致 P0 高危单例 I05 未获质询。
+- 证据: `orchestrate_v2.py:328-331 is_conflict 实现, issue-registry.json I01 五模型同向确认 Windows 规则缺口仍标 contradiction;I02/I04 同理, challenge-plan.json C01-C03 全部为 contradiction 类型,singleton_audit 轮空, challenge-reply-C01-gemini38flash.md:19-26 真正分歧存在于子断言级(kill -9 -1 层级归属),target 级聚类不可见`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:215-222 (normalize_target) 与 192 (fallback 正则)` [P1]
+- 来源: ['kimi-k3']
+- 断言: 目标归一化不做路径等价归一且 fallback 正则不匹配盘符冒号,同一文件裂变为多个 target,正则片段被误认为文件路径,产生幽灵 target 并撕裂真共识。
+- 证据: `探针:normalize_target('cli\\.py') -> 'cli/.py', issue-registry.json:approval_detection.py 裂为 3 个 target(I01/I13/I14),test_approval_windows.py 3 个,scan_history.py 与 approval.py 各 2 个;16 issue 按 basename 归并仅 10 个真实文件, unresolved-ledger.json 与 consensus-report.md:32-36 幽灵路径 cli/.py 以 P0 入账并入报告`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:186-212 (extract_findings_json 启发式兜底) 与 158-164` [P1]
+- 来源: ['kimi-k3']
+- 断言: 结构化 findings 层在生产中 100% 由正则启发式合成(该 run 的 prompt 与 task.md 均未要求结构化产出,五模型无一补写),兜底把流程说明与规则引用行抓成 finding;兜底落盘的 sidecar 与模型亲笔 JSON 无来源区分。
+- 证据: `stop-process-20260917/prompt-kimi-k3.txt 全文 11 行为 v1 PLAN_PROMPT,无 findings/JSON 字样;task.md 检索同样为零, review-*.md 检索 findings/severity/代码围栏零命中, 五份 findings-*.json 呈现同一兜底签名:kind 仅 bug/observation、claim 第 140 字符硬截断(如 'fork bom'、'定向 PI')、evidence 单定位符、unknowns/assumptions 全空, findings-kimi-k3.json F1“材料范围……”流程说明成为 P2 finding 并混入 C01 bundle Proposal-1;findings-gemini38flash.json F9 规则引用行成为 P0, orchestrate_v2.py:180-181、210-211 兜底落盘无任何 provenance 标记`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:419-421 (质询者选取) 与 challenge bundle 生成` [P1]
+- 来源: ['kimi-k3']
+- 断言: 匿名质询不匿名:质询者恒为争议当事人(注释承诺的回避逻辑未实现且 raised[0] 依赖不稳定的集合序),bundle 提案顺序与 models 阵容顺序逐项对齐可直接解码作者,claim 保留第一人称叙事指纹。
+- 证据: `challenge-plan.json:C01/C02/C03 reviewer 均在各自 issue raised_by 内(self_review=True), challenge-reply-C01-gemini38flash.md:13“已在我方独立评审中完成覆盖”——质询者认出自己文字, C01 bundle 28 提案按 kimi-k3×9、dsv4pro×6、glm53×6、gemini38flash×4、gemini31pro×3 排列,与 MODE_PRESETS standard models 顺序一致, 探针:四种 PYTHONHASHSEED 下 list(raised_set)[0] 出现三种取值`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:589-594 (表态解析 elif 链)` [P1]
+- 来源: ['kimi-k3']
+- 断言: 表态按文件级单标签 elif 归类,与提示词要求的逐断言表态粒度错配;生产 run 中含 CONCEDE+REFUTED+UNRESOLVED 三种表态的答复只被记为 Conceded,最有价值的 REFUTED 纠偏与 UNRESOLVED 项在报告与账本中消失。
+- 证据: `challenge-reply-C01-gemini38flash.md:43/48/52 三种表态并存, consensus-report.md:7-8 Conceded: 1、Refuted: 0;ledger 仅含两条单例保护项, orchestrate_v2.py:589 'CONCEDE' in text 子串匹配,“我方不 CONCEDE”亦命中`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:596-608 (少数派证据保护)` [P1]
+- 来源: ['kimi-k3']
+- 断言: 保护实现与注释承诺不符:注释限定“未被质询直接证伪”,实现无条件收录全部带非空 evidence 的 P0/P1 单例,无证据质量门槛,亦不检查质询驳回结果;幽灵路径因此获得机制背书。
+- 证据: `orchestrate_v2.py:596-597 注释 vs 598-608 无条件 append, unresolved-ledger.json I11 cli/.py P0(fallback 噪声)被保护入账, consensus-report.md:32-36 同一幽灵项呈现于终报`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `skill.md:60-62 与 orchestrate_v2.py:46-63、472-492 (三档模式拓扑)` [P1]
+- 来源: ['kimi-k3']
+- 断言: 文档声明的调用次数与代码拓扑不符:standard 实为 5-8 次(文档 7-8),audit 实为 5-10 次(文档 10-12),错排匹配与矛盾、单例质询共享 max_challenges=5 配额而非文档暗示的叠加;“压降 60%+”无测量对应物。
+- 证据: `探针按 MODE_PRESETS 推算:economy 3-4、standard 5-8、audit 5-10, SKILL.md:60-62 次数声明原文, orchestrate_v2.py:472-492 derangement 仅在 len(challenges)<max_challenges 时补充,共用配额`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:614-645 (stage_synthesize_v2 报告生成)` [P1]
+- 来源: ['kimi-k3']
+- 断言: 最终报告只写共识与未决账本两节,矛盾项(含真五模型共识 I01)与质询答复内容整体缺席,conceded/refuted 仅以头部计数出现;报告对读者呈现的是系统性变形的评审结论。
+- 证据: `orchestrate_v2.py:626-645 仅 consensus 与 unresolved_ledger 两节, consensus-report.md 全文无矛盾/分歧章节(探针检索确认),8 条 contradictions 无一呈现, C01 答复的 CONCEDE/REFUTED 细节在报告中无对应章节`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:577-581 (synthesize 对账缺失)、142-153 (wait_for_outputs)、158-164 (陈旧 sidecar 优先)` [P1]
+- 来源: ['kimi-k3']
+- 断言: 流程容错链薄弱:synthesize 不核对质询计划与答复的对应关系(3 计划 1 答复静默通过);单模型失败即整阶段判负且无降级续跑;重跑时旧 sidecar 无条件压过新产出,幂等性不成立;合法但非对象的 sidecar JSON 致下游 AttributeError。
+- 证据: `challenge-plan.json 三项 vs 目录仅 challenge-reply-C01-gemini38flash.md 一份,报告无缺失提示, orchestrate_v2.py:722-723 all 模式 plan 失败即 return 1, orchestrate_v2.py:158-164 sidecar 存在即直接采用,不重提取, 探针:json 数组 sidecar 下游触发 AttributeError: 'list' object has no attribute 'get'`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:326-332 (cluster_issues 矛盾判定), 佐证产物 issue-registry.json i01/i04/i12/i14` [P0]
+- 来源: ['dsv4pro']
+- 断言: cluster_issues 用 claim 是否含"不"字或"错"字及 kinds 异同判定 contradiction,中文 claim 极常见这两个字,导致全员共识被判矛盾、单模型自聚被判共识,Consensus/Contradiction 标签系统性失真。
+- 证据: `orchestrate_v2.py:328-331 判定式 len(kinds) > 1 or any("不" in claim or "错" in claim), 验证实验: 两模型同 kind(bug)、实质相同,claim 含一个"不"字即被误判 contradiction, 重放实测: I01 五模型全部指向 approval_detection.py、28 条 claim 中 12 条含"不/错",被标 contradiction; I04 四模型一致认定目标绑定错误,同样被标 contradiction, issue-registry.json: I12 与 I14 的 raised_by 各只有 1 个模型(自身多条 findings 撞同 target),却被标为 consensus,consensus-report.md 称之为"高度共识项 (Verified Consensus)", tests/test_cross_review_five_v2.py:57-93 test_cluster_issues 的两个 claim 均不含"不/错"字,矛盾路径零断言`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:336 (raised_by 用 set 去重)、orchestrate_v2.py:420-421 (reviewer = raised[0]); 佐证产物 challenge-plan.json c01/c03` [P1]
+- 来源: ['dsv4pro']
+- 断言: 矛盾质询的 reviewer 取 raised_by[0],即争议第一提出者;本次三组质询中 C01 与 C03 的 reviewer 均为 gemini38flash,且 bundle 内含其本人 findings 原文,匿名质询在制度层面失效。raised_by 由 set 去重生成,顺序受哈希随机化影响,重跑 merge 时质询分配不确定,幂等性不成立。
+- 证据: `orchestrate_v2.py:336 raised_by = list({x["model"] for x in items}),set 迭代顺序跨进程不稳定, orchestrate_v2.py:420-421 reviewer = raised[0] if len(raised) > 0 else model_keys[0], challenge-plan.json: C01 reviewer=gemini38flash,其 proposals 第 22-25 条与 findings-gemini38flash.json F2/F3/F6/F8 的 claim 文本一致; C03 reviewer=gemini38flash,proposals 第 2-4 条同样出自其本人 findings, challenge-reply-C01-gemini38flash.md:13 写明"已在我方独立评审中完成覆盖,不属于新增量",证明质询者识别出包内观点来自自己`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:588-594 (synthesize 表态解析 if-elif 链); 佐证产物 consensus-report.md:8 与 challenge-reply-c01-gemini38flash.md:43,48,52` [P1]
+- 来源: ['dsv4pro']
+- 断言: synthesize 对质询答复的表态解析用 if-elif 链,一个文件先命中 CONCEDE 后同文件的 REFUTED 与 UNRESOLVED 被整体丢弃。四步法提示词要求逐断言表态,混合表态是常态,本次 C01 答复同时含三种标记,报告显示 Refuted: 0,两条 REFUTED 与一条 UNRESOLVED 全部丢失。
+- 证据: `orchestrate_v2.py:588-594 if CONCEDE elif REFUTED elif UNRESOLVED 链式结构, challenge-reply-C01-gemini38flash.md:43 含【CONCEDE】、:48 含【REFUTED】、:52 含【UNRESOLVED_REQUIRES_CODE_VERIFICATION】, consensus-report.md:8 "质询证伪驳回 (Refuted): 0 项",与答复实际含 2 条 REFUTED 矛盾`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:596-608 (少数派保护逻辑)` [P1]
+- 来源: ['dsv4pro']
+- 断言: 少数派证据保护只检查 singleton 的 severity 与 evidence 非空,不检查该 singleton 是否已在质询阶段被证伪;被 REFUTED 的 P0/P1 单例仍会无条件进入 unresolved-ledger.json,"未被证伪"的保护条件在实现中退化为"存在即保护"。
+- 证据: `orchestrate_v2.py:598-599 for s in registry.get("singletons", []): if s.get("severity") in ("P0", "P1") and s.get("evidence"), orchestrate_v2.py:583-595 已解析出 refuted_items 列表,但 598-608 行没有任何与之求交集的逻辑, 本次运行无 singleton_audit 质询(unresolved-ledger.json 两项均未质询),缺陷未在本次实例中触发,由代码路径静态可证`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:215-222 (normalize_target); 佐证产物 issue-registry.json i01/i14、i04/i16` [P1]
+- 来源: ['dsv4pro']
+- 断言: normalize_target 不统一绝对路径与裸文件名,同一实体分裂为多个 cluster,产生假单例与假共识;本次运行中同一 approval_detection.py 被拆成 I01(矛盾)与 I14(单模型"共识"),scan_history.py 被拆成 I04 与 I16。
+- 证据: `orchestrate_v2.py:219-222 仅做 replace("\\","/")、lower、截行号,无 basename 或绝对化处理, 验证实测: "<HERMES_HOME>/hermes-agent/tools/approval_detection.py" 与 "approval_detection.py" 归一化后不相等, issue-registry.json: I01 target=approval_detection.py(五模型)与 I14 target=<HERMES_HOME>/hermes-agent/tools/approval_detection.py(仅 gemini31pro)并存; I04 与 I16 同型分裂, findings-gemini31pro.json F8/F9 用绝对路径,其 F3/F4/F6 用裸文件名,同一模型同一主题被拆散`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:186-212 (extract_findings_json 降级启发路径); 佐证产物五份 findings-*.json` [P1]
+- 来源: ['dsv4pro']
+- 断言: 降级提取路径把证据引用行、修复建议行、材料说明行一律当作 finding,claim 硬截断 140 字符;本次运行五个模型无一自觉落盘 findings JSON,五份 findings 全部呈现降级产物特征(带 md 行前缀、140 字处截断、纯引用行收录),噪声直接进入聚类输入。
+- 证据: `orchestrate_v2.py:189-207 逐行扫描含文件名引用的行,claim = line.strip()[:140],按关键词猜 severity, findings-dsv4pro.json F15 claim 为"- 事故命令原文:task.md:7。"(纯证据引用行被当 finding); F1 claim 结尾停在"按进"二字,是 140 字符截断特征, findings-kimi-k3.json F1 claim 为"材料范围:任务书指定材料全部实读……"(材料说明被当 finding), findings-dsv4pro.json 无一份来自模型自觉落盘:review-dsv4pro.md 全文无 json 代码块,findings 文件 id 连续 F1-F15、target 为裸文件名,与降级路径生成逻辑完全吻合, issue-registry.json I05 以 P0 进入少数派账本,实质是 kimi-k3 提出的"写进 AGENTS.md 的纪律"修复建议而非缺陷发现`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:293-347 cluster_issues` [P0]
+- 来源: ['glm53']
+- 断言: 聚类单元是条目而非模型，同一模型对同一 target 的多条 finding 会被判为跨模型 consensus/contradiction，state 判定从未校验 raised_by 是否含多个不同模型。
+- 证据: `orchestrate_v2.py:310-311 仅按 len(items)==1 分单例/多例, stop-process issue-registry.json: I14 标签 consensus 但 raised_by 仅 ['gemini31pro'] 且三条 claims 全为 gemini31pro, stop-process issue-registry.json: I06 标签 contradiction 但 raised_by 仅 ['dsv4pro'], stop-process issue-registry.json: I12 标签 consensus 但 raised_by 仅 ['gemini38flash'], consensus-report.md:18-22 将 I14 列为 'Verified Consensus' 实为单模型观点`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:328-331 cluster_issues 矛盾判定启发式` [P0]
+- 来源: ['glm53']
+- 断言: 用 kind 集合大于 1 或 claim 含『不』『错』二字判矛盾，中文技术评述几乎必然含『不』，导致大量同向观点被误判为矛盾并涌入质询包。
+- 证据: `orchestrate_v2.py:328-331 is_conflict 判定原文, stop-process challenge-plan.json: C01 的 I01 被判 contradiction 且塞入 28 条 Proposal，而五方 claim 实际高度同向（均指向 approval_detection.py:238 规则粒度）`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:215-222 normalize_target` [P0]
+- 来源: ['glm53']
+- 断言: 归一化只去行号与小写化路径，不折叠绝对路径与相对路径，同一文件以不同路径书写会被聚成多个独立 issue，制造伪单例并稀释真实共识簇。
+- 证据: `orchestrate_v2.py:219-222 无路径折叠逻辑, stop-process issue-registry.json: approval_detection.py 同时出现为 I01（相对名）与 I14（<USER_HOME>/.../approval_detection.py）, stop-process issue-registry.json: 同一测试文件出现三个 target——I02 test_approval_windows.py、I09 tests/tools/test_approval_windows.py、I15 绝对全路径`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:577-594 stage_synthesize_v2 质询对账与表态解析` [P0]
+- 来源: ['glm53']
+- 断言: synthesize 只 glob 已存在的答复文件、不与 challenge-plan 对账，缺席的质询在报告中不可见；且 CONCEDE/REFUTED 按整文件 if/elif 归一类，混合表态的答复被压成单一类别。
+- 证据: `orchestrate_v2.py:577-581 仅 glob challenge-reply-*.md, orchestrate_v2.py:588-594 文件级 if/elif 解析, stop-process challenge-plan.json 规划 C01/C02/C03 三组，目录仅存在 challenge-reply-C01-gemini38flash.md 一份答复, challenge-reply-C01-gemini38flash.md:43/48/52 同一文件含 CONCEDE、REFUTED、UNRESOLVED 三种表态, consensus-report.md:8 显示 Conceded 1、Refuted 0，与答复实际内容不符`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:186-212 extract_findings_json 启发式降级路径` [P0]
+- 来源: ['glm53']
+- 断言: fallback 启发式把含文件名引用的任意行截前 140 字符当 claim、kind 只赋 bug/observation，产物为残句；该路径在 stop-process 真实运行中承载了大量 findings 并直接污染 registry 与未决账本。
+- 证据: `orchestrate_v2.py:203 claim 取 line.strip()[:140], orchestrate_v2.py:202 kind 赋 'observation'（PLAN_PROMPT_V2 第 83 行枚举中不存在该值）, findings-glm53.json: F1 claim 为 'approval_detection.py:238 有专门规则:'，多条 claim 在 140 字符处截断成半句, unresolved-ledger.json: I11 target 为正则误捕的伪文件名 'cli/.py'，claim 为裸正则字面量，仍以 P0+blocking 进入账本`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:419-421 contradiction 质询 reviewer 选取` [P1]
+- 来源: ['glm53']
+- 断言: 矛盾质询的 reviewer 直接取 raised[0]，即被审断言的作者本人，匿名性对质询者不成立并引入自证偏置；同时 claim 原文逐字进 bundle，跨模型文风可推断身份。
+- 证据: `orchestrate_v2.py:421 reviewer = raised[0], stop-process challenge-plan.json: C01 reviewer 为 gemini38flash，而 issue-registry I01 的 claims 中含 gemini38flash 的原话, 质询子进程为全功能 hermes 会话，review-*.md 就在同一 stream 目录，无任何隔离机制阻止读取原文`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:596-608 少数派证据保护` [P1]
+- 来源: ['glm53']
+- 断言: 少数派保护只校验 evidence 列表非空，不校验定位符是否指向真实存在的文件或可解析路径，fallback 伪证据同样享受 P0 保护进入账本。
+- 证据: `orchestrate_v2.py:599 判定条件仅为 s.get('severity') in ('P0','P1') and s.get('evidence'), unresolved-ledger.json: I11 的 evidence 为 'cli\.py'（正则字面量片段），仍被保护入账`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `tests/test_cross_review_five_v2.py（全文件 6 项）` [P1]
+- 来源: ['glm53']
+- 断言: 测试遗漏了本次真实运行全部踩中的雷区：伪共识（无多模型断言）、路径混用聚类、fallback 启发式路径、混合表态解析、质询缺席对账、wait_for_outputs 超时分支。
+- 证据: `test_cluster_issues:57-93 的样例中各模型 target 互不重叠除 core.py（且为两模型），测不出单模型多条同 target 的伪共识, test_extract_findings_fallback_markdown:96-129 只测 markdown 代码块路径，未测 186-212 的行级启发式, test_merge_and_synthesize_end_to_end:132-177 的答复文件只含 CONCEDE，未覆盖混合表态与缺席对账`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+
+### `orchestrate_v2.py:174,187-212` [P1]
+- 来源: ['gemini38flash']
+- 断言: extract_findings_json 采用非贪婪正则匹配 JSON 块，遭遇嵌套大括号时解析崩溃，且降级机制依赖中文关键词硬编码截断并生成低质伪发现。
+- 证据: `orchestrate_v2.py:174 中正则 r'```(?:json)?\s*(\{[\s\S]*?\})\s*```' 在内部嵌套闭合括号处提前截断, orchestrate_v2.py:196-207 依据崩溃、误杀等字样强行切词构造 fallback findings`
+- 说明: 少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)
+

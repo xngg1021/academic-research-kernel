@@ -1,0 +1,171 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "approval_detection.py",
+      "kind": "observation",
+      "claim": "材料范围:任务书指定材料全部实读(approval_detection.py 全文 1482 行、test_approval_windows.py 全文 110 行、scan_history.py 全文 117 行、三处日志的指定时间窗切片);另附两条评审过程中对本机同一套部署的",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F2",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "- `approval_detection.py:238`:`(r'\\bstop-process\\b[^\\n]*\\s-force\\b', \"force kill processes (Stop-Process -Force)\")`。肇事命令 `powershell -Comman",
+      "evidence": [
+        "approval_detection.py:238"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "- hardline 档(`approval_detection.py:88-121`,不可豁免层)只有 POSIX 的 `kill -1`(116 行,\"kill all processes\")。通读全部 hardline 条目——mkfs、dd、块设备重定向、fork bom",
+      "evidence": [
+        "approval_detection.py:88-121"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "test_approval_windows.py",
+      "kind": "observation",
+      "claim": "- 测试侧:`test_approval_windows.py:38` 钉住的用例是 `Stop-Process -Force -Name explorer`(单进程);66 行的豁免用例是 `Stop-Process -Name notepad`(无 -Force)。全文件没有",
+      "evidence": [
+        "test_approval_windows.py:38"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F5",
+      "target": "approval_detection.py",
+      "kind": "observation",
+      "claim": "- detection 侧的键设计:`approval_detection.py:453-454` 注释说明批准条目按\"描述串与历史 regex 键\"双键存储,\"kept for backwards compatibility with stored allowlist/sess",
+      "evidence": [
+        "approval_detection.py:453-454"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F6",
+      "target": "tools/approval.py",
+      "kind": "observation",
+      "claim": "- 语义推断(批准状态的实现文件 tools/approval.py 不在指定材料内,此处如实标注推断边界):同一会话内,任一命令以某规则键获批后,后续命中同一规则键的命令不再提示。风险正出在键的粒度——规则键不区分半径。早先一次小半径的 Stop-Process -Force ",
+      "evidence": [
+        "tools/approval.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F7",
+      "target": "approval_detection.py",
+      "kind": "observation",
+      "claim": "- 框架自知无沙箱:`gateway-stdio.log`(<PROFILE_DAD>):664 启动警告明说 \"the terminal backend is 'local' (unsandboxed) ... runs as the host user with full terminal/fi",
+      "evidence": [
+        "approval_detection.py:52-54"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F8",
+      "target": "approval_detection.py",
+      "kind": "observation",
+      "claim": "- 检测层无归属概念:`approval_detection.py:1-4` 的 docstring 自述 \"Pure command classification ... no approval state, config reads, or prompting live he",
+      "evidence": [
+        "approval_detection.py:1-4"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F9",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "- 自毁保护的不对称:`approval_detection.py:358` 的 `(r'\\b(pkill|killall)\\b.*\\b(hermes|gateway|cli\\.py)\\b', \"kill hermes/gateway process (self-terminat",
+      "evidence": [
+        "approval_detection.py:358"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F10",
+      "target": "scan_history.py",
+      "kind": "bug",
+      "claim": "agent 对 Stop-Process -Force 的语义理解没有错——它要的就是强杀,命令也正确地执行了强杀。错的是\"杀谁\"。它要杀的对象是\"我的 scan_history.py 及其 git 子进程\",一个可按 PID、可按父子关系精确界定的集合;它实际作用的对象是\"本机",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F11",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "还有一层情境误判。scan_history.py 只在每个仓库之间打印进度(97 行,带 flush=True),blob 循环内部(75-89 行)没有任何输出;大仓库的静默窗口可以轻松超过单次 terminal 调用的 420 秒超时。\"长时间无输出\"被读成\"卡死\",而被跳过",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F12",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "1. 拆分并升档\"无差别杀进程\"规则。在 `approval_detection.py` 237-238 行附近新增独立规则,匹配 `Get-Process ... | Stop-Process` 管道形态与不带 -Id 的 `Stop-Process -Force -Name ",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F13",
+      "target": "AGENTS.md",
+      "kind": "bug",
+      "claim": "1. 写进 AGENTS.md 的硬纪律:清理 agent 自己起的子进程一律按 PID 或进程树(taskkill /PID <pid> /T /F;PowerShell 侧用 Get-CimInstance Win32_Process 按 CommandLine 或 Pare",
+      "evidence": [
+        "AGENTS.md"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F14",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "2. 重写 scan_history.py 的子进程模型:blob_lines(43-48 行)改为单个 `git cat-file --batch` 长驻进程顺序喂 sha,消除每 blob 一次进程启动;blob 循环内增加进度输出,与 97 行已有的 flush 打印接上;",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F15",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "1. 肇事命令命中危险档而非不可豁免档:`approval_detection.py:238`(stop-process -force 规则原文);对照 88-121 行 hardline 清单无 Windows 杀进程条目;实时观察——本机同一部署拦下含肇事命令原文的调用,返回",
+      "evidence": [
+        "approval_detection.py:238"
+      ],
+      "severity": "P0",
+      "blocking": true
+    }
+  ],
+  "unknowns": [],
+  "assumptions": []
+}

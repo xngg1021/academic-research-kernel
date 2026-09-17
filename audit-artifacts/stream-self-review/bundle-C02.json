@@ -1,0 +1,17 @@
+{
+  "title": "对未覆盖单例高危断言的独立核验: orchestrate_v2.py:310-345 (cluster_issues)",
+  "target": "orchestrate_v2.py:310-345 (cluster_issues)",
+  "proposals": [
+    {
+      "source_alias": "Proposal-A",
+      "claim": "聚类按 findings 条数而非去重模型数判定多模型状态,同一模型对同一 target 的多条 findings 被错误标为 consensus 或 contradiction,最终报告将单模型观点呈现为“高度共识项 (Verified Consensus)”。",
+      "evidence": [
+        "orchestrate_v2.py:311 len(items)==1 与第 325 行注释“2 个及以上模型命中同一 target”不符",
+        "issue-registry.json I12/I14(state=consensus,raised_by 单模型),I06/I08/I16(state=contradiction,raised_by 单模型)",
+        "consensus-report.md:13-22 I12、I14 列入“高度共识项”且提出方各仅一个模型",
+        "探针复现:单模型双 findings 同 target -> [('a.py', ['m1'], 'consensus')]"
+      ],
+      "severity": "P0"
+    }
+  ]
+}

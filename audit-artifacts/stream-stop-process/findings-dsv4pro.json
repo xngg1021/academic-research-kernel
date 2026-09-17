@@ -1,0 +1,171 @@
+{
+  "findings": [
+    {
+      "id": "F1",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "主因在模型:事故命令的目标绑定、后果枚举、工具语义三层全部出错,而且错得可以静态定位。agent 要杀的是\"自己起的扫描子进程\",可它自己写的 scan_history.py 起的子进程是 git cat-file,不是 python(scan_history.py:44)。按进",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F2",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "POSIX 侧分层完整。kill -1 在硬线层(approval_detection.py:116,\"kill all processes\"),不可绕过,连 --yolo 都不放行;kill -9 -1 在危险层(approval_detection.py:278);pkill",
+      "evidence": [
+        "approval_detection.py:116"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F3",
+      "target": "task.md",
+      "kind": "bug",
+      "claim": "事故命令 `powershell -Command \"Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force\"` 按规则顺序静态推导,命中第 238 行(正则 `\\bstop-process\\b",
+      "evidence": [
+        "task.md:17"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F4",
+      "target": "test_approval_windows.py",
+      "kind": "bug",
+      "claim": "关键缺口在范围识别。\"Stop-Process -Force -Name explorer\" 与 \"Get-Process python | Stop-Process -Force\" 在检测层是同一个 key、同一句描述、同一个严重级别。前者的后果是杀一个桌面程序,后者的后果是杀",
+      "evidence": [
+        "test_approval_windows.py:38"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F5",
+      "target": "approval_detection.py",
+      "kind": "observation",
+      "claim": "approval_detection.py 的模块 docstring 声明自己是纯分类模块,不存审批状态(第 2-4 行)。但第 448-460 行的 _PATTERN_KEY_ALIASES 机制暴露了审批系统的存储语义:审批条目按 pattern key(即规则描述)持久化",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F6",
+      "target": "task.md",
+      "kind": "bug",
+      "claim": "由此可以确定会话级放行的粒度:放行的是 pattern key,也就是命令形态。同一会话内批准过 key \"force kill processes (Stop-Process -Force)\" 之后,该会话内所有命中同一 key 的命令都不再提示,无论目标是什么。任务书截图显示",
+      "evidence": [
+        "task.md:17"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F7",
+      "target": "main.py",
+      "kind": "observation",
+      "claim": "进程层面,CLI 会话的 terminal 与三个 gateway worker 在同一台 Windows 主机、同一用户、同一个 python 解释器下运行,全是 python.exe,进程层没有任何隔离机制。gateway-exit-diag.log:96 显示 gatewa",
+      "evidence": [
+        "main.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F8",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "检测层面,approval_detection.py 是纯函数,输入命令字符串,输出 key 与描述,不接触本机进程清单,没有任何\"本机还跑着什么\"的上下文注入点。它对进程归属的唯一启发式是第 358-362 行的自终止保护:三条规则要求命令文本中出现 hermes、gatewa",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F9",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "没有。approval_detection.py 全文不产出提示词,检测结果只有一句静态描述(\"force kill processes (Stop-Process -Force)\")。模块内不存在任何主机上下文注入点,审批交互层(不在指定材料内)能拿到的也只有这句描述。框架没有",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F10",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "第一层,目标绑定错误。agent 明确知道要杀的是自己起的扫描子进程(任务书截图:它先承认\"逐个 blob 起子进程\"是灾难级写法,然后动手杀)。它自己写的 scan_history.py 里,子进程是 subprocess.run([\"git\", \"cat-file\", \"bl",
+      "evidence": [
+        "scan_history.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F11",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "1. 给 Windows 补\"全量杀\"的范围识别,与 POSIX 的 kill -1 分层对齐。在 approval_detection.py 第 236-238 行的 Windows 强杀规则处新增独立 key,识别 `Get-Process <name> | Stop-Pro",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F12",
+      "target": "approval_detection.py",
+      "kind": "bug",
+      "claim": "2. 给自终止保护补 Windows 对应物,并注入主机上下文。approval_detection.py 第 358 行的 pkill/killall 自终止规则只有 POSIX 形态,应增加 taskkill /F /IM 与 Stop-Process -Force -Nam",
+      "evidence": [
+        "approval_detection.py"
+      ],
+      "severity": "P0",
+      "blocking": true
+    },
+    {
+      "id": "F13",
+      "target": "test_approval_windows.py",
+      "kind": "observation",
+      "claim": "4. 补测试。test_approval_windows.py 增加三个断言:Get-Process 管道形态被标记、-Name * 通配形态被标记、且二者的 key 与单目标形态(现第 38 行)不同。",
+      "evidence": [
+        "test_approval_windows.py"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F14",
+      "target": "scan_history.py",
+      "kind": "observation",
+      "claim": "3. 扫描类脚本纪律:大批量 git 对象访问必须用 cat-file --batch 流式批处理或 git log -p --all,禁止逐 blob 起子进程。scan_history.py:44 的写法是反例,扫描脚本若重写应直接改掉这条。",
+      "evidence": [
+        "scan_history.py:44"
+      ],
+      "severity": "P2",
+      "blocking": false
+    },
+    {
+      "id": "F15",
+      "target": "task.md",
+      "kind": "observation",
+      "claim": "- 事故命令原文:task.md:7。",
+      "evidence": [
+        "task.md:7"
+      ],
+      "severity": "P2",
+      "blocking": false
+    }
+  ],
+  "unknowns": [],
+  "assumptions": []
+}
