@@ -73,19 +73,33 @@ def test_max_weight_derangement():
 # ---------- C03: canonical 目标归一 (basename + 关键父目录段) ----------
 
 def test_normalize_target_basename_and_parent():
+    """完整相对路径归一 (RV-02): 全部路径段保留, 只去行号/盘符/大小写/斜杠。"""
     assert oc2.normalize_target("schemas/foo.json:41-52") == "schemas/foo.json"
-    assert oc2.normalize_target("D:\\repos\\proj\\src\\lib.py:120") == "src/lib.py"
+    assert oc2.normalize_target("D:\\repos\\proj\\src\\lib.py:120") == "repos/proj/src/lib.py"
     assert oc2.normalize_target("  core_engine  ") == "core_engine"
     assert oc2.normalize_target("") == "general"
 
 
 def test_normalize_target_path_equivalence():
-    """带相同父目录的写法归一后相等; 裸文件名与带路径写法不再强行等价 (宁拆不并)。"""
-    assert oc2.normalize_target("/opt/audit/hermes-agent/tools/approval_detection.py") == "tools/approval_detection.py"
-    assert oc2.normalize_target("/opt/audit/hermes-agent/tools/approval_detection.py:238") == "tools/approval_detection.py"
-    assert oc2.normalize_target("D:/repos/proj/tools/APPROVAL_DETECTION.PY") == "tools/approval_detection.py"
+    """同一完整路径不同写法等价; 裸文件名与带路径写法不强行等价 (宁拆不并)。"""
+    assert oc2.normalize_target("/opt/audit/hermes-agent/tools/approval_detection.py") == \
+        "opt/audit/hermes-agent/tools/approval_detection.py"
+    assert oc2.normalize_target("/opt/audit/hermes-agent/tools/approval_detection.py:238") == \
+        "opt/audit/hermes-agent/tools/approval_detection.py"
+    assert oc2.normalize_target("OPT/AUDIT/HERMES-AGENT/TOOLS/APPROVAL_DETECTION.PY") == \
+        "opt/audit/hermes-agent/tools/approval_detection.py"
     assert oc2.normalize_target("approval_detection.py") == "approval_detection.py"
-    assert oc2.normalize_target("approval_detection.py") != oc2.normalize_target("tools/approval_detection.py")
+    assert oc2.normalize_target("approval_detection.py") != \
+        oc2.normalize_target("opt/audit/hermes-agent/tools/approval_detection.py")
+
+
+def test_normalize_target_no_collision_between_skill_watch_scripts():
+    """RV-02 反例: 两个技能的 scripts/watch.py 不得归一为同一个目标。"""
+    a = oc2.normalize_target("skills/literature-watch/scripts/watch.py")
+    b = oc2.normalize_target("skills/retraction-watch/scripts/watch.py")
+    assert a == "skills/literature-watch/scripts/watch.py"
+    assert b == "skills/retraction-watch/scripts/watch.py"
+    assert a != b
 
 
 def test_normalize_target_distinguishes_same_basename():
@@ -96,10 +110,11 @@ def test_normalize_target_distinguishes_same_basename():
 
 
 def test_normalize_target_extracts_file_from_composite():
-    """复合描述式 target (文件名+函数+行号) 归一后按文件聚合。"""
+    """复合描述式 target (文件名+函数+行号) 提取文件名 token; 路径写法保留完整路径。"""
     assert oc2.normalize_target("orchestrate_v2.py cluster_issues (388-430行), 对应契约C01") == "orchestrate_v2.py"
     assert oc2.normalize_target("orchestrate_v2.py normalize_target (295-308行)") == "orchestrate_v2.py"
-    assert oc2.normalize_target("skills/cross-review-five/scripts/orchestrate_v2.py:661-670") == "scripts/orchestrate_v2.py"
+    assert oc2.normalize_target("skills/cross-review-five/scripts/orchestrate_v2.py:661-670") == \
+        "skills/cross-review-five/scripts/orchestrate_v2.py"
     a = oc2.normalize_target("orchestrate_v2.py cluster_issues (388-430行)")
     b = oc2.normalize_target("orchestrate_v2.py cluster_issues L382-430")
     assert a == b == "orchestrate_v2.py"
@@ -332,6 +347,7 @@ def test_plan_failed_model_reported_missing(tmp_path, monkeypatch):
 
     class _FakeProc:
         pid = 0
+        returncode = 0
 
         def poll(self):
             return 0
@@ -532,6 +548,7 @@ def test_consensus_report_uses_corroborated_naming(tmp_path):
 
 
 def test_wait_for_outputs_partial_failure(tmp_path):
+    """RV-10: 返回 {path: {file, exit}}, 文件存在与退出码分开记录。"""
     ok_file = tmp_path / "ok.md"
     ok_file.write_text("x", encoding="utf-8")
     missing = tmp_path / "missing.md"
@@ -539,8 +556,148 @@ def test_wait_for_outputs_partial_failure(tmp_path):
     for p in procs:
         p.wait()
     results = oc2.wait_for_outputs([str(ok_file), str(missing)], procs)
-    assert results[str(ok_file)] is True
-    assert results[str(missing)] is False
+    assert results[str(ok_file)]["file"] is True
+    assert results[str(ok_file)]["exit"] == 0
+    assert results[str(missing)]["file"] is False
+
+
+def test_wait_for_outputs_records_nonzero_exit(tmp_path):
+    """RV-10: 文件存在但进程非零退出, exit 字段如实记录。"""
+    ok_file = tmp_path / "ok2.md"
+    ok_file.write_text("x", encoding="utf-8")
+    missing = tmp_path / "missing2.md"
+    procs = [subprocess.Popen([sys.executable, "-c", "import sys; sys.exit(3)"])]
+    procs[0].wait()
+    results = oc2.wait_for_outputs([str(ok_file), str(missing)], procs)
+    assert results[str(ok_file)]["file"] is True
+    assert results[str(ok_file)]["exit"] == 3
+
+
+# ---------- 第三轮裁决 RV-01~RV-10 探针 ----------
+
+def test_manifest_run_id_refreshed_on_new_plan(tmp_path):
+    """RV-01: 每次 plan 强制重算 run_id 与 task_sha256, 任务变更不沿用旧身份。"""
+    stream = tmp_path / "stream_rv01"
+    stream.mkdir()
+    task = stream / "task.md"
+    task.write_text("任务 A", encoding="utf-8")
+    m1 = oc2._write_manifest(str(stream), str(task), ["a"], "economy")
+    task.write_text("任务 B", encoding="utf-8")
+    m2 = oc2._write_manifest(str(stream), str(task), ["a"], "economy")
+    assert m2["run_id"] != m1["run_id"]
+    assert m2["task_sha256"] != m1["task_sha256"]
+
+
+def test_plan_cleans_all_downstream_artifacts(tmp_path):
+    """RV-01: 新 run 清理范围覆盖全部下游产物, 不只 review/findings/log。"""
+    stream = tmp_path / "stream_rv01b"
+    stream.mkdir()
+    stale = ["issue-registry.json", "challenge-plan.json", "challenge-reply-C01-x.md",
+             "bundle-C01.json", "consensus-report.md", "unresolved-ledger.json",
+             "graph-summary.md", "challenge-skipped.json"]
+    for n in stale:
+        (stream / n).write_text("旧", encoding="utf-8")
+    oc2._clean_stale_plan_outputs(str(stream), ["kimi-k3"])
+    for n in stale:
+        assert not (stream / n).exists(), n
+
+
+def test_parse_stances_mixed_on_same_line():
+    """RV-07: 同一行三种裁决标记全部收集。"""
+    text = "第四步：【CONCEDE】此条成立。【REFUTED】彼条不成立。【UNRESOLVED_REQUIRES_CODE_VERIFICATION】需验证。\n"
+    conceded, refuted, unresolved = oc2._parse_stances(text)
+    assert len(conceded) == 1
+    assert len(refuted) == 1
+    assert len(unresolved) == 1
+
+
+def test_parse_stances_skips_quote_lines():
+    """RV-05: 引用行中的裁决标签不参与解析。"""
+    text = ("> 对方说【REFUTED】全部\n"
+            "【REFUTED】真实驳回。\n")
+    conceded, refuted, unresolved = oc2._parse_stances(text)
+    assert len(refuted) == 1
+
+
+def test_evidence_check_abs_path_with_line_no(tmp_path):
+    """RV-04: 真实绝对路径带行号不得被当成幽灵证据。"""
+    f = tmp_path / "sample.py"
+    f.write_text("x", encoding="utf-8")
+    verified, missing, unverified = oc2._evidence_check(
+        [f"{f}:1"], [str(tmp_path)])
+    assert verified == [f"{f}:1"]
+    assert missing == []
+    assert unverified == []
+
+
+def test_evidence_check_nonpath_text_unverified():
+    """RV-03: 非文件样式的断言文本不得冒充已验证。"""
+    verified, missing, unverified = oc2._evidence_check(["测试用例 X 可复现"], [])
+    assert verified == []
+    assert unverified == ["测试用例 X 可复现"]
+
+
+def test_consensus_empty_evidence_reported_as_none(tmp_path):
+    """RV-03: 共识项空证据显示'无证据', 不得显示已验证。"""
+    stream = tmp_path / "stream_rv03"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="core.py", claim="锁泄漏", issue_key="lock-leak", evidence=[])],
+        "dsv4pro": [_f(target="core.py", claim="锁未释放", issue_key="lock-leak", evidence=[])],
+    })
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
+    oc2.stage_synthesize_v2(str(stream))
+    report = (stream / "consensus-report.md").read_text(encoding="utf-8")
+    assert "无证据" in report
+
+
+def test_cluster_carries_provenance():
+    """RV-08: 启发式合成来源标记传递到聚类条目。"""
+    models = ["kimi-k3", "dsv4pro"]
+    findings = {
+        "kimi-k3": {"findings": [_f(target="core.py", claim="合成发现",
+                                    provenance="synthetic_fallback")]},
+        "dsv4pro": {"findings": []},
+    }
+    consensus, singletons, contradictions = oc2.cluster_issues(models, findings)
+    assert singletons[0]["provenance"] == "synthetic_fallback"
+    assert singletons[0]["claims"][0]["provenance"] == "synthetic_fallback"
+
+
+def test_derangement_bundle_has_no_model_name(tmp_path):
+    """RV-09: audit 模式互补审查 bundle 不得携带模型短名。"""
+    stream = tmp_path / "stream_rv09"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="a.py", claim="发现甲", issue_key="k1")],
+        "dsv4pro": [_f(target="b.py", claim="发现乙", issue_key="k2")],
+        "glm53": [_f(target="c.py", claim="发现丙", issue_key="k3")],
+        "gemini38flash": [_f(target="d.py", claim="发现丁", issue_key="k4")],
+        "gemini31pro": [_f(target="e.py", claim="发现戊", issue_key="k5")],
+    })
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "glm53", "gemini38flash", "gemini31pro"],
+                       mode="audit")
+    plan = json.loads((stream / "challenge-plan.json").read_text(encoding="utf-8"))
+    for item in plan:
+        if item["type"] == "derangement_peer":
+            raw = json.dumps(item["bundle"], ensure_ascii=False)
+            for m in ("kimi-k3", "dsv4pro", "glm53", "gemini38flash", "gemini31pro"):
+                assert m not in raw
+
+
+def test_synthesize_no_closure_when_replies_missing(tmp_path):
+    """RV-06: 质询缺失时不得宣称'所有分歧均已收敛达成闭环'。"""
+    stream = tmp_path / "stream_rv06"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", issue_key="ck", polarity="present")],
+        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", issue_key="ck", polarity="absent")],
+    })
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
+    oc2.stage_synthesize_v2(str(stream))
+    report = (stream / "consensus-report.md").read_text(encoding="utf-8")
+    assert "收敛状态: 未收敛" in report
+    assert "所有分歧均已收敛达成闭环" not in report
 
 
 # ---------- 端到端 ----------
