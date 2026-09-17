@@ -143,6 +143,8 @@ CHALLENGE_PROMPT_V2 = """任务：对匿名方案的分歧点与独有发现进�
 
 # 合法 target 文件名样式 (basename 校验, 排除正则残片/幽灵路径)
 _TARGET_BASENAME_RE = re.compile(r"^[A-Za-z0-9_.\-]+\.(?:py|json|md|sh|ps1|yaml|yml|toml|txt|csv)$")
+# 无锚定文件名 token (用于从复合描述中提取第一个文件名)
+_FILE_TOKEN_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:py|json|md|sh|ps1|yaml|yml|toml|txt|csv)")
 _ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|/)")
 OPPOSING_POLARITY = {
     ("present", "absent"), ("absent", "present"),
@@ -294,13 +296,18 @@ def extract_findings_json(stream, model_key):
 
 def normalize_target(target_str):
     """canonical 目标归一 (C03): 以文件 basename 为聚类键。
-    绝对/相对路径、盘符、正反斜杠、行号全部等价; 同一文件任何写法归一后相等。
+    优先从复合描述 (文件名+函数+行号) 中提取文件名 token;
+    绝对/相对路径、盘符、正反斜杠、行号全部等价。
     """
     if not target_str:
         return "general"
     s = str(target_str).strip()
     s = re.sub(r":\d+(?:-\d+)?$", "", s)  # 去行号
     s = s.replace("\\", "/").lower()
+    # 复合描述式 target: 提取第一个文件名样式 token
+    m = _FILE_TOKEN_RE.search(s)
+    if m:
+        return m.group(0)
     s = s.strip("/")
     parts = [p for p in s.split("/") if p and p != "c:" and p != "d:"]
     if not parts:

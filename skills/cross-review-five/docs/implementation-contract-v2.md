@@ -27,9 +27,9 @@
 缺陷:normalize_target 不做路径等价归一,同一文件以绝对/相对/裸名出现裂成多个 target;fallback 正则不匹配盘符冒号,正则片段被当文件路径。
 定位:orchestrate_v2.py normalize_target(约 215-222 行)与 extract_findings_json fallback 正则(约 186-212 行)。
 验收:
-- normalize_target 输出 canonical 形式:basename + 关键父目录段的小写路径,去行号;绝对/相对/盘符冒号/正反斜杠全部等价;
+- normalize_target 输出 canonical 形式:basename + 关键父目录段的小写路径,去行号;绝对/相对/盘符冒号/正反斜杠全部等价;复合描述式 target(文件名+函数+行号)归一后按文件聚合(C12 实测补充);
 - fallback 提取的 target 必须匹配实际存在的文件路径或 basename,否则丢弃;
-- 测试:同一文件五种写法归一后相等;正则片段不产生 target。
+- 测试:同一文件五种写法归一后相等;复合描述归一相等;正则片段不产生 target。
 
 ### C04 findings 结构化强制 + provenance 标记
 缺陷:该轮 run 五模型无一自觉落盘 findings JSON,100% 由正则启发式合成,claim 截断 140 字符,证据引用行被当 finding;sidecar 与亲笔 JSON 无来源区分,重跑时陈旧 sidecar 无条件压过新产出。

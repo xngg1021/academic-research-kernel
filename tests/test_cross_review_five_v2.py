@@ -85,6 +85,19 @@ def test_normalize_target_path_equivalence():
     assert canon == {"approval_detection.py"}
 
 
+def test_normalize_target_extracts_file_from_composite():
+    """C12 实测缺陷: 复合描述式 target (文件名+函数+行号) 归一后按文件聚合。"""
+    assert oc2.normalize_target("orchestrate_v2.py cluster_issues (388-430行), 对应契约C01") == "orchestrate_v2.py"
+    assert oc2.normalize_target("orchestrate_v2.py normalize_target (295-308行)") == "orchestrate_v2.py"
+    assert oc2.normalize_target("skills/cross-review-five/scripts/orchestrate_v2.py:661-670") == "orchestrate_v2.py"
+    # 不同模型对同一函数的复合描述归一后相等
+    a = oc2.normalize_target("orchestrate_v2.py cluster_issues (388-430行)")
+    b = oc2.normalize_target("orchestrate_v2.py cluster_issues L382-430")
+    assert a == b == "orchestrate_v2.py"
+    # 复合描述中多文件名取第一个
+    assert oc2.normalize_target("stage_merge_v2 产物 issue-registry.json (L422-424)") == "issue-registry.json"
+
+
 def test_is_plausible_target_rejects_regex_fragment():
     assert oc2._is_plausible_target("approval_detection.py")
     assert oc2._is_plausible_target("test_x.py")
