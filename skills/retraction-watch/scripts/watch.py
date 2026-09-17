@@ -22,10 +22,10 @@ import os
 import re
 import sys
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
 import sys as _sys
@@ -35,7 +35,7 @@ if _sys.platform == "win32":
             _s.reconfigure(encoding="utf-8")
 
 OPENALEX = 'https://api.openalex.org'
-CROSSREF = 'https://api.crossref.org'
+CROSSREF = 'https://api.crossref.org/v1'
 
 
 def normalize_doi(value) -> str:
@@ -174,11 +174,34 @@ def _headers() -> dict:
     return headers
 
 
+def _parse_retry_after(value: str | None, default_delay: float) -> float:
+    """支持 RFC 9110 秒数 (delta-seconds) 或 HTTP-date。"""
+    if not value:
+        return default_delay
+    val = value.strip()
+    try:
+        return max(0.0, min(float(val), 30.0))
+    except ValueError:
+        pass
+    try:
+        import email.utils
+        dt = email.utils.parsedate_to_datetime(val)
+        now = datetime.now(timezone.utc)
+        diff = (dt - now).total_seconds()
+        return max(0.0, min(diff, 30.0))
+    except Exception:
+        return default_delay
+
+
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
 def get(url: str, timeout: int = 20) -> dict:
-    """live: 真实 HTTPS GET，带 429/5xx 有界重试；OpenAlex key 只发给 OpenAlex。"""
+    """live: 真实 HTTPS GET，仅针对 429 与 5xx 有界重试；OpenAlex key 仅注入官方 HTTPS 域名。"""
     req = Request(url, headers=_headers())
     key = os.environ.get('OPENALEX_API_KEY', '').strip()
-    if key and url.startswith(OPENALEX):
+    parsed = urlsplit(url)
+    if key and parsed.scheme == 'https' and (parsed.hostname or '').lower() == 'api.openalex.org':
         req.add_header('Authorization', f'Bearer {key}')
     attempts, delay = 0, 1.0
     while True:
@@ -186,11 +209,11 @@ def get(url: str, timeout: int = 20) -> dict:
             with urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode('utf-8'))
         except HTTPError as exc:
-            attempts += 1
-            if exc.code == 401 or attempts >= 3:
+            if exc.code not in RETRY_STATUSES or attempts >= 3:
                 raise
+            attempts += 1
             retry_after = exc.headers.get('Retry-After') if exc.headers else None
-            wait = min(float(retry_after), 30.0) if retry_after else delay
+            wait = _parse_retry_after(retry_after, delay)
             time.sleep(wait)
             delay *= 2
         except URLError:
@@ -214,8 +237,8 @@ def check_doi(doi: str) -> dict:
     except HTTPError as exc:
         if exc.code != 404:
             raise
-    data = get(f'{CROSSREF}/works?filter=updates:{quote(doi, safe="")}&rows=100')
-    message = data.get('message') or {}
+    data_cr = get(f'{CROSSREF}/works?filter=updates:{quote(doi, safe="")}&rows=100')
+    message = data_cr.get('message') or {}
     records = message.get('items') or []
     total_results = message.get('total-results', len(records))
     truncated = bool(total_results > len(records))

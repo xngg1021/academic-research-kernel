@@ -1,15 +1,25 @@
 ---
 name: cross-review-five
-description: "五人异构模型小组:交叉评审、红队、生成对比,一任务书五独立产出加轮转互审."
-version: 1.0.0
+description: 五人异构模型小组:交叉评审、红队、生成对比,v2 四阶段 Sparse Deliberation 稀疏审议流.
+version: 2.0.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
+tags:
+- cross-review
+- red-team
+- multi-model
+- orchestration
+- five-models
 metadata:
-  hermes:
-    tags: [cross-review, red-team, multi-model, orchestration, five-models]
-    related_skills: [research-object-identity, academic-source-verification]
+  tags: cross-review, red-team, multi-model, orchestration, five-models
+  related_skills: ''
 ---
+
+
 
 # cross-review-five
 
@@ -17,15 +27,15 @@ metadata:
 
 ## 五人构成
 
-| 短名 | 模型 | 提供方 |
+| 短名 | 模型 | 提供方 (首选规范名 / 兼容别名) |
 | --- | --- | --- |
-| kimi-k3 | Kimi K3 | kimi |
+| kimi-k3 | Kimi K3 | kimi-coding (兼容 kimi) |
 | dsv4pro | DeepSeek V4 Pro | deepseek |
 | glm53 | GLM 5.3(始终思考推理模型) | zai |
-| gemini38flash | Gemini 3.8 Flash | google |
-| gemini31pro | Gemini 3.1 Pro | google |
+| gemini38flash | Gemini 3.8 Flash | gemini (兼容 google) |
+| gemini31pro | Gemini 3.1 Pro | gemini (兼容 google) |
 
-凭证要求:各提供方的密钥按 Hermes 常规配置(deepseek 在 auth.json 凭证池,kimi 用 MOONSHOT_API_KEY,GLM 用 GLM_API_KEY,Gemini 用 GOOGLE_API_KEY)。
+凭证要求:各提供方的密钥按 Hermes 常规配置(DeepSeek 在 auth.json 凭证池，Kimi 首选 KIMI_API_KEY 或 KIMI_CODING_API_KEY，兼容 MOONSHOT_API_KEY；GLM 用 GLM_API_KEY；Gemini 用 GEMINI_API_KEY 或 GOOGLE_API_KEY)。子进程已启用安全环境白名单隔离与 --ignore-rules 参数。
 
 ## 工作流 (v1 经典轮转)
 
@@ -77,7 +87,27 @@ python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --stage status
 python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task <任务书> --stage all --mode standard
 ```
 
---models 参数按短名选择子集,默认五人全上。任务书模板与约束见脚本内的 PLAN_PROMPT 与 REVIEW_PROMPT。
+### 任意数量与种类模型及子代理支持 (v2 动态扩展)
+
+编排器原生支持用户自由指定任意数量与种类的模型或独立子代理参与交叉审议：
+
+1. **命令行内联声明**（支持 `key:provider:model[:runner]` 规范）：
+   ```bash
+   # 指定自定义 3 模型组合:
+   python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task task.md --stage all \
+     --models "sonnet:anthropic:claude-3-7-sonnet,gpt4o:openai:gpt-4o,dsv4:deepseek:deepseek-v4-pro"
+   ```
+2. **JSON 配置文件定义**（支持第三方子代理 CLI 模板）：
+   ```json
+   [
+     {"key": "claude", "provider": "anthropic", "model": "claude-3-7-sonnet"},
+     {"key": "gemini-cli", "runner": "cli", "cmd": "gemini -p {prompt_path}"},
+     {"key": "codex-agent", "runner": "cli", "cmd": "codex run --query-file {prompt_path}"}
+   ]
+   ```
+   执行：`python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task task.md --stage all --models-file models.json`。
+
+--models 参数若传已有短名则从预设中选取子集。任务书模板与约束见脚本内的 PLAN_PROMPT 与 REVIEW_PROMPT。
 
 ## 纪律
 

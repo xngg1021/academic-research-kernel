@@ -1,34 +1,44 @@
 ---
 name: retraction-watch
-description: "每周核查 DOI 清单的撤稿信号：OpenAlex 与 Crossref 双源比对，只在状态变化时报告."
-version: 1.0.0
+description: 每周核查 DOI 清单的撤稿信号：OpenAlex 与 Crossref 双源比对，只在状态变化时报告.
+version: 1.1.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
 required_environment_variables:
-  - name: OPENALEX_API_KEY
-    prompt: "OpenAlex API key（可跳过，使用匿名查询）"
-    help: "在 OpenAlex 官方账户中获取免费 key；不要把 key 写进技能或聊天。"
-    required_for: "Authenticated OpenAlex requests; anonymous queries remain available."
+- name: OPENALEX_API_KEY
+  prompt: OpenAlex API key（可跳过，使用匿名查询）
+  help: 在 OpenAlex 官方账户中获取免费 key；不要把 key 写进技能或聊天。
+  required_for: Authenticated OpenAlex requests; anonymous queries remain available.
+blueprint:
+  schedule: 0 9 * * 1
+  deliver: origin
+  prompt: 运行 retraction-watch：读取 DOI 监控清单，用 scripts/watch.py --run 逐条查 OpenAlex is_retracted
+    与 Crossref updates 反向查询的 update-to 撤稿信号，与状态快照比对；只有发生变化（含首次建档）的 DOI 才报告，全部无变化则明确说无变化。写回状态文件后结束。
+  no_agent: false
+config:
+- key: retraction_watch.watchlist
+  description: DOI 监控清单 JSON 路径（含 dois 数组）
+  default: ~/.hermes/retraction-watch.json
+  prompt: retraction-watch 监控清单文件路径
+- key: retraction_watch.state
+  description: 各 DOI 状态快照文件路径（自动维护，勿手改）
+  default: ~/.hermes/retraction-watch.state.json
+  prompt: retraction-watch 状态快照文件路径
+tags:
+- blueprint
+- retraction
+- crossref
+- openalex
+- monitoring
 metadata:
-  hermes:
-    tags: [blueprint, retraction, crossref, openalex, monitoring]
-    related_skills: [academic-source-verification, literature-watch]
-    config:
-      - key: retraction_watch.watchlist
-        description: DOI 监控清单 JSON 路径（含 dois 数组）
-        default: "~/.hermes/retraction-watch.json"
-        prompt: retraction-watch 监控清单文件路径
-      - key: retraction_watch.state
-        description: 各 DOI 状态快照文件路径（自动维护，勿手改）
-        default: "~/.hermes/retraction-watch.state.json"
-        prompt: retraction-watch 状态快照文件路径
-    blueprint:
-      schedule: "0 9 * * 1"
-      deliver: origin
-      prompt: "运行 retraction-watch：读取 DOI 监控清单，用 scripts/watch.py --run 逐条查 OpenAlex is_retracted 与 Crossref updates 反向查询的 update-to 撤稿信号，与状态快照比对；只有发生变化（含首次建档）的 DOI 才报告，全部无变化则明确说无变化。写回状态文件后结束。"
-      no_agent: false
+  tags: blueprint, retraction, crossref, openalex, monitoring
+  related_skills: academic-source-verification, literature-watch
 ---
+
 
 # retraction-watch
 

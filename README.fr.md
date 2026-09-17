@@ -18,21 +18,26 @@ SLL autorise largement l'utilisation, l'étude, la modification, l'usage commerc
 
 | Compétence | Version | Fonction |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.1.1 | Vérifier l'identité et les comptes de citations par source ; examiner les signaux de mise à jour et de rétractation ; localiser le texte en accès libre et vérifier l'identité des PDF |
-| `skills/literature-analysis` | 1.2.0 | Douze flux : similarité thématique, chevauchement local, contre-preuves, profils d'auteurs, revue simulée, vérification des sophismes, matrice de revue, revues candidates, BibTeX, lecture bilingue, dépistage des lacunes, reproduction |
+| `skills/academic-source-verification` | 1.2.0 | Vérifier l'identité et les comptes de citations par source ; examiner les signaux de mise à jour et de rétractation ; localiser le texte en accès libre et vérifier l'identité des PDF |
+| `skills/literature-analysis` | 1.3.0 | Douze flux : similarité thématique, chevauchement local, contre-preuves, profils d'auteurs, revue simulée, vérification des sophismes, matrice de revue, revues candidates, BibTeX, lecture bilingue, dépistage des lacunes, reproduction |
 | `skills/academic-writing` | 1.1.1 | Édition, conseils de citation (APA, MLA, Chicago, IEEE, AMA, GB/T), instructions des revues, services de détection optionnels, matériaux de soumission, exigences académiques chinoises |
 | `skills/math-computation` | 1.2.1 | Routage domaine/tâche existant avec exemples numériques et statistiques corrigés ; quatre fichiers de référence par domaine |
-| `skills/quantitative-paper-audit` | 1.0.0 | Recalculer les statistiques rapportées (taille d'effet, valeurs p, intervalles de confiance, OR/RR, puissance atteinte) et détecter les incohérences numériques |
-| `skills/research-reproducibility` | 1.0.0 | Pipeline d'audit de reproduction en quatorze étapes avec moteur de liste de contrôle structuré, cinq niveaux de faits et reçu à quatre états |
-| `skills/systematic-review-meta-analysis` | 1.0.0 | Journaux de recherche PRISMA, registres de sélection, conversion des tailles d'effet, hétérogénéité, regroupement à effets fixes/aléatoires, diagnostics de sensibilité et de biais de publication |
-| `skills/literature-watch` | 1.0.0 | Plan hebdomadaire : surveiller les thèmes, auteurs et œuvres citant des DOI sur OpenAlex et Crossref ; dédupliquer et ne signaler que les nouveautés |
-| `skills/retraction-watch` | 1.0.0 | Plan hebdomadaire : revérifier une liste de DOI contre OpenAlex is_retracted et les enregistrements de mise à jour Crossref (signaux update-to) ; ne signaler que les changements d'état |
+| `skills/quantitative-paper-audit` | 1.1.0 | Recalculer les statistiques rapportées (taille d'effet, valeurs p, intervalles de confiance, OR/RR, puissance atteinte) et détecter les incohérences numériques |
+| `skills/research-reproducibility` | 1.0.1 | Pipeline d'audit de reproduction en quatorze étapes avec moteur de liste de contrôle structuré, cinq niveaux de faits et reçu à quatre états |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Journaux de recherche PRISMA, registres de sélection, conversion des tailles d'effet, hétérogénéité, regroupement à effets fixes/aléatoires, diagnostics de sensibilité et de biais de publication |
+| `skills/literature-watch` | 1.1.0 | Plan hebdomadaire : surveiller les thèmes, auteurs et œuvres citant des DOI sur OpenAlex et Crossref ; dédupliquer et ne signaler que les nouveautés |
+| `skills/retraction-watch` | 1.1.0 | Plan hebdomadaire : revérifier une liste de DOI contre OpenAlex is_retracted et les enregistrements de mise à jour Crossref (signaux update-to) ; ne signaler que les changements d'état |
 | `skills/research-object-identity` | 1.0.0 | Couche d'identité déterministe des objets de recherche : normalisation des identifiants, verdict à cinq états (sans score de confiance), arêtes de relation et de lignage ; consomme les reçus de preuve |
-| `skills/cross-review-five` | 1.0.0 | Panel de revue hétérogène à cinq modèles (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro) : pipeline Sparse Deliberation v2 en quatre étapes (plan indépendant, regroupement/fusion au niveau des affirmations, contestation anonyme ciblée et réconciliation avec registre non résolu) |
+| `skills/cross-review-five` | 2.0.0 | Panel de révision multi-modèles et sous-agents dynamique (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, etc.) : pipeline v2 Sparse Deliberation en 4 phases avec affectation hongroise de Kuhn-Munkres et niveaux de gravité P0-P3 |
 
 Les onze compétences comprennent 21 fichiers de référence Markdown, chargés uniquement à la demande. GB/T 7714-2025 est en vigueur ; la référence d'écriture distingue sa date d'entrée en vigueur vérifiée des exemples explicitement étiquetés de 2015. La conformité complète à l'édition 2025 exige le modèle ou le texte standard de l'institution cible.
 
-## Installation dans Hermes
+## Intégration & Installation
+
+### 1. Agent Plugins v1 & Serveur MCP
+Supporte stdio MCP (`python scripts/mcp_server.py`) et Agent Plugins v1 portable (`plugin.json`).
+
+### 2. Installation dans Hermes
 
 La découverte de tap amont actuelle inspecte les sous-répertoires immédiats de `skills/`. Chaque compétence vit donc directement sous cette racine. Depuis une installation Hermes :
 

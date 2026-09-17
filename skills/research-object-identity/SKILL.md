@@ -1,15 +1,24 @@
 ---
 name: research-object-identity
-description: "研究对象身份归一、聚合五态判定与谱系建边的确定性公共骨架."
+description: 研究对象身份归一、聚合五态判定与谱系建边的确定性公共骨架.
 version: 1.0.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
+tags:
+- identity
+- lineage
+- dedup
+- research-object
+- deterministic
 metadata:
-  hermes:
-    tags: [identity, lineage, dedup, research-object, deterministic]
-    related_skills: [academic-source-verification, literature-analysis]
+  tags: identity, lineage, dedup, research-object, deterministic
+  related_skills: academic-source-verification, literature-analysis
 ---
+
 
 # research-object-identity
 

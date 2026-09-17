@@ -18,7 +18,7 @@ import workload_profiles as wp
 
 
 def time_call(fn, warmup=2, repeat=5):
-    """startup = first-call wall time; warmup iterations (C04); steady = median of repeats."""
+    """startup = first-call wall time; warmup iterations (C04); steady = median of repeats + MAD."""
     start = time.perf_counter()
     fn()
     startup = time.perf_counter() - start
@@ -29,7 +29,9 @@ def time_call(fn, warmup=2, repeat=5):
         t0 = time.perf_counter()
         fn()
         times.append(time.perf_counter() - t0)
-    return {"startup": startup, "median": statistics.median(times),
+    med = statistics.median(times)
+    mad = statistics.median([abs(x - med) for x in times]) if times else 0.0
+    return {"startup": startup, "median": med, "mad": round(mad, 8),
             "times": times}
 
 
@@ -98,7 +100,7 @@ def run_admission(workload, scale, dtype="float64", gain_threshold=1.5,
             })
             continue
 
-        parity_ok = wp.check_parity(workload, scale, ref_result, cand_result)
+        parity_ok = wp.check_parity(workload, scale, ref_result, cand_result, dtype=dtype)
         if not parity_ok:
             candidates.append({
                 "backend": name,

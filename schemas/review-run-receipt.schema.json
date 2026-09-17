@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/review-run-receipt.schema.json",
+  "title": "ReviewRunReceipt",
+  "description": "Comprehensive run receipt and provenance record of a multi-reviewer deliberation.",
+  "type": "object",
+  "required": ["protocol", "run_id", "timestamp", "panel_id", "participants", "phases", "convergence"],
+  "properties": {
+    "protocol": {"type": "string", "const": "review-run-receipt-1.0"},
+    "run_id": {"type": "string"},
+    "timestamp": {"type": "string"},
+    "panel_id": {"type": "string"},
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "executor"],
+        "properties": {
+          "id": {"type": "string"},
+          "executor": {"type": "string"},
+          "provider": {"type": "string"},
+          "model": {"type": "string"}
+        }
+      }
+    },
+    "phases": {
+      "type": "object",
+      "properties": {
+        "plan": {"type": "object"},
+        "merge": {"type": "object"},
+        "challenge": {"type": "object"},
+        "synthesize": {"type": "object"}
+      }
+    },
+    "convergence": {
+      "type": "object",
+      "required": ["status", "unresolved_issues_count"],
+      "properties": {
+        "status": {"type": "string", "enum": ["CONVERGED", "UNRESOLVED_CONTESTED", "PARTIAL_PROGRESS"]},
+        "unresolved_issues_count": {"type": "integer"}
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "properties": {
+        "total_wall_seconds": {"type": "number"},
+        "total_calls": {"type": "integer"},
+        "total_cost_usd": {"type": "number"}
+      }
+    }
+  }
+}

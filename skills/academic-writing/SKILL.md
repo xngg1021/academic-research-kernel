@@ -1,15 +1,24 @@
 ---
 name: academic-writing
-description: "学术写作:润色编辑、引用规范生成、期刊投稿格式检索、AI 生成成分检测."
+description: 学术写作:润色编辑、引用规范生成、期刊投稿格式检索、AI 生成成分检测.
 version: 1.1.1
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
+tags:
+- writing
+- citation
+- journal-submission
+- ai-detection
+- editing
 metadata:
-  hermes:
-    tags: [writing, citation, journal-submission, ai-detection, editing]
-    related_skills: [literature-analysis, academic-source-verification, docx, pdf]
+  tags: writing, citation, journal-submission, ai-detection, editing
+  related_skills: literature-analysis, academic-source-verification, docx, pdf
 ---
+
 
 # 学术写作 Skill
 

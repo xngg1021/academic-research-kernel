@@ -1,24 +1,37 @@
 ---
 name: academic-source-verification
-description: "核查文献真实性:交叉核对被引数、撤稿状态、开放获取全文与原文内容."
-version: 1.1.1
+description: 核查文献真实性:交叉核对被引数、撤稿状态、开放获取全文与原文内容.
+version: 1.2.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
 required_environment_variables:
-  - name: OPENALEX_API_KEY
-    prompt: "OpenAlex API key（可跳过，使用匿名查询）"
-    help: "在 OpenAlex 官方账户中获取免费 key；不要把 key 写进技能或聊天。"
-    required_for: "Authenticated OpenAlex requests; anonymous queries remain available."
-  - name: UNPAYWALL_EMAIL
-    prompt: "Unpaywall 联系邮箱（可跳过此服务）"
-    help: "填写您自己的真实联系邮箱；跳过时继续其他来源检查。"
-    required_for: "Unpaywall OA lookup only; other source checks remain available."
+- name: OPENALEX_API_KEY
+  prompt: OpenAlex API key（可跳过，使用匿名查询）
+  help: 在 OpenAlex 官方账户中获取免费 key；不要把 key 写进技能或聊天。
+  required_for: Authenticated OpenAlex requests; anonymous queries remain available.
+- name: UNPAYWALL_EMAIL
+  prompt: Unpaywall 联系邮箱（可跳过此服务）
+  help: 填写您自己的真实联系邮箱；跳过时继续其他来源检查。
+  required_for: Unpaywall OA lookup only; other source checks remain available.
+tags:
+- research
+- citations
+- open-access
+- crossref
+- openalex
+- semantic-scholar
+- unpaywall
+- retraction
 metadata:
-  hermes:
-    tags: [research, citations, open-access, crossref, openalex, semantic-scholar, unpaywall, retraction]
-    related_skills: [arxiv, pdf, grounded-citations, literature-analysis]
+  tags: research, citations, open-access, crossref, openalex, semantic-scholar, unpaywall,
+    retraction
+  related_skills: arxiv, pdf, grounded-citations, literature-analysis
 ---
+
 
 # 学术来源核查 Skill
 

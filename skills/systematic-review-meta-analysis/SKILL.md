@@ -1,15 +1,27 @@
 ---
 name: systematic-review-meta-analysis
-description: "系统综述与元分析流水线:PRISMA 日志、效应量互转、异质性合并、发表偏倚诊断."
-version: 1.0.0
+description: 系统综述与元分析流水线:PRISMA 日志、效应量互转、异质性合并、发表偏倚诊断.
+version: 1.0.1
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
+tags:
+- systematic-review
+- meta-analysis
+- prisma
+- effect-size
+- heterogeneity
+- publication-bias
+- evidence-synthesis
 metadata:
-  hermes:
-    tags: [systematic-review, meta-analysis, prisma, effect-size, heterogeneity, publication-bias, evidence-synthesis]
-    related_skills: [literature-analysis, math-computation]
+  tags: systematic-review, meta-analysis, prisma, effect-size, heterogeneity, publication-bias,
+    evidence-synthesis
+  related_skills: literature-analysis, math-computation
 ---
+
 
 # 系统综述与元分析 Skill
 

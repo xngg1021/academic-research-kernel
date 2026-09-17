@@ -1,15 +1,27 @@
 ---
 name: quantitative-paper-audit
-description: "论文定量 claim 反算与数值体检:效应量、p 值、CI、OR/RR、功效错配检测."
-version: 1.0.0
+description: 论文定量 claim 反算与数值体检:效应量、p 值、CI、OR/RR、功效错配检测.
+version: 1.1.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
-platforms: [linux, macos, windows]
+platforms:
+- linux
+- macos
+- windows
+tags:
+- statistics
+- audit
+- effect-size
+- p-value
+- confidence-interval
+- power-analysis
+- reproducibility
 metadata:
-  hermes:
-    tags: [statistics, audit, effect-size, p-value, confidence-interval, power-analysis, reproducibility]
-    related_skills: [academic-source-verification, literature-analysis, math-computation]
+  tags: statistics, audit, effect-size, p-value, confidence-interval, power-analysis,
+    reproducibility
+  related_skills: academic-source-verification, literature-analysis, math-computation
 ---
+
 
 # 论文定量体检 Skill
 

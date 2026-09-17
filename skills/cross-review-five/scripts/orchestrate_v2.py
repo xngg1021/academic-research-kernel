@@ -53,6 +53,7 @@ canonical target (RV-02):
     python orchestrate_v2.py <stream_dir> --task <task.md> --stage all [--mode standard]
 """
 import argparse
+import concurrent.futures
 import glob
 import hashlib
 import itertools
@@ -64,6 +65,26 @@ import subprocess
 import sys
 import time
 import uuid
+from pathlib import Path
+
+try:
+    from contracts import (
+        ParticipantSpec, PanelSpec, ReviewRequest, ChallengeRequest,
+        ReviewResult, ChallengeResult, Finding, validate_participant_id
+    )
+    from adapters import (
+        ReviewerAdapter, CommandReviewerAdapter, HermesCliReviewerAdapter, MockReviewerAdapter
+    )
+except ImportError:
+    _cur_dir = Path(__file__).resolve().parent
+    sys.path.insert(0, str(_cur_dir))
+    from contracts import (
+        ParticipantSpec, PanelSpec, ReviewRequest, ChallengeRequest,
+        ReviewResult, ChallengeResult, Finding, validate_participant_id
+    )
+    from adapters import (
+        ReviewerAdapter, CommandReviewerAdapter, HermesCliReviewerAdapter, MockReviewerAdapter
+    )
 
 if sys.platform == "win32":
     for _s in (sys.stdout, sys.stderr):
@@ -77,6 +98,151 @@ MODELS = {
     "gemini38flash": ("google", "gemini-3.8-flash"),
     "gemini31pro": ("google", "gemini-3.1-pro-preview"),
 }
+
+CANONICAL_PROVIDERS = {
+    "kimi": "kimi-coding",
+    "google": "gemini",
+    "zai": "zai",
+    "deepseek": "deepseek",
+}
+
+CUSTOM_SPECS = {}
+
+
+def get_participant_spec(key: str) -> ParticipantSpec:
+    """根据 key 构造或获取 ParticipantSpec。"""
+    if key in CUSTOM_SPECS:
+        c = CUSTOM_SPECS[key]
+        return ParticipantSpec(
+            id=key,
+            executor=c.get("runner", "command" if c.get("cmd") else "hermes"),
+            provider=c.get("provider", "custom"),
+            model=c.get("model", key),
+            cmd=c.get("cmd"),
+            role=c.get("role", "reviewer"),
+            toolsets=c.get("toolsets", ["default"]),
+        )
+    if key in MODELS:
+        prov, mod = MODELS[key]
+        return ParticipantSpec(
+            id=key,
+            executor="hermes",
+            provider=prov,
+            model=mod,
+            role="reviewer",
+            toolsets=["default"],
+        )
+    return ParticipantSpec(id=key, executor="hermes.cli", provider="custom", model=key)
+
+
+def get_reviewer_adapter(spec: ParticipantSpec) -> ReviewerAdapter:
+    """根据 ParticipantSpec 调度对应的中立 ReviewerAdapter 执行器。"""
+    executor = (spec.executor or "").lower()
+    if executor == "mock":
+        return MockReviewerAdapter()
+    if executor in ("command", "cli", "cmd") or spec.cmd:
+        return CommandReviewerAdapter()
+    if executor in ("hermes.cli", "hermes", "hermes_cli"):
+        return HermesCliReviewerAdapter(spawn_fn=spawn)
+    if executor in ("hermes.llm", "hermes.subagent", "api"):
+        raise NotImplementedError(
+            f"Executor {executor!r} requires an active native host runtime (e.g. PluginContext). "
+            f"Use 'command' or 'hermes.cli' in standalone CLI mode."
+        )
+    raise ValueError(f"Unknown executor: {executor!r}")
+
+
+def _safe_stream_path(stream: str, filename: str) -> str:
+    """Path containment guard to prevent path traversal when formatting reviewer filenames."""
+    s_path = Path(stream).resolve()
+    target = (s_path / filename).resolve()
+    if not target.is_relative_to(s_path):
+        raise ValueError(f"Path containment violation: {filename!r} escapes {stream!r}")
+    return str(target)
+
+
+def register_model_spec(key, provider, model, runner="hermes.cli", cmd=None):
+    """动态注册一个模型或子代理评审者，支持任意模型与执行方式。"""
+    key = str(key).strip()
+    # 严格校验合法 slug 标识符，杜绝路径穿越与 shell 逃逸
+    if not re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_-]{0,63}", key):
+        raise ValueError(
+            f"Invalid participant key: {key!r}. Must match '^[a-zA-Z0-9_][a-zA-Z0-9_-]{{0,63}}$' "
+            f"and not start with a hyphen or contain path separators."
+        )
+    provider = str(provider).strip()
+    model = str(model).strip()
+    MODELS[key] = (provider, model)
+    CUSTOM_SPECS[key] = {
+        "provider": provider,
+        "model": model,
+        "runner": runner or "hermes.cli",
+        "cmd": cmd,
+    }
+
+
+def parse_and_register_models(models_arg: str = None, models_file: str = None) -> list:
+    """解析用户指定的任意数量与种类模型/子代理 (支持三段式与外部配置清单)。"""
+    selected_keys = []
+    if models_file and os.path.exists(models_file):
+        with open(models_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            for item in data:
+                k = item.get("key") or item.get("name")
+                p = item.get("provider", "custom")
+                m = item.get("model", k)
+                r = item.get("runner", "hermes")
+                c = item.get("cmd")
+                register_model_spec(k, p, m, runner=r, cmd=c)
+                selected_keys.append(k)
+        elif isinstance(data, dict):
+            for k, val in data.items():
+                if isinstance(val, (list, tuple)):
+                    p, m = val[0], val[1]
+                    register_model_spec(k, p, m)
+                elif isinstance(val, dict):
+                    p = val.get("provider", "custom")
+                    m = val.get("model", k)
+                    r = val.get("runner", "hermes")
+                    c = val.get("cmd")
+                    register_model_spec(k, p, m, runner=r, cmd=c)
+                selected_keys.append(k)
+
+    if models_arg:
+        tokens = [t.strip() for t in models_arg.split(",") if t.strip()]
+        for tok in tokens:
+            parts = tok.split(":")
+            if len(parts) == 1:
+                k = parts[0]
+                if k not in MODELS:
+                    register_model_spec(k, k, k)
+                selected_keys.append(k)
+            elif len(parts) == 2:
+                k, m = parts[0], parts[1]
+                register_model_spec(k, k, m)
+                selected_keys.append(k)
+            elif len(parts) == 3:
+                k, p, m = parts[0], parts[1], parts[2]
+                register_model_spec(k, p, m)
+                selected_keys.append(k)
+            elif len(parts) >= 4:
+                k, p, m, r = parts[0], parts[1], parts[2], parts[3]
+                register_model_spec(k, p, m, runner=r)
+                selected_keys.append(k)
+
+    return dedup_preserve_order(selected_keys)
+
+
+def resolve_provider(model_key: str) -> str:
+    """优先使用环境变量指定，或按 CANONICAL_PROVIDERS 规范名解析，默认规范优先 (RV-12)。"""
+    env_override = os.environ.get(f"HERMES_{model_key.upper().replace('-', '_')}_PROVIDER")
+    if env_override:
+        return env_override
+    raw_provider, _ = MODELS.get(model_key, (model_key, model_key))
+    if os.environ.get("HERMES_USE_CANONICAL_PROVIDERS", "1").strip().lower() in ("1", "true", "yes"):
+        return CANONICAL_PROVIDERS.get(raw_provider, raw_provider)
+    return raw_provider
 
 DEFAULT_MODELS = list(MODELS)
 
@@ -103,10 +269,10 @@ POLL_SECONDS = 15
 TIMEOUT_SECONDS = 40 * 60
 RNG_SEED = 20260917
 
-VALID_SEVERITY = {"P0", "P1", "P2"}
+VALID_SEVERITY = {"P0", "P1", "P2", "P3"}
 VALID_KINDS = {"bug", "security", "invariant", "perf", "spec_mismatch", "suggestion"}
 VALID_POLARITY = {"present", "absent", "positive", "negative"}
-_SEV_RANK = {"P0": 3, "P1": 2, "P2": 1}
+_SEV_RANK = {"P0": 3, "P1": 2, "P2": 1, "P3": 0}
 
 PLAN_PROMPT_V2 = """任务：评审任务书并独立产出方案与结构化发现。
 
@@ -200,29 +366,81 @@ def dedup_preserve_order(seq):
     return out
 
 
+def _minimal_child_env(model_key):
+    """构造最小 env allowlist，仅传基础系统变量与当前 provider 所需密钥 (RV-11)。"""
+    base_allow = {
+        "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "TEMP", "TMP",
+        "USERPROFILE", "HOME", "LANG", "LC_ALL", "SHELL", "COMSPEC",
+        "HERMES_HOME", "HERMES_CONFIG_DIR", "HERMES_LOG_LEVEL",
+    }
+    raw_provider, _ = MODELS.get(model_key, (model_key, model_key))
+    provider = resolve_provider(model_key).lower()
+    allowed_prefixes = {
+        raw_provider.upper().replace("-", "_"),
+        provider.upper().replace("-", "_"),
+        model_key.upper().replace("-", "_"),
+    }
+    env = {}
+    for k, v in os.environ.items():
+        if k in base_allow or k.startswith("HERMES_"):
+            env[k] = v
+        elif any(k.upper().startswith(p) for p in allowed_prefixes):
+            if any(term in k.upper() for term in ("API_KEY", "TOKEN", "SECRET")):
+                env[k] = v
+    # 针对已知的别名兼容
+    if "MOONSHOT_API_KEY" in os.environ and "KIMI_API_KEY" not in env:
+        env["KIMI_API_KEY"] = os.environ["MOONSHOT_API_KEY"]
+    if "GOOGLE_API_KEY" in os.environ and "GEMINI_API_KEY" not in env:
+        env["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
+    return env
+
+
 def spawn(model_key, prompt_path, log_path):
-    provider, model = MODELS[model_key]
-    cmd = ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
-           "-m", model, "--provider", provider]
-    if model_key == "glm53":
-        cmd += ["--reasoning", "low"]
+    spec = CUSTOM_SPECS.get(model_key, {})
+    runner = spec.get("runner", "hermes")
+    custom_cmd = spec.get("cmd") or os.environ.get(f"HERMES_REVIEW_CMD_{model_key.upper().replace('-', '_')}")
+
+    if runner in ("cli", "cmd") or custom_cmd:
+        # 用户指定了自定义 CLI 子代理命令模板
+        cmd_str = custom_cmd or "{model} --query {prompt_path}"
+        cmd_formatted = cmd_str.format(
+            model=spec.get("model", model_key),
+            prompt_path=prompt_path,
+            prompt=prompt_path,
+            log=log_path,
+        )
+        import shlex
+        cmd = shlex.split(cmd_formatted, posix=(sys.platform != "win32"))
+    else:
+        # 默认 Hermes CLI 方式
+        raw_provider, model = MODELS.get(model_key, (model_key, model_key))
+        provider = resolve_provider(model_key)
+        cmd = ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
+               "--ignore-rules", "-m", model, "--provider", provider]
+        if model_key == "glm53":
+            cmd += ["--reasoning", "low"]
+
     with open(log_path, "wb") as log:
         return subprocess.Popen(
             cmd, stdout=log, stderr=subprocess.STDOUT,
             cwd=os.getcwd(),
+            env=_minimal_child_env(model_key),
         )
 
 
 def wait_for_outputs(out_paths, procs, timeout=TIMEOUT_SECONDS):
     """轮询产物落盘与进程退出 (RV-10):
     返回 {path: {"file": bool, "exit": int|None}}; 文件存在与退出码分开记录。
-    超时 terminate 后等待确认退出。
+    超时 terminate 后等待确认退出。采用自适应 0.2s-1.0s 间隔消除无效等待。
     """
     deadline = time.time() + timeout
+    poll_interval = 0.2
     while time.time() < deadline:
         if all(p.poll() is not None for p in procs):
             break
-        time.sleep(POLL_SECONDS)
+        time.sleep(poll_interval)
+        if poll_interval < 1.0:
+            poll_interval = min(1.0, poll_interval * 1.5)
     for p in procs:
         if p.poll() is None:
             p.terminate()
@@ -237,8 +455,11 @@ def wait_for_outputs(out_paths, procs, timeout=TIMEOUT_SECONDS):
 
 def _task_digest(task_path):
     try:
+        h = hashlib.sha256()
         with open(task_path, "rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()[:16]
+            while chunk := f.read(65536):
+                h.update(chunk)
+        return h.hexdigest()[:16]
     except OSError:
         return None
 
@@ -285,7 +506,7 @@ def _clean_stale_plan_outputs(stream, model_keys, task_path=None):
     targets_to_clean = set()
     for k in (model_keys or []):
         for pattern in (f"review-{k}.md", f"findings-{k}.json", f"prompt-{k}.txt", f"log-{k}.txt"):
-            targets_to_clean.add(os.path.join(stream, pattern))
+            targets_to_clean.add(_safe_stream_path(stream, pattern))
     fixed_outputs = [
         "issue-registry.json", "graph-summary.md", "challenge-plan.json",
         "challenge-skipped.json", "consensus-report.md", "unresolved-ledger.json",
@@ -526,22 +747,86 @@ def compute_complementarity_matrix(models, findings_by_model):
     return weights
 
 
+def _hungarian_min_cost_assignment(cost_matrix):
+    """Kuhn-Munkres (Hungarian) algorithm for minimum-cost bipartite matching in O(N^3)."""
+    n = len(cost_matrix)
+    u = [0.0] * (n + 1)
+    v = [0.0] * (n + 1)
+    p = [0] * (n + 1)
+    way = [0] * (n + 1)
+
+    for i in range(1, n + 1):
+        p[0] = i
+        j0 = 0
+        minv = [float('inf')] * (n + 1)
+        used = [False] * (n + 1)
+        while True:
+            used[j0] = True
+            i0 = p[j0]
+            delta = float('inf')
+            j1 = 0
+            for j in range(1, n + 1):
+                if not used[j]:
+                    cur = cost_matrix[i0 - 1][j - 1] - u[i0] - v[j]
+                    if cur < minv[j]:
+                        minv[j] = cur
+                        way[j] = j0
+                    if minv[j] < delta:
+                        delta = minv[j]
+                        j1 = j
+            for j in range(n + 1):
+                if used[j]:
+                    u[p[j]] += delta
+                    v[j] -= delta
+                else:
+                    minv[j] -= delta
+            j0 = j1
+            if p[j0] == 0:
+                break
+        while True:
+            j1 = way[j0]
+            p[j0] = p[j1]
+            j0 = j1
+            if j0 == 0:
+                break
+
+    ans = [0] * n
+    for j in range(1, n + 1):
+        if p[j] > 0:
+            ans[p[j] - 1] = j - 1
+    return ans
+
+
 def max_weight_derangement(models, weights):
+    """求解全局最大权重错排 (Maximum-Weight Derangement)。
+    全量基于 O(N^3) 匈牙利算法 (Kuhn-Munkres) 求解最优完全二分图匹配，
+    对角线施加负极大惩罚杜绝自审查，适用于任意规模席位 (2 到 50+)。
+    """
     n = len(models)
     if n < 2:
         return []
-    best_score = -1e9
-    best_perm = None
-    for perm in itertools.permutations(models):
-        if any(m == t for m, t in zip(models, perm)):
-            continue
-        score = sum(weights.get((m, t), 0.0) for m, t in zip(models, perm))
-        if score > best_score:
-            best_score = score
-            best_perm = perm
-    if best_perm is None:
-        return [(models[i], models[(i + 1) % n]) for i in range(n)]
-    return list(zip(models, best_perm))
+    if n == 2:
+        return [(models[0], models[1]), (models[1], models[0])]
+
+    # O(N^3) 匈牙利算法构造成本矩阵 (求最大权等价于求 -w 的最小成本)
+    HIGH_PENALTY = 1e7
+    cost_matrix = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            if i == j:
+                row.append(HIGH_PENALTY)
+            else:
+                w = weights.get((models[i], models[j]), 0.0)
+                row.append(-float(w))
+        cost_matrix.append(row)
+
+    match = _hungarian_min_cost_assignment(cost_matrix)
+    if all(match[i] != i for i in range(n)):
+        return [(models[i], models[match[i]]) for i in range(n)]
+
+    # 极端退化情况保底循环位移
+    return [(models[i], models[(i + 1) % n]) for i in range(n)]
 
 
 def _has_polarity_contradiction(items):
@@ -645,48 +930,66 @@ def cluster_issues(models, findings_by_model):
 
 
 def stage_plan_v2(stream, task_path, model_keys):
-    """Phase 1: 独立盲审与生成 (新 run: 清理全部旧产物 + 重算 manifest 身份 + 退出码判定)。"""
+    """Phase 1: 独立盲审与生成 (基于中立 ReviewerAdapter 统一分发与执行)。"""
     _clean_stale_plan_outputs(stream, model_keys, task_path=task_path)
     manifest = _write_manifest(stream, task_path, model_keys, "plan")
     run_id = manifest["run_id"]
     started_at = manifest["started_at"]
 
-    out_paths, procs = [], []
+    requests = []
     for k in model_keys:
-        prompt_path = os.path.join(stream, f"prompt-{k}.txt")
-        out_path = os.path.join(stream, f"review-{k}.md")
-        findings_path = os.path.join(stream, f"findings-{k}.json")
-        log_path = os.path.join(stream, f"log-{k}.txt")
+        k_slug = validate_participant_id(k)
+        prompt_path = _safe_stream_path(stream, f"prompt-{k_slug}.txt")
+        out_path = _safe_stream_path(stream, f"review-{k_slug}.md")
+        findings_path = _safe_stream_path(stream, f"findings-{k_slug}.json")
         with open(prompt_path, "w", encoding="utf-8") as f:
             f.write(PLAN_PROMPT_V2.format(
                 task_path=task_path,
                 out_path=out_path,
                 findings_path=findings_path
             ))
-        procs.append(spawn(k, prompt_path, log_path))
-        out_paths.append(out_path)
-        print(f"[plan-v2] {k} 已启动 pid={procs[-1].pid}")
+        spec = get_participant_spec(k_slug)
+        req = ReviewRequest(
+            task_path=prompt_path,
+            out_path=out_path,
+            findings_path=findings_path,
+            participant=spec
+        )
+        requests.append((k_slug, req))
 
-    results = wait_for_outputs(out_paths, procs)
-    missing = [k for k, p in zip(model_keys, out_paths) if not results[p]["file"]]
-    bad_exit = {k: results[p]["exit"] for k, p in zip(model_keys, out_paths)
-                if results[p]["exit"] not in (0, None)}
+    # 基于中立 ReviewerAdapter 协议统一调度评审
+    results: dict[str, ReviewResult] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(requests), 10)) as pool:
+        future_map = {
+            pool.submit(get_reviewer_adapter(req.participant).review, req): k
+            for k, req in requests
+        }
+        for fut in concurrent.futures.as_completed(future_map):
+            k = future_map[fut]
+            try:
+                res = fut.result()
+                results[k] = res
+            except Exception as exc:
+                results[k] = ReviewResult(participant_id=k, success=False, error=str(exc))
+
+    missing = [k for k in model_keys if not os.path.isfile(os.path.join(stream, f"review-{k}.md"))]
+    bad_exit = {k: results[k].error for k in model_keys if not results[k].success}
     if missing:
         print(f"[plan-v2] 警告: 无产出模型: {', '.join(missing)}", file=sys.stderr)
     if bad_exit:
-        print(f"[plan-v2] 警告: 非零退出: {bad_exit}", file=sys.stderr)
+        print(f"[plan-v2] 警告: 异常退出: {bad_exit}", file=sys.stderr)
     failed_models = sorted(list(set(missing) | set(bad_exit.keys())))
     _write_manifest(stream, task_path, model_keys, "plan", missing_models=failed_models,
                     run_id=run_id, started_at=started_at)
 
     for k in model_keys:
-        if k in bad_exit:
+        if k in failed_models:
             continue
         extract_findings_json(stream, k)
 
-    ok = any(r["file"] and r["exit"] in (0, None) for r in results.values())
+    ok = any(r.success and os.path.isfile(os.path.join(stream, f"review-{k}.md")) for k, r in results.items())
     print(f"[plan-v2] {'完成' if ok else '全部失败'} "
-          f"{json.dumps({os.path.basename(p): v['file'] for p, v in results.items()}, ensure_ascii=False)}")
+          f"{json.dumps({k: results[k].success for k in model_keys}, ensure_ascii=False)}")
     return ok
 
 
@@ -854,7 +1157,7 @@ def stage_merge_v2(stream, model_keys, mode="standard"):
 
 
 def stage_challenge_v2(stream, task_path):
-    """Phase 3: 定向匿名质询执行 (清理陈旧答复 + 退出码/文件分开判定)。"""
+    """Phase 3: 定向匿名质询执行 (基于中立 ReviewerAdapter 统一分发与执行)。"""
     plan_path = os.path.join(stream, "challenge-plan.json")
     if not os.path.exists(plan_path):
         print("[challenge-v2] 缺失质询计划，请先运行 --stage merge", file=sys.stderr)
@@ -869,14 +1172,14 @@ def stage_challenge_v2(stream, task_path):
 
     _clean_stale_challenge_outputs(stream)
 
-    out_paths, procs = [], []
+    challenge_requests = []
     for item in challenges:
-        cid = item["challenge_id"]
-        reviewer = item["reviewer"]
-        bundle_path = os.path.join(stream, f"bundle-{cid}.json")
-        out_path = os.path.join(stream, f"challenge-reply-{cid}-{reviewer}.md")
-        log_path = os.path.join(stream, f"log-challenge-{cid}-{reviewer}.txt")
-        prompt_path = os.path.join(stream, f"prompt-challenge-{cid}-{reviewer}.txt")
+        cid = validate_participant_id(item["challenge_id"])
+        reviewer_key = validate_participant_id(item["reviewer"])
+        target_id = item.get("target", "")
+        bundle_path = _safe_stream_path(stream, f"bundle-{cid}.json")
+        out_path = _safe_stream_path(stream, f"challenge-reply-{cid}-{reviewer_key}.md")
+        prompt_path = _safe_stream_path(stream, f"prompt-challenge-{cid}-{reviewer_key}.txt")
 
         with open(bundle_path, "w", encoding="utf-8") as f:
             json.dump(item["bundle"], f, ensure_ascii=False, indent=2)
@@ -886,21 +1189,43 @@ def stage_challenge_v2(stream, task_path):
                 bundle_path=bundle_path,
                 out_path=out_path,
             ))
-        procs.append(spawn(reviewer, prompt_path, log_path))
-        out_paths.append(out_path)
-        print(f"[challenge-v2] 启动质询 {cid}: 由 {reviewer} 审查 pid={procs[-1].pid}")
 
-    results = wait_for_outputs(out_paths, procs)
-    for item, p in zip(challenges, out_paths):
-        r = results[p]
-        if not r["file"]:
-            print(f"[challenge-v2] 警告: 质询 {item['challenge_id']} ({item['reviewer']}) 无答复", file=sys.stderr)
-        elif r["exit"] not in (0, None):
-            print(f"[challenge-v2] 警告: 质询 {item['challenge_id']} 非零退出 {r['exit']}", file=sys.stderr)
+        spec = get_participant_spec(reviewer_key)
+        req = ChallengeRequest(
+            task_path=prompt_path,
+            bundle_path=bundle_path,
+            out_path=out_path,
+            reviewer=spec,
+            target_participant_id=target_id,
+        )
+        challenge_requests.append((cid, reviewer_key, req))
 
-    ok = any(r["file"] for r in results.values())
-    print(f"[challenge-v2] {'完成' if ok else '全部失败'} "
-          f"{json.dumps({os.path.basename(p): v['file'] for p, v in results.items()}, ensure_ascii=False)}")
+    results: dict[str, ChallengeResult] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(challenge_requests), 10)) as pool:
+        future_map = {
+            pool.submit(get_reviewer_adapter(req.reviewer).challenge, req): (cid, rev)
+            for cid, rev, req in challenge_requests
+        }
+        for fut in concurrent.futures.as_completed(future_map):
+            cid, rev = future_map[fut]
+            try:
+                res = fut.result()
+                results[f"{cid}:{rev}"] = res
+            except Exception as exc:
+                results[f"{cid}:{rev}"] = ChallengeResult(
+                    reviewer_id=rev, target_id="", success=False, error=str(exc)
+                )
+
+    for item in challenges:
+        cid = item["challenge_id"]
+        rev = item["reviewer"]
+        res = results.get(f"{cid}:{rev}")
+        out_file = os.path.join(stream, f"challenge-reply-{cid}-{rev}.md")
+        if not os.path.isfile(out_file) or (res and not res.success):
+            print(f"[challenge-v2] 警告: 质询 {cid} ({rev}) 无有效答复: {getattr(res, 'error', None)}", file=sys.stderr)
+
+    ok = any(r.success for r in results.values())
+    print(f"[challenge-v2] {'完成' if ok else '全部失败'} 答复数={sum(1 for r in results.values() if r.success)}/{len(challenges)}")
     return ok
 
 
@@ -1223,29 +1548,30 @@ def stage_status_v2(stream):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="五人异构模型交叉编排器 v2 (Sparse Adaptive Deliberation)")
+    parser = argparse.ArgumentParser(description="多模型与子代理交叉编排器 v2 (Sparse Adaptive Deliberation)")
     parser.add_argument("stream_dir", help="任务流目录")
     parser.add_argument("--task", default="task.md", help="任务书路径 (默认流目录内 task.md)")
     parser.add_argument("--stage", choices=["plan", "merge", "challenge", "synthesize", "status", "all"], required=True)
     parser.add_argument("--mode", choices=["economy", "standard", "audit"], default="standard",
                         help="评审拓扑与预算模式: economy (3模型/快速), standard (5模型/常规默认), audit (5模型/严格审计)")
     parser.add_argument("--models", default=None,
-                        help="手动覆盖模型列表 (逗号分隔短名)")
+                        help="手动指定模型列表 (逗号分隔短名或 key:provider:model[:runner] 规格)")
+    parser.add_argument("--models-file", default=None,
+                        help="外部模型与子代理配置文件路径 (JSON 格式)")
     args = parser.parse_args(argv)
 
     stream = os.path.abspath(args.stream_dir)
     os.makedirs(stream, exist_ok=True)
     task_path = args.task if os.path.isabs(args.task) else os.path.join(stream, args.task)
 
-    if args.models:
-        model_keys = [k.strip() for k in args.models.split(",") if k.strip()]
+    if args.models or args.models_file:
+        model_keys = parse_and_register_models(args.models, args.models_file)
     else:
         model_keys = MODE_PRESETS.get(args.mode, MODE_PRESETS["standard"])["models"]
 
-    for k in model_keys:
-        if k not in MODELS:
-            print(f"未知模型短名: {k}, 可用: {', '.join(MODELS)}", file=sys.stderr)
-            return 2
+    if len(model_keys) < 2 and args.stage in ("plan", "merge", "all"):
+        print(f"交叉评审至少需要 2 个模型或子代理，当前指定: {len(model_keys)}", file=sys.stderr)
+        return 2
 
     if args.stage == "status":
         stage_status_v2(stream)

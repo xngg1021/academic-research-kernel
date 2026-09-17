@@ -1,0 +1,20 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "academic-skills",
+  "version": "2.0.0",
+  "description": "Harness-neutral academic research, statistical recompute, and multi-model deliberation skills.",
+  "author": {
+    "name": "Junfu Shi",
+    "url": "https://github.com/xngg1021"
+  },
+  "homepage": "https://github.com/xngg1021/hermes-academic-skills",
+  "repository": "https://github.com/xngg1021/hermes-academic-skills.git",
+  "license": "LicenseRef-Source-Lineage-1.0",
+  "keywords": [
+    "academic",
+    "research",
+    "citations",
+    "cross-review",
+    "scfabric"
+  ]
+}
