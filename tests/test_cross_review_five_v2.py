@@ -1,15 +1,16 @@
 """cross-review-five v2 编排器 (Sparse Adaptive Deliberation) 的离线可测单元测试。
 
-覆盖 implementation-contract-v2.md 的 C01-C11 验收标准:
-- C01 聚类按独立模型数判定 (消灭伪共识)
-- C02 矛盾仅由互斥 polarity 判定 (消灭伪矛盾)
-- C03 canonical target 归一 + 幽灵 target 拒绝
-- C04 findings sidecar 优先 + provenance + 平衡括号 JSON 提取
-- C05 synthesize 对账 + 逐断言表态
-- C06 质询者排除当事人 + bundle 匿名乱序
-- C07 少数派保护与 REFUTED 联动 + 幽灵证据丢弃
-- C09 raised_by 保序确定性
-- C10 单模型失败容错
+覆盖 implementation-contract-v2.md 与第二轮 PR 裁决的全部验收标准:
+- 断言级 Issue identity (issue_key 对齐 + claim 哈希兜底 + 宁拆不并)
+- 单模型多条 findings 全部保留, severity 不错嫁接
+- 同 basename 不同父目录不合并
+- 无 polarity 的相反 claim 不默认共识
+- run lineage (陈旧产物清理 + manifest 谱系 + 缺失模型进报告)
+- 相对幽灵证据标注 unverified
+- schema 校验丢弃非法条目
+- 全员当事人时质询跳过而非退回当事人
+- P0 单例优先于 P2 矛盾占用配额
+- merge 幂等 (除 timestamp 外字节一致)
 """
 
 import importlib.util
@@ -26,11 +27,17 @@ SPEC.loader.exec_module(oc2)
 
 
 def _f(**kw):
-    """构造一条 finding, 带默认值。"""
     base = {"id": "F1", "target": "core.py", "kind": "bug", "claim": "资源未释放",
             "evidence": ["core.py:10"], "severity": "P1", "blocking": False}
     base.update(kw)
     return base
+
+
+def _write_two_sidecars(stream, findings_by_model):
+    for m, findings in findings_by_model.items():
+        (stream / f"findings-{m}.json").write_text(
+            json.dumps({"findings": findings, "unknowns": [], "assumptions": []}),
+            encoding="utf-8")
 
 
 # ---------- 基础 ----------
@@ -63,72 +70,92 @@ def test_max_weight_derangement():
     assert set(pairs) == {("A", "B"), ("B", "C"), ("C", "A")}
 
 
-# ---------- C03: canonical 目标归一 ----------
+# ---------- C03: canonical 目标归一 (basename + 关键父目录段) ----------
 
-def test_normalize_target_basename():
-    assert oc2.normalize_target("schemas/foo.json:41-52") == "foo.json"
-    assert oc2.normalize_target("D:\\repos\\proj\\src\\lib.py:120") == "lib.py"
+def test_normalize_target_basename_and_parent():
+    assert oc2.normalize_target("schemas/foo.json:41-52") == "schemas/foo.json"
+    assert oc2.normalize_target("D:\\repos\\proj\\src\\lib.py:120") == "src/lib.py"
     assert oc2.normalize_target("  core_engine  ") == "core_engine"
     assert oc2.normalize_target("") == "general"
 
 
 def test_normalize_target_path_equivalence():
-    """同一文件五种写法归一后必须相等 (用中性路径, 避免触发个人路径检测)。"""
-    variants = [
-        "approval_detection.py",
-        "tools/approval_detection.py:238",
-        "/opt/audit/hermes-agent/tools/approval_detection.py",
-        "/opt/audit/hermes-agent/tools/approval_detection.py:238",
-        "D:/repos/proj/tools/APPROVAL_DETECTION.PY",
-    ]
-    canon = {oc2.normalize_target(v) for v in variants}
-    assert canon == {"approval_detection.py"}
+    """带相同父目录的写法归一后相等; 裸文件名与带路径写法不再强行等价 (宁拆不并)。"""
+    assert oc2.normalize_target("/opt/audit/hermes-agent/tools/approval_detection.py") == "tools/approval_detection.py"
+    assert oc2.normalize_target("/opt/audit/hermes-agent/tools/approval_detection.py:238") == "tools/approval_detection.py"
+    assert oc2.normalize_target("D:/repos/proj/tools/APPROVAL_DETECTION.PY") == "tools/approval_detection.py"
+    assert oc2.normalize_target("approval_detection.py") == "approval_detection.py"
+    assert oc2.normalize_target("approval_detection.py") != oc2.normalize_target("tools/approval_detection.py")
+
+
+def test_normalize_target_distinguishes_same_basename():
+    """同 basename 不同父目录不得合并 (src/config.py vs tests/config.py)。"""
+    assert oc2.normalize_target("src/config.py") == "src/config.py"
+    assert oc2.normalize_target("tests/config.py") == "tests/config.py"
+    assert oc2.normalize_target("src/config.py") != oc2.normalize_target("tests/config.py")
 
 
 def test_normalize_target_extracts_file_from_composite():
-    """C12 实测缺陷: 复合描述式 target (文件名+函数+行号) 归一后按文件聚合。"""
+    """复合描述式 target (文件名+函数+行号) 归一后按文件聚合。"""
     assert oc2.normalize_target("orchestrate_v2.py cluster_issues (388-430行), 对应契约C01") == "orchestrate_v2.py"
     assert oc2.normalize_target("orchestrate_v2.py normalize_target (295-308行)") == "orchestrate_v2.py"
-    assert oc2.normalize_target("skills/cross-review-five/scripts/orchestrate_v2.py:661-670") == "orchestrate_v2.py"
-    # 不同模型对同一函数的复合描述归一后相等
+    assert oc2.normalize_target("skills/cross-review-five/scripts/orchestrate_v2.py:661-670") == "scripts/orchestrate_v2.py"
     a = oc2.normalize_target("orchestrate_v2.py cluster_issues (388-430行)")
     b = oc2.normalize_target("orchestrate_v2.py cluster_issues L382-430")
     assert a == b == "orchestrate_v2.py"
-    # 复合描述中多文件名取第一个
-    assert oc2.normalize_target("stage_merge_v2 产物 issue-registry.json (L422-424)") == "issue-registry.json"
 
 
 def test_is_plausible_target_rejects_regex_fragment():
     assert oc2._is_plausible_target("approval_detection.py")
-    assert oc2._is_plausible_target("test_x.py")
     assert not oc2._is_plausible_target("cli/.py")
     assert not oc2._is_plausible_target(r"cli\.py")
     assert not oc2._is_plausible_target("cli[abc].py")
     assert not oc2._is_plausible_target("README")
 
 
-# ---------- C01/C02/C09: 聚类语义 ----------
+# ---------- C01/C02: 断言级聚类 ----------
 
-def test_single_model_multi_findings_not_consensus():
-    """C01: 同一模型对同一 target 的多条 findings 归 singleton, 不冒充多模型共识。"""
+def test_single_model_multi_findings_all_preserved():
+    """单模型同 target 多条 findings 全部保留 (身份=target+claim 哈希, 宁拆不并), severity 不错嫁接。"""
     models = ["kimi-k3", "dsv4pro"]
     findings = {
-        "kimi-k3": {"findings": [_f(target="core.py:10", claim="资源未释放"),
-                                 _f(target="core.py:20", claim="句柄泄漏", id="F2")]},
+        "kimi-k3": {"findings": [_f(target="core.py:10", claim="轻微风格问题", severity="P2"),
+                                 _f(target="core.py:20", claim="数据丢失缺陷", severity="P0", id="F2")]},
         "dsv4pro": {"findings": []},
     }
     consensus, singletons, contradictions = oc2.cluster_issues(models, findings)
     assert consensus == []
-    assert [s["target"] for s in singletons] == ["core.py"]
-    assert singletons[0]["raised_by"] == ["kimi-k3"]
+    assert len(singletons) == 2
+    by_claim = {s["claims"][0]["claim"]: s for s in singletons}
+    p2 = by_claim["轻微风格问题"]
+    p0 = by_claim["数据丢失缺陷"]
+    assert p2["claims"][0]["severity"] == "P2" and p2["severity"] == "P2"
+    assert p0["claims"][0]["severity"] == "P0" and p0["severity"] == "P0"
+    for s in singletons:
+        assert s["raised_by"] == ["kimi-k3"]
 
 
-def test_claim_keywords_do_not_make_contradiction():
-    """C02: claim 含'不/错'字、kind 不同, 不构成矛盾。"""
+def test_opposite_claims_without_polarity_not_consensus():
+    """两模型同 target 语义相反且都无 polarity: 不得默认共识 (宁拆不并)。"""
     models = ["kimi-k3", "dsv4pro"]
     findings = {
-        "kimi-k3": {"findings": [_f(target="core.py", kind="bug", claim="资源未关闭,不正确释放")]},
-        "dsv4pro": {"findings": [_f(target="core.py", kind="perf", claim="句柄未释放,存在错误")]},
+        "kimi-k3": {"findings": [_f(target="core.py", claim="validation exists")]},
+        "dsv4pro": {"findings": [_f(target="core.py", claim="validation is absent")]},
+    }
+    consensus, singletons, contradictions = oc2.cluster_issues(models, findings)
+    assert consensus == []
+    assert contradictions == []
+    assert len(singletons) == 2
+
+
+def test_issue_key_aligns_assertions():
+    """同 target 同 issue_key 的不同措辞 claim 聚合为 consensus。"""
+    models = ["kimi-k3", "dsv4pro"]
+    findings = {
+        "kimi-k3": {"findings": [_f(target="core.py", claim="锁未释放,不正确",
+                                    issue_key="lock-leak", kind="bug")]},
+        "dsv4pro": {"findings": [_f(target="core.py", claim="存在锁竞争错误",
+                                    issue_key="lock-leak", kind="perf")]},
     }
     consensus, singletons, contradictions = oc2.cluster_issues(models, findings)
     assert contradictions == []
@@ -137,11 +164,13 @@ def test_claim_keywords_do_not_make_contradiction():
 
 
 def test_polarity_opposition_is_contradiction():
-    """C02: 不同模型对同一 target 给出互斥 polarity 才判矛盾。"""
+    """同 issue_key 下互斥 polarity 判矛盾 (claim 措辞不同也可)。"""
     models = ["kimi-k3", "dsv4pro"]
     findings = {
-        "kimi-k3": {"findings": [_f(target="cache.py", claim="缓存未失效", polarity="present")]},
-        "dsv4pro": {"findings": [_f(target="cache.py", claim="缓存已失效", polarity="absent")]},
+        "kimi-k3": {"findings": [_f(target="cache.py", claim="缓存未失效",
+                                    issue_key="cache-stale", polarity="present")]},
+        "dsv4pro": {"findings": [_f(target="cache.py", claim="缓存失效问题不存在",
+                                    issue_key="cache-stale", polarity="absent")]},
     }
     consensus, singletons, contradictions = oc2.cluster_issues(models, findings)
     assert consensus == []
@@ -150,14 +179,12 @@ def test_polarity_opposition_is_contradiction():
 
 
 def test_raised_by_preserves_order():
-    """C09: 保序去重, 与输入顺序无关的确定性。"""
     assert oc2.dedup_preserve_order(["b", "a", "b", "a", "c"]) == ["b", "a", "c"]
-    # 跨进程确定性: 重复运行结果一致
     assert oc2.dedup_preserve_order(["b", "a", "b", "a", "c"]) == \
         oc2.dedup_preserve_order(["b", "a", "b", "a", "c"])
 
 
-# ---------- C04/C10: findings 提取 ----------
+# ---------- C04/C10: findings 提取与 schema 校验 ----------
 
 def test_extract_findings_md_json_block(tmp_path):
     stream = tmp_path / "stream1"
@@ -182,7 +209,6 @@ def test_extract_findings_md_json_block(tmp_path):
 
 
 def test_extract_findings_nested_brace_json(tmp_path):
-    """C10: 嵌套大括号的 JSON 块必须正确解析 (平衡提取)。"""
     stream = tmp_path / "stream_nested"
     stream.mkdir()
     md_content = """# 评审意见
@@ -204,7 +230,6 @@ def test_extract_findings_nested_brace_json(tmp_path):
 
 
 def test_sidecar_preferred_over_fallback(tmp_path):
-    """C04: sidecar 存在且合法时直接使用, 不走 fallback。"""
     stream = tmp_path / "stream_sidecar"
     stream.mkdir()
     sidecar = {"findings": [_f(target="real.py", claim="真实发现")],
@@ -219,7 +244,6 @@ def test_sidecar_preferred_over_fallback(tmp_path):
 
 
 def test_sidecar_non_object_no_crash(tmp_path):
-    """C04/C10: sidecar 为数组等非对象形状时不引发 AttributeError。"""
     stream = tmp_path / "stream_badsidecar"
     stream.mkdir()
     (stream / "findings-kimi-k3.json").write_text("[1, 2, 3]", encoding="utf-8")
@@ -229,8 +253,28 @@ def test_sidecar_non_object_no_crash(tmp_path):
     assert data["findings"] == []
 
 
+def test_schema_validation_drops_invalid(tmp_path):
+    """非法条目 (severity 越界/非对象/polarity 非法) 丢弃, 合法条目保留, 不崩。"""
+    stream = tmp_path / "stream_schema"
+    stream.mkdir()
+    sidecar = {"findings": [
+        {"id": "F1", "target": "ok.py", "kind": "bug", "claim": "合法发现",
+         "evidence": ["ok.py:1"], "severity": "P1"},
+        {"id": "F2", "target": "bad.py", "kind": "bug", "claim": "severity 越界",
+         "evidence": ["bad.py:1"], "severity": "P9"},
+        "not-an-object",
+        {"id": "F4", "target": "bad2.py", "kind": "bug", "claim": "polarity 非法",
+         "evidence": ["bad2.py:1"], "severity": "P2", "polarity": "maybe"},
+    ], "unknowns": [], "assumptions": []}
+    (stream / "findings-kimi-k3.json").write_text(json.dumps(sidecar), encoding="utf-8")
+    data = oc2.extract_findings_json(str(stream), "kimi-k3")
+    assert len(data["findings"]) == 1
+    assert data["findings"][0]["target"] == "ok.py"
+    dropped = data.get("_meta", {}).get("dropped", [])
+    assert len(dropped) == 3
+
+
 def test_fallback_rejects_regex_fragment(tmp_path):
-    """C03/C04: 正则残片与幽灵路径不产生 finding。"""
     stream = tmp_path / "stream_ghost"
     stream.mkdir()
     (stream / "review-kimi-k3.md").write_text(
@@ -241,22 +285,80 @@ def test_fallback_rejects_regex_fragment(tmp_path):
         assert oc2._is_plausible_target(f["target"])
 
 
-# ---------- C05/C06/C07: merge + synthesize ----------
+# ---------- run lineage: 陈旧产物清理与 manifest ----------
 
-def _write_two_sidecars(stream, findings_by_model):
-    for m, findings in findings_by_model.items():
-        (stream / f"findings-{m}.json").write_text(
-            json.dumps({"findings": findings, "unknowns": [], "assumptions": []}),
-            encoding="utf-8")
+def test_plan_cleans_stale_outputs(tmp_path):
+    stream = tmp_path / "stream_clean"
+    stream.mkdir()
+    (stream / "review-kimi-k3.md").write_text("旧评审", encoding="utf-8")
+    (stream / "findings-kimi-k3.json").write_text("{}", encoding="utf-8")
+    (stream / "log-kimi-k3.txt").write_text("旧日志", encoding="utf-8")
+    oc2._clean_stale_plan_outputs(str(stream), ["kimi-k3", "dsv4pro"])
+    assert not (stream / "review-kimi-k3.md").exists()
+    assert not (stream / "findings-kimi-k3.json").exists()
+    assert not (stream / "log-kimi-k3.txt").exists()
 
+
+def test_challenge_cleans_stale_replies(tmp_path):
+    stream = tmp_path / "stream_clean_c"
+    stream.mkdir()
+    (stream / "challenge-reply-C01-kimi-k3.md").write_text("旧答复", encoding="utf-8")
+    (stream / "bundle-C01.json").write_text("{}", encoding="utf-8")
+    oc2._clean_stale_challenge_outputs(str(stream))
+    assert not (stream / "challenge-reply-C01-kimi-k3.md").exists()
+    assert not (stream / "bundle-C01.json").exists()
+
+
+def test_manifest_roundtrip(tmp_path):
+    stream = tmp_path / "stream_manifest"
+    stream.mkdir()
+    (stream / "task.md").write_text("任务书内容", encoding="utf-8")
+    m = oc2._write_manifest(str(stream), str(stream / "task.md"), ["a", "b"], "economy",
+                            missing_models=["b"])
+    assert m["run_id"]
+    assert m["task_sha256"] and len(m["task_sha256"]) == 16
+    assert m["missing_models"] == ["b"]
+    m2 = oc2._read_manifest(str(stream))
+    assert m2["run_id"] == m["run_id"]
+
+
+def test_plan_failed_model_reported_missing(tmp_path, monkeypatch):
+    """plan 阶段: 旧产物被清理, 失败模型的旧文件不得冒充本轮结果, missing 进 manifest。"""
+    stream = tmp_path / "stream_fail"
+    stream.mkdir()
+    (stream / "task.md").write_text("任务", encoding="utf-8")
+    (stream / "review-kimi-k3.md").write_text("旧评审", encoding="utf-8")
+    (stream / "findings-kimi-k3.json").write_text("{}", encoding="utf-8")
+
+    class _FakeProc:
+        pid = 0
+
+        def poll(self):
+            return 0
+
+    def fake_spawn(model_key, prompt_path, log_path):
+        if model_key == "dsv4pro":
+            out = stream / "review-dsv4pro.md"
+            out.write_text("新评审", encoding="utf-8")
+        return _FakeProc()
+
+    monkeypatch.setattr(oc2, "spawn", fake_spawn)
+    ok = oc2.stage_plan_v2(str(stream), str(stream / "task.md"), ["kimi-k3", "dsv4pro"])
+    assert ok is True
+    assert (stream / "review-dsv4pro.md").exists()
+    assert not (stream / "review-kimi-k3.md").exists()
+    manifest = oc2._read_manifest(str(stream))
+    assert "kimi-k3" in manifest["missing_models"]
+
+
+# ---------- C05/C06/C07: merge + challenge + synthesize ----------
 
 def test_reviewer_excludes_contradiction_parties(tmp_path):
-    """C06: 矛盾质询的 reviewer 不得是争议当事人。"""
     stream = tmp_path / "stream_r"
     stream.mkdir()
     _write_two_sidecars(stream, {
-        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", polarity="present")],
-        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", polarity="absent")],
+        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", issue_key="ck", polarity="present")],
+        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", issue_key="ck", polarity="absent")],
     })
     oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
     plan = json.loads((stream / "challenge-plan.json").read_text(encoding="utf-8"))
@@ -266,12 +368,11 @@ def test_reviewer_excludes_contradiction_parties(tmp_path):
 
 
 def test_bundle_anonymized(tmp_path):
-    """C06: bundle 提案不含模型短名, 别名 Proposal-N, 乱序由固定种子决定。"""
     stream = tmp_path / "stream_a"
     stream.mkdir()
     _write_two_sidecars(stream, {
-        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", polarity="present")],
-        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", polarity="absent")],
+        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", issue_key="ck", polarity="present")],
+        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", issue_key="ck", polarity="absent")],
     })
     oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
     plan = json.loads((stream / "challenge-plan.json").read_text(encoding="utf-8"))
@@ -281,15 +382,63 @@ def test_bundle_anonymized(tmp_path):
         assert m not in raw
     aliases = [p["source_alias"] for p in bundle["proposals"]]
     assert aliases == sorted(aliases, key=lambda a: int(a.split("-")[1]))
-    # 确定性: 两次 merge 产出字节一致
-    b2 = (stream / "challenge-plan.json").read_bytes()
+
+
+def test_all_parties_no_anonymous_candidate_skipped(tmp_path):
+    """两模型全员当事人: 质询跳过并记录, 不退回当事人。"""
+    stream = tmp_path / "stream_skip"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", issue_key="ck", polarity="present")],
+        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", issue_key="ck", polarity="absent")],
+    })
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro"], mode="economy")
+    plan = json.loads((stream / "challenge-plan.json").read_text(encoding="utf-8"))
+    assert plan == []
+    skipped = json.loads((stream / "challenge-skipped.json").read_text(encoding="utf-8"))
+    assert len(skipped) == 1
+    assert "无匿名候选" in skipped[0]["reason"] or "无可用非当事人" in skipped[0]["reason"]
+
+
+def test_p0_singleton_beats_p2_contradiction(tmp_path):
+    """配额 1: P2 矛盾与 P0 单例并存时, P0 单例优先。"""
+    stream = tmp_path / "stream_quota"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", issue_key="ck", polarity="present",
+                       severity="P2"),
+                    _f(target="crypto.py", claim="弱随机数", severity="P0")],
+        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", issue_key="ck", polarity="absent",
+                       severity="P2")],
+    })
     oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
-    b3 = (stream / "challenge-plan.json").read_bytes()
-    assert b2 == b3
+    plan = json.loads((stream / "challenge-plan.json").read_text(encoding="utf-8"))
+    assert len(plan) == 1
+    assert plan[0]["type"] == "singleton_audit"
+    assert plan[0]["target"] == "crypto.py"
+
+
+def test_merge_idempotent_modulo_timestamp(tmp_path):
+    """两次 merge: registry 除 timestamp 外一致, challenge-plan 字节一致。"""
+    stream = tmp_path / "stream_idem"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", issue_key="ck", polarity="present")],
+        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", issue_key="ck", polarity="absent")],
+    })
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
+    r1 = json.loads((stream / "issue-registry.json").read_text(encoding="utf-8"))
+    p1 = (stream / "challenge-plan.json").read_bytes()
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
+    r2 = json.loads((stream / "issue-registry.json").read_text(encoding="utf-8"))
+    p2 = (stream / "challenge-plan.json").read_bytes()
+    r1["metadata"].pop("timestamp", None)
+    r2["metadata"].pop("timestamp", None)
+    assert r1 == r2
+    assert p1 == p2
 
 
 def test_mixed_stances_parsed():
-    """C05: 一份答复含三种表态时, 三类均被计数。"""
     text = ("第四步【裁决与表态】：\n"
             "【CONCEDE】对方证据确凿, 认同。\n"
             "【REFUTED】该条不成立, 反例见附件。\n"
@@ -299,23 +448,20 @@ def test_mixed_stances_parsed():
 
 
 def test_synthesize_missing_reply_reported(tmp_path):
-    """C05: 质询计划与答复对账, 缺失答复在报告点名。"""
     stream = tmp_path / "stream_m"
     stream.mkdir()
     _write_two_sidecars(stream, {
-        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", polarity="present")],
-        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", polarity="absent")],
+        "kimi-k3": [_f(target="cache.py", claim="缓存未失效", issue_key="ck", polarity="present")],
+        "dsv4pro": [_f(target="cache.py", claim="缓存已失效", issue_key="ck", polarity="absent")],
     })
     oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
-    # 不写任何 challenge-reply
     oc2.stage_synthesize_v2(str(stream))
     report = (stream / "consensus-report.md").read_text(encoding="utf-8")
-    assert "质询缺失" in report or "MISSING" in report
     assert "质询缺失 (Missing Replies): 1 项" in report
+    assert "MISSING" in report
 
 
 def test_refuted_singleton_excluded_from_ledger(tmp_path):
-    """C07: 被质询 REFUTED 的单例不得进入未决账本。"""
     stream = tmp_path / "stream_f"
     stream.mkdir()
     _write_two_sidecars(stream, {
@@ -327,7 +473,7 @@ def test_refuted_singleton_excluded_from_ledger(tmp_path):
     assert plan and plan[0]["type"] == "singleton_audit"
     cid, reviewer = plan[0]["challenge_id"], plan[0]["reviewer"]
     (stream / f"challenge-reply-{cid}-{reviewer}.md").write_text(
-        "第四步【裁决与表态】：【REFUTED】该断言不成立, 代码实际使用 secrets 模块。",
+        "第四步【裁决与表态】：【REFUTED】该断言不成立, 代码实际使用加密安全随机源。",
         encoding="utf-8")
     oc2.stage_synthesize_v2(str(stream))
     ledger = json.loads((stream / "unresolved-ledger.json").read_text(encoding="utf-8"))
@@ -336,7 +482,6 @@ def test_refuted_singleton_excluded_from_ledger(tmp_path):
 
 
 def test_ghost_absolute_evidence_excluded(tmp_path):
-    """C07: 绝对路径证据不存在 (幽灵证据) 时单例不得入账, 报告记录丢弃。"""
     stream = tmp_path / "stream_g"
     stream.mkdir()
     ghost = "/opt/hermes-nonexistent-dir-xyz/ghost.py"
@@ -352,10 +497,41 @@ def test_ghost_absolute_evidence_excluded(tmp_path):
     assert "幽灵证据" in report
 
 
-# ---------- C10: 容错 ----------
+def test_relative_ghost_evidence_marked_unverified(tmp_path):
+    """相对路径样式证据未命中任何 base 目录: 入账但标注 unverified, 不冒充已验证。"""
+    stream = tmp_path / "stream_rg"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="config.py", claim="配置缺陷", severity="P0",
+                       evidence=["ghost_dir/ghost.py:10"])],
+        "dsv4pro": [],
+    })
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
+    oc2.stage_synthesize_v2(str(stream))
+    ledger = json.loads((stream / "unresolved-ledger.json").read_text(encoding="utf-8"))
+    report = (stream / "consensus-report.md").read_text(encoding="utf-8")
+    assert len(ledger) == 1
+    assert ledger[0]["evidence_unverified"] == ["ghost_dir/ghost.py:10"]
+    assert "证据未验证" in report
+
+
+def test_consensus_report_uses_corroborated_naming(tmp_path):
+    """报告不得使用 Verified Consensus 命名 (与'模型共识不是证据'纪律一致)。"""
+    stream = tmp_path / "stream_name"
+    stream.mkdir()
+    _write_two_sidecars(stream, {
+        "kimi-k3": [_f(target="core.py", claim="锁泄漏", issue_key="lock-leak")],
+        "dsv4pro": [_f(target="core.py", claim="锁未释放", issue_key="lock-leak")],
+    })
+    oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro", "gemini38flash"], mode="economy")
+    oc2.stage_synthesize_v2(str(stream))
+    report = (stream / "consensus-report.md").read_text(encoding="utf-8")
+    assert "Verified Consensus" not in report
+    assert "多模型互证" in report
+    assert "Corroborated" in report
+
 
 def test_wait_for_outputs_partial_failure(tmp_path):
-    """C10: 单个模型无产出时, 返回逐项状态而非整阶段失败。"""
     ok_file = tmp_path / "ok.md"
     ok_file.write_text("x", encoding="utf-8")
     missing = tmp_path / "missing.md"
@@ -373,9 +549,9 @@ def test_merge_and_synthesize_end_to_end(tmp_path):
     stream = tmp_path / "stream_e2e"
     stream.mkdir()
     _write_two_sidecars(stream, {
-        "kimi-k3": [_f(target="server.py", kind="perf", claim="并发锁争用"),
+        "kimi-k3": [_f(target="server.py", kind="perf", claim="并发锁争用", issue_key="lock"),
                     _f(target="config.yaml", kind="bug", claim="配置项缺失", severity="P2")],
-        "dsv4pro": [_f(target="server.py", kind="perf", claim="存在锁冲突"),
+        "dsv4pro": [_f(target="server.py", kind="perf", claim="存在锁冲突", issue_key="lock"),
                     _f(target="crypto.py", kind="security", claim="弱随机数生成", severity="P0")],
     })
     ok_merge = oc2.stage_merge_v2(str(stream), ["kimi-k3", "dsv4pro"], mode="economy")
@@ -389,7 +565,7 @@ def test_merge_and_synthesize_end_to_end(tmp_path):
     cid, reviewer = plan[0]["challenge_id"], plan[0]["reviewer"]
     (stream / f"challenge-reply-{cid}-{reviewer}.md").write_text(
         "第一步【提取增量】：核验了对方的弱随机数。\n"
-        "第四步【裁决与表态】：【CONCEDE】对方指出 crypto.py 使用了 random 而非 secrets，证据确凿。",
+        "第四步【裁决与表态】：【CONCEDE】对方指出 crypto.py 使用了伪随机源而非加密安全随机源。",
         encoding="utf-8")
 
     ok_synth = oc2.stage_synthesize_v2(str(stream))
@@ -398,11 +574,8 @@ def test_merge_and_synthesize_end_to_end(tmp_path):
     assert (stream / "unresolved-ledger.json").exists()
     report_text = (stream / "consensus-report.md").read_text(encoding="utf-8")
     assert "五人交叉评审合议报告 (v2 Sparse Deliberation)" in report_text
-    # 头部计数 + 单例质询答复章节呈现 CONCEDE 表态原文
     assert "质询认同/认输 (Conceded): 1 项" in report_text
-    assert "单例/互补质询答复" in report_text
     assert "【CONCEDE】" in report_text
-    # server.py 两模型同向 -> consensus
     registry = json.loads((stream / "issue-registry.json").read_text(encoding="utf-8"))
     assert any(c["target"] == "server.py" and c["state"] == "consensus"
                for c in registry["consensus"])

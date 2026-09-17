@@ -3,22 +3,23 @@
 基于信息增量、结构化 Issue 拓扑与自适应质询的稀疏通信评审系统。
 
 核心设计原则 (v2):
-1. 独立盲审 (Blind Independent Society): 保留五个异构模型互不可见的第一阶段，防范从众与锚定；
-2. 结构化 Issue 提取: 每个模型产出 Markdown 的同时生成 findings 规范数据 (强制落盘 sidecar JSON)；
-3. 本地零成本归并: 本地 Python 脚本聚类 Consensus、Singleton 与 Contradiction，计算互补矩阵；
-4. 匿名定向质询 (Targeted Cross-Examination): 只审关键 Issue，质询者排除争议当事人，议题包匿名乱序；
-5. 少数派证据保护与防从众提示词: 提取增量优先于表态，支持 CONCEDE 认输，有证据的少数派绝不被多数票吞没。
+1. 独立盲审 (Blind Independent Society): 五个异构模型互不可见的第一阶段；
+2. 结构化 Issue 提取: 每个模型产出 Markdown 的同时强制落盘 findings sidecar JSON；
+3. 本地零成本归并: 聚类 Consensus、Singleton 与 Contradiction，计算互补矩阵；
+4. 匿名定向质询: 只审关键 Issue，质询者排除争议当事人，议题包匿名乱序；
+5. 少数派证据保护: 有证据的少数派绝不被多数票吞没。
 
-修复记录 (implementation-contract-v2.md):
-- C01 聚类按独立模型数判定 (raised_by 去重后 ≥2 才是多模型状态)
-- C02 矛盾判定改为 polarity 互斥断言，删除"不/错"字与 kinds 启发式
-- C03 normalize_target 以 basename 为 canonical，fallback 拒绝正则残片/幽灵路径
-- C04 findings sidecar 强制写入 + provenance 标记 + 平衡括号 JSON 提取
-- C05 synthesize 与质询计划对账 + 逐断言表态解析 + 矛盾/质询章节
-- C06 质询者排除 raised_by 当事人，bundle 提案固定种子乱序匿名
-- C07 少数派保护与 REFUTED 联动，绝对路径证据存在性校验
-- C09 raised_by 保序去重 (确定性幂等)
-- C10 单模型失败不判负整阶段，缺失模型显式标注
+断言级 Issue identity (第二轮裁决修复):
+- Issue 身份 = canonical_target + assertion_key。显式 issue_key 优先；
+- 无 issue_key 时以归一化 claim 短哈希兜底 (宁拆不并, 绝不凭空合并);
+- 同一模型对同一身份的多条 findings 全部保留, 不再静默丢弃;
+- 多模型聚合且无互斥 polarity 的展示名一律用 "多模型互证 (Corroborated)"
+  而非 "Verified Consensus" (模型共识不是证据, 出处谱系才是证据)。
+
+运行谱系 (run lineage):
+- 每个 plan run 写入 run-manifest.json (run_id, task_sha256, model_set, missing_models);
+- plan 开始前清理本轮模型的旧 review/findings/log; challenge 开始前清理旧答复与议题包;
+- 报告头展示 run_id 与任务摘要, 缺失模型显式列名。
 
 用法:
     python orchestrate_v2.py <stream_dir> --task <task.md> --stage plan [--mode standard]
@@ -30,6 +31,7 @@
 """
 import argparse
 import glob
+import hashlib
 import itertools
 import json
 import os
@@ -54,30 +56,33 @@ MODELS = {
 
 DEFAULT_MODELS = list(MODELS)
 
-# 模式配置 (调用次数: 盲审次数 + max_challenges; 见 SKILL.md 三档声明)
 MODE_PRESETS = {
     "economy": {
         "models": ["kimi-k3", "dsv4pro", "gemini38flash"],
         "max_challenges": 1,
-        "description": "经济模式 (3 模型盲审, 最多 1 次关键争议质询, 共 3-4 次调用)",
+        "description": "经济模式 (3 模型盲审, 最多 1 次质询, 共 3-4 次调用)",
     },
     "standard": {
         "models": ["kimi-k3", "dsv4pro", "glm53", "gemini38flash", "gemini31pro"],
         "max_challenges": 3,
-        "description": "标准模式 (5 模型盲审, 最多 3 次核心争议与单例质询, 共 5-8 次调用, 默认推荐)",
+        "description": "标准模式 (5 模型盲审, 最多 3 次质询, 共 5-8 次调用, 默认推荐)",
     },
     "audit": {
         "models": ["kimi-k3", "dsv4pro", "glm53", "gemini38flash", "gemini31pro"],
         "max_challenges": 5,
         "use_derangement": True,
-        "description": "审计模式 (5 模型盲审, 最多 5 次质询 + 互补错排, 共 5-10 次调用, 适合高危收口)",
+        "description": "审计模式 (5 模型盲审, 最多 5 次质询, 配额有余时追加互补错排, 共 5-10 次调用)",
     },
 }
 
 POLL_SECONDS = 15
 TIMEOUT_SECONDS = 40 * 60
-# 固定种子保证质询分配与 bundle 乱序可复现 (幂等性)
 RNG_SEED = 20260917
+
+VALID_SEVERITY = {"P0", "P1", "P2"}
+VALID_KINDS = {"bug", "security", "invariant", "perf", "spec_mismatch", "suggestion"}
+VALID_POLARITY = {"present", "absent", "positive", "negative"}
+_SEV_RANK = {"P0": 3, "P1": 2, "P2": 1}
 
 PLAN_PROMPT_V2 = """任务：评审任务书并独立产出方案与结构化发现。
 
@@ -93,7 +98,8 @@ PLAN_PROMPT_V2 = """任务：评审任务书并独立产出方案与结构化发
   "findings": [
     {{
       "id": "F1",
-      "target": "涉及的具体文件、模块、行号范围或规范接口",
+      "target": "涉及的具体文件路径 (尽量带父目录与行号范围)",
+      "issue_key": "可选的断言身份键: 同一具体问题请用同一个简短键, 如 'cluster-consensus-rule'",
       "kind": "bug|security|invariant|perf|spec_mismatch|suggestion",
       "claim": "发现的核心断言（一两句话说明问题实体与结论）",
       "polarity": "可选：present|absent|positive|negative，表示您对该目标的主张方向",
@@ -111,7 +117,8 @@ PLAN_PROMPT_V2 = """任务：评审任务书并独立产出方案与结构化发
 - 只读任务书与指定材料，不得修改任何现有文件；不得修改其他评审者的产出文件；
 - 输出用简体中文，按您自然的文风写作；
 - 产出必须基于您实际读到的内容，严禁虚构不存在的文件、接口或测试结果；
-- findings JSON 必须写入 {findings_path}，kind 只能使用上述枚举值，确保 target、claim、evidence 真实明确。
+- findings JSON 必须写入 {findings_path}，kind 与 severity 只能使用上述枚举值；
+- issue_key 用于跨评审者的断言对齐：不同评审者对同一具体问题请使用含义相同的键；不同问题请使用不同键。
 """
 
 CHALLENGE_PROMPT_V2 = """任务：对匿名方案的分歧点与独有发现进行定向交叉质询。
@@ -141,9 +148,7 @@ CHALLENGE_PROMPT_V2 = """任务：对匿名方案的分歧点与独有发现进�
 - 严禁以多数票为由否定附有具体代码证据的少数派意见。
 """
 
-# 合法 target 文件名样式 (basename 校验, 排除正则残片/幽灵路径)
 _TARGET_BASENAME_RE = re.compile(r"^[A-Za-z0-9_.\-]+\.(?:py|json|md|sh|ps1|yaml|yml|toml|txt|csv)$")
-# 无锚定文件名 token (用于从复合描述中提取第一个文件名)
 _FILE_TOKEN_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:py|json|md|sh|ps1|yaml|yml|toml|txt|csv)")
 _ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|/)")
 OPPOSING_POLARITY = {
@@ -153,7 +158,6 @@ OPPOSING_POLARITY = {
 
 
 def dedup_preserve_order(seq):
-    """保序去重, 替代 set 以保证跨进程确定性 (C09)。"""
     seen = set()
     out = []
     for x in seq:
@@ -164,7 +168,6 @@ def dedup_preserve_order(seq):
 
 
 def spawn(model_key, prompt_path, log_path):
-    """启动子进程执行单个模型的评测任务。"""
     provider, model = MODELS[model_key]
     cmd = ["hermes", "chat", "--query-file", prompt_path, "--oneshot",
            "-m", model, "--provider", provider]
@@ -178,7 +181,7 @@ def spawn(model_key, prompt_path, log_path):
 
 
 def wait_for_outputs(out_paths, procs, timeout=TIMEOUT_SECONDS):
-    """轮询产物文件落盘与进程退出 (C10): 返回 {path: bool}, 单个模型失败不判负整阶段。"""
+    """轮询产物文件落盘与进程退出; 返回 {path: bool}, 单个模型失败不判负整阶段。"""
     deadline = time.time() + timeout
     while time.time() < deadline:
         if all(p.poll() is not None for p in procs):
@@ -190,15 +193,74 @@ def wait_for_outputs(out_paths, procs, timeout=TIMEOUT_SECONDS):
     return {p: (os.path.exists(p) and os.path.getsize(p) > 0) for p in out_paths}
 
 
+def _write_manifest(stream, task_path, model_keys, mode, missing_models=None):
+    """写/更新 run-manifest.json, 记录运行谱系。"""
+    manifest_path = os.path.join(stream, "run-manifest.json")
+    manifest = {}
+    if os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                manifest = json.load(f)
+        except Exception:
+            manifest = {}
+    if manifest.get("run_id") is None:
+        manifest["run_id"] = time.strftime("%Y%m%d-%H%M%S")
+    if manifest.get("task_sha256") is None and os.path.exists(task_path):
+        with open(task_path, "rb") as f:
+            manifest["task_sha256"] = hashlib.sha256(f.read()).hexdigest()[:16]
+    manifest["model_set"] = model_keys
+    manifest["mode"] = mode
+    manifest["started_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    if missing_models is not None:
+        manifest["missing_models"] = missing_models
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    return manifest
+
+
+def _read_manifest(stream):
+    manifest_path = os.path.join(stream, "run-manifest.json")
+    if not os.path.exists(manifest_path):
+        return None
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _clean_stale_plan_outputs(stream, model_keys):
+    """重跑防护: 清理本轮模型名下的旧 review/findings/log, 防止旧产物冒充本轮结果。"""
+    for k in model_keys:
+        for name in (f"review-{k}.md", f"findings-{k}.json", f"log-{k}.txt"):
+            p = os.path.join(stream, name)
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
+
+
+def _clean_stale_challenge_outputs(stream):
+    for pat in ("challenge-reply-*.md", "bundle-*.json", "log-challenge-*.txt",
+                "prompt-challenge-*.txt"):
+        for p in glob.glob(os.path.join(stream, pat)):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+
 def _mark_provenance(data, provenance):
     for f in data.get("findings", []):
-        f.setdefault("provenance", provenance)
+        if isinstance(f, dict):
+            f.setdefault("provenance", provenance)
     data.setdefault("_meta", {})["provenance"] = provenance
     return data
 
 
 def _extract_json_object_from_text(text):
-    """平衡括号解析: 从文本中提取第一个含 findings 键的 JSON 对象 (C04/C10, 处理嵌套括号)。"""
+    """平衡括号解析: 从文本中提取第一个含 findings 键的 JSON 对象。"""
     dec = json.JSONDecoder()
     idx = 0
     n = len(text)
@@ -219,25 +281,64 @@ def _extract_json_object_from_text(text):
 
 
 def _is_plausible_target(t):
-    """target 必须是合法文件名样式且不含正则元字符 (C03)。"""
     return bool(_TARGET_BASENAME_RE.match(t)) and not re.search(r"[\\\[\]()*+?{}^$|]", t)
 
 
+def _validate_findings(data, provenance):
+    """schema 校验: 非法条目丢弃并计数, 不崩。"""
+    raw = data.get("findings")
+    if not isinstance(raw, list):
+        data.setdefault("_meta", {})["dropped"] = [{"reason": "findings not a list"}]
+        data["findings"] = []
+        return data
+    kept, dropped = [], []
+    for i, f in enumerate(raw):
+        if not isinstance(f, dict):
+            dropped.append({"index": i, "reason": "not an object"})
+            continue
+        reasons = []
+        if not isinstance(f.get("target", ""), str) or not f.get("target", "").strip():
+            reasons.append("bad target")
+        if str(f.get("severity", "")).upper() not in VALID_SEVERITY:
+            reasons.append("bad severity")
+        if not isinstance(f.get("claim", ""), str):
+            reasons.append("bad claim")
+        ev = f.get("evidence", [])
+        if not isinstance(ev, list) or not all(isinstance(e, str) for e in ev):
+            reasons.append("bad evidence")
+        pol = str(f.get("polarity", "")).strip().lower()
+        if pol and pol not in VALID_POLARITY:
+            reasons.append("bad polarity")
+        if reasons:
+            dropped.append({"index": i, "reason": ",".join(reasons)})
+            continue
+        f2 = dict(f)
+        f2["severity"] = str(f["severity"]).upper()
+        f2["polarity"] = pol
+        f2.setdefault("provenance", provenance)
+        kept.append(f2)
+    if dropped:
+        print(f"[findings] schema 校验丢弃 {len(dropped)} 条非法 finding", file=sys.stderr)
+        data.setdefault("_meta", {})["dropped"] = dropped
+    data["findings"] = kept
+    return data
+
+
 def extract_findings_json(stream, model_key):
-    """提取模型的结构化 findings (C04):
-    1) 优先读模型亲写 sidecar findings-<model>.json;
-    2) 缺失时从 review-<model>.md 平衡提取 JSON 块并落盘 sidecar;
+    """提取模型的结构化 findings:
+    1) 优先读模型亲写 sidecar (plan 阶段已清理陈旧文件, 只可能是本轮产物);
+    2) 缺失时从 review md 平衡提取 JSON 块并落盘 sidecar;
     3) 最后降级为启发式合成, 带 provenance=synthetic_fallback 标记。
+    所有路径统一走 schema 校验。
     """
     json_path = os.path.join(stream, f"findings-{model_key}.json")
 
-    # 1. sidecar 优先
     if os.path.exists(json_path) and os.path.getsize(json_path) > 0:
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, dict) and isinstance(data.get("findings"), list):
-                return _mark_provenance(data, "model_written")
+                return _validate_findings(_mark_provenance(data, "model_written"), "model_written")
             print(f"[findings] {model_key} sidecar 非对象形状, 回退提取", file=sys.stderr)
         except Exception as e:
             print(f"[findings] {model_key} sidecar 解析失败 ({e}), 回退提取", file=sys.stderr)
@@ -248,10 +349,9 @@ def extract_findings_json(stream, model_key):
         with open(md_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-    # 2. Markdown 内 JSON 块 (平衡解析)
     obj = _extract_json_object_from_text(content) if content else None
     if obj is not None:
-        data = _mark_provenance(obj, "model_written")
+        data = _validate_findings(_mark_provenance(obj, "model_written"), "model_written")
         try:
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
@@ -259,7 +359,6 @@ def extract_findings_json(stream, model_key):
             pass
         return data
 
-    # 3. 启发式降级 (标记 provenance, 过滤幽灵 target)
     fallback_findings = []
     for line in content.splitlines():
         if line.startswith("#"):
@@ -282,7 +381,7 @@ def extract_findings_json(stream, model_key):
                 "blocking": (sev == "P0"),
                 "provenance": "synthetic_fallback",
             })
-            break  # 一行最多取一个
+            break
     res = {"findings": fallback_findings[:15], "unknowns": [], "assumptions": [],
            "_meta": {"provenance": "synthetic_fallback"}}
     if fallback_findings:
@@ -295,28 +394,45 @@ def extract_findings_json(stream, model_key):
 
 
 def normalize_target(target_str):
-    """canonical 目标归一 (C03): 以文件 basename 为聚类键。
-    优先从复合描述 (文件名+函数+行号) 中提取文件名 token;
-    绝对/相对路径、盘符、正反斜杠、行号全部等价。
+    """canonical 目标归一: 文件名 + 最后一个父目录段 (区分 src/config.py 与 tests/config.py)。
+    优先从复合描述中提取文件名 token; 裸文件名与带路径写法不再强行等价 (宁拆不并)。
     """
     if not target_str:
         return "general"
     s = str(target_str).strip()
-    s = re.sub(r":\d+(?:-\d+)?$", "", s)  # 去行号
+    s = re.sub(r":\d+(?:-\d+)?$", "", s)
     s = s.replace("\\", "/").lower()
-    # 复合描述式 target: 提取第一个文件名样式 token
     m = _FILE_TOKEN_RE.search(s)
     if m:
-        return m.group(0)
+        fname = m.group(0)
+        prefix = s[:m.start()].rstrip("/")
+        parts = [p for p in prefix.split("/") if p and p not in ("c:", "d:")]
+        if parts:
+            return parts[-1] + "/" + fname
+        return fname
     s = s.strip("/")
-    parts = [p for p in s.split("/") if p and p != "c:" and p != "d:"]
+    parts = [p for p in s.split("/") if p and p not in ("c:", "d:")]
     if not parts:
         return "general"
-    return parts[-1]
+    return "/".join(parts[-2:])
+
+
+def _issue_identity(item):
+    """断言级 issue 身份: (canonical_target, assertion_key)。
+    显式 issue_key 优先; 无 issue_key 用归一化 claim 短哈希兜底 (宁拆不并, 绝不凭空合并)。
+    """
+    target = normalize_target(item.get("target", ""))
+    key = str(item.get("issue_key", "")).strip().lower()
+    if key:
+        return (target, "k:" + key)
+    claim_norm = re.sub(r"\s+", "", str(item.get("claim", ""))).lower()
+    if claim_norm:
+        h = hashlib.sha256(claim_norm.encode("utf-8")).hexdigest()[:12]
+        return (target, "c:" + h)
+    return (target, "anon")
 
 
 def compute_complementarity_matrix(models, findings_by_model):
-    """计算各模型间的互补性权重矩阵 W(i -> j)。"""
     weights = {}
     targets_by_model = {
         m: {normalize_target(f.get("target", "")) for f in findings_by_model.get(m, {}).get("findings", [])}
@@ -350,7 +466,6 @@ def compute_complementarity_matrix(models, findings_by_model):
 
 
 def max_weight_derangement(models, weights):
-    """求解最大权重错排匹配 (Bipartite matching with no fixed points)。"""
     n = len(models)
     if n < 2:
         return []
@@ -369,7 +484,6 @@ def max_weight_derangement(models, weights):
 
 
 def _has_polarity_contradiction(items):
-    """C02: 仅当 ≥2 个不同模型对同一 target 给出互斥 polarity 时判矛盾。"""
     pol_by_model = {}
     for x in items:
         pol = str(x["raw"].get("polarity", "")).strip().lower()
@@ -387,58 +501,54 @@ def _has_polarity_contradiction(items):
 
 
 def cluster_issues(models, findings_by_model):
-    """将各模型的 findings 聚类为 Consensus、Contradiction 与 Singleton (C01/C02/C09)。
-    - 状态按"去重后的独立模型数"判定: 单模型多条 findings 归 singleton;
-    - 矛盾仅由互斥 polarity 断言判定, 无 polarity 的同 target 多模型归 consensus;
-    - raised_by 保序去重, 保证幂等。
+    """断言级聚类:
+    - 身份 = (canonical_target, assertion_key), 显式 issue_key 优先, 无则 claim 哈希兜底;
+    - 单模型多条 findings 全部保留 (claims 列表完整), 不再只取第一条;
+    - 矛盾仅由互斥 polarity 判定; 其余多模型聚合为 consensus (展示名 Corroborated)。
     """
-    by_target = {}
+    by_identity = {}
     for m in models:
         raw_items = findings_by_model.get(m, {}).get("findings", [])
         for item in raw_items:
-            tgt = normalize_target(item.get("target", ""))
-            by_target.setdefault(tgt, []).append({"model": m, "raw": item})
+            ident = _issue_identity(item)
+            by_identity.setdefault(ident, []).append({"model": m, "raw": item})
 
     consensus, singletons, contradictions = [], [], []
     issue_counter = 1
-    for tgt, items in by_target.items():
+    for (tgt, key), items in by_identity.items():
         raised = dedup_preserve_order([x["model"] for x in items])
         severity = max((x["raw"].get("severity", "P2") for x in items),
-                       key=lambda s: {"P0": 3, "P1": 2, "P2": 1}.get(s, 0))
-        if len(raised) == 1:
-            it = items[0]
-            singletons.append({
-                "issue_id": f"I{issue_counter:02d}",
-                "target": tgt,
-                "raised_by": raised,
-                "severity": severity,
-                "claim": it["raw"].get("claim", ""),
-                "evidence": it["raw"].get("evidence", []),
-                "blocking": it["raw"].get("blocking", False),
-                "state": "singleton",
-            })
-            issue_counter += 1
-            continue
-
-        state = "contradiction" if _has_polarity_contradiction(items) else "consensus"
+                       key=lambda s: _SEV_RANK.get(s, 0))
+        claims = [{"model": x["model"], "claim": x["raw"].get("claim", ""),
+                   "evidence": x["raw"].get("evidence", []),
+                   "polarity": x["raw"].get("polarity", ""),
+                   "severity": x["raw"].get("severity", "P2")} for x in items]
         entry = {
             "issue_id": f"I{issue_counter:02d}",
             "target": tgt,
+            "assertion_key": key,
             "raised_by": raised,
             "severity": severity,
-            "claims": [{"model": x["model"], "claim": x["raw"].get("claim", ""),
-                        "evidence": x["raw"].get("evidence", []),
-                        "polarity": x["raw"].get("polarity", "")} for x in items],
-            "state": state,
+            "claims": claims,
+            "state": "singleton" if len(raised) == 1 else
+                     ("contradiction" if _has_polarity_contradiction(items) else "consensus"),
         }
-        (contradictions if state == "contradiction" else consensus).append(entry)
+        if entry["state"] == "singleton":
+            singletons.append(entry)
+        elif entry["state"] == "contradiction":
+            contradictions.append(entry)
+        else:
+            consensus.append(entry)
         issue_counter += 1
 
     return consensus, singletons, contradictions
 
 
 def stage_plan_v2(stream, task_path, model_keys):
-    """Phase 1: 独立盲审与生成 (C10: 单模型失败不判负整阶段)。"""
+    """Phase 1: 独立盲审与生成 (清理陈旧产物 + manifest 谱系 + 单模型失败不判负)。"""
+    _clean_stale_plan_outputs(stream, model_keys)
+    _write_manifest(stream, task_path, model_keys, "plan")
+
     out_paths, procs = [], []
     for k in model_keys:
         prompt_path = os.path.join(stream, f"prompt-{k}.txt")
@@ -456,27 +566,34 @@ def stage_plan_v2(stream, task_path, model_keys):
         print(f"[plan-v2] {k} 已启动 pid={procs[-1].pid}")
 
     results = wait_for_outputs(out_paths, procs)
-    for k, p in zip(model_keys, out_paths):
-        if not results.get(p, False):
-            print(f"[plan-v2] 警告: {k} 无产出, 后续阶段将其视为空 findings", file=sys.stderr)
+    missing = [k for k, p in zip(model_keys, out_paths) if not results.get(p, False)]
+    if missing:
+        print(f"[plan-v2] 警告: 无产出模型: {', '.join(missing)}", file=sys.stderr)
+    _write_manifest(stream, task_path, model_keys, "plan", missing_models=missing)
 
     for k in model_keys:
         extract_findings_json(stream, k)
 
     ok = any(results.values())
-    print(f"[plan-v2] {'完成' if ok else '全部失败'} {json.dumps({os.path.basename(p): v for p, v in results.items()}, ensure_ascii=False)}")
+    print(f"[plan-v2] {'完成' if ok else '全部失败'} "
+          f"{json.dumps({os.path.basename(p): v for p, v in results.items()}, ensure_ascii=False)}")
     return ok
 
 
 def stage_merge_v2(stream, model_keys, mode="standard"):
-    """Phase 2: 本地结构化 Issue 聚类与图分析 (纯 Python 离线运行，零 LLM 消耗) (C06: 匿名质询规划)。"""
+    """Phase 2: 断言级聚类与质询规划 (纯本地, 零 LLM 消耗)。"""
     findings_by_model = {k: extract_findings_json(stream, k) for k in model_keys}
     consensus, singletons, contradictions = cluster_issues(model_keys, findings_by_model)
     weights = compute_complementarity_matrix(model_keys, findings_by_model)
     rng = random.Random(RNG_SEED)
+    manifest = _read_manifest(stream)
+    missing_models = (manifest or {}).get("missing_models", [])
 
     registry = {
         "metadata": {"mode": mode, "models": model_keys,
+                     "missing_models": missing_models,
+                     "run_id": (manifest or {}).get("run_id"),
+                     "task_sha256": (manifest or {}).get("task_sha256"),
                      "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")},
         "stats": {
             "consensus_count": len(consensus),
@@ -497,9 +614,9 @@ def stage_merge_v2(stream, model_keys, mode="standard"):
     cfg = MODE_PRESETS.get(mode, MODE_PRESETS["standard"])
     max_challenges = cfg["max_challenges"]
     challenges = []
+    skipped_challenges = []
 
     def anon_proposals(claim_items):
-        """C06: 提案匿名化并固定种子乱序, 消除模型阵容顺序指纹。"""
         props = [{"source_alias": None, "claim": x["claim"], "evidence": x.get("evidence", [])}
                  for x in claim_items]
         rng.shuffle(props)
@@ -508,59 +625,72 @@ def stage_merge_v2(stream, model_keys, mode="standard"):
         return props
 
     def pick_reviewer(excluded_models):
-        """C06: 从非当事人模型中按互补权重最高选取 (确定性: 权重相同时按 model_keys 顺序)。"""
+        """排除当事人后按互补权重选取; 无匿名候选时返回 None (绝不退回当事人)。"""
         candidates = [m for m in model_keys if m not in set(excluded_models)]
         if not candidates:
-            candidates = list(model_keys)
+            return None
         anchor = next((m for m in excluded_models if m in model_keys), candidates[0])
         return max(candidates, key=lambda cand: weights.get((cand, anchor), 0.0))
 
-    # 1. 优先质询核心冲突 (Contradictions)
+    # 质询候选按 severity 排序 (P0 单例优先于 P2 矛盾), 同 severity 下矛盾优先
+    ranked = []
     for c in contradictions:
-        if len(challenges) >= max_challenges:
-            break
-        reviewer = pick_reviewer(c["raised_by"])
-        challenges.append({
-            "challenge_id": f"C{len(challenges)+1:02d}",
-            "type": "contradiction",
-            "issue_id": c["issue_id"],
-            "target": c["target"],
-            "reviewer": reviewer,
-            "bundle": {
-                "title": f"关于 {c['target']} 的对立断言裁决",
-                "target": c["target"],
-                "proposals": anon_proposals(c["claims"]),
-            },
-        })
+        ranked.append((_SEV_RANK.get(c["severity"], 0), 2, ("contradiction", c)))
+    for s in singletons:
+        if s.get("severity") in ("P0", "P1"):
+            ranked.append((_SEV_RANK.get(s["severity"], 0), 1, ("singleton_audit", s)))
+    ranked.sort(key=lambda r: (-r[0], -r[1]))
 
-    # 2. 其次质询高危单例 (P0/P1 Singletons), 负载均衡
-    high_singletons = [s for s in singletons if s.get("severity") in ("P0", "P1")]
     used_reviewers = set()
-    for s in high_singletons:
+    for _, _, (ctype, obj) in ranked:
         if len(challenges) >= max_challenges:
             break
-        author = s["raised_by"][0]
-        candidates = [m for m in model_keys if m != author and m not in used_reviewers]
-        if not candidates:
-            candidates = [m for m in model_keys if m != author]
-        best_reviewer = max(candidates,
-                            key=lambda cand: weights.get((cand, author), 0.0)) if candidates else model_keys[0]
-        used_reviewers.add(best_reviewer)
-        proposals = anon_proposals([{"claim": s["claim"], "evidence": s["evidence"]}])
-        challenges.append({
-            "challenge_id": f"C{len(challenges)+1:02d}",
-            "type": "singleton_audit",
-            "issue_id": s["issue_id"],
-            "target": s["target"],
-            "reviewer": best_reviewer,
-            "bundle": {
-                "title": f"对未覆盖单例高危断言的独立核验: {s['target']}",
-                "target": s["target"],
-                "proposals": proposals,
-            },
-        })
+        if ctype == "contradiction":
+            reviewer = pick_reviewer(obj["raised_by"])
+            if reviewer is None:
+                skipped_challenges.append({"challenge_id": f"C{len(challenges)+len(skipped_challenges)+1:02d}",
+                                           "issue_id": obj["issue_id"], "target": obj["target"],
+                                           "reason": "全部模型均为当事人, 无匿名候选"})
+                continue
+            challenges.append({
+                "challenge_id": f"C{len(challenges)+1:02d}",
+                "type": "contradiction",
+                "issue_id": obj["issue_id"],
+                "target": obj["target"],
+                "reviewer": reviewer,
+                "bundle": {
+                    "title": f"关于 {obj['target']} 的对立断言裁决",
+                    "target": obj["target"],
+                    "proposals": anon_proposals(obj["claims"]),
+                },
+            })
+        else:
+            author = obj["raised_by"][0]
+            candidates = [m for m in model_keys if m != author and m not in used_reviewers]
+            if not candidates:
+                candidates = [m for m in model_keys if m != author]
+            if not candidates:
+                skipped_challenges.append({"challenge_id": f"C{len(challenges)+len(skipped_challenges)+1:02d}",
+                                           "issue_id": obj["issue_id"], "target": obj["target"],
+                                           "reason": "无可用非当事人模型"})
+                continue
+            best_reviewer = max(candidates,
+                                key=lambda cand: weights.get((cand, author), 0.0))
+            used_reviewers.add(best_reviewer)
+            proposals = anon_proposals(obj["claims"])
+            challenges.append({
+                "challenge_id": f"C{len(challenges)+1:02d}",
+                "type": "singleton_audit",
+                "issue_id": obj["issue_id"],
+                "target": obj["target"],
+                "reviewer": best_reviewer,
+                "bundle": {
+                    "title": f"对未覆盖单例高危断言的独立核验: {obj['target']}",
+                    "target": obj["target"],
+                    "proposals": proposals,
+                },
+            })
 
-    # 3. 审计模式且质询配额有余: 使用最大互补错排匹配
     if cfg.get("use_derangement") and len(challenges) < max_challenges:
         derange_pairs = max_weight_derangement(model_keys, weights)
         for reviewer, target in derange_pairs:
@@ -585,15 +715,23 @@ def stage_merge_v2(stream, model_keys, mode="standard"):
     plan_path = os.path.join(stream, "challenge-plan.json")
     with open(plan_path, "w", encoding="utf-8") as f:
         json.dump(challenges, f, ensure_ascii=False, indent=2)
+    if skipped_challenges:
+        skip_path = os.path.join(stream, "challenge-skipped.json")
+        with open(skip_path, "w", encoding="utf-8") as f:
+            json.dump(skipped_challenges, f, ensure_ascii=False, indent=2)
 
     summary_path = os.path.join(stream, "graph-summary.md")
     with open(summary_path, "w", encoding="utf-8") as f:
         f.write(f"# Issue Graph Summary ({mode})\n\n")
         f.write(f"- 参与模型: {', '.join(model_keys)}\n")
-        f.write(f"- 共识发现 (Consensus): {len(consensus)} 项\n")
-        f.write(f"- 独有发现 (Singleton): {len(singletons)} 项 (高危 P0/P1: {len(high_singletons)} 项)\n")
-        f.write(f"- 存在争议 (Contradiction): {len(contradictions)} 项\n")
-        f.write(f"- 生成针对性质询任务: {len(challenges)} 组\n\n")
+        f.write(f"- 缺失模型: {', '.join(missing_models) if missing_models else '无'}\n")
+        f.write(f"- 多模型互证 (Corroborated): {len(consensus)} 项\n")
+        f.write(f"- 独有发现 (Singleton): {len(singletons)} 项\n")
+        f.write(f"- 断言级对立 (Contradiction): {len(contradictions)} 项\n")
+        f.write(f"- 生成针对性质询任务: {len(challenges)} 组\n")
+        if skipped_challenges:
+            f.write(f"- 因无匿名候选跳过的质询: {len(skipped_challenges)} 组\n")
+        f.write("\n")
         if contradictions:
             f.write("## 核心分歧清单\n\n")
             for c in contradictions:
@@ -602,12 +740,13 @@ def stage_merge_v2(stream, model_keys, mode="standard"):
                     f.write(f"- **{cl['model']}**: {cl['claim']} (证据: {', '.join(cl['evidence']) if cl['evidence'] else '无'})\n")
                 f.write("\n")
 
-    print(f"[merge-v2] Issue 归并完成: {len(consensus)} 共识, {len(singletons)} 单例, {len(contradictions)} 冲突 -> 规划 {len(challenges)} 组质询")
+    print(f"[merge-v2] 归并完成: {len(consensus)} 互证, {len(singletons)} 单例, "
+          f"{len(contradictions)} 对立 -> 规划 {len(challenges)} 组质询, 跳过 {len(skipped_challenges)} 组")
     return True
 
 
 def stage_challenge_v2(stream, task_path):
-    """Phase 3: 定向匿名质询执行 (C10: 单模型失败不判负整阶段)。"""
+    """Phase 3: 定向匿名质询执行 (清理陈旧答复 + 单模型失败不判负)。"""
     plan_path = os.path.join(stream, "challenge-plan.json")
     if not os.path.exists(plan_path):
         print("[challenge-v2] 缺失质询计划，请先运行 --stage merge", file=sys.stderr)
@@ -619,6 +758,8 @@ def stage_challenge_v2(stream, task_path):
     if not challenges:
         print("[challenge-v2] 无需针对性质询 (零冲突或预算已饱和)")
         return True
+
+    _clean_stale_challenge_outputs(stream)
 
     out_paths, procs = [], []
     for item in challenges:
@@ -647,12 +788,12 @@ def stage_challenge_v2(stream, task_path):
             print(f"[challenge-v2] 警告: 质询 {item['challenge_id']} ({item['reviewer']}) 无答复", file=sys.stderr)
 
     ok = any(results.values())
-    print(f"[challenge-v2] {'完成' if ok else '全部失败'} {json.dumps({os.path.basename(p): v for p, v in results.items()}, ensure_ascii=False)}")
+    print(f"[challenge-v2] {'完成' if ok else '全部失败'} "
+          f"{json.dumps({os.path.basename(p): v for p, v in results.items()}, ensure_ascii=False)}")
     return ok
 
 
 def _parse_stances(text):
-    """C05: 逐行解析表态标记, 一份答复可同时计入 CONCEDE/REFUTED/UNRESOLVED。"""
     conceded, refuted, unresolved = [], [], []
     for line in text.splitlines():
         s = line.strip()
@@ -665,20 +806,26 @@ def _parse_stances(text):
     return conceded, refuted, unresolved
 
 
-def _evidence_files_exist(evidence_list):
-    """C07: 绝对路径样式的证据必须真实存在, 否则判为幽灵证据丢弃。相对路径不做存在性要求。"""
-    ok, bad = [], []
+def _evidence_check(evidence_list, base_dirs):
+    """证据校验: 绝对路径必须真实存在; 相对路径在 base_dirs/cwd 命中即 verified;
+    未命中的文件样式相对引用标 unverified (不丢弃, 不冒充 verified)。"""
+    verified, unverified = [], []
     for e in (evidence_list or []):
         e = str(e).strip()
-        if _ABS_PATH_RE.match(e) and not os.path.exists(e):
-            bad.append(e)
+        if _ABS_PATH_RE.match(e):
+            (verified if os.path.exists(e) else unverified).append(e)
+            continue
+        loc = re.sub(r":\d+(?:-\d+)?$", "", e)
+        hit = any(os.path.exists(os.path.join(b, loc)) for b in base_dirs)
+        if hit or not re.search(r"\.(?:py|json|md|sh|ps1|yaml|yml|toml|txt|csv)$", loc):
+            verified.append(e)
         else:
-            ok.append(e)
-    return ok, bad
+            unverified.append(e)
+    return verified, unverified
 
 
 def stage_synthesize_v2(stream):
-    """Phase 4: 对账质询计划与答复 (C05), 逐断言表态解析, 少数派证据保护 (C07), 产出最终裁决。"""
+    """Phase 4: 对账、逐断言表态、少数派证据保护 (与 REFUTED 联动 + 证据校验)。"""
     reg_path = os.path.join(stream, "issue-registry.json")
     if not os.path.exists(reg_path):
         print("[synthesize-v2] 缺失 issue-registry.json", file=sys.stderr)
@@ -686,12 +833,13 @@ def stage_synthesize_v2(stream):
     with open(reg_path, "r", encoding="utf-8") as f:
         registry = json.load(f)
 
-    # 质询计划与答复对账
     plan_path = os.path.join(stream, "challenge-plan.json")
     planned = []
     if os.path.exists(plan_path):
         with open(plan_path, "r", encoding="utf-8") as f:
             planned = json.load(f)
+
+    base_dirs = [stream, os.getcwd()]
 
     replies_by_cid = {}
     missing_challenges = []
@@ -724,26 +872,39 @@ def stage_synthesize_v2(stream):
             unresolved_contested.append({"source_file": f"challenge-reply-{cid}-{reply['reviewer']}.md",
                                          "status": "unresolved_contested", "excerpt": excerpt})
 
-    # 少数派证据保护 (C07): 排除已被质询 REFUTED 的单例; 幽灵证据不得入账
     unresolved_ledger = list(unresolved_contested)
     ghost_discarded = []
+    unverified_evidence = []
     for s in registry.get("singletons", []):
         if s.get("issue_id") in refuted_issue_ids:
             continue
-        if not (s.get("severity") in ("P0", "P1") and s.get("evidence")):
+        sev = s.get("severity")
+        if sev not in ("P0", "P1"):
             continue
-        ok_ev, bad_ev = _evidence_files_exist(s.get("evidence"))
-        if not ok_ev:
+        all_evidence = []
+        for cl in s.get("claims", []):
+            all_evidence.extend(cl.get("evidence") or [])
+        if not all_evidence:
+            continue
+        verified, unverified = _evidence_check(all_evidence, base_dirs)
+        abs_ghost = [u for u in unverified if _ABS_PATH_RE.match(u)]
+        rel_unverified = [u for u in unverified if not _ABS_PATH_RE.match(u)]
+        if not verified and abs_ghost and not rel_unverified:
             ghost_discarded.append({"issue_id": s["issue_id"], "target": s["target"],
-                                    "ghost_evidence": bad_ev})
+                                    "ghost_evidence": abs_ghost})
             continue
+        if unverified:
+            unverified_evidence.append({"issue_id": s["issue_id"], "target": s["target"],
+                                        "unverified_evidence": unverified})
         unresolved_ledger.append({
             "issue_id": s["issue_id"],
             "target": s["target"],
+            "assertion_key": s.get("assertion_key"),
             "raised_by": s["raised_by"],
-            "claim": s["claim"],
-            "evidence": ok_ev + ([f"ghost_discarded: {b}" for b in bad_ev] if bad_ev else []),
-            "severity": s["severity"],
+            "claims": s["claims"],
+            "severity": sev,
+            "evidence_verified": verified,
+            "evidence_unverified": unverified,
             "reason": "少数派附证据独立发现 (Minority preservation: unrefuted finding with concrete locators)",
         })
 
@@ -751,33 +912,48 @@ def stage_synthesize_v2(stream):
     with open(ledger_path, "w", encoding="utf-8") as f:
         json.dump(unresolved_ledger, f, ensure_ascii=False, indent=2)
 
-    # 生成最终合议报告 (含矛盾与质询章节)
-    report_path = os.path.join(stream, "consensus-report.md")
+    manifest = _read_manifest(stream) or {}
     contradictions = registry.get("contradictions", [])
+    consensus = registry.get("consensus", [])
+    missing_models = registry.get("metadata", {}).get("missing_models", [])
+    report_path = os.path.join(stream, "consensus-report.md")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("# 五人交叉评审合议报告 (v2 Sparse Deliberation)\n\n")
         f.write(f"- 合议生成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"- run_id: {manifest.get('run_id', '?')}  任务摘要: {manifest.get('task_sha256', '?')[:8]}\n")
         f.write(f"- 评审模式: {registry.get('metadata', {}).get('mode', 'standard')}\n")
         f.write(f"- 模型阵容: {', '.join(registry.get('metadata', {}).get('models', []))}\n")
-        f.write(f"- 共识项 (Consensus): {len(registry.get('consensus', []))} 项\n")
+        if missing_models:
+            f.write(f"- 缺失模型 (本轮无产出): {', '.join(missing_models)}\n")
+        f.write(f"- 多模型互证 (Corroborated): {len(consensus)} 项\n")
         f.write(f"- 质询认同/认输 (Conceded): {len(conceded_items)} 项\n")
         f.write(f"- 质询证伪驳回 (Refuted): {len(refuted_items)} 项\n")
         f.write(f"- 未决保护账本 (Unresolved Ledger): {len(unresolved_ledger)} 项\n")
-        f.write(f"- 质询缺失 (Missing Replies): {len(missing_challenges)} 项\n\n")
+        f.write(f"- 质询缺失 (Missing Replies): {len(missing_challenges)} 项\n")
+        if ghost_discarded:
+            f.write(f"- 幽灵证据丢弃: {len(ghost_discarded)} 项\n")
+        if unverified_evidence:
+            f.write(f"- 证据未验证 (入账但标注): {len(unverified_evidence)} 项\n")
+        f.write("\n")
 
-        f.write("## 一、高度共识项 (Verified Consensus)\n\n")
-        if not registry.get("consensus"):
+        f.write("## 一、多模型互证发现 (Corroborated Model Findings)\n\n")
+        f.write("（注意: 模型共识不是证据, 本表只表示多个模型指向同一断言身份, 出处谱系才是证据。）\n\n")
+        if not consensus:
             f.write("（无多模型一致项）\n\n")
-        for it in registry.get("consensus", []):
+        for it in consensus:
             f.write(f"### [{it['issue_id']}] `{it['target']}` ({it['severity']})\n")
             f.write(f"- 提出方: {', '.join(it['raised_by'])}\n")
+            all_ev = []
             for cl in it.get("claims", []):
                 f.write(f"  - {cl['model']}: {cl['claim']}\n")
-            f.write("\n")
+                all_ev.extend(cl.get("evidence") or [])
+            verified, unverified = _evidence_check(all_ev, base_dirs)
+            tag = "已验证" if not unverified else f"部分未验证: {len(unverified)} 条"
+            f.write(f"- 证据状态: {tag}\n\n")
 
-        f.write("## 二、矛盾与质询 (Contradictions & Cross-Examination)\n\n")
+        f.write("## 二、断言级对立与质询 (Contradictions & Cross-Examination)\n\n")
         if not contradictions and not missing_challenges:
-            f.write("（无矛盾项, 质询计划全部答复）\n\n")
+            f.write("（无对立断言, 质询计划全部答复）\n\n")
         for c in contradictions:
             f.write(f"### [{c['issue_id']}] `{c['target']}` (contradiction)\n")
             for cl in c.get("claims", []):
@@ -789,8 +965,7 @@ def stage_synthesize_v2(stream):
                     for ex in conceded + refuted + unresolved:
                         f.write(f"    - 质询表态: {ex}\n")
             f.write("\n")
-        other_replies = [r for r in replies_by_cid.values()
-                         if r.get("type") != "contradiction"]
+        other_replies = [r for r in replies_by_cid.values() if r.get("type") != "contradiction"]
         if other_replies:
             f.write("### 单例/互补质询答复\n\n")
             for reply in other_replies:
@@ -811,9 +986,15 @@ def stage_synthesize_v2(stream):
         for u in unresolved_ledger:
             f.write(f"### `{u.get('target', 'General')}` [{u.get('severity', 'P1')}]\n")
             f.write(f"- 来源: {u.get('raised_by', [u.get('source_file')])}\n")
-            f.write(f"- 断言: {u.get('claim', u.get('excerpt', ''))}\n")
-            if u.get("evidence"):
-                f.write(f"- 证据: `{', '.join(u['evidence'])}`\n")
+            for cl in u.get("claims", [u]):
+                if isinstance(cl, dict):
+                    f.write(f"- 断言 ({cl.get('model')}): {cl.get('claim', '')}\n")
+                else:
+                    f.write(f"- 断言: {cl}\n")
+            if u.get("evidence_verified"):
+                f.write(f"- 证据(已验证): `{', '.join(u['evidence_verified'])}`\n")
+            if u.get("evidence_unverified"):
+                f.write(f"- 证据(未验证): `{', '.join(u['evidence_unverified'])}`\n")
             f.write(f"- 说明: {u.get('reason', '经质询仍存分歧，需真实测试验证')}\n\n")
         if ghost_discarded:
             f.write("## 四、幽灵证据丢弃记录 (Ghost Evidence Discarded)\n\n")
@@ -821,17 +1002,17 @@ def stage_synthesize_v2(stream):
                 f.write(f"- [{g['issue_id']}] `{g['target']}`: 证据路径不存在, 已拒绝入账: {', '.join(g['ghost_evidence'])}\n")
             f.write("\n")
 
-    print(f"[synthesize-v2] 合议报告已生成 -> {os.path.basename(report_path)}, 未决账本: {len(unresolved_ledger)} 项, 质询缺失: {len(missing_challenges)} 项")
+    print(f"[synthesize-v2] 合议报告已生成, 未决账本: {len(unresolved_ledger)} 项, "
+          f"质询缺失: {len(missing_challenges)} 项, 幽灵丢弃: {len(ghost_discarded)} 项")
     return True
 
 
 def stage_status_v2(stream):
-    """查看 v2 任务流的全部文件资产与状态。"""
     patterns = (
         "task.md", "review-*.md", "findings-*.json", "issue-registry.json",
         "graph-summary.md", "challenge-plan.json", "bundle-*.json",
         "challenge-reply-*.md", "consensus-report.md", "unresolved-ledger.json",
-        "log-*.txt",
+        "run-manifest.json", "log-*.txt",
     )
     total_files = 0
     for pat in patterns:
