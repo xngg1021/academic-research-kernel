@@ -57,10 +57,11 @@ def _windows_ram_bytes():
 
 def _process_affinity_count():
     try:
-        aff = os.process_cpu_affinity()
-        return len(aff)
+        if hasattr(os, "sched_getaffinity"):
+            return len(os.sched_getaffinity(0))
     except (AttributeError, OSError):
-        return UNKNOWN
+        pass
+    return UNKNOWN
 
 
 def _cgroup_cpu_quota():

@@ -55,7 +55,8 @@ def make_input(workload, scale, dtype, seed=0):
         sym = a + a.T
         return {"a": a, "b": b, "sym": sym}
     if workload == "fft":
-        return {"x": (rng.standard_normal((n, n)) + 1j * rng.standard_normal((n, n))).astype(np.complex128)}
+        c_type = np.complex64 if dtype == "float32" else np.complex128
+        return {"x": (rng.standard_normal((n, n)) + 1j * rng.standard_normal((n, n))).astype(c_type)}
     if workload == "monte_carlo":
         return {"n": n}
     if workload == "bootstrap":
@@ -124,7 +125,8 @@ def _candidate_torch(workload, inputs, dtype, device):
         w = torch.linalg.eigvalsh(sym)
         return {"c": c.cpu().numpy(), "eigvals": w.cpu().numpy()}
     if workload == "fft":
-        x = torch.tensor(inputs["x"], dtype=torch.complex128, device=device)
+        c_type = torch.complex64 if dtype == "float32" else torch.complex128
+        x = torch.tensor(inputs["x"], dtype=c_type, device=device)
         y = torch.fft.fft2(x)
         return {"y": y.cpu().numpy()}
     if workload == "monte_carlo":
@@ -132,15 +134,15 @@ def _candidate_torch(workload, inputs, dtype, device):
         n = inputs["n"]
         u = 2.0 * torch.rand(n * 2, generator=gen, dtype=t, device=device) - 1.0
         inside = (u[:n] ** 2 + u[n:] ** 2) <= 1.0
-        pi_mean = 4.0 * inside.float().mean().item()
-        pi_std = 4.0 * inside.float().std(unbiased=True).item() / np.sqrt(n)
+        pi_mean = 4.0 * inside.to(t).mean().item()
+        pi_std = 4.0 * inside.to(t).std(unbiased=True).item() / np.sqrt(n)
         return {"pi_mean": float(pi_mean), "pi_std": float(pi_std)}
     if workload == "bootstrap":
         data = torch.tensor(inputs["data"], dtype=t, device=device)
         gen = torch.Generator(device=device).manual_seed(1)
         idx = torch.randint(0, data.numel(), (inputs["resamples"], data.numel()),
                             generator=gen, device=device)
-        means = data[idx].float().mean(axis=1).cpu().numpy()
+        means = data[idx].mean(dim=1).cpu().numpy()
         return {"ci_lo": float(np.quantile(means, 0.025)),
                 "ci_hi": float(np.quantile(means, 0.975)),
                 "mean_of_means": float(means.mean())}
@@ -168,7 +170,7 @@ def _candidate_cupy(workload, inputs, dtype):
     if workload == "monte_carlo":
         rng = cp.random.RandomState(0)
         n = inputs["n"]
-        u = 2.0 * rng.uniform(low=-1.0, high=1.0, size=n * 2)
+        u = rng.uniform(low=-1.0, high=1.0, size=n * 2)
         inside = (u[:n] ** 2 + u[n:] ** 2) <= 1.0
         return {"pi_mean": float(4.0 * cp.mean(inside)),
                 "pi_std": float(4.0 * cp.std(inside) / cp.sqrt(n))}
@@ -192,18 +194,45 @@ def parity_kind(workload):
 
 
 def check_parity(workload, scale, ref_result, cand_result):
+    """C01: 严格数值等价门禁。
+    - 键集合必须非空且严格一致;
+    - 数组形状必须严格匹配, 拒绝隐式广播;
+    - 所有输出值必须完全有限 (无 NaN / Inf);
+    - 满足上述前提后, 判定相对误差 (确定性算子) 或绝对偏差 (统计算子) 是否在容差内。
+    """
+    if not isinstance(ref_result, dict) or not isinstance(cand_result, dict):
+        return False
+    if not ref_result or not cand_result:
+        return False
+    if set(ref_result.keys()) != set(cand_result.keys()):
+        return False
+
     tol = PARITY_TOL[workload][scale]
-    if workload == "matmul_eig":
-        c_ok = _rel_err(ref_result["c"], cand_result["c"]) < tol
-        e_ok = _rel_err(ref_result["eigvals"], cand_result["eigvals"]) < tol
-        return bool(c_ok and e_ok)
-    if workload == "fft":
-        return bool(_rel_err(ref_result["y"], cand_result["y"]) < tol)
-    if workload == "autodiff":
-        return bool(_rel_err(ref_result["grad"], cand_result["grad"]) < tol)
-    # statistical: absolute tolerance on every reported statistic
+    if workload in ("matmul_eig", "fft", "autodiff"):
+        for key in ref_result:
+            a = np.asarray(ref_result[key])
+            b = np.asarray(cand_result[key])
+            if a.shape != b.shape:
+                return False
+            if not np.all(np.isfinite(a)) or not np.all(np.isfinite(b)):
+                return False
+            err = _rel_err(a, b)
+            if not np.isfinite(err) or err > tol:
+                return False
+        return True
+
     for key in ref_result:
-        if abs(ref_result[key] - cand_result[key]) > tol:
+        val_ref = ref_result[key]
+        val_cand = cand_result[key]
+        try:
+            r_float = float(val_ref)
+            c_float = float(val_cand)
+        except (TypeError, ValueError):
+            return False
+        if not np.isfinite(r_float) or not np.isfinite(c_float):
+            return False
+        diff = abs(r_float - c_float)
+        if not np.isfinite(diff) or diff > tol:
             return False
     return True
 
@@ -211,5 +240,9 @@ def check_parity(workload, scale, ref_result, cand_result):
 def _rel_err(a, b):
     a = np.asarray(a)
     b = np.asarray(b)
+    if a.shape != b.shape:
+        return float("inf")
+    if not np.all(np.isfinite(a)) or not np.all(np.isfinite(b)):
+        return float("nan")
     denom = np.maximum(np.abs(a), 1e-30)
     return float(np.max(np.abs(a - b) / denom))

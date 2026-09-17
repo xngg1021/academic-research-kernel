@@ -77,8 +77,14 @@ def _probe_torch_mps():
 
 def _probe_cupy_cuda():
     try:
-        import cupy  # noqa: F401
-        return {"executable": True, "device_name": "cuda"}
+        import cupy as cp
+        if not hasattr(cp, "cuda") or not cp.cuda.is_available():
+            return {"executable": False, "reason": "cupy.cuda.is_available() == False"}
+        count = cp.cuda.runtime.getDeviceCount()
+        if count <= 0:
+            return {"executable": False, "reason": "no CUDA devices found"}
+        dev_name = cp.cuda.runtime.getDeviceProperties(0)["name"].decode("utf-8", errors="replace")
+        return {"executable": True, "device_name": dev_name}
     except Exception as exc:
         return {"executable": False, "reason": str(exc)}
 

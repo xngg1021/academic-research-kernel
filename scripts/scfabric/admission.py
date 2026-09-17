@@ -18,10 +18,12 @@ import workload_profiles as wp
 
 
 def time_call(fn, warmup=2, repeat=5):
-    """startup = first-call wall time; steady = median of repeats."""
+    """startup = first-call wall time; warmup iterations (C04); steady = median of repeats."""
     start = time.perf_counter()
     fn()
     startup = time.perf_counter() - start
+    for _ in range(max(0, warmup - 1)):
+        fn()
     times = []
     for _ in range(repeat):
         t0 = time.perf_counter()
@@ -32,29 +34,26 @@ def time_call(fn, warmup=2, repeat=5):
 
 
 def measure_transfer(backend, inputs, dtype):
-    """CPU->device copy wall time for accelerator backends."""
-    if backend == "torch_cuda":
+    """CPU->device copy wall time for accelerator backends (C05 / C11)."""
+    if backend in ("torch_cuda", "torch_mps"):
         import torch
         import numpy as np
-        keys = list(inputs.keys())
-        if not keys:
-            return None
-        arr = np.asarray(inputs[keys[0]])
+        device = "cuda" if backend == "torch_cuda" else "mps"
         t0 = time.perf_counter()
-        torch.tensor(arr, dtype=torch.float64 if dtype == "float64" else torch.float32,
-                     device="cuda")
-        torch.cuda.synchronize()
-        return time.perf_counter() - t0
-    if backend == "torch_mps":
-        import torch
-        import numpy as np
-        keys = list(inputs.keys())
-        if not keys:
+        transferred = 0
+        for val in inputs.values():
+            if isinstance(val, np.ndarray):
+                if np.iscomplexobj(val):
+                    c_t = torch.complex64 if dtype == "float32" else torch.complex128
+                    torch.tensor(val, dtype=c_t, device=device)
+                else:
+                    r_t = torch.float32 if dtype == "float32" else torch.float64
+                    torch.tensor(val, dtype=r_t, device=device)
+                transferred += 1
+        if transferred == 0:
             return None
-        arr = np.asarray(inputs[keys[0]])
-        t0 = time.perf_counter()
-        torch.tensor(arr, dtype=torch.float64 if dtype == "float64" else torch.float32,
-                     device="mps")
+        if device == "cuda" and torch.cuda.is_available():
+            torch.cuda.synchronize()
         return time.perf_counter() - t0
     return None
 
@@ -111,12 +110,23 @@ def run_admission(workload, scale, dtype="float64", gain_threshold=1.5,
             })
             continue
 
-        cand_timing = time_call(
-            lambda: wp.candidate(workload, name, inputs, dtype),
-            warmup=warmup, repeat=repeat)
-        transfer = measure_transfer(name, inputs, dtype)
-        vram = measure_vram_delta(
-            name, lambda: wp.candidate(workload, name, inputs, dtype))
+        try:
+            cand_timing = time_call(
+                lambda: wp.candidate(workload, name, inputs, dtype),
+                warmup=warmup, repeat=repeat)
+            transfer = measure_transfer(name, inputs, dtype)
+            vram = measure_vram_delta(
+                name, lambda: wp.candidate(workload, name, inputs, dtype))
+        except Exception as exc:  # C09: 计时与测量异常受控降级为 REFERENCE
+            candidates.append({
+                "backend": name,
+                "device": spec.device_name(),
+                "kind": spec.kind,
+                "dtype": dtype,
+                "verdict": "REFERENCE",
+                "fallback_reason": f"timing_failed: {type(exc).__name__}: {exc}",
+            })
+            continue
 
         speedup = ref_timing["median"] / max(cand_timing["median"], 1e-12)
         if speedup >= gain_threshold:
