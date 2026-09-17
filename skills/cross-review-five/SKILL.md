@@ -57,9 +57,11 @@ v2 摒弃全篇通读与固定有向环，按**最大信息增量与核心分歧
 
 ### 三档模式 (v2)
 
-- `--mode economy`：3 模型盲审（kimi-k3, dsv4pro, gemini38flash），最多 1 组矛盾质询，共 3–4 次调用（轻量快捷）；
-- `--mode standard`（默认推荐）：5 模型盲审，2–3 组关键争议与单例质询，共 7–8 次调用（压降 60%+ 上下文消耗）；
-- `--mode audit`：5 模型盲审，最大互补错排匹配（derangement 5 条边）+ 关键弦质询，共 10–12 次调用（高危收口）。
+- `--mode economy`：3 模型盲审（kimi-k3, dsv4pro, gemini38flash），最多 1 组质询，共 3–4 次调用（轻量快捷）；
+- `--mode standard`（默认推荐）：5 模型盲审，最多 3 组关键争议与单例质询，共 5–8 次调用；
+- `--mode audit`：5 模型盲审，最多 5 组质询，配额有余时追加最大互补错排匹配（derangement），共 5–10 次调用（高危收口）。
+
+调用次数 = 盲审次数 + 实际质询组数（0 到 max_challenges），与 orchestrate_v2.py 的 MODE_PRESETS 一致。
 
 ### 用法 (v2)
 
