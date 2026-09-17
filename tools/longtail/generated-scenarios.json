@@ -4,9 +4,10 @@
     "scenario_count": 30,
     "candidate_pool_size": 4096,
     "random_algorithm": "SHA256 counter-based deterministic pseudorandom selection",
-    "selection_algorithm": "coverage-maximizing deterministic greedy selection with SHA256 tie-break and a deterministic weight sweep",
+    "selection_algorithm": "coverage-maximizing deterministic greedy selection with SHA256 tie-break and a deterministic weight sweep (7 sweeps; best picked by constraint-problem count, no optimality guarantee)",
     "factor_catalog_version": "extreme-academic-longtail-v2",
-    "coverage_note": "Full per-axis level coverage (every level of every axis with <=30 levels appearing at least once) is not jointly satisfiable with the 30-scenario budget, quota satisfaction and critical-tuple uniqueness under greedy selection. The greedy sweep found the best attainable configuration; the remaining gaps are listed verbatim in coverage_report.uncovered_required_levels. Swap repair was attempted and rejected: replacing one scenario to cover 6 missing levels exposed 58 uniquely-covered levels elsewhere, so no monotone-improving swap path exists from the greedy optimum."
+    "coverage_note": "Greedy sweep observation only: uncovered_required_levels lists levels the best sweep left uncovered. This run did NOT execute a repair pass, so infeasibility and optimality are not proven and no repair or best-attainable claims are made.",
+    "repair_executed": false
   },
   "factor_catalog": {
     "A01_role": [
@@ -1108,7 +1109,7 @@
         "odds_ratio"
       ]
     ],
-    "critical_tuple_duplicates": [],
+    "critical_tuple_duplicates": null,
     "constraint_problems": [
       "axis A01_role uncovered levels: ['government_researcher'] (1 missing)",
       "axis C21_locator_system uncovered levels: ['eLocator'] (1 missing)",

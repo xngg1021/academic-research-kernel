@@ -17,6 +17,8 @@
 """
 from decimal import Decimal
 
+import math
+
 import numpy as np
 from scipy import stats
 from statsmodels.stats.power import TTestIndPower
@@ -275,8 +277,12 @@ def required_n_ttest(d, power=0.8, alpha=0.05, ratio=1.0, reported=None):
 # ---------------------------------------------------------------------------
 
 def _decimals(value):
-    """由浮点字面量推断报告的小数位数(0.04 → 2)。"""
-    return max(0, -Decimal(str(value)).as_tuple().exponent)
+    """由数值或字符串推断报告的小数位数 (Q03: 优先从原始字符串提取, 恢复尾随零)。"""
+    s = str(value).strip()
+    if "." in s:
+        base = s.split("e")[0].split("E")[0]
+        return len(base.split(".")[1])
+    return 0
 
 
 def check_p_match(reported_p, recomputed_p, decimals=None):
@@ -286,15 +292,17 @@ def check_p_match(reported_p, recomputed_p, decimals=None):
     decimals 省略时由 reported_p 的字面精度推断。p 以 "< .05" 形式报告时
     本函数不适用(改用方向性核对,见 SKILL.md 工作流 4)。
     """
-    _require(0 <= reported_p <= 1 and 0 <= recomputed_p <= 1, 'p 值须在 [0,1]')
     k = _decimals(reported_p) if decimals is None else decimals
+    p_rep = float(reported_p)
+    p_rec = float(recomputed_p)
+    _require(0 <= p_rep <= 1 and 0 <= p_rec <= 1, 'p 值须在 [0,1]')
     tol = 0.5 * 10 ** (-k)
-    diff = abs(recomputed_p - reported_p)
+    diff = abs(p_rec - p_rep)
     return {
         'consistent': bool(diff <= tol + 1e-12),
-        'reported': reported_p,
-        'recomputed': float(recomputed_p),
-        'difference': float(recomputed_p - reported_p),
+        'reported': p_rep,
+        'recomputed': p_rec,
+        'difference': float(p_rec - p_rep),
         'tolerance': float(tol),
         'decimals': int(k),
         'formula': '|p_recomputed - p_reported| <= 0.5 * 10^-decimals',
@@ -303,35 +311,71 @@ def check_p_match(reported_p, recomputed_p, decimals=None):
     }
 
 
-def check_percentage(count, percent, denominator=None, max_denominator=100000):
+def check_percentage(count, percent, denominator=None, max_denominator=100000,
+                     decimals=None):
     """百分比分母核对:报告百分比、计数与(可选)声明分母是否自洽。
 
     给出 denominator 时直接比较 100*count/denominator 与 percent(按 percent
     的报告精度取容差)。省略 denominator 时反推隐含分母 100*count/percent,
     在距其最近整数处回算百分比判定;同时给出最近整数分母供人工核对。
+
+    QA-03: percent=0 是合法输入——count=0 且给了分母时直接核对;
+    未给分母时 0% 与 0 计数自洽但分母欠定(consistent=None),count>0 判不一致。
+    QA-04 / Q03: decimals 显式传入或传入字符串可恢复 float 无法保留的尾随零(报告 0.050 应传
+    "0.050" 或 decimals=3);省略时按字面量推断。
     """
     _require(count >= 0, '计数须非负')
-    _require(0 < percent <= 100, '百分比须在 (0,100]')
-    k = _decimals(percent)
+    k = _decimals(percent) if decimals is None else decimals
+    p_val = float(percent)
+    _require(0 <= p_val <= 100, '百分比须在 [0,100]')
     tol = 0.5 * 10 ** (-k) + 1e-12
     out = {
-        'inputs': {'count': count, 'percent': percent},
+        'inputs': {'count': count, 'percent': p_val, 'raw_percent': str(percent)},
         'tolerance': float(tol),
         'formula': 'percent ?= 100*count/denominator (按报告精度容差)',
         'library': 'pure python',
         'confidence': 'high',
     }
+    if p_val == 0:
+        if denominator is not None:
+            _require(denominator > 0, '分母须为正')
+            recomputed = 100.0 * count / denominator
+            out.update({
+                'consistent': bool(abs(recomputed - p_val) <= tol),
+                'denominator': denominator,
+                'recomputed_percent': float(recomputed),
+                'difference': float(recomputed - p_val),
+            })
+        elif count == 0:
+            out.update({'consistent': None,
+                        'note': '0% 与 0 计数自洽, 但未给分母时无法确定分母'})
+        else:
+            # Q01: 按报告精度处理零边界——count>0 且 percent=0 时，若存在合理分母使 100*count/D <= tol，
+            # 则在四舍五入下可能成立，属于分母未知的欠定状态，不能判定为绝对不可能
+            min_denom = int(np.ceil(100.0 * count / tol))
+            if min_denom <= max_denominator:
+                out.update({
+                    'consistent': None,
+                    'min_possible_denominator': min_denom,
+                    'note': f'报告 0% 但 count={count} 在四舍五入下可能成立 (要求分母 >= {min_denom}); 未声明分母因此欠定',
+                })
+            else:
+                out.update({
+                    'consistent': False,
+                    'note': f'percent=0 且 count={count} 所需分母超过最大上限 {max_denominator}',
+                })
+        return out
     if denominator is not None:
         _require(denominator > 0, '分母须为正')
         recomputed = 100.0 * count / denominator
         out.update({
-            'consistent': bool(abs(recomputed - percent) <= tol),
+            'consistent': bool(abs(recomputed - p_val) <= tol),
             'denominator': denominator,
             'recomputed_percent': float(recomputed),
-            'difference': float(recomputed - percent),
+            'difference': float(recomputed - p_val),
         })
         return out
-    implied = 100.0 * count / percent
+    implied = 100.0 * count / p_val
     nearest = int(round(implied))
     if not (1 <= nearest <= max_denominator):
         out.update({'consistent': False, 'implied_denominator': float(implied),
@@ -339,11 +383,11 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000):
         return out
     recomputed = 100.0 * count / nearest
     out.update({
-        'consistent': bool(abs(recomputed - percent) <= tol),
+        'consistent': bool(abs(recomputed - p_val) <= tol),
         'implied_denominator': float(implied),
         'nearest_denominator': nearest,
         'recomputed_percent': float(recomputed),
-        'difference': float(recomputed - percent),
+        'difference': float(recomputed - p_val),
     })
     return out
 
@@ -389,7 +433,36 @@ def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=Non
     if kind in ('ttest_1sample', 'ttest_paired'):
         implied = df + 1
     elif kind == 'ttest_2sample':
+        # QA-02: N = df + 2 只对 pooled Student t 成立且要求整数 df;
+        # 非整数 df 是 Welch-Satterthwaite 自由度的特征, 不能反推 N。
+        if float(df) != int(df):
+            return {
+                'consistent': None,
+                'implied_n': None,
+                'reported_n': int(reported_n),
+                'difference': None,
+                'inputs': {'df': df, 'reported_n': reported_n, 'kind': kind,
+                           'n_params': n_params},
+                'formula': 'Student t: N = df+2 (仅整数 df); 非整数 df 属于 Welch',
+                'library': 'pure python',
+                'confidence': 'medium',
+                'note': '非整数自由度属于 Welch 情形, N = df+2 不成立, 不得据此判定样本量错误; '
+                        '用 kind="ttest_2sample_welch" 显式声明, 或核对论文是否报告了 Welch 校正',
+            }
         implied = df + 2
+    elif kind == 'ttest_2sample_welch':
+        return {
+            'consistent': None,
+            'implied_n': None,
+            'reported_n': int(reported_n),
+            'difference': None,
+            'inputs': {'df': df, 'reported_n': reported_n, 'kind': kind,
+                       'n_params': n_params},
+            'formula': 'Welch df 依赖两组方差与样本量, 无法仅由 df 反推 N',
+            'library': 'pure python',
+            'confidence': 'medium',
+            'note': 'Welch 自由度无法反推样本量, 本函数不做判定',
+        }
     elif kind == 'regression':
         _require(n_params is not None and n_params >= 1,
                  "kind='regression' 须提供 n_params(含截距)")
@@ -404,7 +477,8 @@ def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=Non
         'inputs': {'df': df, 'reported_n': reported_n, 'kind': kind,
                    'n_params': n_params},
         'formula': {'ttest_1sample': 'N = df+1', 'ttest_paired': 'N = df+1',
-                    'ttest_2sample': 'N = df+2',
+                    'ttest_2sample': 'N = df+2 (pooled Student, 整数 df)',
+                    'ttest_2sample_welch': 'Welch df 不可反推 N',
                     'regression': 'N = df_residual + n_params'}[kind],
         'library': 'pure python',
         'confidence': 'high',
@@ -415,7 +489,15 @@ def values_agree(value_a, value_b, rel_tol=1e-3, abs_tol=None):
     """两处报告值(正文 vs 表格、摘要 vs 结果)是否一致。
 
     默认相对容差 1e-3(容忍排版四舍五入);跨量级或近零值用 abs_tol。
+    QA-01: 输入与容差必须为有限数, inf/nan 一律 ValueError, 不得判成一致。
     """
+    for name, val in (('value_a', value_a), ('value_b', value_b)):
+        if not math.isfinite(float(val)):
+            raise ValueError(f'{name} 必须是有限数, got {val!r}')
+    if not math.isfinite(float(rel_tol)) or float(rel_tol) < 0:
+        raise ValueError(f'rel_tol 必须是有限非负数, got {rel_tol!r}')
+    if abs_tol is not None and (not math.isfinite(float(abs_tol)) or float(abs_tol) < 0):
+        raise ValueError(f'abs_tol 必须是有限非负数, got {abs_tol!r}')
     diff = abs(value_a - value_b)
     scale = max(abs(value_a), abs(value_b))
     tol = abs_tol if abs_tol is not None else rel_tol * scale

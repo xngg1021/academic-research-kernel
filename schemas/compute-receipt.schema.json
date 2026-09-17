@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/compute-receipt.schema.json",
+  "title": "ComputeReceipt",
+  "description": "Evidence record of a paired benchmark and admission decision in the scientific compute fabric. Records measurements and failures; never an inferred conclusion.",
+  "type": "object",
+  "required": ["protocol", "timestamp", "hardware", "environment", "operation",
+               "scale", "dtype", "gain_threshold", "benchmark_parameters",
+               "reference", "candidates", "admitted_backends", "fallback_backends"],
+  "properties": {
+    "protocol": {"type": "string", "const": "compute-receipt-1.0"},
+    "timestamp": {"type": "string"},
+    "hardware": {
+      "type": "object",
+      "required": ["os", "architecture", "os_visible_cpus", "accelerators"],
+      "properties": {
+        "os": {"type": "string"},
+        "architecture": {"type": "string"},
+        "cpu_model": {"type": "string"},
+        "python": {"type": "string"},
+        "os_visible_cpus": {},
+        "process_affinity_cpus": {},
+        "cgroup_cpu_quota": {},
+        "ram_total_bytes": {},
+        "isa_hint": {"type": "string"},
+        "accelerators": {
+          "type": "array",
+          "items": {"type": "object"}
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["python", "platform", "libraries"],
+      "properties": {
+        "python": {"type": "string"},
+        "platform": {"type": "string"},
+        "libraries": {"type": "object"}
+      }
+    },
+    "operation": {"type": "string"},
+    "scale": {"type": "string", "enum": ["small", "medium", "large"]},
+    "dtype": {"type": "string", "enum": ["float32", "float64"]},
+    "gain_threshold": {"type": "number"},
+    "benchmark_parameters": {
+      "type": "object",
+      "required": ["warmup", "repeat", "seed"]
+    },
+    "reference": {
+      "type": "object",
+      "required": ["backend", "timing"],
+      "properties": {
+        "backend": {"type": "string"},
+        "timing": {
+          "type": "object",
+          "required": ["startup", "median", "times"],
+          "properties": {
+            "startup": {"type": "number"},
+            "median": {"type": "number"},
+            "times": {"type": "array", "items": {"type": "number"}}
+          }
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["backend", "dtype", "verdict"],
+        "properties": {
+          "backend": {"type": "string"},
+          "device": {"type": ["string", "null"]},
+          "kind": {"type": "string"},
+          "dtype": {"type": "string"},
+          "verdict": {"type": "string", "enum": ["ADMITTED", "REFERENCE"]},
+          "fallback_reason": {"type": ["string", "null"]},
+          "speedup_vs_reference": {"type": "number"},
+          "timing": {"type": "object"},
+          "transfer_seconds": {"type": ["number", "null"]},
+          "vram_delta_bytes": {"type": ["number", "null"]}
+        }
+      }
+    },
+    "admitted_backends": {"type": "array", "items": {"type": "string"}},
+    "fallback_backends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["backend", "reason"],
+        "properties": {
+          "backend": {"type": "string"},
+          "reason": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

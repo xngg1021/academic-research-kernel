@@ -240,7 +240,11 @@ def verify_quotas(state, selected, catalog):
     for tag, need in quota_requirements().items():
         if state["tags"][tag] < need:
             problems.append(f"quota {tag}: {state['tags'][tag]} < {need}")
-    for skill, count in state["skills"].items():
+    # FW-02: 遍历 catalog 声明的技能全集, 完全缺席的技能也会被发现
+    skill_axis = (catalog.get("axes") or {}).get("E01_primary_capability") or {}
+    all_skills = set(skill_axis.get("levels") or [])
+    for skill in sorted(all_skills):
+        count = state["skills"][skill]
         if count < 8:
             problems.append(f"skill {skill}: {count} < 8")
     multi3 = sum(1 for c in selected if len(c["E01_primary_capability"]) >= 3)
@@ -326,18 +330,18 @@ def repair_uncovered(catalog, pool, selected, state, max_rounds=80):
         def loss(c):
             return len(uncovered_levels_candidate(catalog, selected, state, c))
         worst_old = min(selected, key=loss)
-        # trial swap with rollback on non-improvement
-        apply_combo_inverse(catalog, worst_old, state)
+        # trial swap with rollback on non-improvement (FW-01: inverse 按剩余集合重算)
         selected.remove(worst_old)
         selected_set.discard(worst_old["_ci"])
+        apply_combo_inverse(catalog, worst_old, state, selected)
         selected.append(best_new)
         selected_set.add(best_new["_ci"])
         apply_combo(catalog, best_new, state)
         new_count = len(uncovered_levels(catalog, state))
         if new_count >= base_count:
-            apply_combo_inverse(catalog, best_new, state)
             selected.remove(best_new)
             selected_set.discard(best_new["_ci"])
+            apply_combo_inverse(catalog, best_new, state, selected)
             selected.append(worst_old)
             selected_set.add(worst_old["_ci"])
             apply_combo(catalog, worst_old, state)
@@ -369,31 +373,16 @@ def uncovered_levels_candidate(catalog, selected, state, candidate):
     return out
 
 
-def apply_combo_inverse(catalog, combo, state):
-    axes = catalog["axes"]
-    for axis_id, spec in axes.items():
-        values = combo[axis_id]
-        if not isinstance(values, list):
-            values = [values]
-        for v in values:
-            state["levels"][axis_id].discard(v)
-    for (ax, bx) in catalog["pairwise_axes"]:
-        a = combo[ax]
-        b = combo[bx]
-        av = a if isinstance(a, list) else [a]
-        bv = b if isinstance(b, list) else [b]
-        for x in av:
-            for y in bv:
-                state["pairs"][(ax, bx)].discard((x, y))
-    evs = draw_events_for(catalog, combo)
-    for cat in evs:
-        state["events"].discard(cat)
-    for skill in combo["E01_primary_capability"]:
-        state["skills"][skill] -= 1
-    state["terminals"][combo["E04_correct_terminal_state"]] -= 1
-    for tag, count in combo_tags(catalog, combo).items():
-        state["tags"][tag] -= count
-    state["critical_tuples"].discard(combo_critical_tuple(catalog, combo))
+def apply_combo_inverse(catalog, combo, state, selected):
+    """撤销 combo 的覆盖贡献 (FW-01): 不直接 discard 共享元素,
+    而是基于剩余 selected 场景整体重算, 仍被其他场景覆盖的
+    level/pair/event/计数不会误删。"""
+    fresh = coverage_state(catalog)
+    for other in selected:
+        if other is not combo:
+            apply_combo(catalog, other, fresh)
+    state.clear()
+    state.update(fresh)
 
 
 def run():
@@ -474,9 +463,10 @@ def run():
             "scenario_count": len(scenarios),
             "candidate_pool_size": POOL_SIZE,
             "random_algorithm": "SHA256 counter-based deterministic pseudorandom selection",
-            "selection_algorithm": "coverage-maximizing deterministic greedy selection with SHA256 tie-break and a deterministic weight sweep",
+            "selection_algorithm": "coverage-maximizing deterministic greedy selection with SHA256 tie-break and a deterministic weight sweep (7 sweeps; best picked by constraint-problem count, no optimality guarantee)",
             "factor_catalog_version": catalog["version"],
-            "coverage_note": "Full per-axis level coverage (every level of every axis with <=30 levels appearing at least once) is not jointly satisfiable with the 30-scenario budget, quota satisfaction and critical-tuple uniqueness under greedy selection. The greedy sweep found the best attainable configuration; the remaining gaps are listed verbatim in coverage_report.uncovered_required_levels. Swap repair was attempted and rejected: replacing one scenario to cover 6 missing levels exposed 58 uniquely-covered levels elsewhere, so no monotone-improving swap path exists from the greedy optimum.",
+            "coverage_note": "Greedy sweep observation only: uncovered_required_levels lists levels the best sweep left uncovered. This run did NOT execute a repair pass, so infeasibility and optimality are not proven and no repair or best-attainable claims are made.",
+            "repair_executed": False,
         },
         "factor_catalog": {k: v["levels"] for k, v in catalog["axes"].items()},
         "coverage_report": report,
@@ -512,7 +502,7 @@ def build_report(catalog, state, selected, problems, weights):
         "quota_tag_counts": dict(state["tags"]),
         "scenarios_with_3plus_skills": multi3,
         "uncovered_required_levels": missing_levels,
-        "critical_tuple_duplicates": [],
+        "critical_tuple_duplicates": find_critical_duplicates(selected, catalog),
         "constraint_problems": problems,
     }
 

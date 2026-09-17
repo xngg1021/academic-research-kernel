@@ -44,6 +44,15 @@ Python 3.11+；数值配方要求 NumPy、SciPy >=1.9（含 MILP）。其余按�
 
 出图必须无头运行：**先 `import matplotlib; matplotlib.use('Agg')` 再 import pyplot，最后 `fig.savefig(path)` 存文件**，不要 `plt.show()`（无 GUI 会卡住/报错）。中文标签需先设字体（见 Pitfalls）。
 
+## 科学计算执行层（Scientific Compute Fabric）
+
+默认在 CPU 上用 NumPy/SciPy 计算；不要默认"上 GPU 更快"。本机与本仓库有一层实测证据：`../../scripts/scfabric/` 与 `../../docs/scientific-compute-fabric.md`。核心规则：
+
+- dtype 语义先于设备可用性。float64 工作负载不得为"上 GPU"降成 float32；MPS 不支持 float64，double 计算留在 CPU。
+- 大规模可并行的浮点统计（蒙特卡洛、bootstrap 重抽样、大 FFT）才有加速器价值；小任务与标量重算一律 CPU。
+- 要声称某个后端更快，必须跑 paired benchmark 加数值等价检查并出 ComputeReceipt（`../../scripts/scfabric/admission.py`）；没有 receipt 的加速断言不算证据。
+- 复现记录里写清楚 backend、dtype、线程数与实测 dispatch，不要只写"GPU"。
+
 ## 领域自动路由（全领域计算中枢）
 
 每次计算先输出一行路由说明再执行：

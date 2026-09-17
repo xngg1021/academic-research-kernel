@@ -89,6 +89,12 @@ def main(argv=None) -> int:
             print(json.dumps({'doi': doi, 'status': 'failed',
                               'error': f'{type(error).__name__}: {error}'}, ensure_ascii=False, indent=2))
             return 1
+        rec_doi = str(record.get('doi') or '').lower().removeprefix('https://doi.org/').strip().strip('/')
+        if rec_doi and rec_doi != doi:
+            print(json.dumps({'doi': doi, 'status': 'failed',
+                              'error': f'record DOI mismatch: requested {doi}, got {rec_doi}',
+                              'mismatch': True}, ensure_ascii=False, indent=2))
+            return 1
         mode = 'offline-file'
     else:
         email = args.email or os.environ.get('UNPAYWALL_EMAIL')

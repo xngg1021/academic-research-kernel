@@ -32,7 +32,11 @@ def _node_id(work: dict):
 
 
 def build_graph(works: list) -> dict:
-    """从含 referenced_works 的 work 列表建语料内引文网络。"""
+    """从含 referenced_works 的 work 列表建语料内引文网络 (简单图口径, LA-04)。
+
+    同一 (citing, cited) 引用对只记一条边; 重复输入记录或重复引用 ID
+    不再放大边数与度数, 重复边单独计数为数据质量问题。
+    """
     nodes = {}
     for work in works:
         node = _node_id(work)
@@ -40,6 +44,8 @@ def build_graph(works: list) -> dict:
             nodes[node] = {'id': node, 'title': work.get('title'),
                            'year': work.get('publication_year') or work.get('year')}
     edges = []
+    edge_set = set()
+    duplicate_edges = 0
     external_counts = {}
     for work in works:
         src = _node_id(work)
@@ -48,6 +54,11 @@ def build_graph(works: list) -> dict:
         for ref in work.get('referenced_works') or []:
             rid = str(ref).split('/')[-1]
             if rid in nodes and rid != src:
+                pair = (src, rid)
+                if pair in edge_set:
+                    duplicate_edges += 1
+                    continue
+                edge_set.add(pair)
                 edges.append({'citing': src, 'cited': rid})
             else:
                 external_counts[src] = external_counts.get(src, 0) + 1
@@ -55,7 +66,8 @@ def build_graph(works: list) -> dict:
         'nodes': list(nodes.values()),
         'edges': edges,
         'external_reference_counts': external_counts,
-        'summary': {'node_count': len(nodes), 'internal_edge_count': len(edges)},
+        'summary': {'node_count': len(nodes), 'internal_edge_count': len(edges),
+                    'duplicate_edge_count': duplicate_edges},
     }
 
 
@@ -133,6 +145,12 @@ def main(argv=None) -> int:
         try:
             with open(args.input, encoding='utf-8') as handle:
                 works = json.load(handle)
+            # LA-03: 适配上游产物形状 ({candidates: [...]} 或去重器 {kept: [...]})
+            if isinstance(works, dict):
+                if 'kept' in works:
+                    works = works['kept']
+                elif 'candidates' in works:
+                    works = works['candidates']
             if not isinstance(works, list):
                 raise ValueError('input JSON must be a list of works')
         except (OSError, ValueError) as error:

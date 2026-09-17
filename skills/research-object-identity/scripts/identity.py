@@ -94,9 +94,10 @@ def normalize(kind: str, value: Any) -> str:
 
 
 def normalize_title(text: Any) -> str:
-    """标题规范文本:小写折叠、去标点(保留中日韩字符)、压缩空白。"""
+    """标题规范文本:小写折叠、去标点(保留 Unicode 字母数字, 覆盖全部
+    文字系统 AV-03)、压缩空白。"""
     text = str(text or '').casefold()
-    text = re.sub(r'[^a-z0-9\u4e00-\u9fff\uac00-\ud7af]+', ' ', text)
+    text = re.sub(r'[^\w\u4e00-\u9fff\uac00-\ud7af]+', ' ', text)
     return ' '.join(text.split())
 
 
@@ -162,6 +163,14 @@ def _authors_of(record: dict) -> list:
     return [normalize_author(a) for a in record.get('authors') or [] if str(a).strip()]
 
 
+def _strict_bool(value, field='human_confirmed'):
+    """严格 JSON 布尔: 只接受 bool 类型。字符串 'true'/'false' 一律拒绝 —
+    出现字符串说明证据不是结构化 JSON, 不得静默猜测 (ID-02)。"""
+    if isinstance(value, bool):
+        return value
+    raise ValueError(f'{field} 必须是 JSON 布尔值, got {value!r}')
+
+
 def resolve(records: list) -> dict:
     """聚合同一对象的若干候选记录，输出判定结果。
 
@@ -217,6 +226,32 @@ def resolve(records: list) -> dict:
             pair_counts[pair] = pair_counts.get(pair, 0) + 1
     shared_kinds = sorted({k for (k, _), c in pair_counts.items() if c >= 2})
 
+    # ID-01: shared_identifier 成立要求全部记录处于同一共享标识符连通分量。
+    # 部分记录共享 (如 A、B 同 DOI 而 C 无关) 不得把整批判为 EXACT。
+    n_records = len(records)
+    parent = list(range(n_records))
+
+    def _find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def _union(a, b):
+        ra, rb = _find(a), _find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for pair, count in pair_counts.items():
+        if count >= 2:
+            holders = [i for i, pairs in enumerate(per_record_pairs) if pair in pairs]
+            for i in holders[1:]:
+                _union(holders[0], i)
+    all_connected = n_records <= 1 or len({_find(i) for i in range(n_records)}) == 1
+    if shared_kinds and not all_connected:
+        result['uncertainty'].append({'item': 'shared identifiers only cover a subset of records',
+                                      'kind': 'partial_shared_identifier', 'needs_human': True})
+
     titles = [normalize_title(r.get('title')) for r in records]
     authors = [_authors_of(r) for r in records]
     years = [str(r.get('year') or '') for r in records]
@@ -246,7 +281,7 @@ def resolve(records: list) -> dict:
 
     facts = {
         'id_conflicts': bool(conflict_fields) and any(k in conflict_fields for k in by_kind),
-        'shared_identifier': bool(shared_kinds),
+        'shared_identifier': bool(shared_kinds) and all_connected,
         'single_record': len(records) == 1,
         'has_identifier': bool(per_record_pairs and per_record_pairs[0]),
         'title_all_equal': title_all,
@@ -285,7 +320,7 @@ def link(a: dict, b: dict, kind: str, evidence: dict) -> dict:
         'queried_at': evidence['queried_at'],
         'match_fields': list(evidence['match_fields']),
         'conflict_fields': list(evidence['conflict_fields']),
-        'human_confirmed': bool(evidence['human_confirmed']),
+        'human_confirmed': _strict_bool(evidence['human_confirmed']),
     }
     if kind in RELATION_KINDS:
         forward = {'target_object_id': b['object_id'], 'kind': kind, 'evidence': dict(ev)}
@@ -343,6 +378,21 @@ def from_canonical_work(cw: Any) -> dict:
     }
 
 
+def _observation_from_source(s: dict) -> dict:
+    """source 条目 → 观察记录。ID-03: coverage/raw_identifier 缺项或 None
+    时省略键, 不写 None (目标 schema 要求字符串)。"""
+    obs = {
+        'source': s.get('source', ''),
+        'queried_at': s.get('queried_at', ''),
+        'status': s.get('status', 'skipped'),
+    }
+    for key in ('coverage', 'raw_identifier'):
+        value = s.get(key)
+        if isinstance(value, str) and value:
+            obs[key] = value
+    return obs
+
+
 def consume_receipt(receipt: dict) -> dict:
     """消费 Evidence Receipt 1.0,产出 source_observations 与 uncertainty。
 
@@ -363,24 +413,12 @@ def consume_receipt(receipt: dict) -> dict:
     uncertainty = []
     if (receipt or {}).get('schema_version') != '1.0':
         for s in (receipt or {}).get('sources') or []:
-            observations.append({
-                'source': s.get('source', ''),
-                'queried_at': s.get('queried_at', ''),
-                'status': s.get('status', 'skipped'),
-                'coverage': s.get('coverage'),
-                'raw_identifier': s.get('raw_identifier'),
-            })
+            observations.append(_observation_from_source(s))
         uncertainty.append({'item': 'unsupported schema_version',
                             'kind': 'unsupported_schema_version', 'needs_human': True})
         return {'source_observations': observations, 'uncertainty': uncertainty}
     for s in (receipt or {}).get('sources') or []:
-        observations.append({
-            'source': s.get('source', ''),
-            'queried_at': s.get('queried_at', ''),
-            'status': s.get('status', 'skipped'),
-            'coverage': s.get('coverage'),
-            'raw_identifier': s.get('raw_identifier'),
-        })
+        observations.append(_observation_from_source(s))
     for c in (receipt or {}).get('claims') or []:
         status = c.get('support_status')
         if status == 'contradicted':

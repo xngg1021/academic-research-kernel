@@ -138,6 +138,8 @@ def _arrays(yi, vi) -> tuple[np.ndarray, np.ndarray]:
         raise ValueError('yi 与 vi 必须等长且非空')
     if np.any(v <= 0):
         raise ValueError('方差 vi 必须全部为正')
+    if not (np.all(np.isfinite(y)) and np.all(np.isfinite(v))):
+        raise ValueError('yi 与 vi 必须全部为有限数 (SR-03: NaN/inf 一律拒绝)')
     return y, v
 
 
@@ -205,31 +207,41 @@ def trim_and_fill(yi, vi, side: str = 'left', maxiter: int = 100) -> dict:
     最后把被削研究关于最终 θ̂ 镜像补回,给出校正后合并估计。
 
     L0 = max(0, round((4·T_K − K(K+1)) / (2K − 1))),
-    T_K 为正偏离研究的 |X_j| 秩和(Duval & Tweedie 2000, Biometrics 56:455)。
+    side='left' 时 T_K 为正偏离研究的 |X_j| 秩和,side='right' 时为负偏离的秩和
+    (Duval & Tweedie 2000, Biometrics 56:455);这一对称定义保证镜像变换
+    (y→−y 且 side 互换) 下 k0 与校正量不变 (SR-01)。
 
-    返回 {'k0', 'adjusted', 'se', 'theta_observed', 'filled'}。
+    返回 {'k0', 'adjusted', 'se', 'theta_observed', 'filled', 'converged'}。
+    迭代振荡或达到上限未收敛时 k0=None、adjusted=None、converged=False,
+    不得把迭代上限的奇偶性当结果 (SR-02)。
     异质性大时结果不稳,仅作敏感性分析;正式报告用 R metafor::trimfill 复核。
     """
     y, v = _arrays(yi, vi)
     k = y.size
     if k < 3:
         raise ValueError('trim-and-fill 至少需要 3 项研究')
+    if side not in ('left', 'right'):
+        raise ValueError("side 必须是 'left' 或 'right'")
 
-    def l0_count(yy, vv):
+    def l0_count(yy, vv, side):
         theta = float(np.sum(yy / vv) / np.sum(1.0 / vv))
         x = yy - theta
         ranks = stats.rankdata(np.abs(x))
-        t_pos = float(np.sum(ranks[x > 0]))
+        t_sign = float(np.sum(ranks[x < 0] if side == 'right' else ranks[x > 0]))
         kk = yy.size
-        return max(0, int(round((4.0 * t_pos - kk * (kk + 1)) / (2.0 * kk - 1.0))))
+        return max(0, int(round((4.0 * t_sign - kk * (kk + 1)) / (2.0 * kk - 1.0))))
 
     idx = np.arange(k)
     k0, prev = 0, -1
     it = 0
+    seen_states = set()
     while k0 != prev and it < maxiter:
         it += 1
         prev = k0
-        k0 = min(l0_count(y[idx], v[idx]), k - 3)
+        k0 = min(l0_count(y[idx], v[idx], side), k - 3)
+        if k0 == prev:
+            # S01: 连续两轮 k0 一致, 成功到达固定点
+            break
         if k0 > 0:
             theta = float(np.sum(y[idx] / v[idx]) / np.sum(1.0 / v[idx]))
             x_full = y - theta
@@ -238,17 +250,32 @@ def trim_and_fill(yi, vi, side: str = 'left', maxiter: int = 100) -> dict:
             idx = order[k0:]
         else:
             idx = np.arange(k)
+        state = (int(k0), tuple(sorted(idx.tolist())))
+        if state in seen_states:
+            return {'k0': None, 'adjusted': None, 'se': None,
+                    'theta_observed': float(pool_fixed(y, v).estimate),
+                    'filled': [], 'converged': False,
+                    'note': 'trim-and-fill 迭代未收敛(检测到状态循环); '
+                            '请用 R metafor::trimfill 复核 k0'}
+        seen_states.add(state)
+    if it >= maxiter and k0 != prev:
+        return {'k0': None, 'adjusted': None, 'se': None,
+                'theta_observed': float(pool_fixed(y, v).estimate),
+                'filled': [], 'converged': False,
+                'note': f'trim-and-fill 在 {maxiter} 次迭代内未收敛; '
+                        '请用 R metafor::trimfill 复核 k0'}
     theta_obs = pool_fixed(y, v).estimate
     if k0 == 0:
         return {'k0': 0, 'adjusted': theta_obs, 'se': pool_fixed(y, v).se,
-                'theta_observed': theta_obs, 'filled': []}
+                'theta_observed': theta_obs, 'filled': [], 'converged': True}
     theta_trim = float(np.sum(y[idx] / v[idx]) / np.sum(1.0 / v[idx]))
     trimmed = np.setdiff1d(np.arange(k), idx)
     y_aug = np.concatenate([y, 2.0 * theta_trim - y[trimmed]])
     v_aug = np.concatenate([v, v[trimmed]])
     adj = pool_fixed(y_aug, v_aug)
     return {'k0': int(k0), 'adjusted': adj.estimate, 'se': adj.se,
-            'theta_observed': theta_obs, 'filled': (2.0 * theta_trim - y[trimmed]).tolist()}
+            'theta_observed': theta_obs,
+            'filled': (2.0 * theta_trim - y[trimmed]).tolist(), 'converged': True}
 
 
 def egger_test(yi, vi) -> tuple[float, float, float]:

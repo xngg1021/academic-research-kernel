@@ -28,7 +28,7 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 | `skills/literature-watch` | 1.0.0 | 주간 블루프린트: OpenAlex와 Crossref에서 주제·저자·DOI의 신규 저작을 감시하고 중복 제거 후 신규 항목만 보고 |
 | `skills/retraction-watch` | 1.0.0 | 주간 블루프린트: OpenAlex is_retracted와 Crossref 갱신 기록(update-to 신호)에 대해 DOI 감시 목록을 재점검하고 상태 변화만 보고 |
 | `skills/research-object-identity` | 1.0.0 | 결정적 연구 객체 신원 계층: 식별자 정규화, 5상태 판정(신뢰 점수 없음), 관계·계보 간선. Evidence Receipt 소비 |
-| `skills/cross-review-five` | 1.0.0 | 5개 모델 이종 리뷰 패널(Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): plan 독립 산출과 순환 교차 리뷰 두 단계 |
+| `skills/cross-review-five` | 1.0.0 | 5개 모델 이종 리뷰 패널(Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 4단계 Sparse Deliberation 파이프라인(독립 산출, 주장 단위 클러스터링/병합, 익명 질의, 미해결 대장 대조) |
 
 11개 스킬에는 21편의 Markdown 참조 파일이 있으며 필요할 때만 로드된다. GB/T 7714-2025가 시행 중이며, 집필 참조는 검증된 시행일과 명시적으로 2015년 예시로 표기된 것을 구분한다. 2025년판 완전 준수에는 대상 기관의 템플릿 또는 표준 원문이 필요하다.
 

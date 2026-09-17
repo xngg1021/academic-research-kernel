@@ -127,6 +127,14 @@ def crossref_to_entry(message: dict) -> dict:
     elif entry_type == 'book':
         if message.get('publisher'):
             fields['publisher'] = tex_escape(message['publisher'])
+    elif entry_type == 'incollection':
+        # LA-05: 书籍章节保留书级容器信息 (书名 + 出版社)
+        if container:
+            fields['booktitle'] = tex_escape(container[0])
+        else:
+            todo.append('booktitle missing; verify against original')
+        if message.get('publisher'):
+            fields['publisher'] = tex_escape(message['publisher'])
     elif entry_type == 'phdthesis':
         school = (message.get('institution') or {}).get('name') or message.get('publisher')
         if school:
@@ -180,6 +188,16 @@ def openalex_to_entry(work: dict) -> dict:
             fields['journal'] = tex_escape(venue)
         else:
             todo.append('journal missing; verify against original')
+    elif entry_type == 'incollection':
+        # LA-05: 书籍章节保留书级容器信息 (书名 + 出版社)
+        if venue:
+            fields['booktitle'] = tex_escape(venue)
+        else:
+            todo.append('booktitle missing; verify against original')
+        publisher = ((work.get('primary_location') or {}).get('source') or {}).get(
+            'host_organization_name')
+        if publisher:
+            fields['publisher'] = tex_escape(publisher)
     if year:
         fields['year'] = str(year)
     for src, dst in (('volume', 'volume'), ('issue', 'number')):
@@ -238,7 +256,10 @@ def _load_works(path: str, source: str) -> list:
         return data
     if isinstance(data, dict):
         if source == 'crossref' and isinstance(data.get('message'), dict):
-            return [data['message']]
+            msg = data['message']
+            if isinstance(msg.get('items'), list):
+                return msg['items']
+            return [msg]
         if isinstance(data.get('results'), list):
             return data['results']
         if isinstance(data.get('items'), list):

@@ -28,7 +28,7 @@ SLL 广泛允许使用、研究、修改、商用、分发与专有增补，受�
 | `skills/literature-watch` | 1.0.0 | 周更蓝图：监控主题、作者与 DOI 在 OpenAlex 与 Crossref 的新作品；去重并只报告新增 |
 | `skills/retraction-watch` | 1.0.0 | 周更蓝图：对照 OpenAlex is_retracted 与 Crossref 更新记录（update-to 信号）复查 DOI 监控清单；只报告状态变化 |
 | `skills/research-object-identity` | 1.0.0 | 确定性研究对象身份层：标识符归一、五态判定（无置信分）、关系与谱系建边；消费 Evidence Receipt |
-| `skills/cross-review-five` | 1.0.0 | 五人异构模型评审小组（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：plan 独立产出与轮转互审两阶段 |
+| `skills/cross-review-five` | 1.0.0 | 五人异构模型评审小组（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：v2 四阶段 Sparse Deliberation 流（盲审产出、断言级聚类合并、定向匿名质询、对账与未决保护账本） |
 
 十一个技能共含 21 篇 Markdown 参考文件，按需加载。GB/T 7714-2025 已生效；写作参考区分其已核实生效日期与显式标注的 2015 示例。完全符合 2025 版需以目标机构的模板或标准文本为准。
 
@@ -52,13 +52,24 @@ hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-ver
 
 ## QA 与测试
 
-仓库 QA 校验元数据、参考文件、个人路径与已知密钥模式、Python 语法与标记过的可执行围栏。每个 smoke 示例在全新子进程中原样运行；绘图示例接受 `PLOT_DIR`（默认 `~/plots`，显式展开），测试使用临时目录。未分类的 Python 围栏被拒绝；`fragment:` 块做语法检查但需显式输入，不单独执行。`external-test:` 块仅经手动外部命令运行。QA 在通过的检查上返回 0，代码、schema 或身份失败返回 1，传输、认证或配额不可用返回 2；未配置的可选服务保持 SKIP。
+仓库 QA 校验元数据、参考文件、个人路径与已知密钥模式、Python 语法与标记为可执行的代码块。每个 smoke 示例在全新子进程中原样运行；绘图示例接受 `PLOT_DIR`（默认 `~/plots`，显式展开），测试使用临时目录。未分类的 Python 代码块被拒绝；`fragment:` 块做语法检查但需显式输入，不单独执行。`external-test:` 块仅经手动外部命令运行。QA 在通过的检查上返回 0，代码、schema 或身份失败返回 1，传输、认证或配额不可用返回 2；未配置的可选服务保持 SKIP。
 
-固定的 Hermes 作者测试被复用，其逐技能规则不改动。上游全分布总体检查不适用于本 tap；本仓库测试覆盖全部十一个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
+本地执行验证（从仓库根目录）：
+```bash
+# 运行全部 439 项单元测试与严苛回归套件
+pytest
 
-CI 经 GitHub Actions 在 Ubuntu（Python 3.12 与 3.13）、Windows 与 macOS 上运行完整 QA 套件。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。不声称全新 Hermes 会话与每套依赖版本组合已验证。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
+# 运行代码块静态语法与独立执行检查
+python scripts/qa.py
+```
+
+固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十一个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
+
+CI 经 GitHub Actions 在 Ubuntu（Python 3.10、3.11、3.12 与 3.13）、Windows（Python 3.12）与 macOS（Python 3.12）六组矩阵上运行完整 QA 套件。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。不声称全新 Hermes 会话与每套依赖版本组合已验证。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
 
 tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
+
+scripts/scfabric/ 是科学计算执行层：硬件探针、带 dtype 门禁的后端目录、五个工作负载画像、带数值等价检查的配对基准与 ComputeReceipt。本机首轮实测见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；经验规则是默认 CPU，加速器只凭 receipt 启用。
 
 ## 研究与规划文档
 

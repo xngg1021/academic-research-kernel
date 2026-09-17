@@ -28,7 +28,7 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 | `skills/literature-watch` | 1.0.0 | Weekly blueprint: watch topics, authors and DOI citing works on OpenAlex and Crossref; deduplicate and report only new items |
 | `skills/retraction-watch` | 1.0.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref update records (update-to signals); report only status changes |
 | `skills/research-object-identity` | 1.0.0 | Deterministic research-object identity layer: identifier normalization, five-state verdict (no confidence scores), relation/lineage edges; consumes Evidence Receipts |
-| `skills/cross-review-five` | 1.0.0 | Five-model heterogeneous review panel (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): plan and rotating cross-review stages |
+| `skills/cross-review-five` | 1.0.0 | Five-model heterogeneous review panel (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro): v2 four-stage Sparse Deliberation pipeline (independent plan, assertion-level clustering/merge, targeted anonymous challenge, and reconciliation with unresolved ledger) |
 
 There are 21 Markdown reference files across the eleven skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
 
@@ -76,6 +76,8 @@ Pinned Hermes authoring tests are reused without changing their per-skill rules.
 CI runs the full QA suite via GitHub Actions on Ubuntu (Python 3.12 and 3.13), Windows and macOS. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. A fresh Hermes session and every dependency-version combination are not claimed. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
 
 tools/longtail/ holds the deterministic extreme long-tail scenario generator: 4096 SHA256-seeded candidate combinations over the decoupled factor axes, greedy coverage selection, and the machine-computed coverage report in generated-scenarios.json. It is the input layer for stress-testing the skills; semantic expansion (task chains, oracles, injected events) is a separate stage.
+
+scripts/scfabric/ is the scientific compute fabric: hardware probe, backend catalog with dtype gates, five workload profiles, paired benchmark with parity admission, and ComputeReceipt. First-round measurements on this machine are in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); the rule of thumb is CPU by default, accelerator only with a receipt.
 
 ## Research and planning documents
 

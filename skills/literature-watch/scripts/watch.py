@@ -114,8 +114,15 @@ def get(url: str, timeout: int = 20) -> dict:
             delay *= 2
 
 
-def fetch_topic_works(topic: str, since: date) -> list:
-    """live: OpenAlex 主题检索，from_publication_date 限定新增窗口。"""
+def _truncated(data: dict) -> bool:
+    """MW-02: 首批结果条数小于 meta.count 时标记截断, 提示漏报风险。"""
+    total = ((data.get('meta') or {}).get('count') or 0)
+    return int(total) > len(data.get('results') or [])
+
+
+def fetch_topic_works(topic: str, since: date):
+    """live: OpenAlex 主题检索，from_publication_date 限定新增窗口。
+    返回 (items, truncated); truncated=True 表示还有未取回的分页。"""
     params = urlencode({
         'search': topic,
         'filter': f'from_publication_date:{since.isoformat()}',
@@ -123,32 +130,54 @@ def fetch_topic_works(topic: str, since: date) -> list:
         'select': SELECT,
     })
     data = get(f'{OPENALEX}/works?{params}')
-    return data.get('results') or []
+    return data.get('results') or [], _truncated(data)
 
 
-def fetch_author_works(author_id: str, since: date) -> list:
-    """live: OpenAlex 按 author id 过滤新作。"""
+def fetch_author_works(author_id: str, since: date):
+    """live: OpenAlex 按 author id 过滤新作。返回 (items, truncated)。"""
     params = urlencode({
         'filter': f'authorships.author.id:{author_id},from_publication_date:{since.isoformat()}',
         'per_page': 100,
         'select': SELECT,
     })
     data = get(f'{OPENALEX}/works?{params}')
-    return data.get('results') or []
+    return data.get('results') or [], _truncated(data)
 
 
-def fetch_citing_works(doi: str, since: date) -> list:
-    """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。"""
+def fetch_citing_works(doi: str, since: date):
+    """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。
+    返回 (items, truncated)。OpenAlex 查不到 id 时接通 Crossref 兜底
+    (MW-05), 产出标记 crossref-fallback 的种子元数据记录。"""
     data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=id')
     wid = str(data.get('id') or '').rsplit('/', 1)[-1]
     if not wid:
-        return []
+        record = fetch_crossref_record(doi)
+        if record:
+            fallback = {
+                'id': None,
+                'doi': normalize_doi(doi),
+                'title': ' '.join(record.get('title') or []) or None,
+                'publication_year': _crossref_year(record),
+                'source': 'crossref-fallback',
+            }
+            return [fallback], False
+        return [], False
     params = urlencode({
         'filter': f'cites:{wid},from_publication_date:{since.isoformat()}',
         'per_page': 100,
         'select': SELECT,
     })
-    return (get(f'{OPENALEX}/works?{params}')).get('results') or []
+    data = get(f'{OPENALEX}/works?{params}')
+    return data.get('results') or [], _truncated(data)
+
+
+def _crossref_year(record: dict):
+    """从 Crossref message 提取发表年 (MW-05 兜底转写用)。"""
+    for key in ('published-print', 'published-online', 'issued'):
+        parts = (record.get(key) or {}).get('date-parts')
+        if parts and parts[0] and parts[0][0]:
+            return parts[0][0]
+    return None
 
 
 def fetch_crossref_record(doi: str) -> dict:
@@ -157,16 +186,29 @@ def fetch_crossref_record(doi: str) -> dict:
     return data.get('message') or {}
 
 
-def collect(watchlist: dict, since: date) -> list:
-    """live: 聚合三个来源的候选新作并预去重。"""
-    items, seen = [], set()
+def collect(watchlist: dict, since: date):
+    """live: 聚合三个来源的候选新作并预去重。
+    返回 (items, truncations); truncations 非空表示对应来源达到首批上限。
+    """
+    items, seen, truncations = [], set(), []
     for topic in watchlist['topics']:
-        items.extend(fetch_topic_works(topic, since))
+        its, tr = fetch_topic_works(topic, since)
+        items.extend(its)
+        if tr:
+            truncations.append(f'topic={topic!r}')
     for author_id in watchlist['authors']:
-        items.extend(fetch_author_works(author_id, since))
+        its, tr = fetch_author_works(author_id, since)
+        items.extend(its)
+        if tr:
+            truncations.append(f'author={author_id!r}')
     for doi in watchlist['dois']:
-        items.extend(fetch_citing_works(doi, since))
-    return filter_unseen(items, seen)
+        its, tr = fetch_citing_works(doi, since)
+        # M01: 排除被监控论文自身 Crossref 兜底记录, 仅保留真实引用者
+        citing_items = [it for it in its if it.get('source') != 'crossref-fallback']
+        items.extend(citing_items)
+        if tr:
+            truncations.append(f'citing-doi={doi!r}')
+    return filter_unseen(items, seen), truncations
 
 
 def summarize(item: dict) -> str:
@@ -174,6 +216,59 @@ def summarize(item: dict) -> str:
     year = item.get('publication_year') or '?'
     doi = normalize_doi(item.get('doi', '')) or '无 DOI'
     return f'- [{year}] {title} ({doi})'
+
+
+def _atomic_write_json(path, payload) -> None:
+    """MW-04 / M04 / M05: 锁租期回收 + 临时写入 + 原子替换 + 重读合并。"""
+    target = Path(path).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock = target.with_suffix(target.suffix + '.lock')
+    lock_lease_seconds = 30.0
+
+    for _ in range(60):
+        try:
+            with open(lock, 'x') as f:
+                f.write(f'{os.getpid()}:{time.time()}')
+            break
+        except FileExistsError:
+            try:
+                content = lock.read_text(encoding='utf-8').strip()
+                if ':' in content:
+                    pid_str, ts_str = content.split(':', 1)
+                    lock_ts = float(ts_str)
+                    if time.time() - lock_ts > lock_lease_seconds:
+                        lock.unlink(missing_ok=True)
+                        continue
+            except Exception:
+                pass
+            time.sleep(0.05)
+    else:
+        raise RuntimeError(f'state lock timeout: {lock}')
+
+    try:
+        final_payload = list(payload) if isinstance(payload, (list, set)) else payload
+        if isinstance(final_payload, list) and target.is_file():
+            try:
+                disk_state = json.loads(target.read_text(encoding='utf-8'))
+                if isinstance(disk_state, list):
+                    seen = set(disk_state)
+                    for it in final_payload:
+                        if it not in seen:
+                            disk_state.append(it)
+                            seen.add(it)
+                    final_payload = disk_state
+            except Exception:
+                pass
+
+        tmp = target.with_suffix(target.suffix + '.tmp')
+        tmp.write_text(json.dumps(final_payload, ensure_ascii=False, indent=1),
+                       encoding='utf-8')
+        os.replace(tmp, target)
+    finally:
+        try:
+            lock.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def run(watchlist_path, state_path, days: int) -> int:
@@ -184,16 +279,17 @@ def run(watchlist_path, state_path, days: int) -> int:
     if state_file.is_file():
         seen = set(json.loads(state_file.read_text(encoding='utf-8')))
     since = date.today() - timedelta(days=days)
-    fresh = filter_unseen(collect(watchlist, since), seen)
+    collected, truncations = collect(watchlist, since)
+    if truncations:
+        print(f'⚠ 完整性警告: 以下来源达到首批上限, 存在漏报风险: {truncations}')
+    fresh = filter_unseen(collected, seen)
     if fresh:
         print(f'## 新增 {len(fresh)} 条（窗口 {since.isoformat()} 起）')
         for item in fresh:
             print(summarize(item))
     else:
         print(f'无新增（窗口 {since.isoformat()} 起，已见 {len(seen)} 条）。')
-    state_file.parent.mkdir(parents=True, exist_ok=True)
-    state_file.write_text(json.dumps(sorted(seen), ensure_ascii=False, indent=1),
-                          encoding='utf-8')
+    _atomic_write_json(state_file, sorted(seen))
     return 0
 
 

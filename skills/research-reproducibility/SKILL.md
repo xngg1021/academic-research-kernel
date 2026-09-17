@@ -39,7 +39,7 @@ metadata:
 | tier | 含义 | 对应 status |
 | --- | --- | --- |
 | no-code-found | 没找到代码 | blocked |
-| environment-broken | 找到代码但依赖/构建/运行环 | blocked |
+| environment-broken | 找到代码，但依赖安装、构建或运行环节失败 | blocked |
 | runs | 能运行，没对上指标 | partially-reproducible |
 | direction-reproduced | 方向/趋势复现，数值超差 | partially-reproducible |
 | numbers-reproduced | 数值在容差内复现 | reproducible |
