@@ -1,13 +1,13 @@
 # v2 交叉评审产物导出(脱敏)
-导出时间: 2026-09-17 17:19:29
+导出时间: 2026-09-17 17:35:56
 文件总数: 69, 总大小: 781 KB
 smoke 返回码: 0
 
 ## 脱敏规则与替换统计
--   588 处 -> <HOME_ROOT>
+-   591 处 -> <HOME_ROOT>
 -   244 处 -> <USER_HOME>
--   185 处 -> <WORKSPACE>
--   159 处 -> <HERMES_HOME>
+-   186 处 -> <WORKSPACE>
+-   162 处 -> <HERMES_HOME>
 -    40 处 -> <PROFILE_DAD>
 -    11 处 -> <PROFILE_MOM>
 -     2 处 -> <IP>

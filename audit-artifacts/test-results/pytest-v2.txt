@@ -1,1 +1,15 @@
-<USER_HOME>\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe: No module named pytest
+============================= test session starts =============================
+platform win32 -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- <HERMES_HOME>\hermes-agent\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: <WORKSPACE>\repos\hermes-academic-skills
+plugins: anyio-4.12.1, Faker-40.36.0
+collecting ... collected 6 items
+
+tests/test_cross_review_five_v2.py::test_v2_model_table_and_presets PASSED [ 16%]
+tests/test_cross_review_five_v2.py::test_normalize_target PASSED         [ 33%]
+tests/test_cross_review_five_v2.py::test_max_weight_derangement PASSED   [ 50%]
+tests/test_cross_review_five_v2.py::test_cluster_issues PASSED           [ 66%]
+tests/test_cross_review_five_v2.py::test_extract_findings_fallback_markdown PASSED [ 83%]
+tests/test_cross_review_five_v2.py::test_merge_and_synthesize_end_to_end PASSED [100%]
+
+============================== 6 passed in 0.28s ==============================
