@@ -28,7 +28,7 @@ SLL 廣泛允許使用、研究、修改、商用、分發與專有增補，受�
 | `skills/literature-watch` | 1.0.0 | 週更藍圖：監控主題、作者與 DOI 在 OpenAlex 與 Crossref 的新作品；去重並只報告新增 |
 | `skills/retraction-watch` | 1.0.0 | 週更藍圖：對照 OpenAlex is_retracted 與 Crossref 更新記錄（update-to 訊號）複查 DOI 監控清單；只報告狀態變化 |
 | `skills/research-object-identity` | 1.0.0 | 確定性研究物件身份層：標識符歸一、五態判定（無信心分數）、關係與譜系建邊；消費 Evidence Receipt |
-| `skills/cross-review-five` | 1.0.0 | 五人異構模型評審小組（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：plan 獨立產出與輪轉互審兩階段 |
+| `skills/cross-review-five` | 1.0.0 | 五人異構模型評審小組（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Gemini 3.8 Flash、Gemini 3.1 Pro）：v2 四階段 Sparse Deliberation 流（盲審產出、斷言級聚類合併、定向匿名質詢、對賬與未決保護賬本） |
 
 十一個技能共含 21 篇 Markdown 參考文件，按需加載。GB/T 7714-2025 已生效；寫作參考區分其已核實生效日期與顯式標註的 2015 示例。完全符合 2025 版需以目標機構的模板或標準文本為準。
 
@@ -69,11 +69,11 @@ python scripts/verify_external_apis.py
 git diff --check
 ```
 
-QA 校驗元數據、參考文件、個人路徑與已知密鑰模式、Python 語法與標記過的可執行圍欄。每個 smoke 示例在全新子進程中原樣運行；繪圖示例接受 `PLOT_DIR`（預設 `~/plots`，顯式展開），測試使用臨時目錄。未分類的 Python 圍欄被拒絕；`fragment:` 塊做語法檢查但需顯式輸入，不單獨執行。`external-test:` 塊僅經手動外部命令運行。QA 在通過的檢查上返回 0，代碼、schema 或身份失敗返回 1，傳輸、認證或配額不可用返回 2；未配置的可選服務保持 SKIP。
+QA 校驗元數據、參考文件、個人路徑與已知密鑰模式、Python 語法與標記為可執行的代碼塊。每個 smoke 示例在全新子進程中原樣運行；繪圖示例接受 `PLOT_DIR`（預設 `~/plots`，顯式展開），測試使用臨時目錄。未分類的 Python 代碼塊被拒絕；`fragment:` 塊做語法檢查但需顯式輸入，不單獨執行。`external-test:` 塊僅經手動外部命令運行。QA 在通過的檢查上返回 0，代碼、schema 或身份失敗返回 1，傳輸、認證或配額不可用返回 2；未配置的可選服務保持 SKIP。
 
-固定的 Hermes 作者測試被複用，其逐技能規則不改動。上游全分佈總體檢查不適用於本 tap；本倉庫測試覆蓋全部十一個技能，並按固定的捆綁與可選目錄解析參考文件。這不是完整的 Hermes 安裝測試。CI 僅在安裝依賴時使用網路；常規 PR 測試不調用學術 API。
+固定版本的技能編寫規範測試（authoring tests）被複用，其逐技能規則不改動。完整 Hermes 上游發行包的全局測試不適用於本 tap；本倉庫測試覆蓋全部十一個技能，並按固定的捆綁與可選目錄解析參考文件。這不是完整的 Hermes 安裝測試。CI 僅在安裝依賴時使用網絡；常規 PR 測試不調用學術 API。
 
-CI 經 GitHub Actions 在 Ubuntu（Python 3.12 與 3.13）、Windows 與 macOS 上運行完整 QA 套件。另有一個 tap 集成工作流在 main 推送時運行：安裝 tests/upstream/provenance.json 所記錄的固定 Hermes 檢出，並針對本倉庫執行 tap add、search、install 與 list。不聲稱全新 Hermes 會話與每種依賴版本組合已驗證。確切版本、檢查項與限制見[審計文檔](docs/audit-20260906.md)。
+CI 經 GitHub Actions 在 Ubuntu（Python 3.10、3.11、3.12 與 3.13）、Windows（Python 3.12）與 macOS（Python 3.12）六組矩陣上運行完整 QA 套件。另有一個 tap 集成工作流在 main 推送時運行：安裝 tests/upstream/provenance.json 所記錄的固定 Hermes 檢出，並針對本倉庫執行 tap add、search、install 與 list。不聲稱全新 Hermes 會話與每種依賴版本組合已驗證。確切版本、檢查項與限制見[審計文檔](docs/audit-20260906.md)。
 
 ## 研究與規劃文檔
 

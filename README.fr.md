@@ -28,7 +28,7 @@ SLL autorise largement l'utilisation, l'étude, la modification, l'usage commerc
 | `skills/literature-watch` | 1.0.0 | Plan hebdomadaire : surveiller les thèmes, auteurs et œuvres citant des DOI sur OpenAlex et Crossref ; dédupliquer et ne signaler que les nouveautés |
 | `skills/retraction-watch` | 1.0.0 | Plan hebdomadaire : revérifier une liste de DOI contre OpenAlex is_retracted et les enregistrements de mise à jour Crossref (signaux update-to) ; ne signaler que les changements d'état |
 | `skills/research-object-identity` | 1.0.0 | Couche d'identité déterministe des objets de recherche : normalisation des identifiants, verdict à cinq états (sans score de confiance), arêtes de relation et de lignage ; consomme les reçus de preuve |
-| `skills/cross-review-five` | 1.0.0 | Panel de revue hétérogène à cinq modèles (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro) : phases de planification et de revue croisée rotative |
+| `skills/cross-review-five` | 1.0.0 | Panel de revue hétérogène à cinq modèles (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Gemini 3.8 Flash, Gemini 3.1 Pro) : pipeline Sparse Deliberation v2 en quatre étapes (plan indépendant, regroupement/fusion au niveau des affirmations, contestation anonyme ciblée et réconciliation avec registre non résolu) |
 
 Les onze compétences comprennent 21 fichiers de référence Markdown, chargés uniquement à la demande. GB/T 7714-2025 est en vigueur ; la référence d'écriture distingue sa date d'entrée en vigueur vérifiée des exemples explicitement étiquetés de 2015. La conformité complète à l'édition 2025 exige le modèle ou le texte standard de l'institution cible.
 

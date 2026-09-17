@@ -1,6 +1,6 @@
 # 变更日志与版本发布清单 (CHANGELOG & Release Manifest)
 
-本文件记录 `hermes-academic-skills` 仓库各版本的接口变更、迁移规范、输入/输出形态变化与发布身份清单。
+本文件记录 `hermes-academic-skills` 仓库各版本的接口变更与迁移规范，列明输入输出形态变化以及发布身份清单。
 
 ---
 
@@ -19,7 +19,7 @@
 | `literature-analysis/collect_corpus.py` | 仅使用线性字典别名映射；丢弃作者与摘要 | 采用并查集（DSU）两遍归并；保留 `authors`, `abstract`, `referenced_works` 等元数据 | 彻底消除输入顺序依赖；下游引文图与评审矩阵直接消费完整材料 |
 | `literature-analysis/interop.py` | BibTeX 互转单向转义，往复导致 `\\&` 等符号膨胀；剥光机构作者花括号 | 增加对称的 `tex_unescape`；仅剥除单层字段定界符，保护单一机构作者不被拆分 | `to_bibtex(from_bibtex(text))` 达到幂等性 |
 | `quantitative-paper-audit/recompute.py` | `percent=0` 且 `count>0`、未给分母时直接判不可能；float 丢尾随零 | 根据报告精度容差判定最小合理分母，记为欠定；支持直接传入原始字符串保留有效小数位数 | 浮点数与字符串输入同时兼容 |
-| `scfabric` (科学计算薄层) | （新增模块） | 包含硬件探针、后端目录、五项负载画像、严格等价门禁与 `ComputeReceipt` | 默认基于 CPU 执行，仅在实测提速超过阈值且通过数值门禁时准入加速器 |
+| `scfabric` (科学计算执行层) | （新增模块） | 提供硬件探针与后端目录，配备五项基准负载与严格等价门禁，产出完整的 `ComputeReceipt` 回执 | 默认基于 CPU 执行，仅在实测提速超过阈值且通过数值门禁时准入加速器 |
 
 ### 2. 发布身份清单 (Release Manifest)
 
