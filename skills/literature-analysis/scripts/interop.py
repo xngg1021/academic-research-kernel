@@ -285,16 +285,40 @@ def _parse_bibtex_fields(rest: str) -> dict:
     return fields
 
 
+TEX_REPLACEMENTS = {'\\': r'\textbackslash{}', '{': r'\{', '}': r'\}',
+                    '&': r'\&', '%': r'\%', '$': r'\$', '#': r'\#',
+                    '_': r'\_', '~': r'\textasciitilde{}', '^': r'\textasciicircum{}'}
+
+
+def tex_escape(text) -> str:
+    """LaTeX 特殊字符转义 (LA-07): 与 export_bibtex.tex_escape 同表,
+    保证 interop 与导出脚本产出的 BibTeX 语义一致、可编译。"""
+    return ''.join(TEX_REPLACEMENTS.get(c, c) for c in str(text))
+
+
 def _bibtex_authors(value: str) -> list:
+    """拆分 BibTeX author 字段为姓名列表。
+
+    LA-08: 花括号包裹的机构名 (如 '{Harvard and MIT}') 整体保留, 不被
+    ' and ' 拆成多人; 无逗号的片段按字面姓名保留, 不丢。"""
     authors = []
-    for chunk in re.split(r'\s+and\s+', value.strip()):
-        name = chunk.strip().strip('{}').strip()
-        if not name:
+    for piece in re.findall(r'\{[^{}]*\}|[^{}]+', value or ''):
+        piece = piece.strip()
+        if not piece:
             continue
-        if ',' in name:
-            family, _, given = name.partition(',')
-            name = _family_given(family, given)
-        authors.append(name)
+        if piece.startswith('{'):
+            name = piece.strip('{}').strip()
+            if name:
+                authors.append(name)
+            continue
+        for chunk in re.split(r'\s*\band\b\s*', piece):
+            name = chunk.strip().strip('{}').strip()
+            if not name:
+                continue
+            if ',' in name:
+                family, _, given = name.partition(',')
+                name = _family_given(family, given)
+            authors.append(name)
     return authors
 
 
@@ -335,12 +359,15 @@ def make_citekey(work: CanonicalWork) -> str:
 
 
 def to_bibtex(work: CanonicalWork, citekey: Optional[str] = None) -> str:
-    """导出单条 BibTeX。container 按类型落到 journal 或 booktitle。"""
+    """导出单条 BibTeX。container 按类型落到 journal 或 booktitle。
+
+    LA-07: 所有字段值经 tex_escape 转义, %、&、_、括号等不再破坏语义与编译。
+    """
     key = citekey or work.extra.get('citekey') or make_citekey(work)
     entry_type = _BIBTEX_TO.get(work.work_type, 'misc')
     pairs = []
     if work.title:
-        pairs.append(('title', work.title))
+        pairs.append(('title', tex_escape(work.title)))
     if work.authors:
         pairs.append(('author', ' and '.join(work.authors)))
     if work.year:
@@ -348,13 +375,13 @@ def to_bibtex(work: CanonicalWork, citekey: Optional[str] = None) -> str:
     if work.container:
         container_field = 'journal' if work.work_type == 'article' else 'booktitle'
         if work.work_type in ('article', 'paper-conference', 'chapter'):
-            pairs.append((container_field, work.container))
+            pairs.append((container_field, tex_escape(work.container)))
     for name, value in (('volume', work.volume), ('number', work.issue),
                         ('pages', work.pages.replace('-', '--') if work.pages else ''),
                         ('publisher', work.publisher),
                         ('doi', work.doi), ('url', work.url)):
         if value:
-            pairs.append((name, value))
+            pairs.append((name, tex_escape(value)))
     body = ',\n'.join(f'  {name} = {{{value}}}' for name, value in pairs)
     return f'@{entry_type}{{{key},\n{body}\n}}'
 
@@ -509,21 +536,33 @@ def to_csl_json(work: CanonicalWork) -> dict:
 # ---------------------------------------------------------------------------
 
 def from_crossref_json(obj: dict) -> CanonicalWork:
-    """解析 Crossref REST 返回。接受完整信封（含 message）或单条 message。"""
+    """解析 Crossref REST 返回。接受完整信封（含 message）或单条 message。
+
+    LA-06: message 含 items 是列表响应, 不是单条文献, 受控拒绝;
+    用 from_crossref_search_results 逐条解析。
+    LA-08: 只有 name、没有 family/given 的作者按字面名保留, 不消失。
+    LA-09: 发表年只取 issued/published 系列; created 只记入 extra.registered_at,
+    不再冒充发表年。
+    """
     msg = obj.get('message', obj) if isinstance(obj, dict) else {}
+    if 'items' in msg:
+        raise ValueError('Crossref list response (message.items): 请用 '
+                         'from_crossref_search_results 逐条解析, 不要把列表当单条文献')
     authors = []
     for a in msg.get('author') or []:
         name = _family_given(a.get('family'), a.get('given'))
+        if not name:
+            name = str(a.get('name') or '').strip()
         if name:
             authors.append(name)
     year = None
-    for key in ('issued', 'published', 'published-print', 'published-online', 'created'):
+    for key in ('issued', 'published', 'published-print', 'published-online'):
         parts = (msg.get(key) or {}).get('date-parts')
         if parts and parts[0]:
             year = _year_from(parts[0][0])
             if year:
                 break
-    return CanonicalWork(
+    work = CanonicalWork(
         work_type=_CROSSREF_TYPE_FROM.get(str(msg.get('type', '')).lower(), 'misc'),
         title=_first(msg.get('title')),
         authors=authors,
@@ -536,6 +575,16 @@ def from_crossref_json(obj: dict) -> CanonicalWork:
         pages=str(msg.get('page') or ''),
         publisher=str(msg.get('publisher') or ''),
     )
+    created = (msg.get('created') or {}).get('date-parts')
+    if created and created[0] and created[0][0]:
+        work.extra['registered_at'] = str(created[0][0])
+    return work
+
+
+def from_crossref_search_results(obj: dict) -> list:
+    """Crossref 列表响应 ({message:{items:[...]}}) → CanonicalWork 列表 (LA-06)。"""
+    items = ((obj or {}).get('message') or {}).get('items') or []
+    return [from_crossref_json(item) for item in items]
 
 
 # ---------------------------------------------------------------------------

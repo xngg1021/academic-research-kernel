@@ -197,10 +197,10 @@ def adjudicate(checklist, generated_at=None):
         verdict = 'partially-reproducible'
     receipt_stages = []
     for e in cl['stages']:
-        item = {'id': e['id'], 'label': STAGE_LABELS[e['id']], 'status': e['status']}
-        for key in ('detail', 'evidence'):
-            if key in e:
-                item[key] = e[key]
+        # RP-02: 回执保留全部输入证据 (claimed/measured/tolerance/evidence/
+        # artifacts/waived/reason/checked_at/detail), 足以重建同一裁决
+        item = dict(e)
+        item['label'] = STAGE_LABELS[e['id']]
         receipt_stages.append(item)
     return {
         'kind': 'ReproductionReceipt',

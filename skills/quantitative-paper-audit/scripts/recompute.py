@@ -305,16 +305,22 @@ def check_p_match(reported_p, recomputed_p, decimals=None):
     }
 
 
-def check_percentage(count, percent, denominator=None, max_denominator=100000):
+def check_percentage(count, percent, denominator=None, max_denominator=100000,
+                     decimals=None):
     """百分比分母核对:报告百分比、计数与(可选)声明分母是否自洽。
 
     给出 denominator 时直接比较 100*count/denominator 与 percent(按 percent
     的报告精度取容差)。省略 denominator 时反推隐含分母 100*count/percent,
     在距其最近整数处回算百分比判定;同时给出最近整数分母供人工核对。
+
+    QA-03: percent=0 是合法输入——count=0 且给了分母时直接核对;
+    未给分母时 0% 与 0 计数自洽但分母欠定(consistent=None),count>0 判不一致。
+    QA-04: decimals 显式传入可恢复 float 无法保留的尾随零(报告 0.050 应传
+    decimals=3);省略时按 float 字面量推断。
     """
     _require(count >= 0, '计数须非负')
-    _require(0 < percent <= 100, '百分比须在 (0,100]')
-    k = _decimals(percent)
+    _require(0 <= percent <= 100, '百分比须在 [0,100]')
+    k = _decimals(percent) if decimals is None else decimals
     tol = 0.5 * 10 ** (-k) + 1e-12
     out = {
         'inputs': {'count': count, 'percent': percent},
@@ -323,6 +329,23 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000):
         'library': 'pure python',
         'confidence': 'high',
     }
+    if percent == 0:
+        if denominator is not None:
+            _require(denominator > 0, '分母须为正')
+            recomputed = 100.0 * count / denominator
+            out.update({
+                'consistent': bool(abs(recomputed - percent) <= tol),
+                'denominator': denominator,
+                'recomputed_percent': float(recomputed),
+                'difference': float(recomputed - percent),
+            })
+        elif count == 0:
+            out.update({'consistent': None,
+                        'note': '0% 与 0 计数自洽, 但未给分母时无法确定分母'})
+        else:
+            out.update({'consistent': False,
+                        'note': 'percent=0 但 count>0, 两者不可能同时成立'})
+        return out
     if denominator is not None:
         _require(denominator > 0, '分母须为正')
         recomputed = 100.0 * count / denominator

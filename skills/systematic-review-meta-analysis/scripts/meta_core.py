@@ -138,6 +138,8 @@ def _arrays(yi, vi) -> tuple[np.ndarray, np.ndarray]:
         raise ValueError('yi 与 vi 必须等长且非空')
     if np.any(v <= 0):
         raise ValueError('方差 vi 必须全部为正')
+    if not (np.all(np.isfinite(y)) and np.all(np.isfinite(v))):
+        raise ValueError('yi 与 vi 必须全部为有限数 (SR-03: NaN/inf 一律拒绝)')
     return y, v
 
 

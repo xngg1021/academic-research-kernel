@@ -271,7 +271,8 @@ def test_build_citation_graph_offline():
          'referenced_works': ['https://openalex.org/W2']},
     ]
     graph = mod.build_graph(works)
-    assert graph['summary'] == {'node_count': 3, 'internal_edge_count': 2}
+    assert graph['summary'] == {'node_count': 3, 'internal_edge_count': 2,
+                                'duplicate_edge_count': 0}
     assert {tuple(sorted(e.values())) for e in graph['edges']} == {('W1', 'W2'), ('W2', 'W3')}
     assert graph['external_reference_counts'] == {'W1': 1}
     assert mod.in_degrees(graph) == {'W1': 0, 'W2': 2, 'W3': 0}

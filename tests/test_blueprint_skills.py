@@ -128,7 +128,7 @@ def test_retraction_watch_uses_update_to_not_relation():
         {'update-to': [{'DOI': '10.9/other', 'type': 'retraction', 'source': 'publisher'}]},
     ]
     signals = watch.update_signals_from_records(records, target)
-    assert signals == ['retraction(retraction-watch)'], signals
+    assert signals == ['retraction(retraction-watch) update-doi=10.1177/1758835920922055'], signals
     assert 'is-retraction-of' not in ''.join(signals)
 
 

@@ -51,7 +51,10 @@ def normalize_identifier(raw: str) -> dict:
 
     arxiv_text = text
     if lowered.startswith(('https://arxiv.org/pdf/', 'http://arxiv.org/pdf/')):
-        arxiv_text = text.split('/pdf/', 1)[1]
+        # AV-04: 识别与切分统一用 lowered, 原字符串中的大写 /PDF/ 不再触发 IndexError
+        arxiv_text = lowered.split('/pdf/', 1)[1]
+        if not arxiv_text.strip():
+            return _unknown(raw)
         arxiv_text = re.sub(r'\.pdf$', '', arxiv_text, flags=re.IGNORECASE)
     else:
         for prefix in ARXIV_PREFIXES:

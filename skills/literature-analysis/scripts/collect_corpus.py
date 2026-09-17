@@ -31,7 +31,8 @@ def normalize_doi(doi) -> str:
 
 
 def normalize_title(title) -> str:
-    return ' '.join(re.findall(r'[a-z0-9]+|[一-鿿]', (title or '').lower()))
+    """小写、去标点、折叠空白;保留 Unicode 字母数字 (AV-03)。"""
+    return ' '.join(re.findall(r'[^\W_]+', (title or '').lower()))
 
 
 def _work_key(work: dict):
@@ -48,10 +49,14 @@ def _work_key(work: dict):
 def merge_candidates(layers: dict) -> dict:
     """合并 {来源层次: [work, ...]}，同一候选只保留一条并累计 source_layers。
 
-    排序：有 relevance_score 的按得分降序（概念检索命中），其余按被引数降序。
+    LA-02: DOI 与 OpenAlex ID 建立别名映射——同一文献在一层只有 OpenAlex ID、
+    另一层才有完整 DOI 记录时, 两条记录合并为同一条候选, 不再各留一条。
+    排序:有 relevance_score 的按得分降序(概念检索命中), 其余按被引数降序。
     """
     merged = {}
     order = []
+    doi_alias = {}
+    oa_alias = {}
     skipped = 0
     for layer, works in layers.items():
         if not isinstance(layer, str) or not layer:
@@ -61,27 +66,45 @@ def merge_candidates(layers: dict) -> dict:
             if key is None:
                 skipped += 1
                 continue
-            entry = merged.get(key)
+            doi = normalize_doi(work.get('doi')) or None
+            oa_id = (str(work.get('id') or work.get('openalex_id') or '').split('/')[-1]
+                     or None)
+            canonical = key
+            if doi and doi in doi_alias:
+                canonical = doi_alias[doi]
+            elif oa_id and oa_id in oa_alias:
+                canonical = oa_alias[oa_id]
+            entry = merged.get(canonical)
             if entry is None:
                 entry = {
-                    'key': key,
+                    'key': canonical,
                     'title': work.get('title'),
                     'year': work.get('publication_year') or work.get('year'),
-                    'doi': normalize_doi(work.get('doi')) or None,
-                    'openalex_id': str(work.get('id') or work.get('openalex_id') or '') or None,
+                    'doi': doi,
+                    'openalex_id': oa_id,
                     'cited_by_count': work.get('cited_by_count'),
                     'relevance_score': work.get('relevance_score'),
                     'source_layers': [],
                 }
-                merged[key] = entry
-                order.append(key)
+                merged[canonical] = entry
+                order.append(canonical)
+                if doi:
+                    doi_alias[doi] = canonical
+                if oa_id:
+                    oa_alias[oa_id] = canonical
             else:
                 for field, value in (('title', work.get('title')),
                                      ('year', work.get('publication_year') or work.get('year')),
+                                     ('doi', doi),
+                                     ('openalex_id', oa_id),
                                      ('cited_by_count', work.get('cited_by_count')),
                                      ('relevance_score', work.get('relevance_score'))):
                     if entry.get(field) is None and value is not None:
                         entry[field] = value
+                if doi:
+                    doi_alias[doi] = canonical
+                if oa_id:
+                    oa_alias[oa_id] = canonical
             if layer not in entry['source_layers']:
                 entry['source_layers'].append(layer)
     candidates = [merged[key] for key in order]

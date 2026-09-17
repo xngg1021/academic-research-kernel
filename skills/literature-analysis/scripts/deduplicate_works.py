@@ -24,8 +24,8 @@ def normalize_doi(doi) -> str:
 
 
 def normalize_title(title) -> str:
-    """小写、去标点（保留字母/数字/CJK）、折叠空白。"""
-    return ' '.join(re.findall(r'[a-z0-9]+|[一-鿿]', (title or '').lower()))
+    """小写、去标点、折叠空白;保留 Unicode 字母数字 (AV-03)。"""
+    return ' '.join(re.findall(r'[^\W_]+', (title or '').lower()))
 
 
 def work_key(work: dict):
@@ -144,6 +144,9 @@ def main(argv=None) -> int:
         else:
             with open(args.input, encoding='utf-8') as handle:
                 works = json.load(handle)
+        # LA-03: 适配上游 collect_corpus 的 {candidates: [...]} 形状
+        if isinstance(works, dict) and 'candidates' in works:
+            works = works['candidates']
         if not isinstance(works, list):
             raise ValueError('input JSON must be a list of works')
     except (OSError, ValueError) as error:

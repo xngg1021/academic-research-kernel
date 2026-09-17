@@ -94,9 +94,10 @@ def normalize(kind: str, value: Any) -> str:
 
 
 def normalize_title(text: Any) -> str:
-    """标题规范文本:小写折叠、去标点(保留中日韩字符)、压缩空白。"""
+    """标题规范文本:小写折叠、去标点(保留 Unicode 字母数字, 覆盖全部
+    文字系统 AV-03)、压缩空白。"""
     text = str(text or '').casefold()
-    text = re.sub(r'[^a-z0-9\u4e00-\u9fff\uac00-\ud7af]+', ' ', text)
+    text = re.sub(r'[^\w\u4e00-\u9fff\uac00-\ud7af]+', ' ', text)
     return ' '.join(text.split())
 
 
@@ -377,6 +378,21 @@ def from_canonical_work(cw: Any) -> dict:
     }
 
 
+def _observation_from_source(s: dict) -> dict:
+    """source 条目 → 观察记录。ID-03: coverage/raw_identifier 缺项或 None
+    时省略键, 不写 None (目标 schema 要求字符串)。"""
+    obs = {
+        'source': s.get('source', ''),
+        'queried_at': s.get('queried_at', ''),
+        'status': s.get('status', 'skipped'),
+    }
+    for key in ('coverage', 'raw_identifier'):
+        value = s.get(key)
+        if isinstance(value, str) and value:
+            obs[key] = value
+    return obs
+
+
 def consume_receipt(receipt: dict) -> dict:
     """消费 Evidence Receipt 1.0,产出 source_observations 与 uncertainty。
 
@@ -397,24 +413,12 @@ def consume_receipt(receipt: dict) -> dict:
     uncertainty = []
     if (receipt or {}).get('schema_version') != '1.0':
         for s in (receipt or {}).get('sources') or []:
-            observations.append({
-                'source': s.get('source', ''),
-                'queried_at': s.get('queried_at', ''),
-                'status': s.get('status', 'skipped'),
-                'coverage': s.get('coverage'),
-                'raw_identifier': s.get('raw_identifier'),
-            })
+            observations.append(_observation_from_source(s))
         uncertainty.append({'item': 'unsupported schema_version',
                             'kind': 'unsupported_schema_version', 'needs_human': True})
         return {'source_observations': observations, 'uncertainty': uncertainty}
     for s in (receipt or {}).get('sources') or []:
-        observations.append({
-            'source': s.get('source', ''),
-            'queried_at': s.get('queried_at', ''),
-            'status': s.get('status', 'skipped'),
-            'coverage': s.get('coverage'),
-            'raw_identifier': s.get('raw_identifier'),
-        })
+        observations.append(_observation_from_source(s))
     for c in (receipt or {}).get('claims') or []:
         status = c.get('support_status')
         if status == 'contradicted':

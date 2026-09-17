@@ -146,10 +146,21 @@ def fetch_author_works(author_id: str, since: date):
 
 def fetch_citing_works(doi: str, since: date):
     """live: 先取 watched DOI 的 OpenAlex id，再取窗口内的新引用者。
-    返回 (items, truncated)。"""
+    返回 (items, truncated)。OpenAlex 查不到 id 时接通 Crossref 兜底
+    (MW-05), 产出该 DOI 的元数据记录并标记来源。"""
     data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=id')
     wid = str(data.get('id') or '').rsplit('/', 1)[-1]
     if not wid:
+        record = fetch_crossref_record(doi)
+        if record:
+            fallback = {
+                'id': None,
+                'doi': normalize_doi(doi),
+                'title': ' '.join(record.get('title') or []) or None,
+                'publication_year': _crossref_year(record),
+                'source': 'crossref-fallback',
+            }
+            return [fallback], False
         return [], False
     params = urlencode({
         'filter': f'cites:{wid},from_publication_date:{since.isoformat()}',
@@ -158,6 +169,15 @@ def fetch_citing_works(doi: str, since: date):
     })
     data = get(f'{OPENALEX}/works?{params}')
     return data.get('results') or [], _truncated(data)
+
+
+def _crossref_year(record: dict):
+    """从 Crossref message 提取发表年 (MW-05 兜底转写用)。"""
+    for key in ('published-print', 'published-online', 'issued'):
+        parts = (record.get(key) or {}).get('date-parts')
+        if parts and parts[0] and parts[0][0]:
+            return parts[0][0]
+    return None
 
 
 def fetch_crossref_record(doi: str) -> dict:
@@ -196,6 +216,32 @@ def summarize(item: dict) -> str:
     return f'- [{year}] {title} ({doi})'
 
 
+def _atomic_write_json(path, payload) -> None:
+    """MW-04: 锁文件互斥 + 临时写入 + 原子替换, 中断/并发不留下损坏状态。"""
+    target = Path(path).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock = target.with_suffix(target.suffix + '.lock')
+    for _ in range(40):
+        try:
+            with open(lock, 'x'):
+                pass
+            break
+        except FileExistsError:
+            time.sleep(0.05)
+    else:
+        raise RuntimeError(f'state lock timeout: {lock}')
+    try:
+        tmp = target.with_suffix(target.suffix + '.tmp')
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1),
+                       encoding='utf-8')
+        os.replace(tmp, target)
+    finally:
+        try:
+            lock.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def run(watchlist_path, state_path, days: int) -> int:
     """live 入口：查新、跨周去重、只输出新增。"""
     watchlist = load_watchlist(watchlist_path)
@@ -214,9 +260,7 @@ def run(watchlist_path, state_path, days: int) -> int:
             print(summarize(item))
     else:
         print(f'无新增（窗口 {since.isoformat()} 起，已见 {len(seen)} 条）。')
-    state_file.parent.mkdir(parents=True, exist_ok=True)
-    state_file.write_text(json.dumps(sorted(seen), ensure_ascii=False, indent=1),
-                          encoding='utf-8')
+    _atomic_write_json(state_file, sorted(seen))
     return 0
 
 

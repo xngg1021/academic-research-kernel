@@ -55,9 +55,9 @@ def load_watchlist(path) -> list:
 def update_signals_from_records(records: list, target_doi: str) -> list:
     """从 Crossref 反向查询结果提取指向目标 DOI 的更新信号。
 
-    语义与 check_updates.py 的 update_signals 一致：只看 update-to 中
-    DOI 等于目标 DOI 的条目，按 type 与 source 产出类型化信号串，如
-    'retraction(publisher)'、'retraction(retraction-watch)'。
+    语义与 check_updates.py 的 update_signals 一致:只看 update-to 中
+    DOI 等于目标 DOI 的条目。MW-03: 信号带独立事件身份 (更新 DOI 与日期),
+    同类型不同更新 DOI 的第二次更正不再被压缩成同一事件。
     """
     target = normalize_doi(target_doi)
     found = []
@@ -66,8 +66,39 @@ def update_signals_from_records(records: list, target_doi: str) -> list:
             if normalize_doi(update.get('DOI') or '') == target:
                 kind = str(update.get('type') or 'update')
                 source = str(update.get('source') or 'unknown')
-                found.append(f'{kind}({source})')
+                upd_doi = normalize_doi(update.get('DOI') or '') or '?'
+                stamp = str(update.get('date') or update.get('timestamp') or '').strip()
+                sig = f'{kind}({source}) update-doi={upd_doi}'
+                if stamp:
+                    sig += f' date={stamp}'
+                found.append(sig)
     return sorted(set(found))
+
+
+def _atomic_write_json(path, payload) -> None:
+    """MW-04: 锁文件互斥 + 临时写入 + 原子替换, 中断/并发不留下损坏状态。"""
+    target = Path(path).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock = target.with_suffix(target.suffix + '.lock')
+    for _ in range(40):
+        try:
+            with open(lock, 'x'):
+                pass
+            break
+        except FileExistsError:
+            time.sleep(0.05)
+    else:
+        raise RuntimeError(f'state lock timeout: {lock}')
+    try:
+        tmp = target.with_suffix(target.suffix + '.tmp')
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1, sort_keys=True),
+                       encoding='utf-8')
+        os.replace(tmp, target)
+    finally:
+        try:
+            lock.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def snapshot_from_signals(is_retracted, signals) -> dict:
@@ -184,9 +215,7 @@ def run(watchlist_path, state_path) -> int:
         state[doi] = new
     if not reports:
         print(f'无状态变化（监控 {len(dois)} 个 DOI，{date.today().isoformat()}）。')
-    state_file.parent.mkdir(parents=True, exist_ok=True)
-    state_file.write_text(json.dumps(state, ensure_ascii=False, indent=1, sort_keys=True),
-                          encoding='utf-8')
+    _atomic_write_json(state_file, state)
     return 0
 
 
@@ -203,8 +232,10 @@ def self_test() -> int:
         {'update-to': [{'DOI': '10.1/abc', 'type': 'correction', 'source': 'publisher'}]},
     ]
     assert update_signals_from_records(records, '10.1/abc') == [
-        'correction(publisher)', 'retraction(retraction-watch)']
-    assert update_signals_from_records(records, '10.9/other') == ['retraction(publisher)']
+        'correction(publisher) update-doi=10.1/abc',
+        'retraction(retraction-watch) update-doi=10.1/abc']
+    assert update_signals_from_records(records, '10.9/other') == [
+        'retraction(publisher) update-doi=10.9/other']
     old = snapshot_from_signals(False, [])
     new = snapshot_from_signals(True, ['retraction(retraction-watch)'])
     changes = diff_snapshots(old, new)

@@ -24,7 +24,7 @@
 
 | 数据库 | 字段标签 | 截尾 | 邻近 | 备注 |
 | --- | --- | --- | --- | --- |
-| PubMed | `[tiab]` `[Mesh]` | `*` | 无真正邻近,可用词组引号 | 自动词语映射可能吞掉精确式,检索日志里贴完整译后式 |
+| PubMed | `[tiab]` `[Mesh]` | `*` | 官方支持邻近检索:`"term1 term2"[tiab:~N]`(N 为词序窗口,见 PubMed 帮助) | 自动词语映射可能吞掉精确式,检索日志里贴完整译后式 |
 | Web of Science | `TS=` `TI=` | `*` `$` `?` | `NEAR/n` | `TS` 含题名摘要关键词 |
 | Scopus | `TITLE-ABS-KEY()` | `*` `?` | `W/n` `PRE/n` | 机构订阅界面导出含完整式 |
 | Embase | `:ti,ab,kw` `/exp` | `*` | `NEAR/n` | Emtree `/exp` 为扩展检索 |
