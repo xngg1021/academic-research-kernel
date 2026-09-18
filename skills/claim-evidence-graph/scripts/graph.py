@@ -9,14 +9,19 @@ Core Invariants:
    Semantic relation cycles (e.g. A contradicts B and B contradicts A) are valid and preserved.
 2. Rejection of Truth Authority and subjective scores:
    No artificial confidence scores (e.g. 0.85); discrete verdicts and explicit uncertainty queue.
-3. Strongly typed ReceiptRef:
-   Unambiguous binding to LineageReceipt (receipt_id/digest) and AcademicEvidenceReceipt (claim_digest/payload).
+3. Strongly typed ReceiptRef with strict mutual exclusivity:
+   LineageReceipt requires lineage-receipt-1.0, receipt_id, receipt_digest (no academic fields).
+   AcademicEvidenceReceipt requires 1.0, claim_digest, payload_sha256 (no lineage fields).
 4. Lexical canonicalization only:
    NFC normalization and whitespace compaction; never rewrites or paraphrases claim text.
-5. Deterministic, offline graph traversals:
-   Zero LLM, zero network, zero hidden runtime singletons; explicit receipt registry injection.
+5. Structured tuple edge keys:
+   Delimiter-collision-free edge identity and exact-idempotent registration.
 6. Order-invariant graph digest:
-   Full canonical sorting across nodes and edges with allow_nan=False.
+   Full canonical sorting across nodes, edges (including metadata and receipt refs) with allow_nan=False.
+7. Explicit offline provenance tracing:
+   Preserves support status (supported vs contradicted) with explicit receipt registry injection.
+8. Deterministic content-addressed uncertainty items:
+   item_id derived from canonical semantic digest, eliminating sequence counter insertion-order dependency.
 """
 from __future__ import annotations
 
@@ -40,6 +45,11 @@ __all__ = [
     "ClaimEvidenceGraph",
     "canonical_claim_text",
     "compute_claim_digest",
+    "canonical_receipt_ref_tuple",
+    "canonical_support_edge_tuple",
+    "canonical_claim_relation_tuple",
+    "canonical_academic_receipt_payload_sha256",
+    "canonical_evidence_claim_digest",
 ]
 
 VALID_CLAIM_TYPES: Set[str] = {
@@ -93,19 +103,60 @@ def canonical_claim_text(text: str) -> str:
     """Normalize claim text via Unicode NFC and whitespace compaction without paraphrasing."""
     if not text:
         return ""
-    # 1. Unicode NFC normalization
     norm = unicodedata.normalize("NFC", str(text))
-    # 2. Normalize line breaks and compact whitespace
     norm = re.sub(r"[\r\n\t]+", " ", norm)
     norm = re.sub(r"\s+", " ", norm).strip()
     return norm
 
 
 def compute_claim_digest(text: str, target_work_id: Optional[str] = None, locator: Optional[str] = None, claim_type: str = "empirical_finding") -> str:
-    """Compute content-addressed SHA256 digest identifying a specific claim occurrence."""
+    """Compute deterministic content-addressed SHA256 digest identifying a specific claim occurrence."""
     norm_txt = canonical_claim_text(text)
-    payload = f"{norm_txt}|{target_work_id or ''}|{locator or ''}|{claim_type}"
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest().lower()
+    payload = {
+        "claim_type": claim_type,
+        "locator": locator or "",
+        "target_work_id": target_work_id or "",
+        "text": norm_txt,
+    }
+    canon_bytes = json.dumps(
+        payload,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canon_bytes).hexdigest().lower()
+
+
+def canonical_academic_receipt_payload_sha256(receipt_dict: Dict[str, Any]) -> str:
+    """Compute canonical SHA256 of AcademicEvidenceReceipt payload matching schema."""
+    canon_bytes = json.dumps(
+        receipt_dict,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canon_bytes).hexdigest().lower()
+
+
+def canonical_evidence_claim_digest(claim_item: Dict[str, Any]) -> str:
+    """Compute digest of an exact claim entry inside an AcademicEvidenceReceipt."""
+    payload = {
+        "claim": claim_item.get("claim", ""),
+        "evidence_type": claim_item.get("evidence_type", ""),
+        "locator": claim_item.get("locator", ""),
+        "source": claim_item.get("source", ""),
+        "support_status": claim_item.get("support_status", ""),
+    }
+    canon_bytes = json.dumps(
+        payload,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canon_bytes).hexdigest().lower()
 
 
 @dataclass
@@ -121,18 +172,35 @@ class ReceiptRef:
     def __post_init__(self):
         if self.kind not in VALID_RECEIPT_KINDS:
             raise ValueError(f"Invalid receipt kind: {self.kind!r}. Must be one of {sorted(VALID_RECEIPT_KINDS)}")
-        if self.receipt_digest is not None:
+
+        if self.kind == "lineage":
+            if self.schema_version != "lineage-receipt-1.0":
+                raise ValueError(f"Invalid schema_version for lineage receipt: {self.schema_version!r}. Must be 'lineage-receipt-1.0'.")
+            if not self.receipt_id:
+                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_id'.")
+            if not self.receipt_digest:
+                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_digest'.")
             self.receipt_digest = self.receipt_digest.strip().lower()
             if not SHA256_REGEX.match(self.receipt_digest):
-                raise ValueError(f"Invalid receipt_digest SHA256: {self.receipt_digest!r}")
-        if self.claim_digest is not None:
+                raise ValueError(f"Invalid receipt_digest format: {self.receipt_digest!r}. Must be 64 lowercase hex digits.")
+            if self.claim_digest is not None or self.payload_sha256 is not None:
+                raise ValueError("Lineage ReceiptRef must not contain academic_evidence fields (claim_digest or payload_sha256).")
+
+        elif self.kind == "academic_evidence":
+            if self.schema_version != "1.0":
+                raise ValueError(f"Invalid schema_version for academic_evidence receipt: {self.schema_version!r}. Must be '1.0'.")
+            if not self.claim_digest:
+                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'claim_digest'.")
+            if not self.payload_sha256:
+                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'payload_sha256'.")
             self.claim_digest = self.claim_digest.strip().lower()
             if not SHA256_REGEX.match(self.claim_digest):
-                raise ValueError(f"Invalid claim_digest SHA256: {self.claim_digest!r}")
-        if self.payload_sha256 is not None:
+                raise ValueError(f"Invalid claim_digest format: {self.claim_digest!r}. Must be 64 lowercase hex digits.")
             self.payload_sha256 = self.payload_sha256.strip().lower()
             if not SHA256_REGEX.match(self.payload_sha256):
-                raise ValueError(f"Invalid payload_sha256 SHA256: {self.payload_sha256!r}")
+                raise ValueError(f"Invalid payload_sha256 format: {self.payload_sha256!r}. Must be 64 lowercase hex digits.")
+            if self.receipt_id is not None or self.receipt_digest is not None:
+                raise ValueError("AcademicEvidence ReceiptRef must not contain lineage fields (receipt_id or receipt_digest).")
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -150,6 +218,20 @@ class ReceiptRef:
         if self.locator:
             d["locator"] = self.locator
         return d
+
+
+def canonical_receipt_ref_tuple(ref: Optional[ReceiptRef]) -> Tuple[str, ...]:
+    if not ref:
+        return ()
+    return (
+        ref.kind,
+        ref.schema_version,
+        ref.receipt_id or "",
+        ref.receipt_digest or "",
+        ref.claim_digest or "",
+        ref.payload_sha256 or "",
+        ref.locator or "",
+    )
 
 
 @dataclass
@@ -262,6 +344,17 @@ class EvidenceSupportEdge:
         return d
 
 
+def canonical_support_edge_tuple(edge: EvidenceSupportEdge) -> Tuple[Any, ...]:
+    meta_json = json.dumps(edge.metadata, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    return (
+        edge.evidence_id,
+        edge.claim_id,
+        edge.support_status,
+        canonical_receipt_ref_tuple(edge.receipt_ref),
+        meta_json,
+    )
+
+
 @dataclass
 class ClaimRelationEdge:
     source_claim_id: str
@@ -287,6 +380,18 @@ class ClaimRelationEdge:
         if self.metadata:
             d["metadata"] = copy.deepcopy(self.metadata)
         return d
+
+
+def canonical_claim_relation_tuple(edge: ClaimRelationEdge) -> Tuple[Any, ...]:
+    meta_json = json.dumps(edge.metadata, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    ev_tuple = tuple(sorted(list(set(edge.evidence_refs))))
+    return (
+        edge.source_claim_id,
+        edge.target_claim_id,
+        edge.relation_type,
+        ev_tuple,
+        meta_json,
+    )
 
 
 @dataclass
@@ -326,14 +431,21 @@ class ClaimEvidenceGraph:
         self.support_edges: List[EvidenceSupportEdge] = []
         self.claim_relations: List[ClaimRelationEdge] = []
         self.uncertainties: List[UncertaintyItem] = []
-        self._all_node_ids: Dict[str, str] = {}  # id -> "claim" | "evidence"
-        self._support_edge_keys: Set[Tuple[str, str, str, str]] = set()
-        self._claim_relation_keys: Set[Tuple[str, str, str, str]] = set()
+        self._all_node_ids: Dict[str, str] = {}
+        self._support_edge_keys: Set[Tuple[Any, ...]] = set()
+        self._claim_relation_keys: Set[Tuple[Any, ...]] = set()
         self._receipt_registry: Dict[str, Any] = {}
 
     def register_receipt(self, receipt_id: str, receipt_data: Any):
-        """Register an AcademicEvidenceReceipt or LineageReceipt for offline provenance traversal."""
+        """Register an AcademicEvidenceReceipt or LineageReceipt with conflict rejection."""
         rid = str(receipt_id).strip()
+        if rid in self._receipt_registry:
+            existing = self._receipt_registry[rid]
+            ex_dict = existing.to_dict() if hasattr(existing, "to_dict") else existing
+            new_dict = receipt_data.to_dict() if hasattr(receipt_data, "to_dict") else receipt_data
+            if ex_dict != new_dict:
+                raise ValueError(f"Conflicting receipt registration for {rid!r}: existing data differs from new registration.")
+            return
         self._receipt_registry[rid] = receipt_data
 
     def add_claim(
@@ -446,8 +558,7 @@ class ClaimEvidenceGraph:
             receipt_ref=receipt_ref,
             metadata=metadata or {},
         )
-        meta_json = json.dumps(edge.metadata, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-        k = (eid, cid, support_status, meta_json)
+        k = canonical_support_edge_tuple(edge)
         if k not in self._support_edge_keys:
             self._support_edge_keys.add(k)
             self.support_edges.append(edge)
@@ -470,9 +581,7 @@ class ClaimEvidenceGraph:
             evidence_refs=evidence_refs or [],
             metadata=metadata or {},
         )
-        meta_json = json.dumps(edge.metadata, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-        ev_key = ",".join(edge.evidence_refs)
-        k = (sid, tid, relation_type, f"{ev_key}#{meta_json}")
+        k = canonical_claim_relation_tuple(edge)
         if k not in self._claim_relation_keys:
             self._claim_relation_keys.add(k)
             self.claim_relations.append(edge)
@@ -499,19 +608,44 @@ class ClaimEvidenceGraph:
                 if ev_id not in self.evidence_anchors:
                     errors.append(f"Dangling evidence reference {ev_id!r} in claim relation ({edge.source_claim_id} -> {edge.target_claim_id}).")
 
-        # 3. Receipt reference integrity
+        # 3. Receipt reference verification across both EvidenceAnchors and SupportEdges
+        all_refs: List[Tuple[str, ReceiptRef]] = []
         for eid, ev in self.evidence_anchors.items():
             if ev.receipt_ref:
-                ref = ev.receipt_ref
+                all_refs.append((f"evidence {eid!r}", ev.receipt_ref))
+        for i, edge in enumerate(self.support_edges):
+            if edge.receipt_ref:
+                all_refs.append((f"support_edge[{i}] ({edge.evidence_id}->{edge.claim_id})", edge.receipt_ref))
+
+        for owner_desc, ref in all_refs:
+            if ref.kind == "lineage":
                 if ref.receipt_id and ref.receipt_id in self._receipt_registry:
                     registered = self._receipt_registry[ref.receipt_id]
-                    # Verify receipt_digest if provided
-                    if ref.receipt_digest:
-                        reg_digest = getattr(registered, "receipt_digest", None)
-                        if isinstance(registered, dict):
-                            reg_digest = registered.get("receipt_digest")
-                        if reg_digest and reg_digest.lower() != ref.receipt_digest.lower():
-                            errors.append(f"Receipt digest mismatch for evidence {eid!r}: expected {ref.receipt_digest}, got {reg_digest}")
+                    reg_digest = getattr(registered, "receipt_digest", None)
+                    if isinstance(registered, dict):
+                        reg_digest = registered.get("receipt_digest")
+                    if reg_digest and reg_digest.lower() != ref.receipt_digest.lower():
+                        errors.append(f"Lineage receipt digest mismatch on {owner_desc}: expected {ref.receipt_digest}, got {reg_digest}")
+            elif ref.kind == "academic_evidence":
+                # Find matching receipt in registry by payload_sha256 or registry key
+                matched_receipt = None
+                for reg_key, reg_val in self._receipt_registry.items():
+                    val_dict = reg_val if isinstance(reg_val, dict) else (reg_val.to_dict() if hasattr(reg_val, "to_dict") else {})
+                    computed_sha = canonical_academic_receipt_payload_sha256(val_dict)
+                    if computed_sha == ref.payload_sha256 or reg_key == ref.payload_sha256:
+                        matched_receipt = val_dict
+                        break
+
+                if matched_receipt is not None:
+                    # Validate claim_digest against exact claims in that receipt
+                    receipt_claims = matched_receipt.get("claims", [])
+                    matching_claim = False
+                    for c_item in receipt_claims:
+                        if canonical_evidence_claim_digest(c_item) == ref.claim_digest:
+                            matching_claim = True
+                            break
+                    if not matching_claim:
+                        errors.append(f"AcademicEvidence claim digest mismatch on {owner_desc}: claim_digest {ref.claim_digest} not found in registered receipt claims.")
 
         return (len(errors) == 0, errors)
 
@@ -533,9 +667,9 @@ class ClaimEvidenceGraph:
                     "receipt_ref": edge.receipt_ref.to_dict() if edge.receipt_ref else (ev.receipt_ref.to_dict() if ev and ev.receipt_ref else None),
                 })
 
-        # 2. Corroborating claims
+        # 2. Corroborating claims (refines is kept distinct as non-support)
         for edge in self.claim_relations:
-            if edge.target_claim_id == cid and edge.relation_type in ("corroborates", "refines"):
+            if edge.target_claim_id == cid and edge.relation_type == "corroborates":
                 c = self.claims.get(edge.source_claim_id)
                 results.append({
                     "type": "claim_corroboration",
@@ -593,7 +727,7 @@ class ClaimEvidenceGraph:
     ) -> Dict[str, Any]:
         """Deterministically trace from a high-level Claim through EvidenceAnchors to registered LineageReceipts.
 
-        Retrieves claimed raw data inputs and execution pipeline steps without hidden runtimes.
+        Preserves support_status on each trace branch (supported vs contradicted).
         """
         cid = str(claim_id).strip()
         reg = dict(self._receipt_registry)
@@ -608,19 +742,18 @@ class ClaimEvidenceGraph:
             }
 
         target_claim = self.claims[cid]
-        anchors_in_claim = [
-            self.evidence_anchors[e.evidence_id]
-            for e in self.support_edges
-            if e.claim_id == cid and e.evidence_id in self.evidence_anchors
-        ]
+        claim_support_edges = [e for e in self.support_edges if e.claim_id == cid]
 
         lineage_traces: List[Dict[str, Any]] = []
-        for anc in anchors_in_claim:
-            if anc.receipt_ref and anc.receipt_ref.kind == "lineage":
-                rid = anc.receipt_ref.receipt_id
+        for edge in claim_support_edges:
+            ev = self.evidence_anchors.get(edge.evidence_id)
+            ref = edge.receipt_ref or (ev.receipt_ref if ev else None)
+            if ref and ref.kind == "lineage":
+                rid = ref.receipt_id
                 if not rid or rid not in reg:
                     lineage_traces.append({
-                        "evidence_id": anc.id,
+                        "evidence_id": edge.evidence_id,
+                        "support_status": edge.support_status,
                         "receipt_id": rid,
                         "status": "unavailable",
                         "reason": f"LineageReceipt {rid!r} not found in registry",
@@ -630,7 +763,8 @@ class ClaimEvidenceGraph:
                 receipt_obj = reg[rid]
                 r_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
                 lineage_traces.append({
-                    "evidence_id": anc.id,
+                    "evidence_id": edge.evidence_id,
+                    "support_status": edge.support_status,
                     "receipt_id": rid,
                     "status": "available",
                     "verification_status": r_dict.get("verification_status"),
@@ -645,51 +779,63 @@ class ClaimEvidenceGraph:
             "claim_id": cid,
             "claim_text": target_claim.text,
             "claim_digest": target_claim.claim_digest,
-            "connected_evidence_count": len(anchors_in_claim),
+            "connected_evidence_count": len(claim_support_edges),
             "lineage_traces": lineage_traces,
         }
 
     def extract_uncertainties(self) -> List[UncertaintyItem]:
-        """Systematically extract uncertainty items under explicit three-state discipline."""
-        items: List[UncertaintyItem] = []
-        uid_seq = 1
+        """Systematically extract uncertainty items under explicit three-state discipline with deterministic IDs."""
+        raw_items: List[Tuple[str, str, str, bool]] = []
 
         # 1. Unverifiable claims (machine-unobservable != human-required; needs_human=False)
         for edge in self.support_edges:
             if edge.support_status == "unverifiable":
-                items.append(UncertaintyItem(
-                    item_id=f"unc-{uid_seq:04d}",
-                    subject_id=edge.claim_id,
-                    kind="unverifiable_claim",
-                    reason=f"Evidence {edge.evidence_id!r} support for claim {edge.claim_id!r} is unobservable/unverifiable.",
-                    needs_human=False,
+                raw_items.append((
+                    edge.claim_id,
+                    "unverifiable_claim",
+                    f"Evidence {edge.evidence_id!r} support for claim {edge.claim_id!r} is unobservable/unverifiable.",
+                    False,
                 ))
-                uid_seq += 1
 
         # 2. Contradictions (direct conflict requires reviewer/human arbitration; needs_human=True)
         for edge in self.claim_relations:
             if edge.relation_type == "contradicts":
-                items.append(UncertaintyItem(
-                    item_id=f"unc-{uid_seq:04d}",
-                    subject_id=edge.target_claim_id,
-                    kind="unresolved_contradiction",
-                    reason=f"Claim {edge.source_claim_id!r} contradicts claim {edge.target_claim_id!r}.",
-                    needs_human=True,
+                raw_items.append((
+                    edge.target_claim_id,
+                    "unresolved_contradiction",
+                    f"Claim {edge.source_claim_id!r} contradicts claim {edge.target_claim_id!r}.",
+                    True,
                 ))
-                uid_seq += 1
 
         for edge in self.support_edges:
             if edge.support_status == "contradicted":
-                items.append(UncertaintyItem(
-                    item_id=f"unc-{uid_seq:04d}",
-                    subject_id=edge.claim_id,
-                    kind="unresolved_contradiction",
-                    reason=f"Evidence {edge.evidence_id!r} refutes claim {edge.claim_id!r}.",
-                    needs_human=True,
+                raw_items.append((
+                    edge.claim_id,
+                    "unresolved_contradiction",
+                    f"Evidence {edge.evidence_id!r} refutes claim {edge.claim_id!r}.",
+                    True,
                 ))
-                uid_seq += 1
 
-        items.sort(key=lambda x: (x.kind, x.subject_id, x.item_id))
+        # Deduplicate and sort raw items before deterministic ID generation
+        unique_raw = sorted(list(set(raw_items)), key=lambda x: (x[1], x[0], x[2]))
+        items: List[UncertaintyItem] = []
+        for subject_id, kind, reason, needs_human in unique_raw:
+            unc_key = json.dumps({
+                "kind": kind,
+                "needs_human": needs_human,
+                "reason": reason,
+                "subject_id": subject_id,
+            }, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+            unc_digest = hashlib.sha256(unc_key.encode("utf-8")).hexdigest()[:16]
+            items.append(UncertaintyItem(
+                item_id=f"unc-{unc_digest}",
+                subject_id=subject_id,
+                kind=kind,
+                reason=reason,
+                needs_human=needs_human,
+            ))
+
+        items.sort(key=lambda x: x.item_id)
         return items
 
     def graph_digest(self) -> str:
@@ -698,11 +844,23 @@ class ClaimEvidenceGraph:
         canon_evidence = sorted([e.to_dict() for e in self.evidence_anchors.values()], key=lambda x: x["id"])
         canon_support = sorted(
             [e.to_dict() for e in self.support_edges],
-            key=lambda x: (x["evidence_id"], x["claim_id"], x["support_status"]),
+            key=lambda x: canonical_support_edge_tuple(EvidenceSupportEdge(
+                evidence_id=x["evidence_id"],
+                claim_id=x["claim_id"],
+                support_status=x["support_status"],
+                receipt_ref=ReceiptRef(**x["receipt_ref"]) if x.get("receipt_ref") else None,
+                metadata=x.get("metadata", {}),
+            )),
         )
         canon_relations = sorted(
             [e.to_dict() for e in self.claim_relations],
-            key=lambda x: (x["source_claim_id"], x["target_claim_id"], x["relation_type"]),
+            key=lambda x: canonical_claim_relation_tuple(ClaimRelationEdge(
+                source_claim_id=x["source_claim_id"],
+                target_claim_id=x["target_claim_id"],
+                relation_type=x["relation_type"],
+                evidence_refs=x.get("evidence_refs", []),
+                metadata=x.get("metadata", {}),
+            )),
         )
         canon_uncertainties = sorted([u.to_dict() for u in self.extract_uncertainties()], key=lambda x: x["item_id"])
 
@@ -730,11 +888,23 @@ class ClaimEvidenceGraph:
         canon_evidence = sorted([e.to_dict() for e in self.evidence_anchors.values()], key=lambda x: x["id"])
         canon_support = sorted(
             [e.to_dict() for e in self.support_edges],
-            key=lambda x: (x["evidence_id"], x["claim_id"], x["support_status"]),
+            key=lambda x: canonical_support_edge_tuple(EvidenceSupportEdge(
+                evidence_id=x["evidence_id"],
+                claim_id=x["claim_id"],
+                support_status=x["support_status"],
+                receipt_ref=ReceiptRef(**x["receipt_ref"]) if x.get("receipt_ref") else None,
+                metadata=x.get("metadata", {}),
+            )),
         )
         canon_relations = sorted(
             [e.to_dict() for e in self.claim_relations],
-            key=lambda x: (x["source_claim_id"], x["target_claim_id"], x["relation_type"]),
+            key=lambda x: canonical_claim_relation_tuple(ClaimRelationEdge(
+                source_claim_id=x["source_claim_id"],
+                target_claim_id=x["target_claim_id"],
+                relation_type=x["relation_type"],
+                evidence_refs=x.get("evidence_refs", []),
+                metadata=x.get("metadata", {}),
+            )),
         )
         canon_uncertainties = sorted([u.to_dict() for u in self.extract_uncertainties()], key=lambda x: x["item_id"])
 

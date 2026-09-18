@@ -17,7 +17,7 @@
   - `claim_digest` 严格绑定规范化命题文本（仅做 NFC 与空白压缩，绝不重写语义）、定位符与所属论文；
   - 纯 Python 离线实现矛盾发现器（`find_contradictions`）与全链执行谱系回溯穿透（`trace_claim_provenance`）。
 - **验证矩阵更新**：
-  - 全仓单测规模扩充至 **514 项全绿**（0 failures, 0 warnings）；
+  - 全仓单测规模扩充至 **515 项全绿**（0 failures, 0 warnings）；
   - 静态 QA 可执行代码块扩充至 39 项全部 PASS。
 
 ---
@@ -83,7 +83,7 @@
   - `plugin.json` (Agent Plugins v1 portable manifest)
   - `mcp.json` / `scripts/mcp_server.py` (Portable MCP tools surface)
 - **Verification Matrix**:
-  - Unit & Regression Tests: 514 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 515 passed, 0 failures, 0 warnings
   - Static QA Fences: 39 independent executable blocks passed
   - Provenance & Lineage: 毫秒级因果拓扑逆向溯源、完整三阶段物理科研流水线、内容与回执指纹双重独立存证、防篡改哈希核验、因果 DAG 迭代无环检测与 JSON Schema 2020-12 严格匹配全量通过
   - Security & Contracts: Command adapter isolated env, strict participant slug validation, path containment guard, and JSON schema parity check passed

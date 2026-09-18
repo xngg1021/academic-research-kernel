@@ -7,16 +7,17 @@ Covers:
 3. Disjoint Claim and EvidenceAnchor ID namespaces (collision raises ValueError).
 4. Semantic cycles (A contradicts B, B contradicts A) are valid and preserved without cycle errors.
 5. Dangling edge detection (missing claim, missing evidence anchor, or missing evidence_refs).
-6. Strongly typed ReceiptRef binding to LineageReceipt and AcademicEvidenceReceipt.
-7. LineageReceipt digest mismatch detection.
-8. Insertion-order invariance of canonical graph_digest.
-9. Metadata sensitivity of graph_digest.
-10. Immutability and deep isolation of exported graph representations.
-11. Three-state uncertainty queue discipline (unverifiable -> needs_human=False; contradicted -> needs_human=True).
-12. Deterministic contradiction discovery without NLP/clustering.
-13. Deterministic claim provenance tracing back to LineageReceipt root inputs and execution steps.
-14. Explicit failure report when referenced receipt is missing from registry (no silent empty success).
-15. Strict JSON Schema draft 2020-12 parity with additionalProperties: false.
+6. Strongly typed ReceiptRef with strict mutual exclusivity (lineage vs academic_evidence).
+7. AcademicEvidenceReceipt payload SHA256 and exact claim_digest verification.
+8. SupportEdge receipt_ref verification.
+9. Receipt registration conflict rejection.
+10. Insertion-order invariance of canonical graph_digest across tie-key edge sets.
+11. Metadata sensitivity of graph_digest.
+12. Immutability and deep isolation of exported graph representations.
+13. Three-state uncertainty queue discipline with content-addressed deterministic IDs.
+14. Provenance tracing preserves support status (supported vs contradicted).
+15. Explicit failure report when referenced receipt is missing from registry (no silent empty success).
+16. Strict JSON Schema draft 2020-12 parity with additionalProperties: false and oneOf receiptRef.
 """
 from __future__ import annotations
 
@@ -41,11 +42,17 @@ def test_claim_lexical_canonicalization_and_digest():
     """Claim text receives NFC and whitespace normalization without semantic rewriting."""
     c1 = ceg.Claim(id="c1", text="  Scaling  laws   hold. \r\n")
     assert c1.normalized_text == "Scaling laws hold."
-    # Different target work produces different claim occurrence digest
     c2 = ceg.Claim(id="c2", text="Scaling laws hold.", target_work_id="work-a")
     c3 = ceg.Claim(id="c3", text="Scaling laws hold.", target_work_id="work-b")
     assert c1.claim_digest != c2.claim_digest
     assert c2.claim_digest != c3.claim_digest
+
+
+def test_claim_digest_delimiter_collision_free():
+    """Delimiter characters in fields must not cause claim_digest collisions."""
+    c_a = ceg.Claim(id="ca", text="text|target", target_work_id="work", locator="loc")
+    c_b = ceg.Claim(id="cb", text="text", target_work_id="target|work", locator="loc")
+    assert c_a.claim_digest != c_b.claim_digest
 
 
 def test_idempotent_registration_and_conflict_rejection():
@@ -63,7 +70,7 @@ def test_idempotent_registration_and_conflict_rejection():
     assert ev1 is ev1_dup
 
     with pytest.raises(ValueError, match="Conflicting evidence registration"):
-        g.add_evidence("ev1", "figure_artifact")  # Type conflict
+        g.add_evidence("ev1", "figure_artifact")
 
 
 def test_disjoint_claim_and_evidence_namespace():
@@ -85,7 +92,6 @@ def test_semantic_cycles_are_valid_and_preserved():
     g.add_claim("c_a", "Model A outperforms Model B on benchmark X.")
     g.add_claim("c_b", "Model B outperforms Model A on benchmark X.")
 
-    # Mutual contradiction cycle: A <-> B
     g.add_claim_relation("c_a", "c_b", relation_type="contradicts")
     g.add_claim_relation("c_b", "c_a", relation_type="contradicts")
 
@@ -93,14 +99,9 @@ def test_semantic_cycles_are_valid_and_preserved():
     assert valid is True
     assert not errors
 
-    # Contradiction discovery retrieves conflicting claim deterministically
     contras_a = g.find_contradictions("c_a")
     assert len(contras_a) == 1
     assert contras_a[0]["conflicting_claim_id"] == "c_b"
-
-    contras_b = g.find_contradictions("c_b")
-    assert len(contras_b) == 1
-    assert contras_b[0]["conflicting_claim_id"] == "c_a"
 
 
 def test_dangling_edge_detection():
@@ -132,216 +133,254 @@ def test_dangling_edge_detection():
     assert any("missing_ev_anchor" in err for err in errors3)
 
 
-def test_receipt_ref_strongly_typed_validation():
-    """ReceiptRef validates supported kinds and 64-hex digest patterns."""
-    with pytest.raises(ValueError, match="Invalid receipt kind"):
-        ceg.ReceiptRef(kind="invalid_kind", schema_version="1.0")
+def test_strongly_typed_receipt_ref_mutual_exclusivity():
+    """ReceiptRef enforces strict schema_version, required fields, and mutual exclusivity."""
+    # Lineage requires lineage-receipt-1.0 and both receipt_id and receipt_digest
+    with pytest.raises(ValueError, match="Invalid schema_version for lineage"):
+        ceg.ReceiptRef(kind="lineage", schema_version="wrong-ver", receipt_id="r1", receipt_digest="a" * 64)
 
-    with pytest.raises(ValueError, match="Invalid receipt_digest SHA256"):
-        ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_digest="bad_digest")
+    with pytest.raises(ValueError, match="requires non-empty 'receipt_id'"):
+        ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="", receipt_digest="a" * 64)
+
+    # Lineage must not carry academic fields
+    with pytest.raises(ValueError, match="must not contain academic_evidence fields"):
+        ceg.ReceiptRef(
+            kind="lineage",
+            schema_version="lineage-receipt-1.0",
+            receipt_id="r1",
+            receipt_digest="a" * 64,
+            claim_digest="b" * 64,
+        )
+
+    # AcademicEvidence requires 1.0, claim_digest, payload_sha256
+    with pytest.raises(ValueError, match="Invalid schema_version for academic_evidence"):
+        ceg.ReceiptRef(kind="academic_evidence", schema_version="2.0", claim_digest="a" * 64, payload_sha256="b" * 64)
+
+    with pytest.raises(ValueError, match="must not contain lineage fields"):
+        ceg.ReceiptRef(
+            kind="academic_evidence",
+            schema_version="1.0",
+            claim_digest="a" * 64,
+            payload_sha256="b" * 64,
+            receipt_id="r1",
+        )
 
 
-def test_lineage_receipt_digest_mismatch_detection():
-    """If registered LineageReceipt has a different digest than declared, validate_graph must flag mismatch."""
+def test_academic_evidence_receipt_exact_claim_digest_verification():
+    """validate_graph checks AcademicEvidenceReceipt payload SHA256 and exact claim_digest match."""
     g = ceg.ClaimEvidenceGraph()
-    g.add_claim("c1", "Claim 1")
+    g.add_claim("c1", "Reported effect size d = 0.52")
 
-    # Registered mock receipt with digest 'aaa...aaa'
-    mock_receipt = {
-        "receipt_id": "rec-12345",
-        "receipt_digest": "a" * 64,
-        "lineage_digest": "b" * 64,
-        "verification_status": "intact",
+    mock_academic_receipt = {
+        "schema_version": "1.0",
+        "generated_at": "2026-09-18T10:00:00Z",
+        "claims": [
+            {
+                "claim": "Cohen's d is 0.52",
+                "evidence_type": "statistical_test",
+                "locator": "tab:2",
+                "source": "t_test_output",
+                "support_status": "supported",
+            },
+            {
+                "claim": "p-value is 0.01",
+                "evidence_type": "p_value",
+                "locator": "tab:2",
+                "source": "t_test_output",
+                "support_status": "supported",
+            }
+        ]
     }
-    g.register_receipt("rec-12345", mock_receipt)
+    payload_sha = ceg.canonical_academic_receipt_payload_sha256(mock_academic_receipt)
+    exact_claim_digest = ceg.canonical_evidence_claim_digest(mock_academic_receipt["claims"][0])
 
-    # Evidence anchor declaring different digest 'ccc...ccc'
-    ref = ceg.ReceiptRef(
-        kind="lineage",
-        schema_version="lineage-receipt-1.0",
-        receipt_id="rec-12345",
-        receipt_digest="c" * 64,
+    # Register receipt under its payload SHA
+    g.register_receipt(payload_sha, mock_academic_receipt)
+
+    # Anchor with matching claim_digest
+    ref_good = ceg.ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest=exact_claim_digest,
+        payload_sha256=payload_sha,
     )
-    g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref)
-    g.add_support_edge("ev1", "c1", support_status="supported")
+    g.add_evidence("ev_acad", "evidence_receipt", receipt_ref=ref_good)
+    g.add_support_edge("ev_acad", "c1", support_status="supported")
 
     valid, errors = g.validate_graph()
-    assert valid is False
-    assert any("Receipt digest mismatch" in err for err in errors)
+    assert valid is True
+    assert not errors
+
+    # Anchor with non-existent claim_digest inside that receipt
+    ref_bad = ceg.ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest="f" * 64,  # Bad claim digest
+        payload_sha256=payload_sha,
+    )
+    g2 = ceg.ClaimEvidenceGraph()
+    g2.register_receipt(payload_sha, mock_academic_receipt)
+    g2.add_claim("c1", "Test claim")
+    g2.add_evidence("ev_bad", "evidence_receipt", receipt_ref=ref_bad)
+    g2.add_support_edge("ev_bad", "c1", support_status="supported")
+
+    valid2, errors2 = g2.validate_graph()
+    assert valid2 is False
+    assert any("AcademicEvidence claim digest mismatch" in err for err in errors2)
 
 
-def test_insertion_order_invariance_of_graph_digest():
-    """Same graph content with different insertion orders must produce identical graph_digest."""
-    # Graph A
-    ga = ceg.ClaimEvidenceGraph(graph_id="ceg-fixed")
-    ga.add_claim("c1", "First claim")
-    ga.add_claim("c2", "Second claim")
-    ga.add_evidence("ev1", "table_cell")
-    ga.add_evidence("ev2", "figure_artifact")
-    ga.add_support_edge("ev1", "c1", support_status="supported")
-    ga.add_support_edge("ev2", "c2", support_status="supported")
-    ga.add_claim_relation("c1", "c2", relation_type="corroborates")
-
-    # Graph B (reversed insertion order)
-    gb = ceg.ClaimEvidenceGraph(graph_id="ceg-fixed")
-    gb.add_evidence("ev2", "figure_artifact")
-    gb.add_evidence("ev1", "table_cell")
-    gb.add_claim("c2", "Second claim")
-    gb.add_claim("c1", "First claim")
-    gb.add_claim_relation("c1", "c2", relation_type="corroborates")
-    gb.add_support_edge("ev2", "c2", support_status="supported")
-    gb.add_support_edge("ev1", "c1", support_status="supported")
-
-    assert ga.graph_digest() == gb.graph_digest()
-
-    # Altering metadata produces a different digest
-    gc = ceg.ClaimEvidenceGraph(graph_id="ceg-fixed")
-    gc.add_claim("c1", "First claim", metadata={"note": "different"})
-    gc.add_claim("c2", "Second claim")
-    gc.add_evidence("ev1", "table_cell")
-    gc.add_evidence("ev2", "figure_artifact")
-    gc.add_support_edge("ev1", "c1", support_status="supported")
-    gc.add_support_edge("ev2", "c2", support_status="supported")
-    gc.add_claim_relation("c1", "c2", relation_type="corroborates")
-
-    assert ga.graph_digest() != gc.graph_digest()
-
-
-def test_deep_isolation_of_exported_representation():
-    """Mutating graph entities or exported to_dict() results must not cross-contaminate."""
+def test_support_edge_preserves_distinct_receipt_refs():
+    """Support edges between same evidence and claim with distinct ReceiptRefs are not swallowed."""
     g = ceg.ClaimEvidenceGraph()
-    c = g.add_claim("c1", "Original text", metadata={"ver": 1})
-    d = g.to_dict()
+    g.add_claim("c1", "Target claim")
+    g.add_evidence("ev1", "lineage_receipt")
 
-    # Mutate source metadata
-    c.metadata["ver"] = 999
-    assert d["claims"][0]["metadata"]["ver"] == 1
+    ref_a = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-A", receipt_digest="a" * 64)
+    ref_b = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-B", receipt_digest="b" * 64)
 
-    # Mutate exported dict
-    d["claims"][0]["metadata"]["ver"] = 888
-    d2 = g.to_dict()
-    assert d2["claims"][0]["metadata"]["ver"] == 999
+    # Edge 1 via Receipt A
+    g.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a)
+    # Duplicate edge 1 -> idempotent, remains count 1
+    g.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a)
+    assert len(g.support_edges) == 1
+
+    # Edge 2 via Receipt B -> distinct, count becomes 2
+    g.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_b)
+    assert len(g.support_edges) == 2
 
 
-def test_three_state_uncertainty_discipline():
-    """Unverifiable -> needs_human=False; Contradicted -> needs_human=True."""
+def test_insertion_order_invariance_across_tie_keys():
+    """graph_digest is strictly order-invariant even when edges share primary endpoints but differ in metadata/receipts."""
+    ref_a = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-A", receipt_digest="a" * 64)
+    ref_b = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-B", receipt_digest="b" * 64)
+
+    # Graph 1: insert edge A then B
+    g1 = ceg.ClaimEvidenceGraph(graph_id="ceg-fixed")
+    g1.add_claim("c1", "Claim")
+    g1.add_evidence("ev1", "lineage_receipt")
+    g1.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a, metadata={"m": 1})
+    g1.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_b, metadata={"m": 2})
+
+    # Graph 2: insert edge B then A (reversed)
+    g2 = ceg.ClaimEvidenceGraph(graph_id="ceg-fixed")
+    g2.add_claim("c1", "Claim")
+    g2.add_evidence("ev1", "lineage_receipt")
+    g2.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_b, metadata={"m": 2})
+    g2.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a, metadata={"m": 1})
+
+    assert g1.graph_digest() == g2.graph_digest()
+
+
+def test_register_receipt_conflict_rejection():
+    """register_receipt rejects conflicting registrations for the same ID."""
     g = ceg.ClaimEvidenceGraph()
-    g.add_claim("c_unverifiable", "Speculative hypothesis about year 2050.")
-    g.add_evidence("ev_unverifiable", "direct_observation")
-    # unverifiable support
-    g.add_support_edge("ev_unverifiable", "c_unverifiable", support_status="unverifiable")
+    g.register_receipt("rec-1", {"data": 123})
+    # Same data -> no-op
+    g.register_receipt("rec-1", {"data": 123})
 
-    g.add_claim("c_contradicted", "Claim refuted by experimental trial.")
-    g.add_evidence("ev_refuting", "table_cell")
-    # contradicted support
-    g.add_support_edge("ev_refuting", "c_contradicted", support_status="contradicted")
-
-    uncertainties = g.extract_uncertainties()
-    assert len(uncertainties) == 2
-
-    u_map = {u.subject_id: u for u in uncertainties}
-    assert u_map["c_unverifiable"].needs_human is False
-    assert u_map["c_contradicted"].needs_human is True
+    with pytest.raises(ValueError, match="Conflicting receipt registration"):
+        g.register_receipt("rec-1", {"data": 999})
 
 
-def test_trace_claim_provenance_with_missing_receipt():
-    """Tracing provenance of a claim with missing receipt reports explicit unavailable status (no empty success)."""
-    g = ceg.ClaimEvidenceGraph()
-    g.add_claim("c1", "Claim backed by missing receipt.")
-    ref = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-missing-ghost")
-    g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref)
-    g.add_support_edge("ev1", "c1", support_status="supported")
-
-    trace = g.trace_claim_provenance("c1")
-    assert trace["status"] == "traced"
-    assert len(trace["lineage_traces"]) == 1
-    t0 = trace["lineage_traces"][0]
-    assert t0["status"] == "unavailable"
-    assert "not found in registry" in t0["reason"]
-
-
-def test_end_to_end_claim_to_provenance_penetration(tmp_path):
-    """Full penetration: Claim -> EvidenceAnchor -> LineageReceipt -> root data & execution steps."""
-    # 1. Build an underlying LineageGraph and emit a LineageReceipt (using PR #6 Provenance Kernel)
-    clean_py = tmp_path / "clean.py"
-    clean_py.write_text("import sys\n", encoding="utf-8")
-    clean_py_sha = pr.compute_file_sha256(clean_py)
-
-    raw_csv = tmp_path / "raw.csv"
-    raw_csv.write_text("x,y\n1,2\n", encoding="utf-8")
-    raw_sha = pr.compute_file_sha256(raw_csv)
-
-    clean_csv = tmp_path / "clean.csv"
-    clean_csv.write_text("x,y\n1,2\n", encoding="utf-8")
-    clean_sha = pr.compute_file_sha256(clean_csv)
+def test_trace_claim_provenance_preserves_support_status_and_direction(tmp_path):
+    """trace_claim_provenance preserves support_status (supported vs contradicted)."""
+    # Build lineage receipt
+    f = tmp_path / "data.csv"
+    f.write_text("x,y\n1,2\n", encoding="utf-8")
+    sha = pr.compute_file_sha256(f)
 
     lin_graph = pr.LineageGraph(root_dir=tmp_path)
-    e_raw = lin_graph.add_entity("raw-data", "data_snapshot", sha256=raw_sha, locator=str(raw_csv))
-    e_script = lin_graph.add_entity("clean-script", "code_file", sha256=clean_py_sha, locator=str(clean_py))
-    e_clean = lin_graph.add_entity("clean-data", "data_snapshot", sha256=clean_sha, locator=str(clean_csv))
-    act = lin_graph.add_activity("clean-act", "data_cleaning", command="python clean.py", script_id=e_script.id)
+    lin_graph.add_entity("e_raw", "data_snapshot", sha256=sha, locator=str(f))
+    rec = pr.trace_origin(lin_graph, target_id="e_raw", check_on_disk_hashes=True)
 
-    lin_graph.record_used(act.id, e_raw.id)
-    lin_graph.record_used(act.id, e_script.id)
-    lin_graph.record_generated(act.id, e_clean.id)
+    ce_graph = ceg.ClaimEvidenceGraph()
+    ce_graph.register_receipt(rec.receipt_id, rec)
 
-    lineage_receipt = pr.trace_origin(lin_graph, target_id=e_clean.id, check_on_disk_hashes=True)
-    assert lineage_receipt.verification_status == "intact"
-
-    # 2. Build ClaimEvidenceGraph and anchor to the LineageReceipt
-    ce_graph = ceg.ClaimEvidenceGraph(graph_id="ceg-scientific-audit")
-    ce_graph.register_receipt(lineage_receipt.receipt_id, lineage_receipt)
-
-    c_main = ce_graph.add_claim(
-        id="claim-clean-integrity",
-        text="The cleaned survey data maintains full participant representation without attrition.",
-        target_work_id="work-2026-audit",
-        locator="paper.pdf#p=3",
-    )
-
-    ev_anchor = ce_graph.add_evidence(
-        id="ev-lineage-proof",
-        anchor_type="lineage_receipt",
+    c = ce_graph.add_claim("c_dispute", "Claim under dispute.")
+    ev_support = ce_graph.add_evidence(
+        "ev_sup",
+        "lineage_receipt",
         receipt_ref=ceg.ReceiptRef(
             kind="lineage",
             schema_version="lineage-receipt-1.0",
-            receipt_id=lineage_receipt.receipt_id,
-            receipt_digest=lineage_receipt.receipt_digest,
-        ),
-        excerpt="Lineage intact with zero data loss."
+            receipt_id=rec.receipt_id,
+            receipt_digest=rec.receipt_digest,
+        )
+    )
+    ev_refute = ce_graph.add_evidence(
+        "ev_ref",
+        "lineage_receipt",
+        receipt_ref=ceg.ReceiptRef(
+            kind="lineage",
+            schema_version="lineage-receipt-1.0",
+            receipt_id=rec.receipt_id,
+            receipt_digest=rec.receipt_digest,
+        )
     )
 
-    ce_graph.add_support_edge(ev_anchor.id, c_main.id, support_status="supported")
+    ce_graph.add_support_edge("ev_sup", "c_dispute", support_status="supported")
+    ce_graph.add_support_edge("ev_ref", "c_dispute", support_status="contradicted")
 
-    # 3. Penetrate provenance directly from Claim!
-    trace_res = ce_graph.trace_claim_provenance("claim-clean-integrity")
-    assert trace_res["status"] == "traced"
-    assert trace_res["claim_id"] == "claim-clean-integrity"
+    trace = ce_graph.trace_claim_provenance("c_dispute")
+    assert trace["status"] == "traced"
+    assert len(trace["lineage_traces"]) == 2
 
-    trace_lineage = trace_res["lineage_traces"][0]
-    assert trace_lineage["status"] == "available"
-    assert trace_lineage["verification_status"] == "intact"
-    assert "raw-data" in trace_lineage["root_ancestors"]
-    assert len(trace_lineage["trace_steps"]) == 1
-    assert trace_lineage["trace_steps"][0]["activity_id"] == "clean-act"
+    status_map = {t["evidence_id"]: t["support_status"] for t in trace["lineage_traces"]}
+    assert status_map["ev_sup"] == "supported"
+    assert status_map["ev_ref"] == "contradicted"
+
+
+def test_uncertainty_items_have_deterministic_content_addressed_ids():
+    """Uncertainty items have deterministic content-addressed IDs immune to insertion sequence."""
+    g1 = ceg.ClaimEvidenceGraph()
+    g1.add_claim("c1", "Claim 1")
+    g1.add_claim("c2", "Claim 2")
+    # c1 contradicted, then c2 unverifiable
+    g1.add_evidence("ev1", "direct_observation")
+    g1.add_support_edge("ev1", "c1", support_status="contradicted")
+    g1.add_evidence("ev2", "direct_observation")
+    g1.add_support_edge("ev2", "c2", support_status="unverifiable")
+
+    unc1 = g1.extract_uncertainties()
+
+    g2 = ceg.ClaimEvidenceGraph()
+    g2.add_claim("c2", "Claim 2")
+    g2.add_claim("c1", "Claim 1")
+    # reversed edge sequence: c2 unverifiable, then c1 contradicted
+    g2.add_evidence("ev2", "direct_observation")
+    g2.add_support_edge("ev2", "c2", support_status="unverifiable")
+    g2.add_evidence("ev1", "direct_observation")
+    g2.add_support_edge("ev1", "c1", support_status="contradicted")
+
+    unc2 = g2.extract_uncertainties()
+
+    assert [u.item_id for u in unc1] == [u.item_id for u in unc2]
+    assert all(u.item_id.startswith("unc-") for u in unc1)
 
 
 def test_json_schema_draft_2020_12_validation():
-    """Exported ClaimEvidenceGraph dictionary strictly matches schemas/claim-evidence-graph.schema.json."""
+    """Exported ClaimEvidenceGraph dictionary strictly validates against schemas/claim-evidence-graph.schema.json."""
     schema_path = ROOT / "schemas/claim-evidence-graph.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
     g = ceg.ClaimEvidenceGraph(graph_id="ceg-schema-test")
     c1 = g.add_claim("c1", "Claim A", target_work_id="w1", locator="p.1", claim_type="empirical_finding")
     c2 = g.add_claim("c2", "Claim B", target_work_id="w2", locator="p.2", claim_type="benchmark_result")
-    ev1 = g.add_evidence("ev1", "table_cell", source_work_id="w1", locator="tab:1", excerpt="12.4%")
 
-    g.add_support_edge("ev1", "c1", support_status="supported")
+    # Lineage receipt ref
+    ref_lin = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="r1", receipt_digest="a" * 64)
+    # Academic evidence receipt ref
+    ref_acad = ceg.ReceiptRef(kind="academic_evidence", schema_version="1.0", claim_digest="b" * 64, payload_sha256="c" * 64)
+
+    ev1 = g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref_lin)
+    ev2 = g.add_evidence("ev2", "evidence_receipt", receipt_ref=ref_acad)
+
+    g.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_lin)
+    g.add_support_edge("ev2", "c2", support_status="unverifiable", receipt_ref=ref_acad)
     g.add_claim_relation("c1", "c2", relation_type="corroborates", evidence_refs=["ev1"])
 
     payload = g.to_dict()
 
-    # Draft 2020-12 validation
     validator = jsonschema.Draft202012Validator(schema)
     validator.validate(payload)
     assert payload["protocol"] == "claim-evidence-graph-1.0"

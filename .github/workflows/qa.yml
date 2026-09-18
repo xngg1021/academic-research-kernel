@@ -152,7 +152,9 @@ jobs:
           assert manifest is not None and not diag, f'Manifest errors: {diag}'
           mcp = agent_plugins._discover_mcp(root, root / '.data', diag, create_data=False)
           assert 'academic-skills' in mcp and not diag, f'MCP errors: {diag}'
+          expected_count = len(list((root / 'skills').glob('*/SKILL.md')))
+          assert expected_count >= 12, f'Expected at least 12 skills, found {expected_count}'
           skills = agent_plugins._discover_skills(root, diag)
-          assert len(skills) == 11 and not diag, f'Skill errors: {diag}'
-          print('Hermes Agent Plugins v1 live validation SUCCESS: 11 skills, MCP, and manifest clean!')
+          assert len(skills) == expected_count and not diag, f'Skill errors: {diag}'
+          print(f'Hermes Agent Plugins v1 live validation SUCCESS: {len(skills)} skills, MCP, and manifest clean!')
           "

@@ -71,32 +71,7 @@
           },
           "source_work_id": {"type": "string"},
           "locator": {"type": "string"},
-          "receipt_ref": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["kind", "schema_version"],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": ["academic_evidence", "lineage"]
-              },
-              "schema_version": {"type": "string"},
-              "receipt_id": {"type": "string"},
-              "receipt_digest": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$"
-              },
-              "claim_digest": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$"
-              },
-              "payload_sha256": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$"
-              },
-              "locator": {"type": "string"}
-            }
-          },
+          "receipt_ref": {"$ref": "#/$defs/receiptRef"},
           "content_sha256": {
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
@@ -119,32 +94,7 @@
             "type": "string",
             "enum": ["supported", "contradicted", "unverifiable", "out_of_scope"]
           },
-          "receipt_ref": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["kind", "schema_version"],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": ["academic_evidence", "lineage"]
-              },
-              "schema_version": {"type": "string"},
-              "receipt_id": {"type": "string"},
-              "receipt_digest": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$"
-              },
-              "claim_digest": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$"
-              },
-              "payload_sha256": {
-                "type": "string",
-                "pattern": "^[0-9a-f]{64}$"
-              },
-              "locator": {"type": "string"}
-            }
-          },
+          "receipt_ref": {"$ref": "#/$defs/receiptRef"},
           "metadata": {"type": "object"}
         }
       }
@@ -188,6 +138,39 @@
           "metadata": {"type": "object"}
         }
       }
+    }
+  },
+  "$defs": {
+    "receiptRef": {
+      "type": "object",
+      "oneOf": [
+        {
+          "description": "LineageReceipt reference",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "lineage"},
+            "schema_version": {"const": "lineage-receipt-1.0"},
+            "receipt_id": {"type": "string"},
+            "receipt_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "locator": {"type": "string"}
+          },
+          "required": ["kind", "schema_version", "receipt_id", "receipt_digest"]
+        },
+        {
+          "description": "AcademicEvidenceReceipt reference",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "academic_evidence"},
+            "schema_version": {"const": "1.0"},
+            "claim_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "locator": {"type": "string"}
+          },
+          "required": ["kind", "schema_version", "claim_digest", "payload_sha256"]
+        }
+      ]
     }
   }
 }
