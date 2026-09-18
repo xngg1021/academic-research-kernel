@@ -31,7 +31,7 @@ SLL erlaubt weitgehend Nutzung, Studium, Änderung, kommerzielle Nutzung, Verbre
 | `skills/claim-evidence-graph` | 1.0.0 | Deterministischer wissenschaftlicher Behauptungs- und Evidenzgrafen-Kern: Verknüpfung von Behauptungen, Evidenzankern und Herkunftsnachweisen |
 | `skills/cross-review-five` | 2.0.0 | Dynamisches Multi-Reviewer-Panel für heterogene Modelle und Subagenten (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini usw.): v2 4-Stufen Sparse-Deliberation-Pipeline mit Kuhn-Munkres-Ungarischer Zuordnung und P0-P3-Schweregraden |
 
-Die elf Skills umfassen 21 Markdown-Referenzdateien, die nur bei Bedarf geladen werden. GB/T 7714-2025 ist in Kraft; die Schreibreferenz unterscheidet das verifizierte Inkrafttretensdatum von ausdrücklich gekennzeichneten Beispielen von 2015. Volle Konformität mit der Fassung 2025 erfordert die Vorlage oder den Standardtext der Zielinstitution.
+Die zwölf Skills umfassen 21 Markdown-Referenzdateien, die nur bei Bedarf geladen werden. GB/T 7714-2025 ist in Kraft; die Schreibreferenz unterscheidet das verifizierte Inkrafttretensdatum von ausdrücklich gekennzeichneten Beispielen von 2015. Volle Konformität mit der Fassung 2025 erfordert die Vorlage oder den Standardtext der Zielinstitution.
 
 ## Integration & Installation
 
@@ -77,7 +77,7 @@ git diff --check
 
 QA prüft Metadaten, Referenzen, Muster für persönliche Pfade/bekannte Geheimnisse, Python-Syntax und markierte ausführbare Zäune. Jedes Smoke-Beispiel läuft unverändert in einem frischen Subprozess. Plot-Beispiele akzeptieren `PLOT_DIR` (Standard `~/plots`, explizit expandiert); Tests nutzen ein temporäres Verzeichnis. Nicht klassifizierte Python-Zäune werden abgelehnt; `fragment:`-Blöcke werden syntaxgeprüft, benötigen aber benannte Eingaben und laufen nicht eigenständig. `external-test:`-Blöcke laufen nur über den manuellen externen Befehl. Rückgabe: 0 bei bestandenen konfigurierten Prüfungen, 1 bei Code-/Schema-/Identitätsfehlern, 2 bei Transport-/Authentifizierungs-/Kontingentunverfügbarkeit; optionale, nicht konfigurierte Dienste bleiben SKIP.
 
-Die gepinnten Hermes-Authoring-Tests werden ohne Änderung ihrer Pro-Skill-Regeln wiederverwendet. Upstream-Prüfungen über die Gesamtverteilung gelten für diesen Tap nicht; unser Harness prüft elf Skills und löst Referenzen gegen den gepinnten gebündelten/optionalen Katalog auf. Dies ist kein vollständiger Hermes-Installationstest. CI nutzt das Netzwerk nur zur Installation von Abhängigkeiten; gewöhnliche PR-Tests rufen keine Wissenschafts-APIs auf.
+Die gepinnten Hermes-Authoring-Tests werden ohne Änderung ihrer Pro-Skill-Regeln wiederverwendet. Upstream-Prüfungen über die Gesamtverteilung gelten für diesen Tap nicht; unser Harness prüft zwölf Skills und löst Referenzen gegen den gepinnten gebündelten/optionalen Katalog auf. Dies ist kein vollständiger Hermes-Installationstest. CI nutzt das Netzwerk nur zur Installation von Abhängigkeiten; gewöhnliche PR-Tests rufen keine Wissenschafts-APIs auf.
 
 CI führt die vollständige QA-Suite per GitHub Actions auf Ubuntu (Python 3.12 und 3.13), Windows und macOS aus. Ein separater Tap-Integrations-Workflow läuft bei Push auf main: Er installiert den gepinnten Hermes-Checkout aus tests/upstream/provenance.json und führt tap add, search, install und list gegen dieses Repository aus. Eine frische Hermes-Sitzung und jede Abhängigkeitsversionskombination werden nicht beansprucht. Exakte Versionen, Prüfungen und Einschränkungen stehen im [Audit](docs/audit-20260906.md).
 

@@ -8,20 +8,26 @@ Covers:
 4. Semantic cycles (A contradicts B, B contradicts A) are valid and preserved without cycle errors.
 5. Dangling edge detection (missing claim, missing evidence anchor, or missing evidence_refs).
 6. Strongly typed ReceiptRef with strict mutual exclusivity (lineage vs academic_evidence).
-7. AcademicEvidenceReceipt payload SHA256 and exact claim_digest verification.
-8. SupportEdge receipt_ref verification.
-9. Receipt registration conflict rejection.
-10. Insertion-order invariance of canonical graph_digest across tie-key edge sets.
-11. Metadata sensitivity of graph_digest.
-12. Immutability and deep isolation of exported graph representations.
-13. Three-state uncertainty queue discipline with content-addressed deterministic IDs.
-14. Provenance tracing preserves support status (supported vs contradicted).
-15. Explicit failure report when referenced receipt is missing from registry (no silent empty success).
-16. Strict JSON Schema draft 2020-12 parity with additionalProperties: false and oneOf receiptRef.
+7. AcademicEvidenceReceipt verified with REAL schemas/evidence-receipt.schema.json fixture.
+8. AcademicEvidence payload SHA256 physical assertion: registry key cannot bypass hash mismatch.
+9. register_receipt deepcopies payloads, preventing external mutation and evidence drift.
+10. Frozen dataclasses: registered graph objects are immutable against direct property mutation.
+11. LineageReceipt strict positive assertion on protocol, receipt_id, and receipt_digest.
+12. Semantic anchor-type and receipt-kind alignment (lineage_receipt vs evidence_receipt).
+13. Missing referenced receipts generate deterministic missing_receipt uncertainty items.
+14. SupportEdge receipt_ref verification.
+15. Receipt registration conflict rejection.
+16. Insertion-order invariance of canonical graph_digest across tie-key edge sets.
+17. Metadata sensitivity of graph_digest.
+18. Immutability and deep isolation of exported graph representations.
+19. Three-state uncertainty queue discipline with content-addressed deterministic IDs.
+20. Provenance tracing preserves support status (supported vs contradicted).
+21. Strict JSON Schema draft 2020-12 parity with additionalProperties: false and oneOf receiptRef.
 """
 from __future__ import annotations
 
 import copy
+import dataclasses
 import json
 import os
 import sys
@@ -166,38 +172,57 @@ def test_strongly_typed_receipt_ref_mutual_exclusivity():
         )
 
 
-def test_academic_evidence_receipt_exact_claim_digest_verification():
-    """validate_graph checks AcademicEvidenceReceipt payload SHA256 and exact claim_digest match."""
-    g = ceg.ClaimEvidenceGraph()
-    g.add_claim("c1", "Reported effect size d = 0.52")
+def test_academic_evidence_receipt_verified_with_real_schema_fixture():
+    """validate_graph checks a REAL AcademicEvidenceReceipt fixture matching schemas/evidence-receipt.schema.json."""
+    # Load and validate against canonical schema
+    schema_path = ROOT / "schemas/evidence-receipt.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
-    mock_academic_receipt = {
+    real_academic_receipt = {
         "schema_version": "1.0",
+        "query": "effect size of intervention X",
+        "identifiers": {
+            "doi": "10.1000/182",
+            "arxiv_id": None,
+            "openalex_id": None,
+            "pmid": None,
+        },
+        "sources": [
+            {
+                "source": "https://example.com/study-182",
+                "queried_at": "2026-09-18T10:00:00Z",
+                "status": "ok",
+            }
+        ],
         "generated_at": "2026-09-18T10:00:00Z",
         "claims": [
             {
                 "claim": "Cohen's d is 0.52",
-                "evidence_type": "statistical_test",
-                "locator": "tab:2",
-                "source": "t_test_output",
+                "evidence_type": "computed",
+                "locator": "table:2:cell:B4",
+                "source": "t_test_evaluator",
                 "support_status": "supported",
             },
             {
                 "claim": "p-value is 0.01",
-                "evidence_type": "p_value",
-                "locator": "tab:2",
-                "source": "t_test_output",
+                "evidence_type": "computed",
+                "locator": "table:2:cell:B5",
+                "source": "t_test_evaluator",
                 "support_status": "supported",
-            }
-        ]
+            },
+        ],
     }
-    payload_sha = ceg.canonical_academic_receipt_payload_sha256(mock_academic_receipt)
-    exact_claim_digest = ceg.canonical_evidence_claim_digest(mock_academic_receipt["claims"][0])
+    # Assert fixture is 100% valid under the repository's real evidence-receipt JSON Schema
+    jsonschema.Draft202012Validator(schema).validate(real_academic_receipt)
 
-    # Register receipt under its payload SHA
-    g.register_receipt(payload_sha, mock_academic_receipt)
+    g = ceg.ClaimEvidenceGraph()
+    g.add_claim("c1", "Reported effect size d = 0.52")
 
-    # Anchor with matching claim_digest
+    payload_sha = ceg.canonical_academic_receipt_payload_sha256(real_academic_receipt)
+    exact_claim_digest = ceg.canonical_evidence_claim_digest(real_academic_receipt["claims"][0])
+
+    g.register_receipt(payload_sha, real_academic_receipt)
+
     ref_good = ceg.ReceiptRef(
         kind="academic_evidence",
         schema_version="1.0",
@@ -211,15 +236,15 @@ def test_academic_evidence_receipt_exact_claim_digest_verification():
     assert valid is True
     assert not errors
 
-    # Anchor with non-existent claim_digest inside that receipt
+    # Bad claim digest detection
     ref_bad = ceg.ReceiptRef(
         kind="academic_evidence",
         schema_version="1.0",
-        claim_digest="f" * 64,  # Bad claim digest
+        claim_digest="f" * 64,
         payload_sha256=payload_sha,
     )
     g2 = ceg.ClaimEvidenceGraph()
-    g2.register_receipt(payload_sha, mock_academic_receipt)
+    g2.register_receipt(payload_sha, real_academic_receipt)
     g2.add_claim("c1", "Test claim")
     g2.add_evidence("ev_bad", "evidence_receipt", receipt_ref=ref_bad)
     g2.add_support_edge("ev_bad", "c1", support_status="supported")
@@ -229,22 +254,178 @@ def test_academic_evidence_receipt_exact_claim_digest_verification():
     assert any("AcademicEvidence claim digest mismatch" in err for err in errors2)
 
 
+def test_academic_evidence_receipt_payload_hash_cannot_be_bypassed_by_key():
+    """Registering under a claimed key does not bypass physical SHA256 computation of payload."""
+    g = ceg.ClaimEvidenceGraph()
+    g.add_claim("c1", "Claim")
+
+    legit_receipt = {
+        "schema_version": "1.0",
+        "query": "test",
+        "identifiers": [],
+        "sources": [],
+        "generated_at": "2026-09-18T10:00:00Z",
+        "claims": [{
+            "claim": "Claim text",
+            "evidence_type": "computed",
+            "locator": "loc",
+            "source": "src",
+            "support_status": "supported",
+        }],
+    }
+    legit_sha = ceg.canonical_academic_receipt_payload_sha256(legit_receipt)
+    claim_dig = ceg.canonical_evidence_claim_digest(legit_receipt["claims"][0])
+
+    # Attacker tries registering mutated data under legit_sha
+    tampered_receipt = copy.deepcopy(legit_receipt)
+    tampered_receipt["query"] = "tampered query"
+
+    g.register_receipt(legit_sha, tampered_receipt)
+
+    ref = ceg.ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest=claim_dig,
+        payload_sha256=legit_sha,
+    )
+    g.add_evidence("ev1", "evidence_receipt", receipt_ref=ref)
+    g.add_support_edge("ev1", "c1", support_status="supported")
+
+    valid, errors = g.validate_graph()
+    assert valid is False
+    assert any("AcademicEvidence payload SHA256 mismatch" in err for err in errors)
+
+
+def test_register_receipt_deepcopies_preventing_external_mutation():
+    """register_receipt creates a deepcopy snapshot, preventing external mutation of registered receipts."""
+    g = ceg.ClaimEvidenceGraph()
+    g.add_claim("c1", "Claim")
+
+    receipt = {
+        "schema_version": "1.0",
+        "query": "original",
+        "identifiers": [],
+        "sources": [],
+        "generated_at": "2026-09-18T10:00:00Z",
+        "claims": [{
+            "claim": "Valid claim",
+            "evidence_type": "computed",
+            "locator": "l1",
+            "source": "s1",
+            "support_status": "supported",
+        }],
+    }
+    sha = ceg.canonical_academic_receipt_payload_sha256(receipt)
+    claim_dig = ceg.canonical_evidence_claim_digest(receipt["claims"][0])
+
+    g.register_receipt(sha, receipt)
+
+    # Mutate the caller's receipt in-place
+    receipt["query"] = "mutated after registration"
+    receipt["claims"][0]["claim"] = "tampered claim"
+
+    ref = ceg.ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest=claim_dig,
+        payload_sha256=sha,
+    )
+    g.add_evidence("ev1", "evidence_receipt", receipt_ref=ref)
+    g.add_support_edge("ev1", "c1", support_status="supported")
+
+    valid, errors = g.validate_graph()
+    # Graph remains completely valid because internal registry snapshot was isolated from external mutation
+    assert valid is True
+    assert not errors
+
+
+def test_graph_objects_are_frozen_immutable():
+    """Nodes, edges, and refs are frozen dataclasses to prevent in-place mutation drift."""
+    c = ceg.Claim(id="c1", text="Unchangeable text")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        c.text = "New text"
+
+    ref = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="r1", receipt_digest="a" * 64)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        ref.receipt_id = "r2"
+
+    ev = ceg.EvidenceAnchor(id="ev1", anchor_type="direct_observation")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        ev.anchor_type = "table_cell"
+
+    edge = ceg.EvidenceSupportEdge(evidence_id="ev1", claim_id="c1", support_status="supported")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        edge.support_status = "contradicted"
+
+
+def test_lineage_receipt_strict_positive_assertion():
+    """validate_graph asserts protocol=='lineage-receipt-1.0', exact receipt_id, and exact receipt_digest."""
+    g = ceg.ClaimEvidenceGraph()
+    g.add_claim("c1", "Claim")
+
+    ref = ceg.ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id="rec-lin-1",
+        receipt_digest="a" * 64,
+    )
+    g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref)
+    g.add_support_edge("ev1", "c1", support_status="supported")
+
+    # 1. Invalid protocol object registered
+    g.register_receipt("rec-lin-1", {"protocol": "wrong-protocol", "receipt_id": "rec-lin-1", "receipt_digest": "a" * 64})
+    valid, errors = g.validate_graph()
+    assert valid is False
+    assert any("Lineage receipt invalid protocol" in err for err in errors)
+
+
+def test_anchor_type_and_receipt_ref_kind_alignment():
+    """EvidenceAnchor anchor_type must match ReceiptRef kind."""
+    ref_acad = ceg.ReceiptRef(kind="academic_evidence", schema_version="1.0", claim_digest="a" * 64, payload_sha256="b" * 64)
+    ref_lin = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="r1", receipt_digest="c" * 64)
+
+    # lineage_receipt anchor cannot take academic_evidence ref
+    with pytest.raises(ValueError, match="requires a ReceiptRef with kind='lineage'"):
+        ceg.EvidenceAnchor(id="ev1", anchor_type="lineage_receipt", receipt_ref=ref_acad)
+
+    # evidence_receipt anchor cannot take lineage ref
+    with pytest.raises(ValueError, match="requires a ReceiptRef with kind='academic_evidence'"):
+        ceg.EvidenceAnchor(id="ev2", anchor_type="evidence_receipt", receipt_ref=ref_lin)
+
+
+def test_missing_receipt_generates_uncertainty_item():
+    """Referenced receipts absent from registry systematically surface as missing_receipt uncertainties."""
+    g = ceg.ClaimEvidenceGraph()
+    g.add_claim("c1", "Claim")
+
+    ref_missing = ceg.ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id="unregistered-receipt-123",
+        receipt_digest="a" * 64,
+    )
+    g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref_missing)
+    g.add_support_edge("ev1", "c1", support_status="supported")
+
+    uncs = g.extract_uncertainties()
+    assert any(u.kind == "missing_receipt" and "unregistered-receipt-123" in u.reason for u in uncs)
+    missing_unc = [u for u in uncs if u.kind == "missing_receipt"][0]
+    assert missing_unc.needs_human is False
+
+
 def test_support_edge_preserves_distinct_receipt_refs():
     """Support edges between same evidence and claim with distinct ReceiptRefs are not swallowed."""
     g = ceg.ClaimEvidenceGraph()
     g.add_claim("c1", "Target claim")
-    g.add_evidence("ev1", "lineage_receipt")
+    g.add_evidence("ev1", "lineage_receipt", receipt_ref=ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-A", receipt_digest="a" * 64))
 
     ref_a = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-A", receipt_digest="a" * 64)
     ref_b = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-B", receipt_digest="b" * 64)
 
-    # Edge 1 via Receipt A
     g.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a)
-    # Duplicate edge 1 -> idempotent, remains count 1
     g.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a)
     assert len(g.support_edges) == 1
 
-    # Edge 2 via Receipt B -> distinct, count becomes 2
     g.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_b)
     assert len(g.support_edges) == 2
 
@@ -257,14 +438,14 @@ def test_insertion_order_invariance_across_tie_keys():
     # Graph 1: insert edge A then B
     g1 = ceg.ClaimEvidenceGraph(graph_id="ceg-fixed")
     g1.add_claim("c1", "Claim")
-    g1.add_evidence("ev1", "lineage_receipt")
+    g1.add_evidence("ev1", "lineage_receipt", receipt_ref=ref_a)
     g1.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a, metadata={"m": 1})
     g1.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_b, metadata={"m": 2})
 
     # Graph 2: insert edge B then A (reversed)
     g2 = ceg.ClaimEvidenceGraph(graph_id="ceg-fixed")
     g2.add_claim("c1", "Claim")
-    g2.add_evidence("ev1", "lineage_receipt")
+    g2.add_evidence("ev1", "lineage_receipt", receipt_ref=ref_a)
     g2.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_b, metadata={"m": 2})
     g2.add_support_edge("ev1", "c1", support_status="supported", receipt_ref=ref_a, metadata={"m": 1})
 
@@ -275,7 +456,6 @@ def test_register_receipt_conflict_rejection():
     """register_receipt rejects conflicting registrations for the same ID."""
     g = ceg.ClaimEvidenceGraph()
     g.register_receipt("rec-1", {"data": 123})
-    # Same data -> no-op
     g.register_receipt("rec-1", {"data": 123})
 
     with pytest.raises(ValueError, match="Conflicting receipt registration"):
@@ -284,7 +464,6 @@ def test_register_receipt_conflict_rejection():
 
 def test_trace_claim_provenance_preserves_support_status_and_direction(tmp_path):
     """trace_claim_provenance preserves support_status (supported vs contradicted)."""
-    # Build lineage receipt
     f = tmp_path / "data.csv"
     f.write_text("x,y\n1,2\n", encoding="utf-8")
     sha = pr.compute_file_sha256(f)
@@ -335,7 +514,6 @@ def test_uncertainty_items_have_deterministic_content_addressed_ids():
     g1 = ceg.ClaimEvidenceGraph()
     g1.add_claim("c1", "Claim 1")
     g1.add_claim("c2", "Claim 2")
-    # c1 contradicted, then c2 unverifiable
     g1.add_evidence("ev1", "direct_observation")
     g1.add_support_edge("ev1", "c1", support_status="contradicted")
     g1.add_evidence("ev2", "direct_observation")
@@ -346,7 +524,6 @@ def test_uncertainty_items_have_deterministic_content_addressed_ids():
     g2 = ceg.ClaimEvidenceGraph()
     g2.add_claim("c2", "Claim 2")
     g2.add_claim("c1", "Claim 1")
-    # reversed edge sequence: c2 unverifiable, then c1 contradicted
     g2.add_evidence("ev2", "direct_observation")
     g2.add_support_edge("ev2", "c2", support_status="unverifiable")
     g2.add_evidence("ev1", "direct_observation")
@@ -367,9 +544,7 @@ def test_json_schema_draft_2020_12_validation():
     c1 = g.add_claim("c1", "Claim A", target_work_id="w1", locator="p.1", claim_type="empirical_finding")
     c2 = g.add_claim("c2", "Claim B", target_work_id="w2", locator="p.2", claim_type="benchmark_result")
 
-    # Lineage receipt ref
     ref_lin = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="r1", receipt_digest="a" * 64)
-    # Academic evidence receipt ref
     ref_acad = ceg.ReceiptRef(kind="academic_evidence", schema_version="1.0", claim_digest="b" * 64, payload_sha256="c" * 64)
 
     ev1 = g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref_lin)
