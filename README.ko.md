@@ -27,7 +27,7 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 | `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 검색 로그, 선별 원장, 효과 크기 환산, 이질성, 고정·무작위 효과 통합, 민감도와 출판 편향 진단 |
 | `skills/literature-watch` | 1.1.0 | 주간 블루프린트: OpenAlex와 Crossref에서 주제·저자·DOI의 신규 저작을 감시하고 중복 제거 후 신규 항목만 보고 |
 | `skills/retraction-watch` | 1.1.0 | 주간 블루프린트: OpenAlex is_retracted와 Crossref 갱신 기록(update-to 신호)에 대해 DOI 감시 목록을 재점검하고 상태 변화만 보고 |
-| `skills/research-object-identity` | 1.1.0 | 결정적 연구 객체 신원 계층: 식별자 정규화, 5상태 판정(신뢰 점수 없음), 관계·계보 간선. Evidence Receipt 소비 |
+| `skills/research-object-identity` | 1.1.0 | 결정론적 연구 객체 식별 및 생산 계보 커널 (Provenance Kernel v1): 식별자 정규화, 5가지 상태 판정, 콘텐츠 주소 지정 파생 그래프, 인과적 DAG 검증 및 밀리초 단위 오프라인 역방향 추적 |
 | `skills/cross-review-five` | 2.0.0 | 임의의 모델 및 서브에이전트를 지원하는 동적 다중 검토 패널 (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini 등): v2 4단계 Sparse Deliberation 파이프라인 (헝가리안 알고리즘 기반 상호보완적 블라인드 질의, P0-P3 심각도 지원) |
 
 11개 스킬에는 21편의 Markdown 참조 파일이 있으며 필요할 때만 로드된다. GB/T 7714-2025가 시행 중이며, 집필 참조는 검증된 시행일과 명시적으로 2015년 예시로 표기된 것을 구분한다. 2025년판 완전 준수에는 대상 기관의 템플릿 또는 표준 원문이 필요하다.

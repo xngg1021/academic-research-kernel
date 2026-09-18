@@ -2,33 +2,29 @@
 """Research Object Provenance Kernel & Lineage Receipt v1.
 
 Deterministic, content-addressed scientific derivation and provenance kernel
-grounded in W3C PROV-DM (Entity, Activity, used, generated, derived_from).
+grounded in W3C PROV-DM core concepts (Entity, Activity, used, generated, derived_from).
 
-Core Capabilities:
-1. First-class Entity & Activity dataclasses with content-addressing (SHA256).
-2. LineageGraph: In-memory causal derivation graph container.
-3. validate_lineage(): Strict topological DAG verification, referential
-   integrity, and on-disk file hash checks.
-4. trace_origin(): Millisecond-level deterministic backward traversal
-   from any downstream artifact or table cell back to root input datasets,
-   emitting standardized LineageReceipt records matching
-   schemas/lineage-receipt.schema.json.
+Core Invariants:
+1. Strict type enforcement and fail-fast validation for all entities, activities, and edges.
+2. Disjoint entity and activity ID namespaces with idempotent registration.
+3. Causal DAG acyclicity with iterative Kahn / three-color cycle detection.
+4. Content-addressed file verification: missing on-disk files trigger 'missing_artifact',
+   tampered contents trigger 'hash_mismatch', unverified files trigger 'unchecked'.
+5. Referential integrity on script bindings and derivation activities.
+6. Immutable, deep-copied LineageReceipt with canonical content-addressed receipt_id.
+7. Millisecond-level target-scoped backward traversal back to root raw inputs.
 """
 from __future__ import annotations
 
+import collections
+import copy
 import hashlib
 import json
-import os
-import sys
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-
-if sys.platform == "win32":
-    for _s in (sys.stdout, sys.stderr):
-        if _s and hasattr(_s, "reconfigure"):
-            _s.reconfigure(encoding="utf-8")
 
 __all__ = [
     "Entity",
@@ -39,7 +35,37 @@ __all__ = [
     "validate_lineage",
     "trace_origin",
     "compute_file_sha256",
+    "VALID_ENTITY_TYPES",
+    "VALID_ACTIVITY_TYPES",
+    "VALID_EDGE_TYPES",
 ]
+
+VALID_ENTITY_TYPES: Set[str] = {
+    "data_snapshot",
+    "code_file",
+    "environment_spec",
+    "statistic_artifact",
+    "table_cell",
+    "figure_artifact",
+    "generic_entity",
+}
+
+VALID_ACTIVITY_TYPES: Set[str] = {
+    "data_cleaning",
+    "computation_run",
+    "statistical_analysis",
+    "table_extraction",
+    "render_run",
+    "generic_activity",
+}
+
+VALID_EDGE_TYPES: Set[str] = {
+    "used",
+    "generated",
+    "derived_from",
+}
+
+SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 
 
 def compute_file_sha256(path: str | Path, chunk_size: int = 65536) -> str:
@@ -60,32 +86,47 @@ def compute_file_sha256(path: str | Path, chunk_size: int = 65536) -> str:
 @dataclass
 class Entity:
     id: str
-    type: str  # data_snapshot, code_file, environment_spec, statistic_artifact, table_cell, figure_artifact, generic_entity
+    type: str
     sha256: Optional[str] = None
     locator: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self):
+        if self.type not in VALID_ENTITY_TYPES:
+            raise ValueError(f"Invalid entity type: {self.type!r}. Must be one of {sorted(VALID_ENTITY_TYPES)}")
+        if self.sha256 is not None:
+            self.sha256 = self.sha256.strip().lower()
+            if not SHA256_REGEX.match(self.sha256):
+                raise ValueError(f"Invalid SHA256 format for entity {self.id!r}: {self.sha256!r}. Must be 64 lowercase hex digits.")
+        self.metadata = copy.deepcopy(self.metadata)
+
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {"id": self.id, "type": self.type}
         if self.sha256:
-            d["sha256"] = self.sha256.lower()
-        if self.locator:
+            d["sha256"] = self.sha256
+        if self.locator is not None:
             d["locator"] = str(self.locator)
         if self.metadata:
-            d["metadata"] = self.metadata
+            d["metadata"] = copy.deepcopy(self.metadata)
         return d
 
 
 @dataclass
 class Activity:
     id: str
-    type: str  # data_cleaning, computation_run, statistical_analysis, table_extraction, render_run, generic_activity
+    type: str
     command: Optional[str] = None
     script_id: Optional[str] = None
     commit_sha: Optional[str] = None
     parameters: Dict[str, Any] = field(default_factory=dict)
     environment: Dict[str, Any] = field(default_factory=dict)
     timestamp: Optional[str] = None
+
+    def __post_init__(self):
+        if self.type not in VALID_ACTIVITY_TYPES:
+            raise ValueError(f"Invalid activity type: {self.type!r}. Must be one of {sorted(VALID_ACTIVITY_TYPES)}")
+        self.parameters = copy.deepcopy(self.parameters)
+        self.environment = copy.deepcopy(self.environment)
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {"id": self.id, "type": self.type}
@@ -96,9 +137,9 @@ class Activity:
         if self.commit_sha:
             d["commit_sha"] = self.commit_sha
         if self.parameters:
-            d["parameters"] = self.parameters
+            d["parameters"] = copy.deepcopy(self.parameters)
         if self.environment:
-            d["environment"] = self.environment
+            d["environment"] = copy.deepcopy(self.environment)
         if self.timestamp:
             d["timestamp"] = self.timestamp
         return d
@@ -106,10 +147,16 @@ class Activity:
 
 @dataclass
 class LineageEdge:
-    type: str  # used, generated, derived_from
+    type: str
     source_id: str
     target_id: str
+    activity_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.type not in VALID_EDGE_TYPES:
+            raise ValueError(f"Invalid edge type: {self.type!r}. Must be one of {sorted(VALID_EDGE_TYPES)}")
+        self.metadata = copy.deepcopy(self.metadata)
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -117,18 +164,23 @@ class LineageEdge:
             "source_id": self.source_id,
             "target_id": self.target_id,
         }
+        if self.activity_id:
+            d["activity_id"] = self.activity_id
         if self.metadata:
-            d["metadata"] = self.metadata
+            d["metadata"] = copy.deepcopy(self.metadata)
         return d
 
 
 class LineageGraph:
-    """In-memory causal derivation graph container holding Entities, Activities, and Edges."""
+    """In-memory causal derivation graph container enforcing disjoint namespaces and referential integrity."""
 
-    def __init__(self):
+    def __init__(self, root_dir: Optional[str | Path] = None):
         self.entities: Dict[str, Entity] = {}
         self.activities: Dict[str, Activity] = {}
         self.edges: List[LineageEdge] = []
+        self._all_ids: Dict[str, str] = {}  # id -> "entity" | "activity"
+        self._generating_activities: Dict[str, str] = {}  # entity_id -> activity_id (single generator rule)
+        self.root_dir: Optional[Path] = Path(root_dir).resolve() if root_dir else None
 
     def add_entity(
         self,
@@ -138,9 +190,31 @@ class LineageGraph:
         locator: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Entity:
-        ent = Entity(id=id, type=type, sha256=sha256, locator=locator, metadata=metadata or {})
-        self.entities[id] = ent
-        return ent
+        id_str = str(id).strip()
+        if id_str in self._all_ids and self._all_ids[id_str] != "entity":
+            raise ValueError(f"Namespace collision: ID {id_str!r} is already registered as an activity.")
+
+        loc_str = str(locator) if locator is not None else None
+        new_ent = Entity(id=id_str, type=type, sha256=sha256, locator=loc_str, metadata=metadata or {})
+
+        # Idempotent registration check (P1-02)
+        if id_str in self.entities:
+            existing = self.entities[id_str]
+            if (
+                existing.type != new_ent.type
+                or existing.sha256 != new_ent.sha256
+                or existing.locator != new_ent.locator
+                or existing.metadata != new_ent.metadata
+            ):
+                raise ValueError(
+                    f"Conflicting entity registration for ID {id_str!r}: "
+                    f"existing={existing.to_dict()}, new={new_ent.to_dict()}"
+                )
+            return existing
+
+        self.entities[id_str] = new_ent
+        self._all_ids[id_str] = "entity"
+        return new_ent
 
     def add_activity(
         self,
@@ -153,8 +227,12 @@ class LineageGraph:
         environment: Optional[Dict[str, Any]] = None,
         timestamp: Optional[str] = None,
     ) -> Activity:
-        act = Activity(
-            id=id,
+        id_str = str(id).strip()
+        if id_str in self._all_ids and self._all_ids[id_str] != "activity":
+            raise ValueError(f"Namespace collision: ID {id_str!r} is already registered as an entity.")
+
+        new_act = Activity(
+            id=id_str,
             type=type,
             command=command,
             script_id=script_id,
@@ -163,16 +241,45 @@ class LineageGraph:
             environment=environment or {},
             timestamp=timestamp or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         )
-        self.activities[id] = act
-        return act
+
+        # Idempotent registration check (P1-02)
+        if id_str in self.activities:
+            existing = self.activities[id_str]
+            if (
+                existing.type != new_act.type
+                or existing.command != new_act.command
+                or existing.script_id != new_act.script_id
+                or existing.commit_sha != new_act.commit_sha
+                or existing.parameters != new_act.parameters
+                or existing.environment != new_act.environment
+            ):
+                raise ValueError(
+                    f"Conflicting activity registration for ID {id_str!r}: "
+                    f"existing={existing.to_dict()}, new={new_act.to_dict()}"
+                )
+            return existing
+
+        self.activities[id_str] = new_act
+        self._all_ids[id_str] = "activity"
+        return new_act
 
     def record_used(self, activity_id: str, entity_id: str, metadata: Optional[Dict[str, Any]] = None):
         """Record that an Activity consumed an Entity as input."""
-        self.edges.append(LineageEdge(type="used", source_id=activity_id, target_id=entity_id, metadata=metadata or {}))
+        act_id = str(activity_id).strip()
+        ent_id = str(entity_id).strip()
+        self.edges.append(LineageEdge(type="used", source_id=act_id, target_id=ent_id, metadata=metadata or {}))
 
     def record_generated(self, activity_id: str, entity_id: str, metadata: Optional[Dict[str, Any]] = None):
-        """Record that an Activity generated an Entity as output."""
-        self.edges.append(LineageEdge(type="generated", source_id=activity_id, target_id=entity_id, metadata=metadata or {}))
+        """Record that an Activity generated an Entity as output (single-producer invariant)."""
+        act_id = str(activity_id).strip()
+        ent_id = str(entity_id).strip()
+        if ent_id in self._generating_activities and self._generating_activities[ent_id] != act_id:
+            raise ValueError(
+                f"Single-producer violation: Entity {ent_id!r} is already generated by activity "
+                f"{self._generating_activities[ent_id]!r}; cannot be re-generated by {act_id!r}."
+            )
+        self._generating_activities[ent_id] = act_id
+        self.edges.append(LineageEdge(type="generated", source_id=act_id, target_id=ent_id, metadata=metadata or {}))
 
     def record_derivation(
         self,
@@ -182,131 +289,214 @@ class LineageGraph:
         metadata: Optional[Dict[str, Any]] = None,
     ):
         """Record that derived_entity_id was derived from source_entity_id."""
-        meta = dict(metadata or {})
-        if activity_id:
-            meta["activity_id"] = activity_id
-        self.edges.append(LineageEdge(type="derived_from", source_id=derived_entity_id, target_id=source_entity_id, metadata=meta))
+        d_id = str(derived_entity_id).strip()
+        s_id = str(source_entity_id).strip()
+        act_id = str(activity_id).strip() if activity_id else None
+        self.edges.append(LineageEdge(type="derived_from", source_id=d_id, target_id=s_id, activity_id=act_id, metadata=metadata or {}))
 
 
-@dataclass
+@dataclass(frozen=True)
 class LineageReceipt:
     protocol: str = "lineage-receipt-1.0"
     receipt_id: str = ""
+    content_digest: str = ""
     timestamp: str = ""
     target_id: str = ""
-    verification_status: str = "intact"  # intact, broken_chain, hash_mismatch, missing_input, cycle_detected
+    verification_status: str = "unchecked"
+    topology_status: str = "valid_dag"
+    content_verification: str = "unchecked"
     error_detail: Optional[str] = None
-    root_ancestors: List[str] = field(default_factory=list)
-    entities: List[Entity] = field(default_factory=list)
-    activities: List[Activity] = field(default_factory=list)
-    edges: List[LineageEdge] = field(default_factory=list)
-    trace_steps: List[Dict[str, Any]] = field(default_factory=list)
+    root_ancestors: Tuple[str, ...] = field(default_factory=tuple)
+    entities: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
+    activities: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
+    edges: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
+    trace_steps: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Strict dictionary matching schemas/lineage-receipt.schema.json."""
+        """Deepcopy and serialize strictly matching schemas/lineage-receipt.schema.json."""
         d: Dict[str, Any] = {
             "protocol": self.protocol,
             "receipt_id": self.receipt_id,
+            "content_digest": self.content_digest,
             "timestamp": self.timestamp,
             "target_id": self.target_id,
             "verification_status": self.verification_status,
-            "root_ancestors": self.root_ancestors,
-            "entities": [e.to_dict() for e in self.entities],
-            "activities": [a.to_dict() for a in self.activities],
-            "edges": [ed.to_dict() for ed in self.edges],
+            "topology_status": self.topology_status,
+            "content_verification": self.content_verification,
+            "root_ancestors": list(self.root_ancestors),
+            "entities": [copy.deepcopy(e) for e in self.entities],
+            "activities": [copy.deepcopy(a) for a in self.activities],
+            "edges": [copy.deepcopy(ed) for ed in self.edges],
         }
-        if self.error_detail:
+        if self.error_detail is not None:
             d["error_detail"] = self.error_detail
         if self.trace_steps:
-            d["trace_steps"] = self.trace_steps
-        return d
+            d["trace_steps"] = [copy.deepcopy(s) for s in self.trace_steps]
+        return copy.deepcopy(d)
 
 
-def validate_lineage(graph: LineageGraph, check_on_disk_hashes: bool = True) -> Tuple[str, Optional[str]]:
-    """Strict deterministic topological DAG validation, referential integrity, and content hash check.
+def _resolve_locator_path(locator: str, root_dir: Optional[Path] = None) -> Optional[Path]:
+    """Parse local filesystem path from locator string, discarding URI schemes or anchors."""
+    if not locator or locator.startswith(("http://", "https://", "ftp://")):
+        return None
+    clean_path = locator.split("#", 1)[0].split("?", 1)[0]
+    p = Path(clean_path)
+    if not p.is_absolute() and root_dir:
+        p = (root_dir / p).resolve()
+    return p
+
+
+def validate_lineage(
+    graph: LineageGraph,
+    check_on_disk_hashes: bool = True,
+    target_scope: Optional[Set[str]] = None,
+) -> Tuple[str, str, str, Optional[str]]:
+    """Strict deterministic topological DAG validation, referential integrity, and content hash checks.
 
     Returns:
-        (status, error_detail)
-        status in ("intact", "broken_chain", "hash_mismatch", "missing_input", "cycle_detected")
+        (verification_status, topology_status, content_verification, error_detail)
     """
-    # 1. Referential integrity: check that all edge references exist in graph
-    for edge in graph.edges:
+    scoped_entities = graph.entities
+    scoped_activities = graph.activities
+    scoped_edges = graph.edges
+
+    if target_scope is not None:
+        scoped_entities = {k: v for k, v in graph.entities.items() if k in target_scope}
+        scoped_activities = {k: v for k, v in graph.activities.items() if k in target_scope}
+        scoped_edges = [
+            e for e in graph.edges
+            if e.source_id in target_scope and e.target_id in target_scope
+        ]
+
+    # 1. Referential integrity on edges
+    for edge in scoped_edges:
         if edge.type == "used":
-            # source is activity, target is entity
             if edge.source_id not in graph.activities:
-                return "missing_input", f"Activity {edge.source_id!r} referenced in 'used' edge does not exist"
+                return "missing_input", "missing_input", "unchecked", f"Activity {edge.source_id!r} referenced in 'used' edge does not exist"
             if edge.target_id not in graph.entities:
-                return "missing_input", f"Entity {edge.target_id!r} consumed by activity {edge.source_id!r} does not exist"
+                return "missing_input", "missing_input", "unchecked", f"Entity {edge.target_id!r} consumed by activity {edge.source_id!r} does not exist"
         elif edge.type == "generated":
-            # source is activity, target is entity
             if edge.source_id not in graph.activities:
-                return "broken_chain", f"Activity {edge.source_id!r} referenced in 'generated' edge does not exist"
+                return "broken_chain", "broken_chain", "unchecked", f"Activity {edge.source_id!r} referenced in 'generated' edge does not exist"
             if edge.target_id not in graph.entities:
-                return "broken_chain", f"Entity {edge.target_id!r} generated by activity {edge.source_id!r} does not exist"
+                return "broken_chain", "broken_chain", "unchecked", f"Entity {edge.target_id!r} generated by activity {edge.source_id!r} does not exist"
         elif edge.type == "derived_from":
-            # source is derived entity, target is ancestor entity
             if edge.source_id not in graph.entities:
-                return "broken_chain", f"Derived entity {edge.source_id!r} does not exist"
+                return "broken_chain", "broken_chain", "unchecked", f"Derived entity {edge.source_id!r} does not exist"
             if edge.target_id not in graph.entities:
-                return "broken_chain", f"Source entity {edge.target_id!r} in derivation does not exist"
+                return "broken_chain", "broken_chain", "unchecked", f"Source entity {edge.target_id!r} in derivation does not exist"
             if edge.source_id == edge.target_id:
-                return "cycle_detected", f"Self-derivation loop detected on entity {edge.source_id!r}"
+                return "cycle_detected", "cycle_detected", "unchecked", f"Self-derivation loop detected on entity {edge.source_id!r}"
+            # P1-06: Strict validation of derivation activity
+            if edge.activity_id:
+                if edge.activity_id not in graph.activities:
+                    return "broken_chain", "broken_chain", "unchecked", f"Derivation activity {edge.activity_id!r} does not exist in activities"
 
-    # 2. Topological DAG cycle check
-    # Directed graph: causal flow from upstream entity -> activity -> downstream entity
-    adj: Dict[str, List[str]] = {}
-    nodes: Set[str] = set()
-    for eid in graph.entities:
-        nodes.add(eid)
-        adj[eid] = []
-    for aid in graph.activities:
-        nodes.add(aid)
-        adj[aid] = []
+    # 1b. Activity script_id referential integrity (P1-11)
+    for aid, act in scoped_activities.items():
+        if act.script_id:
+            if act.script_id not in graph.entities:
+                return "missing_input", "missing_input", "unchecked", f"Activity {aid!r} references missing script entity {act.script_id!r}"
+            if graph.entities[act.script_id].type != "code_file":
+                return "broken_chain", "broken_chain", "unchecked", f"Activity {aid!r} script {act.script_id!r} is not a 'code_file' entity"
 
-    for edge in graph.edges:
+    # 2. Iterative DAG cycle check (prevents recursion limit issues on deep graphs)
+    nodes: Set[str] = set(scoped_entities.keys()) | set(scoped_activities.keys())
+    adj: Dict[str, List[str]] = {n: [] for n in nodes}
+    indegree: Dict[str, int] = {n: 0 for n in nodes}
+
+    for edge in scoped_edges:
+        u, v = None, None
         if edge.type == "used":
-            # entity (input) -> activity
-            adj[edge.target_id].append(edge.source_id)
+            # entity -> activity
+            u, v = edge.target_id, edge.source_id
         elif edge.type == "generated":
-            # activity -> entity (output)
-            adj[edge.source_id].append(edge.target_id)
+            # activity -> entity
+            u, v = edge.source_id, edge.target_id
         elif edge.type == "derived_from":
-            # ancestor entity -> derived entity
-            adj[edge.target_id].append(edge.source_id)
+            # ancestor -> derived
+            u, v = edge.target_id, edge.source_id
 
-    # Three-color DFS cycle detection: 0 = unvisited, 1 = visiting (in stack), 2 = visited
-    state: Dict[str, int] = {n: 0 for n in nodes}
+        if u in adj and v in adj:
+            adj[u].append(v)
+            indegree[v] += 1
 
-    def _dfs_cycle(u: str) -> bool:
-        state[u] = 1
-        for v in adj.get(u, []):
-            if state[v] == 1:
-                return True
-            if state[v] == 0:
-                if _dfs_cycle(v):
-                    return True
-        state[u] = 2
-        return False
+    queue = collections.deque([n for n, d in indegree.items() if d == 0])
+    visited_count = 0
+    while queue:
+        curr = queue.popleft()
+        visited_count += 1
+        for neighbor in adj[curr]:
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                queue.append(neighbor)
 
-    for node in nodes:
-        if state[node] == 0:
-            if _dfs_cycle(node):
-                return "cycle_detected", f"Causal cycle detected involving node {node!r}"
+    if visited_count < len(nodes):
+        return "cycle_detected", "cycle_detected", "unchecked", "Causal dependency cycle detected in graph"
 
-    # 3. Optional on-disk content hash verification
-    if check_on_disk_hashes:
-        for eid, ent in graph.entities.items():
-            if ent.sha256 and ent.locator:
-                loc_path = Path(ent.locator)
-                if loc_path.is_file():
-                    computed = compute_file_sha256(loc_path)
-                    if computed.lower() != ent.sha256.lower():
-                        return (
-                            "hash_mismatch",
-                            f"Content hash mismatch on entity {eid!r} ({ent.locator}): expected {ent.sha256}, got {computed}",
-                        )
+    # 3. Content verification on disk (P1-01 & P1-05)
+    if not check_on_disk_hashes:
+        return "unchecked", "valid_dag", "unchecked", None
 
-    return "intact", None
+    total_hashed = 0
+    verified_hashed = 0
+    for eid, ent in scoped_entities.items():
+        if ent.sha256 and ent.locator:
+            total_hashed += 1
+            loc_path = _resolve_locator_path(ent.locator, graph.root_dir)
+            if loc_path is None:
+                continue
+            if not loc_path.is_file():
+                # P1-01: Missing file must NEVER silently pass!
+                return (
+                    "missing_artifact",
+                    "valid_dag",
+                    "missing_artifact",
+                    f"Entity {eid!r} declared SHA256 and local locator {ent.locator!r}, but file does not exist on disk.",
+                )
+            computed = compute_file_sha256(loc_path)
+            if computed.lower() != ent.sha256.lower():
+                return (
+                    "hash_mismatch",
+                    "valid_dag",
+                    "hash_mismatch",
+                    f"Content hash mismatch on entity {eid!r}: expected {ent.sha256}, got {computed}",
+                )
+            verified_hashed += 1
+
+    if total_hashed == 0:
+        content_status = "unchecked"
+        overall_status = "unchecked"
+    elif verified_hashed == total_hashed:
+        content_status = "fully_verified"
+        overall_status = "intact"
+    else:
+        content_status = "partially_verified"
+        overall_status = "intact"
+
+    return overall_status, "valid_dag", content_status, None
+
+
+def _canonical_receipt_digest(
+    target_id: str,
+    root_ancestors: List[str],
+    entities: List[Dict[str, Any]],
+    activities: List[Dict[str, Any]],
+    edges: List[Dict[str, Any]],
+    trace_steps: List[Dict[str, Any]],
+) -> str:
+    """Compute deterministic content digest across sorted canonical receipt payload."""
+    payload = {
+        "protocol": "lineage-receipt-1.0",
+        "target_id": target_id,
+        "root_ancestors": sorted(root_ancestors),
+        "entities": sorted(entities, key=lambda x: x["id"]),
+        "activities": sorted(activities, key=lambda x: x["id"]),
+        "edges": sorted(edges, key=lambda x: (x["type"], x["source_id"], x["target_id"])),
+        "trace_steps": trace_steps,
+    }
+    canon_bytes = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(canon_bytes).hexdigest().lower()
 
 
 def trace_origin(
@@ -314,91 +504,113 @@ def trace_origin(
     target_id: str,
     check_on_disk_hashes: bool = True,
 ) -> LineageReceipt:
-    """Deterministically trace the provenance lineage of target_id back to root inputs.
-
-    Performs reverse causal graph traversal, identifies all upstream dependencies,
-    collects execution activities, and validates integrity in milliseconds without
-    network or LLM dependencies.
-    """
+    """Deterministically trace the provenance lineage of target_id back to root inputs."""
     now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    h_seed = hashlib.sha256(f"{target_id}:{now_str}".encode("utf-8")).hexdigest()[:12]
-    receipt_id = f"lin-{h_seed}"
+    tid = str(target_id).strip()
 
-    if target_id not in graph.entities and target_id not in graph.activities:
+    if tid not in graph.entities and tid not in graph.activities:
         return LineageReceipt(
-            receipt_id=receipt_id,
+            receipt_id="lin-missing",
+            content_digest="0" * 64,
             timestamp=now_str,
-            target_id=target_id,
+            target_id=tid,
             verification_status="missing_input",
-            error_detail=f"Target {target_id!r} not found in provenance graph",
+            topology_status="missing_input",
+            content_verification="unchecked",
+            error_detail=f"Target {tid!r} not found in provenance graph",
         )
 
-    # First validate overall graph sanity
-    status, err = validate_lineage(graph, check_on_disk_hashes=check_on_disk_hashes)
-    if status != "intact":
-        return LineageReceipt(
-            receipt_id=receipt_id,
-            timestamp=now_str,
-            target_id=target_id,
-            verification_status=status,
-            error_detail=err,
-            entities=list(graph.entities.values()),
-            activities=list(graph.activities.values()),
-            edges=list(graph.edges),
-        )
-
-    # Backward traversal from target_id
-    # Reverse adjacency: node -> list of upstream sources
+    # 1. Reverse graph traversal to isolate target's causal dependency closure
     rev_adj: Dict[str, List[Tuple[str, LineageEdge]]] = {}
     for edge in graph.edges:
         if edge.type == "used":
-            # causal: entity (target_id) -> activity (source_id)
             # backward: activity -> entity
             rev_adj.setdefault(edge.source_id, []).append((edge.target_id, edge))
         elif edge.type == "generated":
-            # causal: activity (source_id) -> entity (target_id)
             # backward: entity -> activity
             rev_adj.setdefault(edge.target_id, []).append((edge.source_id, edge))
         elif edge.type == "derived_from":
-            # causal: ancestor (target_id) -> derived (source_id)
             # backward: derived -> ancestor
             rev_adj.setdefault(edge.source_id, []).append((edge.target_id, edge))
+            if edge.activity_id:
+                rev_adj.setdefault(edge.source_id, []).append((edge.activity_id, edge))
 
-    visited_nodes: Set[str] = set()
+    visited_nodes: Set[str] = set([tid])
     included_edges: List[LineageEdge] = []
-    queue: List[str] = [target_id]
-    visited_nodes.add(target_id)
+    seen_edge_keys: Set[Tuple[str, str, str]] = set()
+    queue = collections.deque([tid])
 
     while queue:
-        curr = queue.pop(0)
+        curr = queue.popleft()
         for upstream, edge in rev_adj.get(curr, []):
-            included_edges.append(edge)
+            ek = (edge.type, edge.source_id, edge.target_id)
+            if ek not in seen_edge_keys:
+                seen_edge_keys.add(ek)
+                included_edges.append(edge)
             if upstream not in visited_nodes:
                 visited_nodes.add(upstream)
                 queue.append(upstream)
 
-    # Segment visited nodes into entities and activities
-    relevant_entities = [graph.entities[nid] for nid in visited_nodes if nid in graph.entities]
-    relevant_activities = [graph.activities[nid] for nid in visited_nodes if nid in graph.activities]
+    # Also include script entities for visited activities (P1-11)
+    for nid in list(visited_nodes):
+        if nid in graph.activities:
+            s_id = graph.activities[nid].script_id
+            if s_id and s_id in graph.entities:
+                visited_nodes.add(s_id)
 
-    # Find root ancestor entities (entities that have no incoming backward edges in the subgraph)
-    # i.e., entities that are never generated by an activity or derived from another entity
-    derived_or_generated_targets: Set[str] = set()
+    # 2. Target-scoped validation
+    v_stat, topo_stat, cont_stat, err_msg = validate_lineage(
+        graph,
+        check_on_disk_hashes=check_on_disk_hashes,
+        target_scope=visited_nodes,
+    )
+
+    relevant_entities = sorted(
+        [graph.entities[nid].to_dict() for nid in visited_nodes if nid in graph.entities],
+        key=lambda x: x["id"],
+    )
+    relevant_activities = sorted(
+        [graph.activities[nid].to_dict() for nid in visited_nodes if nid in graph.activities],
+        key=lambda x: x["id"],
+    )
+    canonical_edges = sorted(
+        [e.to_dict() for e in included_edges],
+        key=lambda x: (x["type"], x["source_id"], x["target_id"]),
+    )
+
+    if topo_stat != "valid_dag" or cont_stat in ("hash_mismatch", "missing_artifact"):
+        return LineageReceipt(
+            receipt_id="lin-failed",
+            content_digest="0" * 64,
+            timestamp=now_str,
+            target_id=tid,
+            verification_status=v_stat,
+            topology_status=topo_stat,
+            content_verification=cont_stat,
+            error_detail=err_msg,
+            entities=tuple(relevant_entities),
+            activities=tuple(relevant_activities),
+            edges=tuple(canonical_edges),
+        )
+
+    # 3. Identify root ancestor entities in causal subgraph
+    derived_or_generated: Set[str] = set()
     for edge in included_edges:
-        if edge.type in ("generated", "derived_from"):
-            derived_or_generated_targets.add(edge.source_id if edge.type == "derived_from" else edge.target_id)
+        if edge.type == "generated":
+            derived_or_generated.add(edge.target_id)
+        elif edge.type == "derived_from":
+            derived_or_generated.add(edge.source_id)
 
     root_ancestors = sorted([
-        ent.id for ent in relevant_entities
-        if ent.id not in derived_or_generated_targets and ent.id != target_id
+        ent["id"] for ent in relevant_entities
+        if ent["id"] not in derived_or_generated and ent["id"] != tid
     ])
-    if not root_ancestors and target_id in graph.entities and not rev_adj.get(target_id):
-        # Target itself is a root entity
-        root_ancestors = [target_id]
+    if not root_ancestors and tid in graph.entities and not rev_adj.get(tid):
+        root_ancestors = [tid]
 
-    # Deterministic reconstruction of causal trace steps
-    # 按照严格因果拓扑对活动排序 (生产实体的活动必定先于消费该实体的活动)
-    act_deps: Dict[str, Set[str]] = {a.id: set() for a in relevant_activities}
+    # 4. Topological causal ordering of activities
+    act_ids_in_closure = {a["id"] for a in relevant_activities}
+    act_deps: Dict[str, Set[str]] = {aid: set() for aid in act_ids_in_closure}
     gen_map: Dict[str, str] = {}
     for edge in included_edges:
         if edge.type == "generated":
@@ -425,40 +637,53 @@ def trace_origin(
                     ready_acts.append(aid)
                     ready_acts.sort()
 
-    for a in relevant_activities:
-        if a.id not in sorted_act_ids:
-            sorted_act_ids.append(a.id)
+    for aid in sorted(act_ids_in_closure):
+        if aid not in sorted_act_ids:
+            sorted_act_ids.append(aid)
 
-    act_dict = {a.id: a for a in relevant_activities}
-    sorted_activities = [act_dict[aid] for aid in sorted_act_ids]
+    # Pre-index inputs and outputs by activity
+    inputs_by_act: Dict[str, List[str]] = collections.defaultdict(list)
+    outputs_by_act: Dict[str, List[str]] = collections.defaultdict(list)
+    for edge in included_edges:
+        if edge.type == "used":
+            inputs_by_act[edge.source_id].append(edge.target_id)
+        elif edge.type == "generated":
+            outputs_by_act[edge.source_id].append(edge.target_id)
 
     trace_steps = []
     step_num = 1
-    for act in sorted_activities:
-        inputs = [
-            e.target_id for e in included_edges
-            if e.source_id == act.id and e.type == "used"
-        ]
-        outputs = [
-            e.target_id for e in included_edges
-            if e.source_id == act.id and e.type == "generated"
-        ]
+    for aid in sorted_act_ids:
         trace_steps.append({
             "step_number": step_num,
-            "activity_id": act.id,
-            "inputs": sorted(inputs),
-            "outputs": sorted(outputs),
+            "activity_id": aid,
+            "inputs": sorted(inputs_by_act[aid]),
+            "outputs": sorted(outputs_by_act[aid]),
         })
         step_num += 1
 
-    return LineageReceipt(
-        receipt_id=receipt_id,
-        timestamp=now_str,
-        target_id=target_id,
-        verification_status="intact",
+    # 5. Canonical content digest and deterministic receipt_id (P1-08)
+    content_digest = _canonical_receipt_digest(
+        target_id=tid,
         root_ancestors=root_ancestors,
         entities=relevant_entities,
         activities=relevant_activities,
-        edges=included_edges,
+        edges=canonical_edges,
         trace_steps=trace_steps,
+    )
+    receipt_id = f"lin-{content_digest[:16]}"
+
+    return LineageReceipt(
+        protocol="lineage-receipt-1.0",
+        receipt_id=receipt_id,
+        content_digest=content_digest,
+        timestamp=now_str,
+        target_id=tid,
+        verification_status=v_stat,
+        topology_status=topo_stat,
+        content_verification=cont_stat,
+        root_ancestors=tuple(root_ancestors),
+        entities=tuple(relevant_entities),
+        activities=tuple(relevant_activities),
+        edges=tuple(canonical_edges),
+        trace_steps=tuple(trace_steps),
     )

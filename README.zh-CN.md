@@ -27,7 +27,7 @@ SLL 广泛允许使用、研究、修改、商用、分发与专有增补，受�
 | `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 检索日志、筛选台账、效应量换算、异质性、固定与随机效应合并、敏感性与发表偏倚诊断 |
 | `skills/literature-watch` | 1.1.0 | 周更蓝图：监控主题、作者与 DOI 在 OpenAlex 与 Crossref 的新作品；去重并只报告新增 |
 | `skills/retraction-watch` | 1.1.0 | 周更蓝图：对照 OpenAlex is_retracted 与 Crossref 更新记录（update-to 信号）复查 DOI 监控清单；只报告状态变化 |
-| `skills/research-object-identity` | 1.1.0 | 确定性研究对象身份层：标识符归一、五态判定（无置信分）、关系与谱系建边；消费 Evidence Receipt |
+| `skills/research-object-identity` | 1.1.0 | 确定性研究对象身份层与生产谱系内核（Provenance Kernel v1）：标识符归一、五态判定、内容寻址衍生图、因果 DAG 校验与毫秒级脱机逆向溯源 |
 | `skills/cross-review-five` | 2.0.0 | 动态多席位异构模型/子代理交叉审议（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini 等）：v2 四阶段 Sparse Deliberation 流（盲审产出、断言级聚类合并、基于匈牙利算法的全局最优互补错排匿名质询、对账与未决保护账本，支持 P0-P3 严重级别） |
 
 十一个技能共含 21 篇 Markdown 参考文件，按需加载。GB/T 7714-2025 已生效；写作参考区分其已核实生效日期与显式标注的 2015 示例。完全符合 2025 版需以目标机构的模板或标准文本为准。

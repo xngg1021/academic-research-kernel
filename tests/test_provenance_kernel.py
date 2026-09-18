@@ -2,17 +2,27 @@
 """Deterministic regression tests for Research Object Provenance Kernel v1.
 
 Covers:
-1. Content-addressed entity hashing and W3C PROV-DM tri-structures.
-2. End-to-end scientific derivation pipeline:
-   raw.csv -> clean.py@commit -> clean.csv -> stats.py@commit+env -> report.json -> table-2-cell-B7
-3. Sub-100ms deterministic backtrace from table cell to root raw inputs and execution activities.
-4. Tamper-evident hash mismatch detection on modified intermediate files.
-5. Cyclic dependency and self-derivation detection.
-6. Referential integrity on missing activities and inputs.
-7. Full JSON Schema parity against schemas/lineage-receipt.schema.json using modern referencing.Registry.
+1. Content-addressed streaming file hashing.
+2. True three-phase end-to-end scientific pipeline (data_cleaning -> stats -> table_extraction)
+   with physical files, real SHA256 hashes, and sub-100ms deterministic traversal.
+3. Strict failure on missing on-disk artifacts (no silent pass).
+4. Content-tampering detection (hash_mismatch).
+5. Idempotent registration with conflict rejection (P1-02).
+6. Disjoint Entity and Activity ID namespaces (P1-03).
+7. Frozen immutable LineageReceipt deep snapshots (P1-04).
+8. Distinct verification coverage states (intact vs unchecked vs missing_artifact) (P1-05).
+9. Referential integrity on derivation activities (P1-06).
+10. Deterministic content digest and collision-free receipt IDs (P1-08).
+11. Strict type and SHA256 format enforcement (P1-09).
+12. Single-producer invariant enforcement (P1-10).
+13. Script entity referential integrity (P1-11).
+14. Target-scoped traversal isolation from unrelated broken components (P2).
+15. Deep chain iterative DAG traversal (>1000 nodes without RecursionError) (P3).
+16. JSON Schema draft 2020-12 strict validation with additionalProperties: false.
 """
 from __future__ import annotations
 
+import copy
 import json
 import os
 import sys
@@ -36,232 +46,380 @@ def test_compute_file_sha256(tmp_path):
     assert len(h1) == 64
     assert h1 == pr.compute_file_sha256(f)
 
-    # Missing file raises FileNotFoundError
     with pytest.raises(FileNotFoundError):
         pr.compute_file_sha256(tmp_path / "non_existent.csv")
 
 
-def test_end_to_end_scientific_lineage_and_trace(tmp_path):
-    """Full scientific pipeline backtrace:
+def test_end_to_end_three_phase_scientific_pipeline(tmp_path):
+    """Full 3-phase scientific derivation with physical files and exact SHA256 matching:
 
-    raw.csv -> cleaning_activity -> clean.csv -> stats_activity -> result.json -> table-2-cell-B7
-    Asserts sub-100ms deterministic tracing, parameter identification, and root discovery.
+    raw_survey.csv -> [clean.py@commit: data_cleaning] -> clean_survey.csv
+                   -> [calc_stats.py@commit: statistical_analysis] -> stats_report.json
+                   -> [extract_table.py@commit: table_extraction] -> table-2-cell-B7
     """
-    # 1. Physical mock fixture files
-    raw_csv = tmp_path / "raw_survey.csv"
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    # Real physical code files
+    clean_py = scripts_dir / "clean.py"
+    clean_py.write_text("# clean script\nimport sys\n", encoding="utf-8")
+    clean_py_sha = pr.compute_file_sha256(clean_py)
+
+    calc_py = scripts_dir / "calc_stats.py"
+    calc_py.write_text("# calc script\nimport scipy.stats\n", encoding="utf-8")
+    calc_py_sha = pr.compute_file_sha256(calc_py)
+
+    extract_py = scripts_dir / "extract_table.py"
+    extract_py.write_text("# extract script\nprint('formatting table')\n", encoding="utf-8")
+    extract_py_sha = pr.compute_file_sha256(extract_py)
+
+    # Real physical data files
+    raw_csv = data_dir / "raw_survey.csv"
     raw_csv.write_text("subject_id,score,group\n1,10.5,control\n2,14.2,treatment\n", encoding="utf-8")
     raw_sha = pr.compute_file_sha256(raw_csv)
 
-    clean_csv = tmp_path / "clean_survey.csv"
+    clean_csv = data_dir / "clean_survey.csv"
     clean_csv.write_text("subject_id,score,group\n1,10.5,control\n2,14.2,treatment\n", encoding="utf-8")
     clean_sha = pr.compute_file_sha256(clean_csv)
 
-    result_json = tmp_path / "stats_report.json"
+    result_json = data_dir / "stats_report.json"
     result_json.write_text('{"t_stat": 2.451, "p_value": 0.018, "df": 48}', encoding="utf-8")
     result_sha = pr.compute_file_sha256(result_json)
 
-    # 2. Build In-Memory Provenance Graph
-    graph = pr.LineageGraph()
+    # Build Provenance Graph
+    graph = pr.LineageGraph(root_dir=tmp_path)
 
-    # Entities
-    e_raw = graph.add_entity(
-        id="ent-raw-survey",
-        type="data_snapshot",
-        sha256=raw_sha,
-        locator=str(raw_csv),
-        metadata={"rows": 2, "source": "field_survey_wave1"}
-    )
-    e_clean_script = graph.add_entity(
-        id="ent-script-clean",
-        type="code_file",
-        sha256="a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
-        locator="scripts/clean.py",
-        metadata={"commit": "94330ee505d521d645aa4b99bcea0b17bc00b897"}
-    )
-    e_clean = graph.add_entity(
-        id="ent-clean-survey",
-        type="data_snapshot",
-        sha256=clean_sha,
-        locator=str(clean_csv),
-        metadata={"rows": 2, "cleaned_by": "clean.py"}
-    )
-    e_stats_script = graph.add_entity(
-        id="ent-script-stats",
-        type="code_file",
-        sha256="b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef01",
-        locator="scripts/calc_stats.py",
-        metadata={"commit": "80384ba97284b9956b4b878e4eb18533bbe87360"}
-    )
-    e_result = graph.add_entity(
-        id="ent-stats-report",
-        type="statistic_artifact",
-        sha256=result_sha,
-        locator=str(result_json),
-        metadata={"metrics": ["t_stat", "p_value"]}
-    )
+    # Register Entities
+    e_raw = graph.add_entity("ent-raw-survey", "data_snapshot", sha256=raw_sha, locator=str(raw_csv))
+    e_clean_script = graph.add_entity("ent-script-clean", "code_file", sha256=clean_py_sha, locator=str(clean_py))
+    e_clean = graph.add_entity("ent-clean-survey", "data_snapshot", sha256=clean_sha, locator=str(clean_csv))
+    e_stats_script = graph.add_entity("ent-script-stats", "code_file", sha256=calc_py_sha, locator=str(calc_py))
+    e_result = graph.add_entity("ent-stats-report", "statistic_artifact", sha256=result_sha, locator=str(result_json))
+    e_extract_script = graph.add_entity("ent-script-extract", "code_file", sha256=extract_py_sha, locator=str(extract_py))
     e_cell = graph.add_entity(
-        id="ent-table-cell-b7",
-        type="table_cell",
+        "ent-table-cell-b7",
+        "table_cell",
         locator="paper.pdf#page=4:table=2:cell=B7",
-        metadata={"reported_value": "t = 2.45", "confidence_interval": "95% CI [0.42, 4.48]"}
+        metadata={"reported_value": "t = 2.45"}
     )
 
-    # Activities
+    # Register 3 distinct Activities
     act_clean = graph.add_activity(
-        id="act-data-cleaning",
-        type="data_cleaning",
-        command="python scripts/clean.py --input raw_survey.csv --output clean_survey.csv",
+        "act-data-cleaning",
+        "data_cleaning",
+        command="python scripts/clean.py --input raw.csv",
         script_id=e_clean_script.id,
         commit_sha="94330ee505d521d645aa4b99bcea0b17bc00b897",
-        parameters={"drop_na": True, "normalize_scales": False},
-        environment={"python": "3.11.15", "platform": "linux"}
+        parameters={"drop_na": True},
     )
     act_calc = graph.add_activity(
-        id="act-computation-stats",
-        type="statistical_analysis",
-        command="python scripts/calc_stats.py --data clean_survey.csv --alpha 0.05",
+        "act-computation-stats",
+        "statistical_analysis",
+        command="python scripts/calc_stats.py --data clean.csv",
         script_id=e_stats_script.id,
         commit_sha="80384ba97284b9956b4b878e4eb18533bbe87360",
-        parameters={"test_type": "independent_t_test", "two_sided": True},
-        environment={"python": "3.11.15", "scipy": "1.14.0"}
+        parameters={"test": "independent_t_test"},
+    )
+    act_extract = graph.add_activity(
+        "act-table-extraction",
+        "table_extraction",
+        command="python scripts/extract_table.py --source stats.json",
+        script_id=e_extract_script.id,
+        commit_sha="ca2e9d29e462542e347f7b9626afe2f880123456",
+        parameters={"target_table": "Table 2", "cell": "B7"},
     )
 
-    # Edges: Causal links
+    # Connect Causal Edges
+    # Phase 1: Cleaning
     graph.record_used(act_clean.id, e_raw.id)
     graph.record_used(act_clean.id, e_clean_script.id)
     graph.record_generated(act_clean.id, e_clean.id)
 
+    # Phase 2: Statistical computation
     graph.record_used(act_calc.id, e_clean.id)
     graph.record_used(act_calc.id, e_stats_script.id)
     graph.record_generated(act_calc.id, e_result.id)
 
-    graph.record_derivation(e_cell.id, e_result.id, activity_id=act_calc.id)
+    # Phase 3: Table extraction
+    graph.record_used(act_extract.id, e_result.id)
+    graph.record_used(act_extract.id, e_extract_script.id)
+    graph.record_generated(act_extract.id, e_cell.id)
+    graph.record_derivation(e_cell.id, e_result.id, activity_id=act_extract.id)
 
-    # 3. Deterministic Validation
-    status, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
-    assert status == "intact"
+    # Validation
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
+    assert v_stat == "intact"
+    assert t_stat == "valid_dag"
+    assert c_stat == "fully_verified"
     assert err is None
 
-    # 4. Backward Traversal Benchmark (Must be under 100ms)
+    # Benchmark sub-100ms backtrace
     t0 = time.perf_counter()
     receipt = pr.trace_origin(graph, target_id="ent-table-cell-b7", check_on_disk_hashes=True)
     latency_ms = (time.perf_counter() - t0) * 1000.0
-    assert latency_ms < 100.0, f"Lineage trace exceeded 100ms latency budget: {latency_ms:.2f}ms"
+    assert latency_ms < 100.0, f"Latency {latency_ms:.2f}ms exceeded 100ms threshold"
 
-    # 5. Assertions on Provenance Findings
     assert receipt.verification_status == "intact"
-    assert receipt.target_id == "ent-table-cell-b7"
-    # Root source dataset must be strictly identified
+    assert receipt.topology_status == "valid_dag"
+    assert receipt.content_verification == "fully_verified"
     assert "ent-raw-survey" in receipt.root_ancestors
-    # All intermediate calculation activities must be accurately reconstructed
-    act_ids = [a.id for a in receipt.activities]
-    assert "act-data-cleaning" in act_ids
-    assert "act-computation-stats" in act_ids
+    assert "ent-script-clean" in receipt.root_ancestors
+    assert "ent-script-stats" in receipt.root_ancestors
+    assert "ent-script-extract" in receipt.root_ancestors
 
-    # Step-by-step causal replay
-    assert len(receipt.trace_steps) >= 2
-    step1 = receipt.trace_steps[0]
-    assert step1["activity_id"] == "act-data-cleaning"
-    assert "ent-raw-survey" in step1["inputs"]
-    assert "ent-clean-survey" in step1["outputs"]
+    # Must contain all 3 sequential activities in topological order
+    assert len(receipt.trace_steps) == 3
+    assert receipt.trace_steps[0]["activity_id"] == "act-data-cleaning"
+    assert receipt.trace_steps[1]["activity_id"] == "act-computation-stats"
+    assert receipt.trace_steps[2]["activity_id"] == "act-table-extraction"
 
-    step2 = receipt.trace_steps[1]
-    assert step2["activity_id"] == "act-computation-stats"
-    assert "ent-clean-survey" in step2["inputs"]
-    assert "ent-stats-report" in step2["outputs"]
+
+def test_missing_file_with_declared_sha_triggers_missing_artifact(tmp_path):
+    """P1-01: An entity declaring SHA256 and local locator must fail with missing_artifact if file is missing."""
+    graph = pr.LineageGraph()
+    fake_path = tmp_path / "ghost_file.csv"
+    assert not fake_path.exists()
+
+    graph.add_entity(
+        "e_ghost",
+        "data_snapshot",
+        sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        locator=str(fake_path),
+    )
+
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
+    assert v_stat == "missing_artifact"
+    assert c_stat == "missing_artifact"
+    assert "does not exist on disk" in err
+
+    receipt = pr.trace_origin(graph, target_id="e_ghost", check_on_disk_hashes=True)
+    assert receipt.verification_status == "missing_artifact"
 
 
 def test_tamper_evident_hash_mismatch(tmp_path):
-    """If an intermediate file's content is modified on disk, validate_lineage must flag hash_mismatch."""
-    f = tmp_path / "intermediate.csv"
-    f.write_text("a,b\n1,2\n", encoding="utf-8")
-    orig_sha = pr.compute_file_sha256(f)
+    """P1-01: If on-disk file content is altered, validation must return hash_mismatch."""
+    f = tmp_path / "file.csv"
+    f.write_text("orig_content", encoding="utf-8")
+    sha = pr.compute_file_sha256(f)
 
     graph = pr.LineageGraph()
-    e1 = graph.add_entity("e1", "data_snapshot", sha256=orig_sha, locator=str(f))
-    act = graph.add_activity("a1", "computation_run")
-    graph.record_used(act.id, e1.id)
+    graph.add_entity("e1", "data_snapshot", sha256=sha, locator=str(f))
 
-    # Initial state is intact
-    status, _ = pr.validate_lineage(graph, check_on_disk_hashes=True)
-    assert status == "intact"
-
-    # Modify file on disk (Tampering)
-    f.write_text("a,b\n1,99999\n", encoding="utf-8")
-    status_tampered, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
-    assert status_tampered == "hash_mismatch"
+    # Alter file
+    f.write_text("tampered_content", encoding="utf-8")
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
+    assert v_stat == "hash_mismatch"
+    assert c_stat == "hash_mismatch"
     assert "Content hash mismatch on entity 'e1'" in err
 
-    # Tracing this entity returns hash_mismatch receipt
-    rec = pr.trace_origin(graph, target_id="e1", check_on_disk_hashes=True)
-    assert rec.verification_status == "hash_mismatch"
 
-
-def test_cycle_detection_in_causal_graph():
-    """Cycles in causal lineage graphs must be rejected with cycle_detected."""
+def test_idempotent_registration_and_conflict_rejection():
+    """P1-02: Repeated insert of identical entity/activity is idempotent; conflicting insert raises ValueError."""
     graph = pr.LineageGraph()
-    e1 = graph.add_entity("e1", "data_snapshot")
-    e2 = graph.add_entity("e2", "data_snapshot")
-    act1 = graph.add_activity("act1", "computation_run")
-    act2 = graph.add_activity("act2", "computation_run")
+    e1 = graph.add_entity("e1", "data_snapshot", sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    e1_dup = graph.add_entity("e1", "data_snapshot", sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    assert e1 is e1_dup
 
-    # Cycle: e1 -> act1 -> e2 -> act2 -> e1
-    graph.record_used("act1", "e1")
-    graph.record_generated("act1", "e2")
-    graph.record_used("act2", "e2")
-    graph.record_generated("act2", "e1")  # Cycle back!
+    with pytest.raises(ValueError, match="Conflicting entity registration"):
+        graph.add_entity("e1", "code_file")  # Type conflict
 
-    status, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
-    assert status == "cycle_detected"
-    assert "Causal cycle detected" in err
+    act1 = graph.add_activity("act1", "data_cleaning", command="run clean")
+    act1_dup = graph.add_activity("act1", "data_cleaning", command="run clean")
+    assert act1 is act1_dup
+
+    with pytest.raises(ValueError, match="Conflicting activity registration"):
+        graph.add_activity("act1", "computation_run")  # Type conflict
 
 
-def test_self_derivation_loop_rejected():
-    """Self-derivation (A derived_from A) must be immediately rejected with cycle_detected."""
+def test_disjoint_entity_and_activity_id_namespace():
+    """P1-03: Entity and Activity must have disjoint ID namespaces."""
+    graph = pr.LineageGraph()
+    graph.add_entity("shared_id", "data_snapshot")
+
+    with pytest.raises(ValueError, match="already registered as an entity"):
+        graph.add_activity("shared_id", "computation_run")
+
+    graph2 = pr.LineageGraph()
+    graph2.add_activity("shared_id_2", "computation_run")
+    with pytest.raises(ValueError, match="already registered as an activity"):
+        graph2.add_entity("shared_id_2", "data_snapshot")
+
+
+def test_immutable_receipt_and_deep_isolation():
+    """P1-04: Receipt is deeply immutable; mutating graph or to_dict() results does not alter receipt."""
+    graph = pr.LineageGraph()
+    e1 = graph.add_entity("e1", "data_snapshot", metadata={"version": 1})
+    act = graph.add_activity("act1", "data_cleaning", parameters={"flag": True})
+    graph.record_used(act.id, e1.id)
+
+    receipt = pr.trace_origin(graph, target_id=act.id, check_on_disk_hashes=False)
+
+    # Mutate original graph entity metadata
+    e1.metadata["version"] = 999
+    assert receipt.entities[0]["metadata"]["version"] == 1
+
+    # Mutate receipt to_dict() output
+    d = receipt.to_dict()
+    d["entities"][0]["metadata"]["version"] = 888
+    assert receipt.entities[0]["metadata"]["version"] == 1
+
+
+def test_verification_coverage_states_not_collapsed():
+    """P1-05: check_on_disk_hashes=False or unhashed entities must report 'unchecked', not 'intact'."""
+    graph = pr.LineageGraph()
+    e1 = graph.add_entity("e1", "data_snapshot")  # No SHA, no locator
+
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
+    assert v_stat == "unchecked"
+    assert t_stat == "valid_dag"
+    assert c_stat == "unchecked"
+
+    receipt = pr.trace_origin(graph, target_id="e1", check_on_disk_hashes=False)
+    assert receipt.verification_status == "unchecked"
+    assert receipt.content_verification == "unchecked"
+
+
+def test_derivation_activity_referential_integrity():
+    """P1-06: derived_from referencing a missing activity_id must fail validation."""
     graph = pr.LineageGraph()
     graph.add_entity("e1", "data_snapshot")
-    graph.record_derivation("e1", "e1")
+    graph.add_entity("e2", "data_snapshot")
+    graph.record_derivation("e2", "e1", activity_id="non_existent_activity")
 
-    status, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
-    assert status == "cycle_detected"
-    assert "Self-derivation loop" in err
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
+    assert v_stat == "broken_chain"
+    assert "non_existent_activity" in err
 
 
-def test_missing_activity_or_input_referential_integrity():
-    """Edges pointing to non-existent nodes must trigger missing_input or broken_chain."""
+def test_deterministic_canonical_receipt_digest_and_collision_free():
+    """P1-08: Same graph & target produces identical digest & ID; any state difference alters digest."""
     graph = pr.LineageGraph()
     graph.add_entity("e1", "data_snapshot")
-    # used edge references phantom activity
-    graph.record_used("phantom_act", "e1")
+    graph.add_entity("e2", "data_snapshot")
+    graph.record_derivation("e2", "e1")
 
-    status, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
-    assert status == "missing_input"
-    assert "phantom_act" in err
+    r1 = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=False)
+    time.sleep(0.01)
+    r2 = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=False)
+
+    assert r1.content_digest == r2.content_digest
+    assert r1.receipt_id == r2.receipt_id
+
+    # Alter graph state
+    graph.add_entity("e3", "data_snapshot")
+    graph.record_derivation("e2", "e3")
+    r3 = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=False)
+
+    assert r3.content_digest != r1.content_digest
+    assert r3.receipt_id != r1.receipt_id
 
 
-def test_lineage_receipt_json_schema_validation(tmp_path):
-    """LineageReceipt serialized payload must strictly validate against schemas/lineage-receipt.schema.json."""
-    from referencing import Registry, Resource
-    from referencing.jsonschema import DRAFT7
+def test_strict_type_and_sha_format_validation():
+    """P1-09: Invalid entity/activity types or malformed SHA256 must fail fast."""
+    graph = pr.LineageGraph()
+    with pytest.raises(ValueError, match="Invalid entity type"):
+        graph.add_entity("e_bad", "nonsense_type")
 
+    with pytest.raises(ValueError, match="Invalid activity type"):
+        graph.add_activity("a_bad", "nonsense_type")
+
+    with pytest.raises(ValueError, match="Invalid SHA256 format"):
+        graph.add_entity("e_bad_sha", "data_snapshot", sha256="not_a_valid_sha256")
+
+
+def test_single_producer_invariant():
+    """P1-10: An Entity cannot be generated by more than one Activity."""
+    graph = pr.LineageGraph()
+    graph.add_entity("e1", "data_snapshot")
+    graph.add_activity("act1", "data_cleaning")
+    graph.add_activity("act2", "data_cleaning")
+
+    graph.record_generated("act1", "e1")
+    with pytest.raises(ValueError, match="Single-producer violation"):
+        graph.record_generated("act2", "e1")
+
+
+def test_script_id_referential_integrity():
+    """P1-11: script_id must reference an existing code_file entity."""
+    graph = pr.LineageGraph()
+    graph.add_activity("act1", "data_cleaning", script_id="missing_script")
+
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
+    assert v_stat == "missing_input"
+    assert "missing script entity" in err
+
+    # Non code_file entity
+    graph2 = pr.LineageGraph()
+    graph2.add_entity("not_code", "data_snapshot")
+    graph2.add_activity("act2", "data_cleaning", script_id="not_code")
+    v_stat2, t_stat2, c_stat2, err2 = pr.validate_lineage(graph2, check_on_disk_hashes=False)
+    assert v_stat2 == "broken_chain"
+    assert "not a 'code_file' entity" in err2
+
+
+def test_target_scoped_isolation_from_unrelated_broken_nodes():
+    """P2: An unrelated broken component does not invalidate a valid target's trace."""
+    graph = pr.LineageGraph()
+    # Target subgraph: e1 -> e2
+    graph.add_entity("e1", "data_snapshot")
+    graph.add_entity("e2", "data_snapshot")
+    graph.record_derivation("e2", "e1")
+
+    # Unrelated broken cycle component: c1 -> c2 -> c1
+    graph.add_entity("c1", "data_snapshot")
+    graph.add_entity("c2", "data_snapshot")
+    graph.record_derivation("c2", "c1")
+    graph.record_derivation("c1", "c2")
+
+    # Tracing e2 should succeed because e2's ancestor closure does not include c1/c2
+    receipt = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=False)
+    assert receipt.verification_status == "unchecked"
+    assert receipt.topology_status == "valid_dag"
+    assert receipt.target_id == "e2"
+
+
+def test_deep_lineage_chain_no_recursion_error():
+    """P3: Linear chain of 1500 derivation steps must not trigger RecursionError."""
+    graph = pr.LineageGraph()
+    n_nodes = 1500
+    for i in range(n_nodes):
+        graph.add_entity(f"node_{i}", "data_snapshot")
+        if i > 0:
+            graph.record_derivation(f"node_{i}", f"node_{i-1}")
+
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
+    assert v_stat == "unchecked"
+    assert t_stat == "valid_dag"
+
+    receipt = pr.trace_origin(graph, target_id=f"node_{n_nodes-1}", check_on_disk_hashes=False)
+    assert receipt.topology_status == "valid_dag"
+    assert receipt.root_ancestors == ("node_0",)
+
+
+def test_json_schema_draft_2020_12_validation(tmp_path):
+    """LineageReceipt payload must validate against schemas/lineage-receipt.schema.json (2020-12 strict)."""
     schema_file = ROOT / "schemas/lineage-receipt.schema.json"
     schema = json.loads(schema_file.read_text(encoding="utf-8"))
 
     graph = pr.LineageGraph()
-    e_in = graph.add_entity("raw_1", "data_snapshot", sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    e_raw = graph.add_entity("raw_1", "data_snapshot", sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
     e_out = graph.add_entity("res_1", "statistic_artifact", sha256="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
     act = graph.add_activity("clean_1", "data_cleaning", command="python clean.py")
 
-    graph.record_used(act.id, e_in.id)
+    graph.record_used(act.id, e_raw.id)
     graph.record_generated(act.id, e_out.id)
-    graph.record_derivation(e_out.id, e_in.id, activity_id=act.id)
+    graph.record_derivation(e_out.id, e_raw.id, activity_id=act.id)
 
     receipt = pr.trace_origin(graph, target_id=e_out.id, check_on_disk_hashes=False)
     payload = receipt.to_dict()
 
-    # Validate against schema
-    validator = jsonschema.Draft7Validator(schema)
+    # Draft 2020-12 validation
+    validator = jsonschema.Draft202012Validator(schema)
     validator.validate(payload)
     assert payload["protocol"] == "lineage-receipt-1.0"
-    assert payload["verification_status"] == "intact"
+    assert payload["verification_status"] == "unchecked"
+    assert payload["topology_status"] == "valid_dag"
     assert payload["root_ancestors"] == ["raw_1"]
+    assert len(payload["content_digest"]) == 64

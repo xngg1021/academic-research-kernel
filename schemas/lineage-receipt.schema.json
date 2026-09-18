@@ -1,18 +1,23 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/lineage-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/v1.1.0/schemas/lineage-receipt.schema.json",
   "title": "LineageReceipt",
   "description": "Deterministic, content-addressed scientific derivation receipt tracking how an artifact or statistic was produced from raw inputs and computational activities.",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "protocol",
     "receipt_id",
+    "content_digest",
+    "timestamp",
     "target_id",
     "verification_status",
+    "topology_status",
+    "content_verification",
+    "root_ancestors",
     "entities",
     "activities",
-    "edges",
-    "root_ancestors"
+    "edges"
   ],
   "properties": {
     "protocol": {
@@ -21,7 +26,12 @@
     },
     "receipt_id": {
       "type": "string",
-      "description": "Deterministic receipt identifier"
+      "description": "Deterministic content-addressed receipt identifier"
+    },
+    "content_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Content-addressed SHA256 digest of canonical receipt payload"
     },
     "timestamp": {
       "type": "string",
@@ -35,12 +45,35 @@
       "type": "string",
       "enum": [
         "intact",
+        "unchecked",
         "broken_chain",
         "hash_mismatch",
+        "missing_artifact",
         "missing_input",
         "cycle_detected"
       ],
       "description": "Result of deterministic topological and integrity validation"
+    },
+    "topology_status": {
+      "type": "string",
+      "enum": [
+        "valid_dag",
+        "cycle_detected",
+        "missing_input",
+        "broken_chain"
+      ],
+      "description": "Topological integrity status of the causal dependency graph"
+    },
+    "content_verification": {
+      "type": "string",
+      "enum": [
+        "fully_verified",
+        "partially_verified",
+        "unchecked",
+        "hash_mismatch",
+        "missing_artifact"
+      ],
+      "description": "Status of content-addressed on-disk SHA256 verification"
     },
     "error_detail": {
       "type": "string",
@@ -55,12 +88,21 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["id", "type"],
         "properties": {
           "id": {"type": "string"},
           "type": {
             "type": "string",
-            "enum": ["data_snapshot", "code_file", "environment_spec", "statistic_artifact", "table_cell", "figure_artifact", "generic_entity"]
+            "enum": [
+              "data_snapshot",
+              "code_file",
+              "environment_spec",
+              "statistic_artifact",
+              "table_cell",
+              "figure_artifact",
+              "generic_entity"
+            ]
           },
           "sha256": {
             "type": "string",
@@ -81,12 +123,20 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["id", "type"],
         "properties": {
           "id": {"type": "string"},
           "type": {
             "type": "string",
-            "enum": ["data_cleaning", "computation_run", "statistical_analysis", "table_extraction", "render_run", "generic_activity"]
+            "enum": [
+              "data_cleaning",
+              "computation_run",
+              "statistical_analysis",
+              "table_extraction",
+              "render_run",
+              "generic_activity"
+            ]
           },
           "command": {"type": "string"},
           "script_id": {"type": "string"},
@@ -101,6 +151,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["type", "source_id", "target_id"],
         "properties": {
           "type": {
@@ -109,6 +160,7 @@
           },
           "source_id": {"type": "string"},
           "target_id": {"type": "string"},
+          "activity_id": {"type": "string"},
           "metadata": {"type": "object"}
         }
       }
@@ -117,6 +169,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["step_number", "activity_id", "inputs", "outputs"],
         "properties": {
           "step_number": {"type": "integer"},
