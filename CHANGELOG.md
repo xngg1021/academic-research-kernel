@@ -1,10 +1,19 @@
 # 变更日志与版本发布清单 (CHANGELOG & Release Manifest)
 
-本文件记录 `hermes-academic-skills` 仓库各版本的接口变更与迁移规范，列明输入输出形态变化以及发布身份清单。
+本文件记录 `academic-research-kernel` 仓库各版本的接口变更与迁移规范，列明输入输出形态变化以及发布身份清单。
 
 ---
 
-## 2026-09-17（HEAD / work/cross-review-five-v2-20260917）
+## 2026-09-18（HEAD / chore/repo-identity-migration）
+
+### 仓库品牌与身份迁移 (Repository Identity Migration)
+- **去 Hermes 专有化**：仓库正式重命名为 **`xngg1021/academic-research-kernel`**，确立其中立科研基础设施公共内核定位。
+- **现行契约与入口更新**：全量迁移 8 份 JSON Schema 的 `$id`、`plugin.json`、8 份多语言 `README*.md` 的安装与调用入口、MCP 服务器服务名称（`academic-research-kernel`）。
+- **历史审计与法律事实保持**：`SOURCE-LINEAGE.md`、`LICENSE-APPLICATION.md`、`LICENSE-HISTORY.md`、`SLL-APPLICATION.json` 中记录的历史 Commit SHA 与历史仓库身份原样保留，维持不可篡改的法律审计证据链。
+
+---
+
+## 2026-09-17（work/cross-review-five-v2-20260917）
 
 本次更新包含对五人交叉评审 v2（Sparse Deliberation）的完整重构，以及全仓 41 项重审缺陷治理与科学计算执行层（`scfabric`）的引入。
 

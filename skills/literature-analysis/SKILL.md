@@ -218,7 +218,7 @@ from urllib.parse import urlsplit, urlencode, quote
 from urllib.error import HTTPError
 
 def get(url):
-    headers = {'User-Agent': 'hermes-academic-skills/1.2'}
+    headers = {'User-Agent': 'academic-research-kernel/1.2'}
     if urlsplit(url).netloc == 'api.openalex.org' and os.environ.get('OPENALEX_API_KEY'):
         headers['Authorization'] = 'Bearer ' + os.environ['OPENALEX_API_KEY']
     for attempt in range(3):

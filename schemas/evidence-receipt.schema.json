@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/xngg1021/hermes-academic-skills/blob/main/schemas/evidence-receipt.schema.json",
+  "$id": "https://github.com/xngg1021/academic-research-kernel/blob/main/schemas/evidence-receipt.schema.json",
   "title": "AcademicEvidenceReceipt",
   "description": "Machine-readable evidence record produced by academic-source-verification and consumed by downstream skills (literature-analysis, academic-writing, math-computation).",
   "type": "object",

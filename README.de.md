@@ -1,4 +1,4 @@
-# hermes-academic-skills
+# academic-research-kernel
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · Deutsch · [Français](README.fr.md) · [Español](README.es.md)
 
@@ -42,9 +42,9 @@ Unterstützt stdio MCP (`python scripts/mcp_server.py`) und portable Agent Plugi
 Die aktuelle Upstream-Tap-Erkennung prüft unmittelbare Unterverzeichnisse von `skills/`. Jeder Skill liegt daher direkt unter diesem Stamm. In einer Hermes-Installation:
 
 ```bash
-hermes skills tap add xngg1021/hermes-academic-skills
+hermes skills tap add xngg1021/academic-research-kernel
 hermes skills search academic-source-verification
-hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
 ```
 
 Die übrigen Skills installiert man durch Ersetzen des Verzeichnisnamens im vollständigen Bezeichner. Ein normaler Tap liest den Standardzweig, sodass ein frischer Tap den obigen Skillsatz installiert. Um einen Arbeitszweig vor dem Merge zu prüfen, diesen Zweig lokal auschecken und die lokalen Ordner-Anweisungen der installierten Hermes-Version befolgen. Nicht annehmen, dass der Tap-Befehl einen PR-Zweig auswählt.

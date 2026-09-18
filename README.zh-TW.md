@@ -1,4 +1,4 @@
-# hermes-academic-skills
+# academic-research-kernel
 
 English · [简体中文](README.zh-CN.md) · 繁體中文 · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
@@ -46,9 +46,9 @@ python scripts/mcp_server.py
 在 Hermes 安裝環境中執行：
 
 ```bash
-hermes skills tap add xngg1021/hermes-academic-skills
+hermes skills tap add xngg1021/academic-research-kernel
 hermes skills search academic-source-verification
-hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
 ```
 
 安裝其餘技能時替換完整標識符中的目錄名。常規 tap 讀取預設分支，新裝即得上述技能集。如需在合併前檢查工作分支，在本地檢出該分支並遵循所裝 Hermes 版本的本地目錄安裝說明。不要假定 tap 命令會選中 PR 分支。

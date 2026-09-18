@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/review-run-receipt.schema.json",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/review-run-receipt.schema.json",
   "title": "ReviewRunReceipt",
   "description": "Comprehensive run receipt and provenance record of a multi-reviewer deliberation.",
   "type": "object",

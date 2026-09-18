@@ -1,4 +1,4 @@
-# hermes-academic-skills
+# academic-research-kernel
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · 한국어 · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
@@ -37,9 +37,9 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 현재 상류 tap 탐지는 `skills/` 바로 아래의 하위 디렉터리를 검사하므로 각 스킬은 그 루트 바로 아래에 위치한다. Hermes 설치 환경에서:
 
 ```bash
-hermes skills tap add xngg1021/hermes-academic-skills
+hermes skills tap add xngg1021/academic-research-kernel
 hermes skills search academic-source-verification
-hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
 ```
 
 나머지 스킬은 전체 식별자의 디렉터리 이름을 바꿔 설치한다. 일반 tap은 기본 브랜치를 읽으므로 새 tap은 위 스킬 집합을 설치한다. 병합 전에 작업 브랜치를 검사하려면 해당 브랜치를 로컬에 체크아웃하고 설치된 Hermes 버전의 로컬 폴더 지침을 따른다. tap 명령이 PR 브랜치를 선택한다고 가정하지 말 것.

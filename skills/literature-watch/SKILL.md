@@ -56,7 +56,7 @@ metadata:
 本技能 frontmatter 带 `metadata.hermes.blueprint`，安装时 **不会** 静默创建定时任务，而是进入建议队列：
 
 ```bash
-hermes skills install xngg1021/hermes-academic-skills/skills/literature-watch
+hermes skills install xngg1021/academic-research-kernel/skills/literature-watch
 # 然后在会话中：
 /suggestions             # 查看待处理建议
 /suggestions accept N    # 接受并创建 cron 任务

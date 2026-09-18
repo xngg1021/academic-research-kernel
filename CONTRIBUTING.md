@@ -1,4 +1,4 @@
-# Contributing to hermes-academic-skills
+# Contributing to academic-research-kernel
 
 Issues, bug reports, research discussion and non-code suggestions are welcome. Unsolicited copyright-bearing code or documentation contributions are not accepted by default. Before the maintainer decides to accept such a contribution, the contributor and the relevant rights holders must establish a separate, explicit inbound arrangement chosen by the maintainer.
 
