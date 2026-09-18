@@ -83,7 +83,7 @@
   - `plugin.json` (Agent Plugins v1 portable manifest)
   - `mcp.json` / `scripts/mcp_server.py` (Portable MCP tools surface)
 - **Verification Matrix**:
-  - Unit & Regression Tests: 521 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 524 passed, 0 failures, 0 warnings
   - Static QA Fences: 39 independent executable blocks passed
   - Provenance & Lineage: 毫秒级因果拓扑逆向溯源、完整三阶段物理科研流水线、内容与回执指纹双重独立存证、防篡改哈希核验、因果 DAG 迭代无环检测与 JSON Schema 2020-12 严格匹配全量通过
   - Security & Contracts: Command adapter isolated env, strict participant slug validation, path containment guard, and JSON schema parity check passed

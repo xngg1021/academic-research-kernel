@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · 日本語 · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
-ハーネス中立な学術研究コアおよびマルチエージェント協調クロスレビューツールスイート。11の学術スキルと検証ツールを提供し、ベンダー中立なAgent Plugins v1仕様およびstdio MCP（Model Context Protocol）サーバーに対応。Hermes Agent、Claude Code、Cursor、スタンドアロンCLIサブエージェントをネイティブにサポートします。
+ハーネス中立な学術研究コアおよびマルチエージェント協調クロスレビューツールスイート。12の学術スキルと検証ツールを提供し、ベンダー中立なAgent Plugins v1仕様およびstdio MCP（Model Context Protocol）サーバーに対応。Hermes Agent、Claude Code、Cursor、スタンドアロンCLIサブエージェントをネイティブにサポートします。
 
 著者:Junfu Shi(SJF,xngg1021)、Hermes Agent。現在の提供範囲:[Source Lineage License 1.0](LICENSE)。
 

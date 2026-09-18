@@ -561,3 +561,90 @@ def test_json_schema_draft_2020_12_validation():
     assert payload["protocol"] == "claim-evidence-graph-1.0"
     assert payload["graph_id"] == "ceg-schema-test"
     assert len(payload["graph_digest"]) == 64
+
+
+def test_nested_metadata_deep_mutation_is_forbidden():
+    """Graph objects have deeply frozen metadata (FrozenDict) forbidding in-place nested mutation."""
+    edge = ceg.EvidenceSupportEdge(
+        evidence_id="ev1",
+        claim_id="c1",
+        support_status="supported",
+        metadata={"stage": 1, "nested": {"sub": "data"}},
+    )
+    # Direct key assignment forbidden
+    with pytest.raises(TypeError, match="does not support item assignment"):
+        edge.metadata["stage"] = 2
+
+    # In-place update forbidden
+    with pytest.raises(TypeError, match="does not support mutation"):
+        edge.metadata.update({"stage": 2})
+
+    # Nested mutation forbidden
+    with pytest.raises(TypeError, match="does not support item assignment"):
+        edge.metadata["nested"]["sub"] = "tampered"
+
+    # Claim metadata deep mutation forbidden
+    claim = ceg.Claim(id="c1", text="Text", metadata={"tags": ["a", "b"]})
+    with pytest.raises(TypeError, match="does not support item assignment"):
+        claim.metadata["tags"] = ["c"]
+
+
+def test_trace_claim_provenance_rejects_conflicting_external_registry():
+    """trace_claim_provenance rejects external receipt_registry entries that conflict with internal verified receipts."""
+    g = ceg.ClaimEvidenceGraph()
+    c = g.add_claim("c1", "Claim")
+    ref = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-1", receipt_digest="a" * 64)
+    g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref)
+    g.add_support_edge("ev1", "c1", support_status="supported")
+
+    legit_receipt = {
+        "protocol": "lineage-receipt-1.0",
+        "receipt_id": "rec-1",
+        "receipt_digest": "a" * 64,
+        "verification_status": "intact",
+        "topology_status": "dag_valid",
+        "content_verification": "intact",
+        "root_ancestors": ["anc1"],
+        "trace_steps": [],
+    }
+    g.register_receipt("rec-1", legit_receipt)
+
+    # Injected conflicting registry attempting to override internal rec-1
+    tampered_registry = {
+        "rec-1": {
+            "protocol": "lineage-receipt-1.0",
+            "receipt_id": "rec-1",
+            "receipt_digest": "b" * 64,  # Conflicting digest
+            "verification_status": "tampered",
+        }
+    }
+
+    with pytest.raises(ValueError, match="Conflicting receipt_registry injected"):
+        g.trace_claim_provenance("c1", receipt_registry=tampered_registry)
+
+
+def test_trace_claim_provenance_validates_lineage_contract_for_injected_receipts():
+    """Injected non-conflicting external receipts must still satisfy the lineage-receipt-1.0 contract; fakes are marked invalid_receipt."""
+    g = ceg.ClaimEvidenceGraph()
+    c = g.add_claim("c1", "Claim")
+    ref = ceg.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="rec-ext-1", receipt_digest="a" * 64)
+    g.add_evidence("ev1", "lineage_receipt", receipt_ref=ref)
+    g.add_support_edge("ev1", "c1", support_status="supported")
+
+    # Injected fake external receipt missing correct protocol/digest
+    fake_registry = {
+        "rec-ext-1": {
+            "protocol": "fake-protocol",
+            "receipt_id": "rec-ext-1",
+            "receipt_digest": "wrong-digest",
+            "root_ancestors": ["fake_root"],
+        }
+    }
+
+    trace = g.trace_claim_provenance("c1", receipt_registry=fake_registry)
+    assert trace["status"] == "traced"
+    assert len(trace["lineage_traces"]) == 1
+    t = trace["lineage_traces"][0]
+    # Must NOT be available!
+    assert t["status"] == "invalid_receipt"
+    assert "invalid protocol" in t["reason"].lower()
