@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-09-19（PR #11 / Decision & Negative Result Ledger v1，分支 work/decision-ledger-v1）
+
+### 决策与负结果台账内核 (Decision & Negative Result Ledger v1)
+
+按 `docs/post-pr9-roadmap-reevaluation.md` 的立项裁定，填补十四原语中的状态台账 (Primitive 3)：
+
+- **核心数据契约 (`schemas/decision-ledger-receipt.schema.json`)**：
+  - JSON Schema draft 2020-12、`additionalProperties: false`、协议常量 `decision-ledger-1.0`；
+  - 五类记录：`decisions`（explore/commit/abandon/revise/negative_result）、`bases`（claim/negative_result 依据边）、`forks`（considered/explored/deferred/rejected 分支边）、`prune_states`（active/pruned，剪枝原因封闭词表）、`corrections`（positive/negative/inconclusive/unverifiable 结果修正）；
+  - `receiptRef` 复用 CEG 的 `oneOf` 双契约（lineage / academic_evidence），与 `schemas/claim-evidence-graph.schema.json` 逐字段一致。
+- **确定性内核 (`skills/decision-ledger/scripts/ledger.py`)**：
+  - 只追加台账：所有记录为 frozen dataclass + `FrozenDict` 深冻结；结果修正以内容寻址新事件入账，幂等且从不原地改写历史；
+  - 负结果纪律：`negative_result` 必须携带依据边（E404），且必须有 `claim` 类正证据基础（E405），仅由其他负结果支撑的负结果无法通过校验；
+  - 剪枝因果：封闭词表剪枝原因 + `pruned_by` 剪枝决策 + `alternative_ref` 备选路径；`pruned_by` 链严格无环（E304 成环判错）；`trace_prune_cause` 返回完整因果链，缺 claim 依据的剪枝给出确定性 `unsupported_reason`；
+  - 收据物理校验：学术收据负载 SHA256 物理重算断言（注册表键无法绕过哈希校验），谱系收据正向断言协议、收据 ID 与摘要；解析键与 CEG 完全一致（lineage 按 receipt_id、academic 按 payload_sha256 键优先 + 规范化负载哈希扫描）；
+  - 三态不确定性队列：`decision_without_basis`、`unsupported_negative_result`、`missing_receipt`、`unsupported_pruning`、`generic_uncertainty`，内容寻址确定性 ID，`needs_human` 离散标注，不阻断结构校验；
+  - 顺序无关台账摘要：全量规范化排序，插入顺序不影响 `ledger_digest`；注册收据以规范化负载哈希参与摘要。
+- **跨内核字节兼容**：`canonical_academic_receipt_payload_sha256`、`canonical_evidence_claim_digest`、`validate_lineage_receipt_contract`、`validate_academic_receipt_contract`、`ReceiptRef`、`UncertaintyItem` 与 CEG Kernel v1 逐字节一致，同一收据在两个内核给出相同哈希与相同校验结论，为 PR #12（Research Artifact Ingestion Bridge v1）打通消费路径。
+- **技能文档 (`skills/decision-ledger/SKILL.md`)**：frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
+- **测试 (`tests/test_decision_ledger.py`)**：45 项对抗性回归（词法规范化、类型强制、幂等与冲突拒绝、收据物理校验与篡改检测、悬空边、自指与剪枝环、负结果证据纪律、不确定性队列确定性、深冻结与导出隔离、摘要顺序无关性与敏感性、JSON Schema parity、跨内核字节兼容）。
+- **登记同步**：技能计数 12→13（tests/test_authoring.py、tests/test_harness_neutral.py）、tap 发现清单补 `decision-ledger`（tests/test_tap_discovery.py）、8 个 README 技能表与正文计数更新（并修正 zh-CN/zh-TW 首段计数停留在 11 的历史欠账）、单测基线 526→571。
+
+**验证**：`pytest` 571 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS。
+
+---
+
 ## 2026-09-18（PR #10 / CI & Locator Determinism Maintenance，HEAD / chore/ci-node24-and-locator-determinism）
 
 ### 基础设施维护、定位符确定性加固与 PR #11 立项裁定

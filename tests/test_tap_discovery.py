@@ -36,4 +36,4 @@ def test_actual_upstream_discovers_all_skills():
                                               'systematic-review-meta-analysis',
                                               'literature-watch', 'retraction-watch',
                                               'research-object-identity', 'cross-review-five',
-                                              'claim-evidence-graph'}
+                                              'claim-evidence-graph', 'decision-ledger'}
