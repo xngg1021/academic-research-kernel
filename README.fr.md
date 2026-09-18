@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · Français · [Español](README.es.md)
 
-Onze compétences académiques en chinois pour Hermes Agent : vérification des sources, analyse documentaire, rédaction académique, calcul numérique, audit quantitatif d'articles, audits de reproductibilité, revues systématiques et méta-analyses, identité et lignage des objets de recherche, orchestration de revues inter-modèles, plus deux automatisations de veille hebdomadaire. Le dépôt inclut des contrôles d'exemples exécutables ; le périmètre de validation et les limites des services externes sont consignés dans [l'audit](docs/audit-20260906.md).
+Noyau de recherche académique neutre vis-à-vis des environnements et suite de délibération multi-agents. Il fournit 11 compétences académiques et outils de vérification avec des points d'entrée portables Agent Plugins v1 et MCP, ainsi qu'une intégration native pour Hermes Agent, Claude Code, Cursor et les sous-agents CLI personnalisés. Ils couvrent la vérification des sources, l'analyse documentaire, la rédaction académique, le calcul numérique, l'audit quantitatif d'articles, les audits de reproductibilité, les revues systématiques et méta-analyses, l'identité et le lignage des objets de recherche, l'orchestration de revues inter-modèles, plus deux automatisations de veille hebdomadaire. Le dépôt inclut des contrôles d'exemples exécutables ; le périmètre de validation et les limites des services externes sont consignés dans [l'audit](docs/audit-20260906.md).
 
 Auteur : Junfu Shi (SJF, xngg1021), Hermes Agent. Offre actuelle : [Source Lineage License 1.0](LICENSE).
 

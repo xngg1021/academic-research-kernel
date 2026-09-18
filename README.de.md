@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · Deutsch · [Français](README.fr.md) · [Español](README.es.md)
 
-Elf chinesischsprachige akademische Skills für Hermes Agent: Quellenverifikation, Literaturanalyse, akademisches Schreiben, numerische Berechnung, quantitative Paper-Audits, Reproduktionsaudits, systematische Reviews und Meta-Analysen, Identität und Herkunft von Forschungsobjekten, Orchestrierung modellübergreifender Reviews sowie zwei wöchentliche Überwachungsautomatisierungen. Das Repository enthält ausführbare Beispielprüfungen; Validierungsumfang und Einschränkungen externer Dienste sind im [Audit](docs/audit-20260906.md) dokumentiert.
+Harness-neutraler akademischer Forschungskern und Deliberations-Suite für Multi-Agenten-Systeme. Er bietet 11 wissenschaftliche Skills und Verifikationstools mit portablen Agent Plugins v1- und MCP-Einstiegspunkten sowie nativer Integration für Hermes Agent, Claude Code, Cursor und benutzerdefinierte CLI-Subagenten. Das Repository enthält ausführbare Beispielprüfungen; Validierungsumfang und Einschränkungen externer Dienste sind im [Audit](docs/audit-20260906.md) dokumentiert.
 
 Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Aktueller Lizenzumfang: [Source Lineage License 1.0](LICENSE).
 

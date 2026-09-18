@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · 한국어 · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
-Hermes Agent용 중국어 학술 스킬 11개. 출처 검증, 문헌 분석, 학술 집필, 수치 계산, 정량 논문 감사, 재현 감사, 체계적 문헌고찰과 메타 분석, 연구 객체 식별과 계보, 교차 모델 리뷰 편성, 그리고 주간 모니터링 자동화 두 건을 다룬다. 저장소에는 실행 가능한 예제 검사가 포함되어 있으며, 검증 범위와 외부 서비스 제약은 [감사 문서](docs/audit-20260906.md)에 기록되어 있다.
+하네스 중립적 학술 연구 핵심 및 다중 에이전트 심의 제품군. 휴대용 Agent Plugins v1 및 MCP 진입점과 함께 11가지 학술 스킬 및 검증 도구를 제공하며, Hermes Agent, Claude Code, Cursor 및 맞춤형 CLI 하위 에이전트를 위한 네이티브 통합을 지원합니다. 출처 검증, 문헌 분석, 학술 집필, 수치 계산, 정량 논문 감사, 재현 감사, 체계적 문헌고찰과 메타 분석, 연구 객체 식별과 계보, 교차 모델 리뷰 편성, 그리고 주간 모니터링 자동화 두 건을 다룹니다. 저장소에는 실행 가능한 예제 검사가 포함되어 있으며, 검증 범위와 외부 서비스 제약은 [감사 문서](docs/audit-20260906.md)에 기록되어 있습니다.
 
 저자: Junfu Shi (SJF, xngg1021), Hermes Agent. 현재 제공 범위: [Source Lineage License 1.0](LICENSE).
 
