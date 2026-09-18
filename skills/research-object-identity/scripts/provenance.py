@@ -7,15 +7,17 @@ grounded in W3C PROV-DM core concepts (Entity, Activity, used, generated, derive
 Core Invariants:
 1. Strict type enforcement and fail-fast validation for all entities, activities, and edges.
 2. Disjoint entity and activity ID namespaces with strict idempotent registration (including timestamp).
-3. Canonical edge identity with exact-idempotent registration (retains distinct activity/metadata derivations).
+3. Structural tuple edge identity with exact-idempotent registration (delimiter-collision-free).
 4. Causal DAG acyclicity with iterative Kahn / topological cycle detection.
 5. Content-addressed file verification: missing on-disk files trigger 'missing_artifact',
    tampered contents trigger 'hash_mismatch', partial local coverage triggers 'partial',
    and unverified/disabled verification triggers 'unchecked'. Never collapses UNKNOWN into 'intact'.
-6. Separation of Lineage Content Identity (lineage_digest) from Verification Receipt Identity (receipt_digest / receipt_id).
-7. Referential integrity on script bindings and derivation activities.
-8. Immutable, deep-copied LineageReceipt snapshots.
-9. Millisecond-level target-scoped backward traversal back to root raw inputs.
+6. Full edge canonical sorting by (type, source, target, activity, canonical_metadata_json).
+7. Strict derivation-activity binding: claimed derivation activity must causally touch source or derived entity.
+8. Comprehensive URI scheme recognition (http, https, s3, gs, hdfs, etc.) preventing false missing_artifact.
+9. Separation of Lineage Content Identity (lineage_digest) from Verification Receipt Identity (receipt_digest / receipt_id).
+10. Immutable, deep-copied LineageReceipt snapshots.
+11. Millisecond-level target-scoped backward traversal back to root raw inputs.
 """
 from __future__ import annotations
 
@@ -38,7 +40,8 @@ __all__ = [
     "validate_lineage",
     "trace_origin",
     "compute_file_sha256",
-    "canonical_edge_key",
+    "canonical_edge_tuple",
+    "edge_dict_sort_key",
     "VALID_ENTITY_TYPES",
     "VALID_ACTIVITY_TYPES",
     "VALID_EDGE_TYPES",
@@ -70,6 +73,7 @@ VALID_EDGE_TYPES: Set[str] = {
 }
 
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
+REMOTE_URI_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
 
 
 def compute_file_sha256(path: str | Path, chunk_size: int = 65536) -> str:
@@ -175,11 +179,40 @@ class LineageEdge:
         return d
 
 
-def canonical_edge_key(edge: LineageEdge) -> str:
-    """Compute canonical unique key for edge identity including activity_id and metadata."""
-    meta_json = json.dumps(edge.metadata, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    act = edge.activity_id or ""
-    return f"{edge.type}:{edge.source_id}->{edge.target_id}@{act}#{meta_json}"
+def canonical_edge_tuple(edge: LineageEdge) -> Tuple[str, str, str, str, str]:
+    """Compute canonical 5-tuple for edge identity including activity_id and sorted metadata."""
+    meta_json = json.dumps(
+        edge.metadata,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return (
+        edge.type,
+        edge.source_id,
+        edge.target_id,
+        edge.activity_id or "",
+        meta_json,
+    )
+
+
+def edge_dict_sort_key(d: Dict[str, Any]) -> Tuple[str, str, str, str, str]:
+    """Sort key for canonical serialized edges matching canonical_edge_tuple."""
+    meta_json = json.dumps(
+        d.get("metadata", {}),
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return (
+        d.get("type", ""),
+        d.get("source_id", ""),
+        d.get("target_id", ""),
+        d.get("activity_id") or "",
+        meta_json,
+    )
 
 
 class LineageGraph:
@@ -189,7 +222,7 @@ class LineageGraph:
         self.entities: Dict[str, Entity] = {}
         self.activities: Dict[str, Activity] = {}
         self.edges: List[LineageEdge] = []
-        self._edge_keys: Set[str] = set()
+        self._edge_keys: Set[Tuple[str, str, str, str, str]] = set()
         self._all_ids: Dict[str, str] = {}  # id -> "entity" | "activity"
         self._generating_activities: Dict[str, str] = {}  # entity_id -> activity_id (single generator rule)
         self.root_dir: Optional[Path] = Path(root_dir).resolve() if root_dir else None
@@ -281,7 +314,7 @@ class LineageGraph:
         act_id = str(activity_id).strip()
         ent_id = str(entity_id).strip()
         edge = LineageEdge(type="used", source_id=act_id, target_id=ent_id, metadata=metadata or {})
-        k = canonical_edge_key(edge)
+        k = canonical_edge_tuple(edge)
         if k not in self._edge_keys:
             self._edge_keys.add(k)
             self.edges.append(edge)
@@ -297,7 +330,7 @@ class LineageGraph:
             )
         self._generating_activities[ent_id] = act_id
         edge = LineageEdge(type="generated", source_id=act_id, target_id=ent_id, metadata=metadata or {})
-        k = canonical_edge_key(edge)
+        k = canonical_edge_tuple(edge)
         if k not in self._edge_keys:
             self._edge_keys.add(k)
             self.edges.append(edge)
@@ -314,7 +347,7 @@ class LineageGraph:
         s_id = str(source_entity_id).strip()
         act_id = str(activity_id).strip() if activity_id else None
         edge = LineageEdge(type="derived_from", source_id=d_id, target_id=s_id, activity_id=act_id, metadata=metadata or {})
-        k = canonical_edge_key(edge)
+        k = canonical_edge_tuple(edge)
         if k not in self._edge_keys:
             self._edge_keys.add(k)
             self.edges.append(edge)
@@ -370,12 +403,20 @@ class LineageReceipt:
 
 def _resolve_locator_path(locator: str, root_dir: Optional[Path] = None) -> Optional[Path]:
     """Parse local filesystem path from locator string, discarding URI schemes or anchors."""
-    if not locator or locator.startswith(("http://", "https://", "ftp://")):
+    if not locator:
         return None
-    clean_path = locator.split("#", 1)[0].split("?", 1)[0]
+    loc_str = str(locator).strip()
+    if REMOTE_URI_REGEX.match(loc_str) or loc_str.startswith(("urn:", "doi:")):
+        return None
+    clean_path = loc_str.split("#", 1)[0].split("?", 1)[0]
     p = Path(clean_path)
-    if not p.is_absolute() and root_dir:
-        p = (root_dir / p).resolve()
+    if not p.is_absolute():
+        if root_dir:
+            p = (root_dir / p).resolve()
+        else:
+            p = p.resolve()
+    else:
+        p = p.resolve()
     return p
 
 
@@ -421,10 +462,19 @@ def validate_lineage(
                 return "broken_chain", "broken_chain", "unchecked", f"Source entity {edge.target_id!r} in derivation does not exist"
             if edge.source_id == edge.target_id:
                 return "cycle_detected", "cycle_detected", "unchecked", f"Self-derivation loop detected on entity {edge.source_id!r}"
-            # Strict validation of derivation activity
+            # Strict validation of derivation activity and causal binding (P2)
             if edge.activity_id:
                 if edge.activity_id not in graph.activities:
                     return "broken_chain", "broken_chain", "unchecked", f"Derivation activity {edge.activity_id!r} does not exist in activities"
+                act_inputs = {e.target_id for e in scoped_edges if e.source_id == edge.activity_id and e.type == "used"}
+                act_outputs = {e.target_id for e in scoped_edges if e.source_id == edge.activity_id and e.type == "generated"}
+                if edge.target_id not in act_inputs and edge.source_id not in act_outputs:
+                    return (
+                        "broken_chain",
+                        "broken_chain",
+                        "unchecked",
+                        f"Derivation activity {edge.activity_id!r} is detached: it neither consumed source {edge.target_id!r} nor generated derived {edge.source_id!r}",
+                    )
 
     # 1b. Activity script_id referential integrity
     for aid, act in scoped_activities.items():
@@ -442,13 +492,10 @@ def validate_lineage(
     for edge in scoped_edges:
         u, v = None, None
         if edge.type == "used":
-            # entity -> activity
             u, v = edge.target_id, edge.source_id
         elif edge.type == "generated":
-            # activity -> entity
             u, v = edge.source_id, edge.target_id
         elif edge.type == "derived_from":
-            # ancestor -> derived
             u, v = edge.target_id, edge.source_id
 
         if u in adj and v in adj:
@@ -468,7 +515,7 @@ def validate_lineage(
     if visited_count < len(nodes):
         return "cycle_detected", "cycle_detected", "unchecked", "Causal dependency cycle detected in graph"
 
-    # 3. Content verification on disk (P1: distinct partial vs intact)
+    # 3. Content verification on disk
     if not check_on_disk_hashes:
         return "unchecked", "valid_dag", "unchecked", None
 
@@ -479,7 +526,6 @@ def validate_lineage(
             total_hashed += 1
             loc_path = _resolve_locator_path(ent.locator, graph.root_dir)
             if loc_path is None:
-                # Non-local locator (HTTP/remote) cannot be verified on local disk
                 continue
             if not loc_path.is_file():
                 return (
@@ -505,7 +551,6 @@ def validate_lineage(
         content_status = "fully_verified"
         overall_status = "intact"
     elif verified_hashed > 0:
-        # P1: Partially verified CANNOT be called 'intact'!
         content_status = "partially_verified"
         overall_status = "partial"
     else:
@@ -530,10 +575,16 @@ def _canonical_lineage_digest(
         "root_ancestors": sorted(root_ancestors),
         "entities": sorted(entities, key=lambda x: x["id"]),
         "activities": sorted(activities, key=lambda x: x["id"]),
-        "edges": sorted(edges, key=lambda x: (x["type"], x["source_id"], x["target_id"], x.get("activity_id") or "")),
+        "edges": sorted(edges, key=edge_dict_sort_key),
         "trace_steps": trace_steps,
     }
-    canon_bytes = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    canon_bytes = json.dumps(
+        payload,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
     return hashlib.sha256(canon_bytes).hexdigest().lower()
 
 
@@ -556,7 +607,13 @@ def _canonical_receipt_digest(
         "error_detail": error_detail or "",
         "check_on_disk_hashes": check_on_disk_hashes,
     }
-    canon_bytes = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    canon_bytes = json.dumps(
+        payload,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
     return hashlib.sha256(canon_bytes).hexdigest().lower()
 
 
@@ -580,7 +637,7 @@ def trace_origin(
             check_on_disk_hashes=check_on_disk_hashes,
         )
         return LineageReceipt(
-            receipt_id=f"rec-{fail_rec_digest[:16]}",
+            receipt_id=f"rec-{fail_rec_digest[:32]}",
             lineage_digest="0" * 64,
             receipt_digest=fail_rec_digest,
             timestamp=now_str,
@@ -605,13 +662,13 @@ def trace_origin(
 
     visited_nodes: Set[str] = set([tid])
     included_edges: List[LineageEdge] = []
-    seen_edge_keys: Set[str] = set()
+    seen_edge_keys: Set[Tuple[str, str, str, str, str]] = set()
     queue = collections.deque([tid])
 
     while queue:
         curr = queue.popleft()
         for upstream, edge in rev_adj.get(curr, []):
-            ek = canonical_edge_key(edge)
+            ek = canonical_edge_tuple(edge)
             if ek not in seen_edge_keys:
                 seen_edge_keys.add(ek)
                 included_edges.append(edge)
@@ -643,10 +700,10 @@ def trace_origin(
     )
     canonical_edges = sorted(
         [e.to_dict() for e in included_edges],
-        key=lambda x: (x["type"], x["source_id"], x["target_id"], x.get("activity_id") or ""),
+        key=edge_dict_sort_key,
     )
 
-    # Calculate partial lineage digest even on failure (with available subgraph)
+    # Calculate partial lineage digest even on failure
     lineage_digest = _canonical_lineage_digest(
         target_id=tid,
         root_ancestors=[],
@@ -664,7 +721,7 @@ def trace_origin(
         error_detail=err_msg,
         check_on_disk_hashes=check_on_disk_hashes,
     )
-    receipt_id = f"rec-{receipt_digest[:16]}"
+    receipt_id = f"rec-{receipt_digest[:32]}"
 
     if topo_stat != "valid_dag" or cont_stat in ("hash_mismatch", "missing_artifact"):
         return LineageReceipt(
@@ -768,7 +825,7 @@ def trace_origin(
         error_detail=err_msg,
         check_on_disk_hashes=check_on_disk_hashes,
     )
-    final_receipt_id = f"rec-{final_receipt_digest[:16]}"
+    final_receipt_id = f"rec-{final_receipt_digest[:32]}"
 
     return LineageReceipt(
         protocol="lineage-receipt-1.0",

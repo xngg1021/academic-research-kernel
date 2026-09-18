@@ -476,24 +476,29 @@ def test_lineage_digest_separated_from_receipt_digest():
 def test_edge_exact_idempotence_and_distinct_activity_derivations_retained():
     """P1/P2: record_* is exact-idempotent, and derivations via distinct activities are NOT swallowed."""
     graph = pr.LineageGraph()
-    graph.add_entity("e1", "data_snapshot")
-    graph.add_entity("e2", "data_snapshot")
-    graph.add_activity("act_a", "data_cleaning")
-    graph.add_activity("act_b", "data_cleaning")
+    e1 = graph.add_entity("e1", "data_snapshot")
+    e2 = graph.add_entity("e2", "data_snapshot")
+    act_a = graph.add_activity("act_a", "data_cleaning")
+    act_b = graph.add_activity("act_b", "data_cleaning")
 
-    # Repeat exact same edge -> idempotent, edge count remains 1
+    # Connect causal touchpoints so derivation activities are valid
+    graph.record_used(act_a.id, e1.id)
+    graph.record_used(act_b.id, e1.id)
+
+    # Repeat exact same edge -> idempotent, edge count remains 3 (used*2 + derived_from*1)
     graph.record_derivation("e2", "e1", activity_id="act_a")
     graph.record_derivation("e2", "e1", activity_id="act_a")
-    assert len(graph.edges) == 1
+    derived_edges = [ed for ed in graph.edges if ed.type == "derived_from"]
+    assert len(derived_edges) == 1
 
     # Derivation via different activity -> distinct edge, count becomes 2
     graph.record_derivation("e2", "e1", activity_id="act_b")
-    assert len(graph.edges) == 2
+    derived_edges = [ed for ed in graph.edges if ed.type == "derived_from"]
+    assert len(derived_edges) == 2
 
     # In trace_origin, BOTH derivation edges must be retained in receipt.edges
     receipt = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=False)
-    assert len(receipt.edges) == 2
-    edge_acts = {ed.get("activity_id") for ed in receipt.edges}
+    edge_acts = {ed.get("activity_id") for ed in receipt.edges if ed.get("activity_id")}
     assert edge_acts == {"act_a", "act_b"}
 
 
@@ -522,3 +527,82 @@ def test_failed_receipts_have_distinct_deterministic_ids():
     assert r_missing1.receipt_id != r_missing2.receipt_id
     assert not r_missing1.receipt_id.startswith("lin-missing")
     assert r_missing1.receipt_id.startswith("rec-")
+
+
+def test_delimiter_bearing_ids_do_not_collide_in_edges():
+    """P1: Delimiter characters (@, ->, #) in IDs must not cause edge key collisions."""
+    graph = pr.LineageGraph()
+    # Edge 1: target="t@u", activity="v"
+    e1_source = graph.add_entity("s", "data_snapshot")
+    e1_target = graph.add_entity("t@u", "data_snapshot")
+    act_v = graph.add_activity("v", "data_cleaning")
+
+    # Edge 2: target="t", activity="u@v"
+    e2_target = graph.add_entity("t", "data_snapshot")
+    act_uv = graph.add_activity("u@v", "data_cleaning")
+
+    graph.record_derivation(e1_target.id, e1_source.id, activity_id=act_v.id)
+    graph.record_derivation(e2_target.id, e1_source.id, activity_id=act_uv.id)
+
+    # Both edges MUST co-exist and not collide
+    assert len(graph.edges) == 2
+
+
+def test_canonical_digest_invariant_to_edge_insertion_order_with_different_metadata():
+    """P1: Different edge insertion order with varied metadata MUST yield identical canonical digest."""
+    # Graph A
+    ga = pr.LineageGraph()
+    e1_a = ga.add_entity("e1", "data_snapshot")
+    e2_a = ga.add_entity("e2", "data_snapshot")
+    act_a = ga.add_activity("act", "data_cleaning")
+    ga.record_used(act_a.id, e1_a.id)
+    # Insertion order: meta1 then meta2
+    ga.record_derivation(e2_a.id, e1_a.id, activity_id=act_a.id, metadata={"step": 1})
+    ga.record_derivation(e2_a.id, e1_a.id, activity_id=act_a.id, metadata={"step": 2})
+
+    ra = pr.trace_origin(ga, target_id="e2", check_on_disk_hashes=False)
+
+    # Graph B (reversed insertion order)
+    gb = pr.LineageGraph()
+    e1_b = gb.add_entity("e1", "data_snapshot")
+    e2_b = gb.add_entity("e2", "data_snapshot")
+    act_b = gb.add_activity("act", "data_cleaning")
+    gb.record_used(act_b.id, e1_b.id)
+    # Reversed insertion order: meta2 then meta1
+    gb.record_derivation(e2_b.id, e1_b.id, activity_id=act_b.id, metadata={"step": 2})
+    gb.record_derivation(e2_b.id, e1_b.id, activity_id=act_b.id, metadata={"step": 1})
+
+    rb = pr.trace_origin(gb, target_id="e2", check_on_disk_hashes=False)
+
+    # Digests MUST be 100% identical regardless of edge insertion order!
+    assert ra.lineage_digest == rb.lineage_digest
+    assert ra.receipt_digest == rb.receipt_digest
+    assert ra.receipt_id == rb.receipt_id
+
+
+def test_detached_derivation_activity_rejected_as_broken_chain():
+    """P2: Derivation referencing an activity detached from both source and target must fail as broken_chain."""
+    graph = pr.LineageGraph()
+    graph.add_entity("e1", "data_snapshot")
+    graph.add_entity("e2", "data_snapshot")
+    # act_detached has NO used or generated relation with e1 or e2
+    graph.add_activity("act_detached", "data_cleaning")
+
+    graph.record_derivation("e2", "e1", activity_id="act_detached")
+
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=False)
+    assert v_stat == "broken_chain"
+    assert "detached" in err
+
+
+def test_remote_uri_schemes_recognized_without_false_missing_artifact():
+    """P2: Non-http URI schemes (s3, gs, hdfs) must be recognized as remote resources without missing_artifact."""
+    graph = pr.LineageGraph()
+    graph.add_entity("s3_data", "data_snapshot", sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", locator="s3://my-academic-bucket/raw.csv")
+    graph.add_entity("gs_data", "data_snapshot", sha256="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", locator="gs://bucket/data.parquet")
+
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
+    # Since neither can be verified on local disk, it must be unverified/unchecked, NOT missing_artifact!
+    assert v_stat == "unchecked"
+    assert c_stat == "unverified"
+    assert v_stat != "missing_artifact"
