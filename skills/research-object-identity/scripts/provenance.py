@@ -401,23 +401,34 @@ class LineageReceipt:
         return copy.deepcopy(d)
 
 
-def _resolve_locator_path(locator: str, root_dir: Optional[Path] = None) -> Optional[Path]:
-    """Parse local filesystem path from locator string, discarding URI schemes or anchors."""
+def _resolve_locator_path(locator: str, root_dir: Optional[Path] = None) -> Tuple[Optional[Path], bool]:
+    """Parse local filesystem path from locator string, discarding URI schemes or anchors.
+
+    Note on trust boundaries:
+        root_dir provides an explicit base anchor for relative paths, completely
+        eliminating implicit process CWD fallback across executions. It acts as
+        a deterministic locator base, not a hardened containment sandbox (e.g.
+        explicit parent-directory traversals like '../' are resolved from root_dir).
+
+    Returns:
+        (resolved_path, is_unanchored_relative)
+        If locator is a relative local path and root_dir is None, returns (None, True).
+        If locator is remote/URI or empty, returns (None, False).
+        If resolvable, returns (absolute_path, False).
+    """
     if not locator:
-        return None
+        return None, False
     loc_str = str(locator).strip()
     if REMOTE_URI_REGEX.match(loc_str) or loc_str.startswith(("urn:", "doi:")):
-        return None
+        return None, False
     clean_path = loc_str.split("#", 1)[0].split("?", 1)[0]
     p = Path(clean_path)
     if not p.is_absolute():
-        if root_dir:
-            p = (root_dir / p).resolve()
-        else:
-            p = p.resolve()
-    else:
-        p = p.resolve()
-    return p
+        if root_dir is not None:
+            return (root_dir / p).resolve(), False
+        # Disallow implicit process CWD fallback to guarantee determinism across environments
+        return None, True
+    return p.resolve(), False
 
 
 def validate_lineage(
@@ -521,10 +532,14 @@ def validate_lineage(
 
     total_hashed = 0
     verified_hashed = 0
+    unanchored_relatives = 0
     for eid, ent in scoped_entities.items():
         if ent.sha256 and ent.locator:
             total_hashed += 1
-            loc_path = _resolve_locator_path(ent.locator, graph.root_dir)
+            loc_path, is_unanchored = _resolve_locator_path(ent.locator, graph.root_dir)
+            if is_unanchored:
+                unanchored_relatives += 1
+                continue
             if loc_path is None:
                 continue
             if not loc_path.is_file():
@@ -547,17 +562,29 @@ def validate_lineage(
     if total_hashed == 0:
         content_status = "unchecked"
         overall_status = "unchecked"
+        error_detail = None
     elif verified_hashed == total_hashed and total_hashed > 0:
         content_status = "fully_verified"
         overall_status = "intact"
+        error_detail = None
     elif verified_hashed > 0:
         content_status = "partially_verified"
         overall_status = "partial"
+        error_detail = (
+            "Relative local locator requires explicit root_dir for on-disk verification"
+            if unanchored_relatives > 0
+            else None
+        )
     else:
         content_status = "unverified"
         overall_status = "unchecked"
+        error_detail = (
+            "Relative local locator requires explicit root_dir for on-disk verification"
+            if unanchored_relatives > 0
+            else None
+        )
 
-    return overall_status, "valid_dag", content_status, None
+    return overall_status, "valid_dag", content_status, error_detail
 
 
 def _canonical_lineage_digest(

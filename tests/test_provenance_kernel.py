@@ -606,3 +606,62 @@ def test_remote_uri_schemes_recognized_without_false_missing_artifact():
     assert v_stat == "unchecked"
     assert c_stat == "unverified"
     assert v_stat != "missing_artifact"
+
+
+def test_relative_locator_requires_explicit_root_dir_and_never_reads_cwd(tmp_path):
+    """P1/P2: Relative local locators with root_dir=None must NEVER read process CWD and remain strictly deterministic."""
+    dir_a = tmp_path / "dir_a"
+    dir_b = tmp_path / "dir_b"
+    dir_a.mkdir()
+    dir_b.mkdir()
+
+    file_a = dir_a / "experiment_data.csv"
+    file_a.write_text("a,b\n1,2\n", encoding="utf-8")
+    sha_a = pr.compute_file_sha256(file_a)
+
+    orig_cwd = os.getcwd()
+    try:
+        # Build graph with root_dir=None and relative locator "experiment_data.csv"
+        graph = pr.LineageGraph(root_dir=None)
+        graph.add_entity("rel_ent", "data_snapshot", sha256=sha_a, locator="experiment_data.csv")
+
+        # Run under CWD = dir_a (where the relative file physically exists)
+        os.chdir(str(dir_a))
+        v1, t1, c1, err1 = pr.validate_lineage(graph, check_on_disk_hashes=True)
+        rec1 = pr.trace_origin(graph, target_id="rel_ent", check_on_disk_hashes=True)
+
+        # Run under CWD = dir_b (empty directory where file does not exist)
+        os.chdir(str(dir_b))
+        v2, t2, c2, err2 = pr.validate_lineage(graph, check_on_disk_hashes=True)
+        rec2 = pr.trace_origin(graph, target_id="rel_ent", check_on_disk_hashes=True)
+
+        # Invariants:
+        # 1. Neither execution accesses process CWD to falsely claim "intact" or crash with "missing_artifact"
+        assert v1 == "unchecked"
+        assert c1 == "unverified"
+        assert "requires explicit root_dir" in (err1 or "")
+
+        # 2. Both executions across different CWDs produce 100% IDENTICAL validation and receipt identity
+        assert (v1, t1, c1, err1) == (v2, t2, c2, err2)
+        assert rec1.receipt_digest == rec2.receipt_digest
+        assert rec1.receipt_id == rec2.receipt_id
+    finally:
+        os.chdir(orig_cwd)
+
+
+def test_explicit_root_dir_allows_relative_locator_verification(tmp_path):
+    """Explicit root_dir enables on-disk content verification for relative locators."""
+    data_dir = tmp_path / "project_root"
+    data_dir.mkdir()
+    f = data_dir / "raw.csv"
+    f.write_text("x,y\n10,20\n", encoding="utf-8")
+    sha = pr.compute_file_sha256(f)
+
+    graph = pr.LineageGraph(root_dir=data_dir)
+    graph.add_entity("e1", "data_snapshot", sha256=sha, locator="raw.csv")
+
+    v, t, c, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
+    assert v == "intact"
+    assert t == "valid_dag"
+    assert c == "fully_verified"
+    assert err is None
