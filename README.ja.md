@@ -1,4 +1,4 @@
-# hermes-academic-skills
+# academic-research-kernel
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · 日本語 · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
@@ -45,9 +45,9 @@ python scripts/mcp_server.py
 Hermes 環境で実行:
 
 ```bash
-hermes skills tap add xngg1021/hermes-academic-skills
+hermes skills tap add xngg1021/academic-research-kernel
 hermes skills search academic-source-verification
-hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
 ```
 
 残りのスキルは完全識別子のディレクトリ名を置き換えてインストールする。通常の tap はデフォルトブランチを読むため、新しい tap は上記のスキルセットをインストールする。マージ前に作業ブランチを検査する場合は、そのブランチをローカルにチェックアウトし、インストール済み Hermes バージョンのローカルフォルダ手順に従う。tap コマンドが PR ブランチを選択するとは想定しないこと。

@@ -20,7 +20,7 @@ if _sys.platform == "win32":
         if _s and hasattr(_s, "reconfigure"):
             _s.reconfigure(encoding="utf-8")
 
-USER_AGENT = 'hermes-academic-skills/1.2'
+USER_AGENT = 'academic-research-kernel/1.2'
 
 TEX_REPLACEMENTS = {'\\': r'\textbackslash{}', '{': r'\{', '}': r'\}',
                     '&': r'\&', '%': r'\%', '$': r'\$', '#': r'\#',

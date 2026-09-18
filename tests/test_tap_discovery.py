@@ -29,7 +29,7 @@ def test_actual_upstream_discovers_all_skills():
             _, _, relative = identifier.split('/', 2)
             path = ROOT / relative / 'SKILL.md'
             return SimpleNamespace(name=path.parent.name, extra={}) if path.is_file() else None
-    found = ns['_list_skills_in_repo'](Source(), 'xngg1021/hermes-academic-skills', 'skills/')
+    found = ns['_list_skills_in_repo'](Source(), 'xngg1021/academic-research-kernel', 'skills/')
     assert {skill.name for skill in found} == {'academic-source-verification', 'academic-writing',
                                               'literature-analysis', 'math-computation',
                                               'quantitative-paper-audit', 'research-reproducibility',

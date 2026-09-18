@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/lineage-receipt.schema.json",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/lineage-receipt.schema.json",
   "title": "LineageReceipt",
   "description": "Deterministic, content-addressed scientific derivation receipt tracking how an artifact or statistic was produced from raw inputs and computational activities.",
   "type": "object",

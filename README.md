@@ -1,4 +1,4 @@
-# hermes-academic-skills
+# academic-research-kernel
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
@@ -46,9 +46,9 @@ python scripts/mcp_server.py
 From a Hermes installation:
 
 ```bash
-hermes skills tap add xngg1021/hermes-academic-skills
+hermes skills tap add xngg1021/academic-research-kernel
 hermes skills search academic-source-verification
-hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
 ```
 
 Install the others by substituting their directory name in the full identifier. A normal tap reads the default branch, so the skill set above is what a fresh tap installs. To inspect a work branch before merge, check out that branch locally and follow the installed Hermes version's local-folder installation instructions. Do not assume the tap command selects a PR branch.

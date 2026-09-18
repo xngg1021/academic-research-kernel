@@ -191,7 +191,7 @@ def test_mcp_server_protocol_messages():
     init_req = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
     init_resp = mcp_server.process_message(init_req)
     assert init_resp["id"] == 1
-    assert init_resp["result"]["serverInfo"]["name"] == "hermes-academic-skills"
+    assert init_resp["result"]["serverInfo"]["name"] == "academic-research-kernel"
 
     # 2. tools/list
     list_req = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}

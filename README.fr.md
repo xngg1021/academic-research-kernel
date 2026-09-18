@@ -1,4 +1,4 @@
-# hermes-academic-skills
+# academic-research-kernel
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · Français · [Español](README.es.md)
 
@@ -42,9 +42,9 @@ Supporte stdio MCP (`python scripts/mcp_server.py`) et Agent Plugins v1 portable
 La découverte de tap amont actuelle inspecte les sous-répertoires immédiats de `skills/`. Chaque compétence vit donc directement sous cette racine. Depuis une installation Hermes :
 
 ```bash
-hermes skills tap add xngg1021/hermes-academic-skills
+hermes skills tap add xngg1021/academic-research-kernel
 hermes skills search academic-source-verification
-hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
 ```
 
 Installer les autres en substituant leur nom de répertoire dans l'identifiant complet. Un tap normal lit la branche par défaut, de sorte qu'un tap frais installe l'ensemble ci-dessus. Pour inspecter une branche de travail avant fusion, extraire cette branche localement et suivre les instructions d'installation en dossier local de la version Hermes installée. Ne pas supposer que la commande tap sélectionne une branche de PR.

@@ -142,7 +142,7 @@ def process_message(msg: dict) -> dict | None:
                 "protocolVersion": negotiated_version,
                 "capabilities": {"tools": {}},
                 "serverInfo": {
-                    "name": "hermes-academic-skills",
+                    "name": "academic-research-kernel",
                     "version": "2.0.0"
                 }
             }
