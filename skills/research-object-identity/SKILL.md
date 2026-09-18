@@ -108,8 +108,9 @@ v_stat, t_stat, c_stat, err = validate_lineage(graph, check_on_disk_hashes=True)
 receipt = trace_origin(graph, target_id=e_clean.id)
 ```
 
-- **三态状态区分**：`intact`（验证完整通过）、`unchecked`（未开启哈希检查或缺少本地定位符）、`missing_artifact`（声明了哈希但磁盘文件缺失）、`hash_mismatch`（磁盘内容与声明哈希不符）、`cycle_detected`（检测到因果拓扑环路）、`missing_input`（引用不存在的输入节点）。
-- **不可变回执存证**：生成深拷贝的 `LineageReceipt`，基于规范序列化生成确定性内容指纹 `content_digest`，并导出规范字典。
+- **状态区分与覆盖率（拒绝将 UNKNOWN 折叠为 intact）**：`intact`（验证完整通过，所有声明哈希的本地文件物理字节一致）、`partial`（部分本地文件校验通过，存在未在本地解析的远程 URI 实体）、`unchecked`（未开启哈希检查或全为无哈希/未本地验证实体）、`missing_artifact`（声明了哈希但本地文件丢失）、`hash_mismatch`（物理文件哈希与声明不符）、`cycle_detected`（因果拓扑环路）、`missing_input` / `broken_chain`（引用不存在的实体或活动）。
+- **不可变回执存证**：生成深拷贝的 `LineageReceipt`，因果图拓扑指纹（`lineage_digest`）与回执审计指纹（`receipt_digest` / `receipt_id`）清晰分离，同图同状态绝对稳定确定。
+- **声称与验证边界**：所记录的代码 Commit SHA 与参数字典代表执行声明（claimed commit identity），供离线审计核对。
 
 ## 边界
 

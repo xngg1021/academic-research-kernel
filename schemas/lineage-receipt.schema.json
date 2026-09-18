@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/v1.1.0/schemas/lineage-receipt.schema.json",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/lineage-receipt.schema.json",
   "title": "LineageReceipt",
   "description": "Deterministic, content-addressed scientific derivation receipt tracking how an artifact or statistic was produced from raw inputs and computational activities.",
   "type": "object",
@@ -8,7 +8,8 @@
   "required": [
     "protocol",
     "receipt_id",
-    "content_digest",
+    "lineage_digest",
+    "receipt_digest",
     "timestamp",
     "target_id",
     "verification_status",
@@ -28,10 +29,20 @@
       "type": "string",
       "description": "Deterministic content-addressed receipt identifier"
     },
+    "lineage_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Content-addressed SHA256 digest of canonical derivation graph closure"
+    },
+    "receipt_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Content-addressed SHA256 digest of verification assessment and metadata"
+    },
     "content_digest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$",
-      "description": "Content-addressed SHA256 digest of canonical receipt payload"
+      "description": "Backward-compatible alias for lineage_digest"
     },
     "timestamp": {
       "type": "string",
@@ -45,6 +56,7 @@
       "type": "string",
       "enum": [
         "intact",
+        "partial",
         "unchecked",
         "broken_chain",
         "hash_mismatch",
@@ -69,6 +81,7 @@
       "enum": [
         "fully_verified",
         "partially_verified",
+        "unverified",
         "unchecked",
         "hash_mismatch",
         "missing_artifact"

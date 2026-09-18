@@ -422,4 +422,103 @@ def test_json_schema_draft_2020_12_validation(tmp_path):
     assert payload["verification_status"] == "unchecked"
     assert payload["topology_status"] == "valid_dag"
     assert payload["root_ancestors"] == ["raw_1"]
+    assert len(payload["lineage_digest"]) == 64
+    assert len(payload["receipt_digest"]) == 64
     assert len(payload["content_digest"]) == 64
+
+
+def test_partial_verification_cannot_be_intact(tmp_path):
+    """P1: partially_verified content MUST NOT yield verification_status='intact'."""
+    f = tmp_path / "local.csv"
+    f.write_text("a,b\n1,2\n", encoding="utf-8")
+    local_sha = pr.compute_file_sha256(f)
+
+    graph = pr.LineageGraph()
+    # 1 local file that is verified
+    graph.add_entity("e_local", "data_snapshot", sha256=local_sha, locator=str(f))
+    # 1 remote HTTP entity whose bytes are not locally verified
+    graph.add_entity("e_remote", "data_snapshot", sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", locator="https://example.com/data.csv")
+    graph.record_derivation("e_local", "e_remote")
+
+    v_stat, t_stat, c_stat, err = pr.validate_lineage(graph, check_on_disk_hashes=True)
+    assert v_stat == "partial", f"Expected 'partial', got {v_stat!r}"
+    assert c_stat == "partially_verified"
+    assert v_stat != "intact"
+
+    # Pure remote case: no local files verified at all
+    graph_remote = pr.LineageGraph()
+    graph_remote.add_entity("e_rem_only", "data_snapshot", sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", locator="https://example.com/data.csv")
+    v_rem, t_rem, c_rem, _ = pr.validate_lineage(graph_remote, check_on_disk_hashes=True)
+    assert v_rem == "unchecked"
+    assert c_rem == "unverified"
+    assert v_rem != "intact"
+
+
+def test_lineage_digest_separated_from_receipt_digest():
+    """P1: lineage_digest identifies graph content; receipt_digest identifies verification verdict."""
+    graph = pr.LineageGraph()
+    e1 = graph.add_entity("e1", "data_snapshot")
+    e2 = graph.add_entity("e2", "data_snapshot")
+    graph.record_derivation("e2", "e1")
+
+    # Mode 1: check_on_disk_hashes=False -> unchecked
+    r_uncheck = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=False)
+    # Mode 2: check_on_disk_hashes=True -> intact (or unchecked for unhashed)
+    r_check = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=True)
+
+    # Lineage content digest MUST be identical because the graph structure did not change
+    assert r_uncheck.lineage_digest == r_check.lineage_digest
+    # But receipt_digest and receipt_id MUST differ because verification mode/assessment differs
+    assert r_uncheck.receipt_digest != r_check.receipt_digest
+    assert r_uncheck.receipt_id != r_check.receipt_id
+
+
+def test_edge_exact_idempotence_and_distinct_activity_derivations_retained():
+    """P1/P2: record_* is exact-idempotent, and derivations via distinct activities are NOT swallowed."""
+    graph = pr.LineageGraph()
+    graph.add_entity("e1", "data_snapshot")
+    graph.add_entity("e2", "data_snapshot")
+    graph.add_activity("act_a", "data_cleaning")
+    graph.add_activity("act_b", "data_cleaning")
+
+    # Repeat exact same edge -> idempotent, edge count remains 1
+    graph.record_derivation("e2", "e1", activity_id="act_a")
+    graph.record_derivation("e2", "e1", activity_id="act_a")
+    assert len(graph.edges) == 1
+
+    # Derivation via different activity -> distinct edge, count becomes 2
+    graph.record_derivation("e2", "e1", activity_id="act_b")
+    assert len(graph.edges) == 2
+
+    # In trace_origin, BOTH derivation edges must be retained in receipt.edges
+    receipt = pr.trace_origin(graph, target_id="e2", check_on_disk_hashes=False)
+    assert len(receipt.edges) == 2
+    edge_acts = {ed.get("activity_id") for ed in receipt.edges}
+    assert edge_acts == {"act_a", "act_b"}
+
+
+def test_activity_timestamp_idempotence_conflict():
+    """P2: Registering an Activity with same ID but different explicit timestamp must raise ValueError."""
+    graph = pr.LineageGraph()
+    graph.add_activity("act_ts", "data_cleaning", timestamp="2026-09-18T10:00:00Z")
+
+    # Same timestamp -> idempotent
+    act_same = graph.add_activity("act_ts", "data_cleaning", timestamp="2026-09-18T10:00:00Z")
+    assert act_same.id == "act_ts"
+
+    # Different timestamp -> conflict rejection
+    with pytest.raises(ValueError, match="Conflicting activity registration"):
+        graph.add_activity("act_ts", "data_cleaning", timestamp="2026-09-18T12:00:00Z")
+
+
+def test_failed_receipts_have_distinct_deterministic_ids():
+    """P2: Failures must produce distinct deterministic receipt IDs rather than colliding constants."""
+    graph = pr.LineageGraph()
+    graph.add_entity("e_present", "data_snapshot")
+
+    r_missing1 = pr.trace_origin(graph, target_id="ghost_target_1", check_on_disk_hashes=False)
+    r_missing2 = pr.trace_origin(graph, target_id="ghost_target_2", check_on_disk_hashes=False)
+
+    assert r_missing1.receipt_id != r_missing2.receipt_id
+    assert not r_missing1.receipt_id.startswith("lin-missing")
+    assert r_missing1.receipt_id.startswith("rec-")
