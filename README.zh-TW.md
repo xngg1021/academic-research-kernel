@@ -27,7 +27,7 @@ SLL 廣泛允許使用、研究、修改、商用、分發與專有增補，受�
 | `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 檢索日誌、篩選台帳、效應量換算、異質性、固定與隨機效應合併、敏感性與發表偏倚診斷 |
 | `skills/literature-watch` | 1.1.0 | 週更藍圖：監控主題、作者與 DOI 在 OpenAlex 與 Crossref 的新作品；去重並只報告新增 |
 | `skills/retraction-watch` | 1.1.0 | 週更藍圖：對照 OpenAlex is_retracted 與 Crossref 更新記錄（update-to 訊號）複查 DOI 監控清單；只報告狀態變化 |
-| `skills/research-object-identity` | 1.0.0 | 確定性研究物件身份層：標識符歸一、五態判定（無信心分數）、關係與譜系建邊；消費 Evidence Receipt |
+| `skills/research-object-identity` | 1.1.0 | 確定性研究物件身份層：標識符歸一、五態判定（無信心分數）、關係與譜系建邊；消費 Evidence Receipt |
 | `skills/cross-review-five` | 2.0.0 | 動態多席位異構模型/子代理交叉審議（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini 等）：v2 四階段 Sparse Deliberation 流（盲審產出、斷言級聚類合併、基於匈牙利算法的全局最優互補錯排匿名質詢、對賬與未決保護賬本，支持 P0-P3 嚴重級別） |
 
 十一個技能共含 21 篇 Markdown 參考文件，按需加載。GB/T 7714-2025 已生效；寫作參考區分其已核實生效日期與顯式標註的 2015 示例。完全符合 2025 版需以目標機構的模板或標準文本為準。

@@ -1,7 +1,7 @@
 ---
 name: research-object-identity
 description: 研究对象身份归一、聚合五态判定与谱系建边的确定性公共骨架.
-version: 1.0.0
+version: 1.1.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms:

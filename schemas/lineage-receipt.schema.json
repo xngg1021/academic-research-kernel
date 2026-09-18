@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/xngg1021/hermes-academic-skills/main/schemas/lineage-receipt.schema.json",
+  "title": "LineageReceipt",
+  "description": "Deterministic, content-addressed scientific derivation receipt tracking how an artifact or statistic was produced from raw inputs and computational activities.",
+  "type": "object",
+  "required": [
+    "protocol",
+    "receipt_id",
+    "target_id",
+    "verification_status",
+    "entities",
+    "activities",
+    "edges",
+    "root_ancestors"
+  ],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "enum": ["lineage-receipt-1.0"]
+    },
+    "receipt_id": {
+      "type": "string",
+      "description": "Deterministic receipt identifier"
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO 8601 UTC timestamp of receipt emission"
+    },
+    "target_id": {
+      "type": "string",
+      "description": "Unique identifier of the target entity whose provenance is traced"
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": [
+        "intact",
+        "broken_chain",
+        "hash_mismatch",
+        "missing_input",
+        "cycle_detected"
+      ],
+      "description": "Result of deterministic topological and integrity validation"
+    },
+    "error_detail": {
+      "type": "string",
+      "description": "Explanatory diagnosis if verification_status is not intact"
+    },
+    "root_ancestors": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Identifiers of root source entities (e.g. raw datasets, external inputs) with no upstream dependencies"
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": {"type": "string"},
+          "type": {
+            "type": "string",
+            "enum": ["data_snapshot", "code_file", "environment_spec", "statistic_artifact", "table_cell", "figure_artifact", "generic_entity"]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Content-addressed SHA256 digest"
+          },
+          "locator": {
+            "type": "string",
+            "description": "Physical path, URL, or fine-grained cell coordinate (e.g. 'table:2:cell:B7')"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "activities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": {"type": "string"},
+          "type": {
+            "type": "string",
+            "enum": ["data_cleaning", "computation_run", "statistical_analysis", "table_extraction", "render_run", "generic_activity"]
+          },
+          "command": {"type": "string"},
+          "script_id": {"type": "string"},
+          "commit_sha": {"type": "string"},
+          "parameters": {"type": "object"},
+          "environment": {"type": "object"},
+          "timestamp": {"type": "string"}
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "source_id", "target_id"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["used", "generated", "derived_from"]
+          },
+          "source_id": {"type": "string"},
+          "target_id": {"type": "string"},
+          "metadata": {"type": "object"}
+        }
+      }
+    },
+    "trace_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step_number", "activity_id", "inputs", "outputs"],
+        "properties": {
+          "step_number": {"type": "integer"},
+          "activity_id": {"type": "string"},
+          "inputs": {"type": "array", "items": {"type": "string"}},
+          "outputs": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

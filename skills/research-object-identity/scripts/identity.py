@@ -40,7 +40,43 @@ __all__ = [
     'link',
     'from_canonical_work',
     'consume_receipt',
+    'Entity',
+    'Activity',
+    'LineageEdge',
+    'LineageGraph',
+    'LineageReceipt',
+    'validate_lineage',
+    'trace_origin',
+    'compute_file_sha256',
 ]
+
+import pathlib as _pathlib
+_scripts_dir = str(_pathlib.Path(__file__).resolve().parent)
+if _scripts_dir not in _sys.path:
+    _sys.path.insert(0, _scripts_dir)
+
+try:
+    from .provenance import (
+        Entity,
+        Activity,
+        LineageEdge,
+        LineageGraph,
+        LineageReceipt,
+        validate_lineage,
+        trace_origin,
+        compute_file_sha256,
+    )
+except (ImportError, ValueError):
+    from provenance import (
+        Entity,
+        Activity,
+        LineageEdge,
+        LineageGraph,
+        LineageReceipt,
+        validate_lineage,
+        trace_origin,
+        compute_file_sha256,
+    )
 
 VERDICTS = ('EXACT', 'STRONG_MATCH', 'CANDIDATE', 'CONFLICT', 'UNRESOLVED')
 RELATION_KINDS = ('cites', 'contradicts', 'replicates', 'derived_from')

@@ -40,7 +40,7 @@
   - `skills/systematic-review-meta-analysis` (1.0.1) — trim-and-fill 固定点收敛判断修复
   - `skills/literature-watch` (1.1.0) — Crossref 兜底、凭证域名权威校验与并发锁租约
   - `skills/retraction-watch` (1.1.0) — 状态合并、并发租约锁与分页截断检测
-  - `skills/research-object-identity` (1.0.0) — 确定性研究对象身份层
+  - `skills/research-object-identity` (1.1.0) — 确定性研究对象身份层
   - `scripts/scfabric` (1.0.0) — 科学计算执行层薄层与严格数值门禁
 - **Schemas & Protocols**:
   - `schemas/compute-receipt.schema.json`
@@ -49,11 +49,13 @@
   - `schemas/review-finding.schema.json`
   - `schemas/review-result.schema.json`
   - `schemas/review-run-receipt.schema.json`
+  - `schemas/lineage-receipt.schema.json` (Research Object Provenance Kernel v1)
   - `plugin.json` (Agent Plugins v1 portable manifest)
   - `mcp.json` / `scripts/mcp_server.py` (Portable MCP tools surface)
 - **Verification Matrix**:
-  - Unit & Regression Tests: 470 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 477 passed, 0 failures, 0 warnings
   - Static QA Fences: 38 independent executable blocks passed
+  - Provenance & Lineage: Sub-100ms deterministic backtrace from table cell to raw inputs, tamper-evident hash mismatch, topological DAG cycle detection, and JSON schema parity check passed
   - Security & Contracts: Command adapter isolated env, strict participant slug validation, path containment guard, and JSON schema parity check passed
   - Scientific Integrity: MCP statistical recompute fixed, non-forgery Cohen's d enforced, literature-watch unobservable cites correctly surfaced
   - Agent Plugins v1 Loader: Live verified against 11 portable skills, MCP tools, and manifest with 0 diagnostics
