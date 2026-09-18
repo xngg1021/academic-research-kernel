@@ -4,12 +4,13 @@
 
 ---
 
-## 2026-09-18（HEAD / chore/repo-identity-migration）
+## 2026-09-18（HEAD / chore/repo-identity-closeout-and-roadmap）
 
-### 仓库品牌与身份迁移 (Repository Identity Migration)
-- **去 Hermes 专有化**：仓库正式重命名为 **`xngg1021/academic-research-kernel`**，确立其中立科研基础设施公共内核定位。
-- **现行契约与入口更新**：全量迁移 8 份 JSON Schema 的 `$id`、`plugin.json`、8 份多语言 `README*.md` 的安装与调用入口、MCP 服务器服务名称（`academic-research-kernel`）。
-- **历史审计与法律事实保持**：`SOURCE-LINEAGE.md`、`LICENSE-APPLICATION.md`、`LICENSE-HISTORY.md`、`SLL-APPLICATION.json` 中记录的历史 Commit SHA 与历史仓库身份原样保留，维持不可篡改的法律审计证据链。
+### 仓库身份闭环与路线图解冻重估 (Identity Closeout & Roadmap Re-evaluation)
+- **现行 CI 彻底脱离旧重定向**：`.github/workflows/qa.yml` tap 集成全面切至 `xngg1021/academic-research-kernel`。
+- **全多语言文档定位与基线对齐**：8 份 README 头部全面对齐中立定位，测试基线统一切至 495 项通过；明确便携包与 MCP 别名长期向后兼容。
+- **仓库身份连续性存证**：建立 `REPOSITORY-IDENTITY.md`，记录官方不可变 ID（`1358731364`）与历史过渡 Commit。
+- **路线图解冻审计裁定**：完成痛点矩阵与杠杆重估（`docs/post-pr6-roadmap-reevaluation.md`），基于三项已就绪资产（`ResearchObject`、`AcademicEvidenceReceipt`、`LineageReceipt`），正式核准 PR #9 为 `Claim-Evidence Graph v1`。
 
 ---
 

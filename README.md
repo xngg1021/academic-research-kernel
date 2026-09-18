@@ -35,7 +35,7 @@ There are 21 Markdown reference files across the eleven skills. References load 
 ## Integration & Portable Usage
 
 ### 1. Universal Agent Plugins v1 & Model Context Protocol (MCP)
-This repository conforms to the vendor-neutral **Agent Plugins v1** specification (`plugin.json`) and exposes core academic verification and statistical recompute tools via a stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`). Compatible with Claude Code, Cursor, Gemini CLI, and any modern agent framework:
+This repository conforms to the vendor-neutral **Agent Plugins v1** specification (`plugin.json`) and exposes core academic verification and statistical recompute tools via a stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`). Compatible with Claude Code, Cursor, Gemini CLI, and any modern agent framework. (Note: While the repository identity is `academic-research-kernel`, the plugin manifest name `academic-skills` and MCP configuration aliases remain stable for backward compatibility.)
 
 ```bash
 # Add as stdio MCP server in your agent harness
@@ -82,7 +82,7 @@ QA validates metadata, references, personal-path/known-secret patterns, Python s
 
 Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks eleven skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
-CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with 470 passed unit tests and live upstream canary validation. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
+CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with 495 passed unit tests and live upstream canary validation. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
 
 tools/longtail/ holds the deterministic extreme long-tail scenario generator: 4096 SHA256-seeded candidate combinations over the decoupled factor axes, greedy coverage selection, and the machine-computed coverage report in generated-scenarios.json. It is the input layer for stress-testing the skills; semantic expansion (task chains, oracles, injected events) is a separate stage.
 

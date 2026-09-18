@@ -55,7 +55,7 @@ The repository's future capability space is organized into four planes sharing t
 - C. Production plane: computation, writing, review, grants, systematic review, submission.
 - D. Learning plane: prerequisites, retrieval, error taxonomy, feedback, transfer, forgetting.
 
-Decision recorded here: the learning plane is a separate project. It shares primitives with research production but has zero overlap with the existing skill set; folding it into this repository would dilute the tap's identity. A future hermes-learning-skills repository or a Family HF learning zone is the natural home.
+Decision recorded here: the learning plane is a separate project. It shares primitives with research production but has zero overlap with the existing skill set; folding it into this repository would dilute the repository's identity. A future separate learning project or a Family HF learning zone is the natural home.
 
 ## 5. Candidate directions
 

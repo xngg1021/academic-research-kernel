@@ -107,12 +107,12 @@ jobs:
           python -m pip install -e ./.hermes-upstream
       - name: Tap, search, install and list
         run: |
-          hermes skills tap add xngg1021/hermes-academic-skills
+          hermes skills tap add xngg1021/academic-research-kernel
           hermes skills search academic-source-verification
-          hermes skills install xngg1021/hermes-academic-skills/skills/academic-source-verification
-          hermes skills install xngg1021/hermes-academic-skills/skills/quantitative-paper-audit
-          hermes skills install xngg1021/hermes-academic-skills/skills/retraction-watch
-          hermes skills install xngg1021/hermes-academic-skills/skills/cross-review-five
+          hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
+          hermes skills install xngg1021/academic-research-kernel/skills/quantitative-paper-audit
+          hermes skills install xngg1021/academic-research-kernel/skills/retraction-watch
+          hermes skills install xngg1021/academic-research-kernel/skills/cross-review-five
           hermes skills list
   upstream-canary:
     # Canary integration against Hermes upstream main branch for forward compatibility

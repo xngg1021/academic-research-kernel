@@ -35,7 +35,7 @@ SLL 广泛允许使用、研究、修改、商用、分发与专有增补，受�
 ## 安装与集成
 
 ### 1. 便携式 Agent Plugins v1 与 MCP 工具服务
-本仓库遵循厂商中立的 **Agent Plugins v1** 规范（`plugin.json`），并通过 stdio 协议暴露通用的 **MCP 服务器**（`mcp.json` / `scripts/mcp_server.py`），原生兼容 Claude Code、Cursor、Gemini CLI 与任意现代智能体宿主：
+本仓库遵循厂商中立的 **Agent Plugins v1** 规范（`plugin.json`），并通过 stdio 协议暴露通用的 **MCP 服务器**（`mcp.json` / `scripts/mcp_server.py`），原生兼容 Claude Code、Cursor、Gemini CLI 与任意现代智能体宿主（注：仓库身份已迁移为 `academic-research-kernel`，便携包标识符 `name: "academic-skills"` 与 MCP 工具配置别名保持长期稳定向后兼容）：
 
 ```bash
 # 在您的智能体宿主中直接作为 stdio MCP 服务加载
@@ -65,7 +65,7 @@ hermes skills install xngg1021/academic-research-kernel/skills/academic-source-v
 
 本地执行验证（从仓库根目录）：
 ```bash
-# 运行全部 470 项单元测试与严苛回归套件
+# 运行全部 495 项单元测试与严苛回归套件
 pytest
 
 # 运行代码块静态语法与独立执行检查
@@ -74,7 +74,7 @@ python scripts/qa.py
 
 固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十一个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
 
-CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，全仓 470 项单元测试全部通过，并附带针对上游 main 最新分支的实时 Canary 加载检验。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
+CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，全仓 495 项单元测试全部通过，并附带针对上游 main 最新分支的实时 Canary 加载检验。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
 
 tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
 

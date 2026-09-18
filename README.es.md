@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · Español
 
-Once competencias académicas en chino para Hermes Agent: verificación de fuentes, análisis de literatura, redacción académica, cálculo numérico, auditoría cuantitativa de artículos, auditorías de reproducibilidad, revisiones sistemáticas y metaanálisis, identidad y linaje de objetos de investigación, orquestación de revisiones entre modelos, más dos automatizaciones de vigilancia semanal. El repositorio incluye comprobaciones de ejemplos ejecutables; el alcance de validación y las limitaciones de servicios externos constan en [la auditoría](docs/audit-20260906.md).
+Núcleo de investigación académica neutral respecto al entorno y suite de deliberación multiagente. Proporciona 11 herramientas de verificación y habilidades académicas con puntos de entrada portátiles Agent Plugins v1 y MCP, así como integración nativa para Hermes Agent, Claude Code, Cursor y subagentes CLI personalizados. Cubren verificación de fuentes, análisis de literatura, redacción académica, cálculo numérico, auditoría cuantitativa de artículos, auditorías de reproducibilidad, revisiones sistemáticas y metaanálisis, identidad y linaje de objetos de investigación, orquestación de revisiones entre modelos, más dos automatizaciones de vigilancia semanal. El repositorio incluye comprobaciones de ejemplos ejecutables; el alcance de validación y las limitaciones de servicios externos constan en [la auditoría](docs/audit-20260906.md).
 
 Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Oferta actual: [Source Lineage License 1.0](LICENSE).
 
