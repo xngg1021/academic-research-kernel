@@ -28,6 +28,7 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 | `skills/literature-watch` | 1.1.0 | 週次ブループリント:OpenAlex と Crossref でトピック、著者、DOI の新規作品を監視し、重複排除のうえ新規のみ報告 |
 | `skills/retraction-watch` | 1.1.0 | 週次ブループリント:OpenAlex の is_retracted と Crossref 更新レコード(update-to シグナル)に対して DOI 監視リストを再検査し、状態変化のみ報告 |
 | `skills/research-object-identity` | 1.1.0 | 決定論的研究対象識別および生産来歴カーネル (Provenance Kernel v1)：識別子正規化、5状態判定、コンテンツアドレス指定派生グラフ、因果DAG検証、ミリ秒単位のオフライン逆方向追跡 |
+| `skills/claim-evidence-graph` | 1.0.0 | 決定論的科学主張・証拠グラフカーネル：主張、証拠アンカー、検証レシート、計算来歴の接続 |
 | `skills/cross-review-five` | 2.0.0 | 動的マルチモデル／サブエージェント協調クロスレビュー（Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Geminiなど）：v2 4段階Sparse Deliberationパイプライン（ハンガリー法による最適マッチング、P0-P3重要度判定対応） |
 
 11 のスキルには 21 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれる。GB/T 7714-2025 が施行されており、執筆リファレンスは検証済みの発効日と明示的に 2015 年例とラベル付けされたものを区別する。2025 年版への完全準拠には対象機関のテンプレートまたは標準本文が必要である。

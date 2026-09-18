@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/claim-evidence-graph.schema.json",
+  "title": "ClaimEvidenceGraph",
+  "description": "Deterministic, content-addressed scientific assertion and evidence graph connecting high-level claims to empirical evidence anchors, verification receipts, and computational provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "graph_id",
+    "graph_digest",
+    "claims",
+    "evidence_anchors",
+    "support_edges",
+    "claim_relations",
+    "uncertainties"
+  ],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "enum": ["claim-evidence-graph-1.0"]
+    },
+    "graph_id": {
+      "type": "string",
+      "description": "Deterministic identifier of the claim-evidence graph"
+    },
+    "graph_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Content-addressed SHA256 digest of canonical graph content"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "text", "normalized_text", "claim_type", "claim_digest"],
+        "properties": {
+          "id": {"type": "string"},
+          "text": {"type": "string"},
+          "normalized_text": {"type": "string"},
+          "target_work_id": {"type": "string"},
+          "locator": {"type": "string"},
+          "claim_type": {
+            "type": "string",
+            "enum": ["empirical_finding", "theoretical_claim", "benchmark_result", "methodological_assertion", "generic_claim"]
+          },
+          "claim_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "entities": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "metadata": {"type": "object"}
+        }
+      }
+    },
+    "evidence_anchors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "anchor_type"],
+        "properties": {
+          "id": {"type": "string"},
+          "anchor_type": {
+            "type": "string",
+            "enum": ["lineage_receipt", "evidence_receipt", "table_cell", "figure_artifact", "direct_observation"]
+          },
+          "source_work_id": {"type": "string"},
+          "locator": {"type": "string"},
+          "receipt_ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "schema_version"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["academic_evidence", "lineage"]
+              },
+              "schema_version": {"type": "string"},
+              "receipt_id": {"type": "string"},
+              "receipt_digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "claim_digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "payload_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "locator": {"type": "string"}
+            }
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "excerpt": {"type": "string"},
+          "metadata": {"type": "object"}
+        }
+      }
+    },
+    "support_edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "claim_id", "support_status"],
+        "properties": {
+          "evidence_id": {"type": "string"},
+          "claim_id": {"type": "string"},
+          "support_status": {
+            "type": "string",
+            "enum": ["supported", "contradicted", "unverifiable", "out_of_scope"]
+          },
+          "receipt_ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "schema_version"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["academic_evidence", "lineage"]
+              },
+              "schema_version": {"type": "string"},
+              "receipt_id": {"type": "string"},
+              "receipt_digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "claim_digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "payload_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "locator": {"type": "string"}
+            }
+          },
+          "metadata": {"type": "object"}
+        }
+      }
+    },
+    "claim_relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_claim_id", "target_claim_id", "relation_type"],
+        "properties": {
+          "source_claim_id": {"type": "string"},
+          "target_claim_id": {"type": "string"},
+          "relation_type": {
+            "type": "string",
+            "enum": ["contradicts", "corroborates", "cites", "refines", "depends_on"]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "metadata": {"type": "object"}
+        }
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item_id", "subject_id", "kind", "reason", "needs_human"],
+        "properties": {
+          "item_id": {"type": "string"},
+          "subject_id": {"type": "string"},
+          "kind": {
+            "type": "string",
+            "enum": ["unverifiable_claim", "unresolved_contradiction", "missing_receipt", "ambiguous_locator", "generic_uncertainty"]
+          },
+          "reason": {"type": "string"},
+          "needs_human": {"type": "boolean"},
+          "metadata": {"type": "object"}
+        }
+      }
+    }
+  }
+}

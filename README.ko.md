@@ -2,7 +2,7 @@
 
 English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · 한국어 · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
 
-하네스 중립적 학술 연구 핵심 및 다중 에이전트 심의 제품군. 휴대용 Agent Plugins v1 및 MCP 진입점과 함께 11가지 학술 스킬 및 검증 도구를 제공하며, Hermes Agent, Claude Code, Cursor 및 맞춤형 CLI 하위 에이전트를 위한 네이티브 통합을 지원합니다. 출처 검증, 문헌 분석, 학술 집필, 수치 계산, 정량 논문 감사, 재현 감사, 체계적 문헌고찰과 메타 분석, 연구 객체 식별과 계보, 교차 모델 리뷰 편성, 그리고 주간 모니터링 자동화 두 건을 다룹니다. 저장소에는 실행 가능한 예제 검사가 포함되어 있으며, 검증 범위와 외부 서비스 제약은 [감사 문서](docs/audit-20260906.md)에 기록되어 있습니다.
+하네스 중립적 학술 연구 핵심 및 다중 에이전트 심의 제품군. 휴대용 Agent Plugins v1 및 MCP 진입점과 함께 12가지 학술 스킬 및 검증 도구를 제공하며, Hermes Agent, Claude Code, Cursor 및 맞춤형 CLI 하위 에이전트를 위한 네이티브 통합을 지원합니다. 출처 검증, 문헌 분석, 학술 집필, 수치 계산, 정량 논문 감사, 재현 감사, 체계적 문헌고찰과 메타 분석, 연구 객체 식별과 계보, 교차 모델 리뷰 편성, 그리고 주간 모니터링 자동화 두 건을 다룹니다. 저장소에는 실행 가능한 예제 검사가 포함되어 있으며, 검증 범위와 외부 서비스 제약은 [감사 문서](docs/audit-20260906.md)에 기록되어 있습니다.
 
 저자: Junfu Shi (SJF, xngg1021), Hermes Agent. 현재 제공 범위: [Source Lineage License 1.0](LICENSE).
 
@@ -28,6 +28,7 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 | `skills/literature-watch` | 1.1.0 | 주간 블루프린트: OpenAlex와 Crossref에서 주제·저자·DOI의 신규 저작을 감시하고 중복 제거 후 신규 항목만 보고 |
 | `skills/retraction-watch` | 1.1.0 | 주간 블루프린트: OpenAlex is_retracted와 Crossref 갱신 기록(update-to 신호)에 대해 DOI 감시 목록을 재점검하고 상태 변화만 보고 |
 | `skills/research-object-identity` | 1.1.0 | 결정론적 연구 객체 식별 및 생산 계보 커널 (Provenance Kernel v1): 식별자 정규화, 5가지 상태 판정, 콘텐츠 주소 지정 파생 그래프, 인과적 DAG 검증 및 밀리초 단위 오프라인 역방향 추적 |
+| `skills/claim-evidence-graph` | 1.0.0 | 결정론적 과학 주장-증거 그래프 커널: 주장, 증거 앵커, 검증 영수증 및 계산 계보 연결 |
 | `skills/cross-review-five` | 2.0.0 | 임의의 모델 및 서브에이전트를 지원하는 동적 다중 검토 패널 (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini 등): v2 4단계 Sparse Deliberation 파이프라인 (헝가리안 알고리즘 기반 상호보완적 블라인드 질의, P0-P3 심각도 지원) |
 
 11개 스킬에는 21편의 Markdown 참조 파일이 있으며 필요할 때만 로드된다. GB/T 7714-2025가 시행 중이며, 집필 참조는 검증된 시행일과 명시적으로 2015년 예시로 표기된 것을 구분한다. 2025년판 완전 준수에는 대상 기관의 템플릿 또는 표준 원문이 필요하다.
