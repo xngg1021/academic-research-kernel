@@ -4,7 +4,25 @@
 
 ---
 
-## 2026-09-18（HEAD / chore/repo-identity-closeout-and-roadmap）
+## 2026-09-18（HEAD / work/claim-evidence-graph-v1）
+
+### 科学论断-证据图内核 (Claim-Evidence Graph v1)
+- **核心数据契约 (`schemas/claim-evidence-graph.schema.json`)**：
+  - JSON Schema 2020-12 严格规范，全量开启 `additionalProperties: false`；
+  - 规范定义 `Claim`、`EvidenceAnchor`、`EvidenceSupportEdge`、`ClaimRelationEdge`、`UncertaintyItem` 与 `ReceiptRef`；
+  - 强类型 `ReceiptRef` 正式解耦并无歧义绑定 `LineageReceipt`（通过 `receipt_id`/`receipt_digest`）与 `AcademicEvidenceReceipt`（通过 `claim_digest`/`payload_sha256`）。
+- **确定性图内核 (`skills/claim-evidence-graph`)**：
+  - 确立生产谱系（DAG）与学术命题关系（允许自然成环，如双向互斥反驳）的分立纪律；
+  - 严禁任何形式的真理裁判所与主观置信度打分（如 0.85），裁决一律离散化，争议显式进入不确定性账本（`UncertaintyQueue`）；
+  - `claim_digest` 严格绑定规范化命题文本（仅做 NFC 与空白压缩，绝不重写语义）、定位符与所属论文；
+  - 纯 Python 离线实现矛盾发现器（`find_contradictions`）与全链执行谱系回溯穿透（`trace_claim_provenance`）。
+- **验证矩阵更新**：
+  - 全仓单测规模扩充至 **515 项全绿**（0 failures, 0 warnings）；
+  - 静态 QA 可执行代码块扩充至 39 项全部 PASS。
+
+---
+
+## 2026-09-18（chore/repo-identity-closeout-and-roadmap）
 
 ### 仓库身份闭环与路线图解冻重估 (Identity Closeout & Roadmap Re-evaluation)
 - **现行 CI 彻底脱离旧重定向**：`.github/workflows/qa.yml` tap 集成全面切至 `xngg1021/academic-research-kernel`。
@@ -51,6 +69,7 @@
   - `skills/literature-watch` (1.1.0) — Crossref 兜底、凭证域名权威校验与并发锁租约
   - `skills/retraction-watch` (1.1.0) — 状态合并、并发租约锁与分页截断检测
   - `skills/research-object-identity` (1.1.0) — 确定性研究对象身份层与生产谱系内核（Provenance Kernel v1，落地路线图原语 2 谱系，为原语 3 奠定对象与事件底座）
+  - `skills/claim-evidence-graph` (1.0.0) — 确定性科学论断-证据图内核（Claim-Evidence Graph v1，连接论断、事实收据与计算谱系）
   - `scripts/scfabric` (1.0.0) — 科学计算执行层薄层与严格数值门禁
 - **Schemas & Protocols**:
   - `schemas/compute-receipt.schema.json`
@@ -60,11 +79,12 @@
   - `schemas/review-result.schema.json`
   - `schemas/review-run-receipt.schema.json`
   - `schemas/lineage-receipt.schema.json` (Research Object Provenance Kernel v1, JSON Schema 2020-12)
+  - `schemas/claim-evidence-graph.schema.json` (Claim-Evidence Graph v1, JSON Schema 2020-12)
   - `plugin.json` (Agent Plugins v1 portable manifest)
   - `mcp.json` / `scripts/mcp_server.py` (Portable MCP tools surface)
 - **Verification Matrix**:
-  - Unit & Regression Tests: 495 passed, 0 failures, 0 warnings
-  - Static QA Fences: 38 independent executable blocks passed
+  - Unit & Regression Tests: 524 passed, 0 failures, 0 warnings
+  - Static QA Fences: 39 independent executable blocks passed
   - Provenance & Lineage: 毫秒级因果拓扑逆向溯源、完整三阶段物理科研流水线、内容与回执指纹双重独立存证、防篡改哈希核验、因果 DAG 迭代无环检测与 JSON Schema 2020-12 严格匹配全量通过
   - Security & Contracts: Command adapter isolated env, strict participant slug validation, path containment guard, and JSON schema parity check passed
   - Scientific Integrity: MCP statistical recompute fixed, non-forgery Cohen's d enforced, literature-watch unobservable cites correctly surfaced

@@ -171,7 +171,7 @@ def test_agent_plugins_v1_manifests_exist():
     assert set(p_data).issubset(allowed_plugin_fields), f"Unexpected plugin fields: {set(p_data) - allowed_plugin_fields}"
 
     skill_files = list((ROOT / "skills").glob("*/SKILL.md"))
-    assert len(skill_files) == 11, f"Expected 11 skills, found {len(skill_files)}"
+    assert len(skill_files) == 12, f"Expected 12 skills, found {len(skill_files)}"
 
     m_data = json.loads(m_json.read_text(encoding="utf-8"))
     assert m_data["$schema"] == "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
@@ -219,10 +219,10 @@ def test_mcp_server_protocol_messages():
 
 
 def test_agent_plugins_v1_skills_and_manifest_compatibility():
-    """Verify all 11 skills have strictly portable metadata and pass Agent Plugins v1 checks."""
+    """Verify all 12 skills have strictly portable metadata and pass Agent Plugins v1 checks."""
     import yaml
     skill_files = sorted(list((ROOT / "skills").glob("*/SKILL.md")))
-    assert len(skill_files) == 11
+    assert len(skill_files) == 12
 
     for sf in skill_files:
         text = sf.read_text(encoding="utf-8")
