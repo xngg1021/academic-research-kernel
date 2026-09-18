@@ -4,7 +4,27 @@
 
 ---
 
-## 2026-09-18（HEAD / work/claim-evidence-graph-v1）
+## 2026-09-18（PR #10 / CI & Locator Determinism Maintenance，HEAD / chore/ci-node24-and-locator-determinism）
+
+### 基础设施维护、定位符确定性加固与 PR #11 立项裁定
+- **GitHub Actions 全量迁移 Node 24 generation**：
+  - 升级 `actions/checkout` 至 v7.0.1 不可变 SHA（`3d3c42e5aac5ba805825da76410c181273ba90b1`）；
+  - 升级 `actions/setup-python` 至 v7.0.0 不可变 SHA（`5fda3b95a4ea91299a34e894583c3862153e4b97`）；
+  - 覆盖 checks、upstream-canary、tap-lifecycle 全部 8 处 action 引用，彻底消解 Node 20 弃用告警与即时生效的时间性阻断风险。
+- **Ubuntu 26.04 Canary 预迁移验证**：
+  - 增设 `ubuntu-26.04` (x86_64) 与 `ubuntu-26.04-arm` (arm64) canary 节点，提前验证下一代系统的依赖与环境兼容性，全矩阵首轮一次性全绿。
+- **谱系相对定位符绝对确定性加固 (P1/P2)**：
+  - `skills/research-object-identity/scripts/provenance.py` 严格规范：`relative local locator + root_dir=None` 绝不回退至进程当前工作目录（CWD）；
+  - `validate_lineage()` 将未指定 `root_dir` 的相对定位符显式标为 `unverified` 并附带 `Relative local locator requires explicit root_dir for on-disk verification`，确保跨不同 CWD 执行时验证元组与回执摘要 100% 恒定。
+- **PR #11 战略立项治理审计**：
+  - 新增 `docs/post-pr9-roadmap-reevaluation.md`，执行 235 项痛点矩阵重算核验，正式核准 PR #11 方向为 `Decision & Negative Result Ledger v1`（填补十四原语中的状态台账 Primitive 3），并规划 PR #12 为 `Research Artifact Ingestion Bridge v1`。
+- **验证矩阵更新**：
+  - 全仓单测规模扩充至 **526 项全绿**（0 failures, 0 warnings）；
+  - 静态 QA 可执行代码块 39 项全部 PASS。
+
+---
+
+## 2026-09-18（PR #9 / Claim-Evidence Graph v1，commit ab7d1fe）
 
 ### 科学论断-证据图内核 (Claim-Evidence Graph v1)
 - **核心数据契约 (`schemas/claim-evidence-graph.schema.json`)**：
@@ -15,9 +35,10 @@
   - 确立生产谱系（DAG）与学术命题关系（允许自然成环，如双向互斥反驳）的分立纪律；
   - 严禁任何形式的真理裁判所与主观置信度打分（如 0.85），裁决一律离散化，争议显式进入不确定性账本（`UncertaintyQueue`）；
   - `claim_digest` 严格绑定规范化命题文本（仅做 NFC 与空白压缩，绝不重写语义）、定位符与所属论文；
-  - 纯 Python 离线实现矛盾发现器（`find_contradictions`）与全链执行谱系回溯穿透（`trace_claim_provenance`）。
-- **验证矩阵更新**：
-  - 全仓单测规模扩充至 **515 项全绿**（0 failures, 0 warnings）；
+  - 纯 Python 离线实现矛盾发现器（`find_contradictions`）与全链执行谱系回溯穿透（`trace_claim_provenance`）；
+  - 采用 `FrozenDict` 深度冻结机制，严格封死对象属性嵌套变异导致的 edge 幂等键失步。
+- **验证矩阵**：
+  - 全仓单测规模扩充至 **524 项全绿**（0 failures, 0 warnings）；
   - 静态 QA 可执行代码块扩充至 39 项全部 PASS。
 
 ---
@@ -55,9 +76,9 @@
 
 ### 2. 发布身份清单 (Release Manifest)
 
-- **Repository**: `xngg1021/hermes-academic-skills`
-- **Protocol**: `compute-receipt-1.0` / `evidence-receipt-1.0`
-- **Skills & Components**:
+- **Repository**: `xngg1021/academic-research-kernel` (历史版本标记为 `hermes-academic-skills`)
+- **Protocol**: `compute-receipt-1.0` / `evidence-receipt-1.0` / `lineage-receipt-1.0` / `claim-evidence-graph-1.0`
+- **Skills & Components (12 一等技能)**:
   - `skills/cross-review-five` (2.0.0) — v2 四阶段 Sparse Deliberation 稀疏审议流重大升级
   - `skills/academic-source-verification` (1.2.0) — 增加全 Unicode 分词与词元集合匹配算法
   - `skills/academic-writing` (1.1.1) — 写作规范与引文参考
@@ -83,10 +104,10 @@
   - `plugin.json` (Agent Plugins v1 portable manifest)
   - `mcp.json` / `scripts/mcp_server.py` (Portable MCP tools surface)
 - **Verification Matrix**:
-  - Unit & Regression Tests: 526 passed, 0 failures, 0 warnings
+  - Unit & Regression Tests: 526 passed, 0 failures, 0 warnings (PR #10)
   - Static QA Fences: 39 independent executable blocks passed
   - Provenance & Lineage: 毫秒级因果拓扑逆向溯源、完整三阶段物理科研流水线、内容与回执指纹双重独立存证、防篡改哈希核验、因果 DAG 迭代无环检测与 JSON Schema 2020-12 严格匹配全量通过
   - Security & Contracts: Command adapter isolated env, strict participant slug validation, path containment guard, and JSON schema parity check passed
   - Scientific Integrity: MCP statistical recompute fixed, non-forgery Cohen's d enforced, literature-watch unobservable cites correctly surfaced
-  - Agent Plugins v1 Loader: Live verified against 11 portable skills, MCP tools, and manifest with 0 diagnostics
-  - CI Matrix Platforms: Linux x86_64 (Python 3.10-3.14), Linux ARM64 (Python 3.12), macOS ARM64 & Intel (macos-15-intel, Python 3.12), Windows x86_64 & Windows ARM64 (Python 3.12)
+  - Agent Plugins v1 Loader: Live verified against 12 portable skills, MCP tools, and manifest with 0 diagnostics
+  - CI Matrix Platforms: Linux x86_64 (Python 3.10-3.14), Linux ARM64 (Python 3.12), Ubuntu 26.04 preview canary (x86_64 & arm64, Python 3.12), macOS ARM64 & Intel (macos-15-intel, Python 3.12), Windows x86_64 & Windows ARM64 (Python 3.12)

@@ -404,6 +404,12 @@ class LineageReceipt:
 def _resolve_locator_path(locator: str, root_dir: Optional[Path] = None) -> Tuple[Optional[Path], bool]:
     """Parse local filesystem path from locator string, discarding URI schemes or anchors.
 
+    Note on trust boundaries:
+        root_dir provides an explicit base anchor for relative paths, completely
+        eliminating implicit process CWD fallback across executions. It acts as
+        a deterministic locator base, not a hardened containment sandbox (e.g.
+        explicit parent-directory traversals like '../' are resolved from root_dir).
+
     Returns:
         (resolved_path, is_unanchored_relative)
         If locator is a relative local path and root_dir is None, returns (None, True).

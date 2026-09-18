@@ -50,7 +50,7 @@
   Decision / Negative Result Ledger     63 / 235 = 26.8%
   Claim-Evidence Graph                  58 / 235 = 24.7%  [PR #9 已落地]
   Constraint Compiler                   49 / 235 = 20.9%
-  Learning Error + Adaptive Practice    29 / 12.3%
+  Learning Error + Adaptive Practice    29 / 235 = 12.3%
   ranking: Research > Method > Decision > Claim-Evidence > Constraint > Learning
 ```
 
