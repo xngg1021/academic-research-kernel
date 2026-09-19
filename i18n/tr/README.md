@@ -81,7 +81,7 @@ git diff --check
 
 QA; meta verileri, referansları, kişisel yol/gizli bilgi kalıplarını, Python sözdizimini ve işaretli kod bloklarını doğrular. Başarılı kontrollerde 0, kod/şema/kimlik hatalarında 1, aktarım/kimlik doğrulama/kota yetersizliğinde 2 döndürür.
 
-CI; Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 ve macOS Intel genelinde tam QA paketini çalıştırır. 629 birim testi geçer ve 40 çalıştırılabilir kod bloğu doğrulanır.
+CI; Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 ve macOS Intel genelinde tam QA paketini çalıştırır. 632 birim testi geçer ve 40 çalıştırılabilir kod bloğu doğrulanır.
 
 tools/longtail/ ayrık faktör eksenleri üzerinde 4096 SHA256 tohumlu aday kombinasyonu, açgözlü kapsam seçimi ve generated-scenarios.json içindeki kapsam raporunu içeren deterministik aşırı uzun kuyruk senaryo üretecini barındırır.
 

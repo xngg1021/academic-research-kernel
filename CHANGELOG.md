@@ -31,9 +31,9 @@
   - 全仓 53 篇规范 Markdown 文档密码学级增量同步清册 `docs/i18n/manifest.json`（53 篇源文档 × 21 语种 = 1,113 理论实例；53 canonical_current、22 localized_current、1,038 queued_for_generation），内置代码块感知的章节哈希提取与陈旧度检测，杜绝重跑脚本静默洗白；
   - `scripts/qa.py` 静态门禁强制固化 21 语种 Profile、18×21 术语矩阵、53 篇清单源文件与本地文件双层哈希、以及 `README.zh-CN.md` / `README.zh-TW.md` 中文别名逐字节恒等不变量。
 - **技能文档 (`skills/decision-ledger/SKILL.md`)**：以自然科研语言重写，frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
-- **测试 (`tests/test_decision_ledger.py`)**：97 项对抗性回归，单测基线升至 **629 passed**。
+- **测试 (`tests/test_decision_ledger.py`)**：100 项对抗性回归，单测基线升至 **632 passed**。
 
-**验证**：`pytest` 629 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
+**验证**：`pytest` 632 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
 
 ### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
 

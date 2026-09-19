@@ -1532,3 +1532,45 @@ def test_canonical_round_trip_empty_optional_fields():
     loaded = dl.DecisionLedger.from_dict(exp)
     assert loaded.ledger_digest() == orig_digest
     assert loaded.to_dict()["ledger_digest"] == orig_digest
+
+
+def test_locator_empty_rejected_runtime_schema_parity():
+    """Empty locator string must be rejected at runtime matching Schema minLength: 1."""
+    g = dl.DecisionLedger()
+    with pytest.raises(ValueError, match="locator must be a non-empty string"):
+        g.add_decision("d1", "Test", locator="")
+
+    with pytest.raises(ValueError, match="locator must be a non-empty string"):
+        dl.DecisionNode(id="d2", title="Test", locator="")
+
+    with pytest.raises(ValueError, match="locator must be a non-empty string"):
+        dl.OutcomeCorrection(
+            correction_id="corr-" + "a" * 32,
+            decision_id="d1",
+            verdict="positive",
+            rationale="valid rationale",
+            locator="",
+        )
+
+    with pytest.raises(ValueError, match="locator must be a non-empty string"):
+        dl.ReceiptRef(
+            kind="academic_evidence",
+            schema_version="1.0",
+            claim_digest="a" * 64,
+            payload_sha256="b" * 64,
+            locator="",
+        )
+
+
+def test_canonical_raw_record_preserves_metadata_with_none_or_empty_values():
+    """Protocol canonicalization must not mutate or strip business metadata containing None or empty strings."""
+    raw_basis = {
+        "decision_id": "d1",
+        "basis_kind": "decision",
+        "basis_id": "d0",
+        "metadata": {"note": None, "custom_locator": ""},
+    }
+    cleaned = dl.canonical_raw_record(raw_basis)
+    assert "metadata" in cleaned
+    assert cleaned["metadata"]["note"] is None
+    assert cleaned["metadata"]["custom_locator"] == ""

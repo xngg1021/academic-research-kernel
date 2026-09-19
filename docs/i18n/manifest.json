@@ -131,7 +131,7 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+      "source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
       "section_hashes": {
         "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
         "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -141,7 +141,7 @@
         "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
         "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
         "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-        "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+        "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
         "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
       },
       "genre": "user_facing_documentation",
@@ -150,8 +150,8 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -161,7 +161,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -170,8 +170,8 @@
         "zh-Hans": {
           "path": "README.zh-Hans.md",
           "status": "localized_current",
-          "localized_file_sha256": "11aa3c63de21f32d1064ce36b2a09f6906b515d36ab0ccb2111cfecfc31fbae5",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "cc8359a0efbf721cb20f15f7eb88eea8e0713ab101682f82f4599e7544cca61d",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -181,7 +181,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -190,8 +190,8 @@
         "zh-Hant": {
           "path": "README.zh-Hant.md",
           "status": "localized_current",
-          "localized_file_sha256": "f38344cd0b2e4bde8ff9defa32020c0db1d9c8702f110f817430c56382e48c71",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "a2d9d17b2e62b7d3f4a786ef753e47333e6c7f1e4b3aff98130611ebcc03135e",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -201,7 +201,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -210,8 +210,8 @@
         "es": {
           "path": "README.es.md",
           "status": "localized_current",
-          "localized_file_sha256": "e09b637d8fad4b795133e9cafbe2e59e9b7c17588f82a000d7f428ef6806e2ad",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "138ba1bf7dbdb59756c2f5b5352cc7d6dc511703aa58d1ea761de623b0209b91",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -221,7 +221,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -230,8 +230,8 @@
         "pt": {
           "path": "i18n/pt/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "44af790877a68d19a40aa2c671f78123e6106e735992d7020b755058d772f672",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "8b7bab5f6844d9ff48306eb7a131e15907e39cd142ec0ad2ec506ee0879ba334",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -241,7 +241,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -250,8 +250,8 @@
         "fr": {
           "path": "README.fr.md",
           "status": "localized_current",
-          "localized_file_sha256": "74e4f988e429130c7853099a0c17efece530421840a2f013d53c86afe670d062",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "889abd2fa222bbe50a51f4e2e8521753fdcaaf3d38797df8d675a44f170102dc",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -261,7 +261,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -270,8 +270,8 @@
         "de": {
           "path": "README.de.md",
           "status": "localized_current",
-          "localized_file_sha256": "a6b2a449cb119b3b1f3c2f64a88629b116c7b198cd1c51ecfdc61a4f01e06416",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "846b524b65added4a151ab9149206786c1c1e8329fa788091446ddf33768cc60",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -281,7 +281,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -290,8 +290,8 @@
         "ru": {
           "path": "i18n/ru/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "f30cde19cb2e90c17713ef38a716d5412854e5c99cc16e6153a196bb0ede8ed7",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "7cf28bc81568b62ec006ab60f202b5c8dbc0195f1e0b6f72033551618970a00e",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -301,7 +301,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -310,8 +310,8 @@
         "ja": {
           "path": "README.ja.md",
           "status": "localized_current",
-          "localized_file_sha256": "6d31b5eb96ee4da6904320fb02f82b99bbb771c73e811c551b822efb15f74d7f",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "b53695194b8b3adfc5a5f55e281ee72cb386d5d9f798ad0abbff6e503b517cc9",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -321,7 +321,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -330,8 +330,8 @@
         "ko": {
           "path": "README.ko.md",
           "status": "localized_current",
-          "localized_file_sha256": "9a948374bacbaba893380be540443d70e4211138d1d232727187c6fb34b6c969",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "9c33093d35f7cfebcb59251b15688f5f7709346d2581a25950bea400c200b072",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -341,7 +341,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -350,8 +350,8 @@
         "id": {
           "path": "i18n/id/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "ef534a32df68b5d81efcd703e4f1f8841157e62306869832d96f618adc7aaa24",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "07d84ba2cb5bb5ec442099abf70a3b31e6a3e56b95832ba240ba1b96f00353c6",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -361,7 +361,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -370,8 +370,8 @@
         "it": {
           "path": "i18n/it/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "f40551d016273ed5ac70918a8958b3f7121fb8b897f4273ff06f935ae68cbdd5",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "aeb517402ab2bf824e995d6ffa5f6857dd7a4adeb7b0e4006ca07fe663b97212",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -381,7 +381,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -390,8 +390,8 @@
         "hi": {
           "path": "i18n/hi/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "2092f3012da4264bb9533716faca5228262add1eba4baccd6f0832451e764ac9",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "dff059ef14f07311478d2dfd47fa5433093587237014e3cebc9949dfa3eb4c05",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -401,7 +401,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -410,8 +410,8 @@
         "ar": {
           "path": "i18n/ar/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "7fc1fd1c1afd81858301022ce14078b40c9610bcb66023d2105b964a2cd95eeb",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "32e588065498d91f8ae46617e5cbb44121129321b6afe863081bc79792fbb327",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -421,7 +421,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -431,7 +431,7 @@
           "path": "i18n/bn/README.md",
           "status": "localized_current",
           "localized_file_sha256": "8732395481d4ed2af238b535cdecd12bf4075a334ea8ba426b262a41da3d6333",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -441,7 +441,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -450,8 +450,8 @@
         "ur": {
           "path": "i18n/ur/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "bffd64de1b7f6a719c19cccb41a291b1e0df6cb8954b8b450edbd012b523d3ee",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "1399a831e460f0dd03e1f5e253cb01c67edff353b651e2696c6febba787ab278",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -461,7 +461,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -470,8 +470,8 @@
         "vi": {
           "path": "i18n/vi/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "c27588ec7486bd26025f89ca524db3f09fed91215c8281b94a4d739e98a386cd",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "7f857555d4465e1e567145d88246f3d6aac0ed0d710029290ec01a5d7d07a2f3",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -481,7 +481,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -490,8 +490,8 @@
         "tr": {
           "path": "i18n/tr/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "c07ef1925fb1353869dfbadb5384cfda2eea3d0f5b9482ad4c26c2cc5a572da4",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "bdc288191ac24723052defbd97b2496431cf9a7e784e201eb2b4c3b697c73e95",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -501,7 +501,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -511,7 +511,7 @@
           "path": "i18n/fa/README.md",
           "status": "localized_current",
           "localized_file_sha256": "85b0e0bb49aac1ca0d22fa270f839e796719b2d9029df2d49f99ca986a8b54b8",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -521,7 +521,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -530,8 +530,8 @@
         "sw": {
           "path": "i18n/sw/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "c1ba1c7662186ecaf860f3ae7b152efcf48964244df05972d44fe1765ad1ad7b",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "8a7824fca774d422dad30c62c2ba2f0888e605c432223cf6f5c48501d00a81cf",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -541,7 +541,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -550,8 +550,8 @@
         "pl": {
           "path": "i18n/pl/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "319eb9ab0a5fb51e97d68fbf831f5a852dd5200b0401fd4c338719cb6726fd7f",
-          "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
+          "localized_file_sha256": "678eb3c03bb587e95a352b9fafef33a04b18b8c526c886199aab4a6a498b78d5",
+          "translated_from_source_sha256": "fe33fb3bef0d1fdec20ab74c24351bf09e1aa479ba908600b9922199f7c8e1c7",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -561,7 +561,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "62105518b3cfbcb62cd2960d6707ee597dac8efd59602b445010dca2a83bcd9b",
+            "Validation": "a2ee09d1cd1f71a08ce484241b3d6da1cd2527eb3a084d049af09b5067423d38",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -785,11 +785,11 @@
       "canonical_title": "Changelog and Release Manifest",
       "source_path": "CHANGELOG.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "246cf2ce292e972566d62d0da0df996cca4080eebb0a49f57d6c1debcd739b8c",
+      "source_sha256": "4316f92294463cef5fc17c4569b72239ff05e3e6d9f87c10d1b05f7cf6517599",
       "section_hashes": {
         "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
         "2026-09-19（PR #11 / Research Decision Log v1，分支 work/decision-ledger-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)": "e43fc4d1b97ddc9f395f61ae7880a6fa383c8ea73064dc79306841d9245a3321",
+        "研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)": "77af315a0c675b845a732384815b0df552c59b5ab74c7578957b4193eedcd5d0",
         "交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）": "aac4cee4591a3b46860f8b3e8a06c3e1e24657dcaf64d6ee4ee5a9e933357a26",
         "交叉评审加固第二轮（dsv4pro 深度盲审 + 主线程复核，同 PR 内实施）": "901d2f7350bbf1081e661ef97ad784a4d581778aee4a8c3cc738bec6c0d649ec",
         "交叉评审合议收口（质询对账 + 未决账本清偿，同 PR 内实施）": "c24321da8df565d37029f4995511c09a2e30f6d4f0810e5da5edb1097f7220b7",
@@ -820,12 +820,12 @@
         "zh-Hans": {
           "path": "CHANGELOG.md",
           "status": "canonical_current",
-          "localized_file_sha256": "246cf2ce292e972566d62d0da0df996cca4080eebb0a49f57d6c1debcd739b8c",
-          "translated_from_source_sha256": "246cf2ce292e972566d62d0da0df996cca4080eebb0a49f57d6c1debcd739b8c",
+          "localized_file_sha256": "4316f92294463cef5fc17c4569b72239ff05e3e6d9f87c10d1b05f7cf6517599",
+          "translated_from_source_sha256": "4316f92294463cef5fc17c4569b72239ff05e3e6d9f87c10d1b05f7cf6517599",
           "translated_from_section_hashes": {
             "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
             "2026-09-19（PR #11 / Research Decision Log v1，分支 work/decision-ledger-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)": "e43fc4d1b97ddc9f395f61ae7880a6fa383c8ea73064dc79306841d9245a3321",
+            "研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)": "77af315a0c675b845a732384815b0df552c59b5ab74c7578957b4193eedcd5d0",
             "交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）": "aac4cee4591a3b46860f8b3e8a06c3e1e24657dcaf64d6ee4ee5a9e933357a26",
             "交叉评审加固第二轮（dsv4pro 深度盲审 + 主线程复核，同 PR 内实施）": "901d2f7350bbf1081e661ef97ad784a4d581778aee4a8c3cc738bec6c0d649ec",
             "交叉评审合议收口（质询对账 + 未决账本清偿，同 PR 内实施）": "c24321da8df565d37029f4995511c09a2e30f6d4f0810e5da5edb1097f7220b7",

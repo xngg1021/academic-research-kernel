@@ -88,7 +88,7 @@ QA는 메타데이터, 참조 파일, 개인 경로·알려진 시크릿 패턴,
 
 고정된 Hermes 저작 테스트는 스킬별 규칙을 바꾸지 않고 재사용된다. 상류 전체 배포 개체군 검사는 이 tap에 적용되지 않으며, 본 저장소 하네스는 13개 스킬 전체를 검사하고 고정된 번들·선택 카탈로그에 대해 참조를 해석한다. 이는 완전한 Hermes 설치 테스트가 아니다. CI는 의존성 설치에만 네트워크를 사용하며 일반 PR 테스트는 학술 API를 호출하지 않는다.
 
-CI는 GitHub Actions로 Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 프리뷰 Canary (ubuntu-26.04 및 ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), macOS Intel (macos-15-intel) 전 플랫폼 및 전 아키텍처에 걸쳐 실행되며, 629개 단위 테스트 전원 통과와 최신 상류 main 실시간 Canary 검증을 포함한다. 별도의 tap 통합 워크플로가 main 푸시에서 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 이 저장소에 대해 tap add, search, install, list를 수행한다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/audit-20260906.md)에 있다.
+CI는 GitHub Actions로 Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 프리뷰 Canary (ubuntu-26.04 및 ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), macOS Intel (macos-15-intel) 전 플랫폼 및 전 아키텍처에 걸쳐 실행되며, 632개 단위 테스트 전원 통과와 최신 상류 main 실시간 Canary 검증을 포함한다. 별도의 tap 통합 워크플로가 main 푸시에서 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 이 저장소에 대해 tap add, search, install, list를 수행한다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/audit-20260906.md)에 있다.
 
 tools/longtail/ 디렉터리는 결정론적 극한 롱테일 시나리오 생성기를 호스팅합니다: 분리된 요인 축 전반에 걸친 4096개의 SHA256 시드 조합, 탐욕적 커버리지 선택, 그리고 generated-scenarios.json 내의 기계 계산 커버리지 보고서를 제공합니다. 이는 스킬 스트레스 테스트의 입력 레이어입니다.
 

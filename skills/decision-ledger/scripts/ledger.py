@@ -527,6 +527,10 @@ class ReceiptRef:
             if self.receipt_id is not None or self.receipt_digest is not None:
                 raise ValueError("AcademicEvidence ReceiptRef must not contain lineage fields (receipt_id or receipt_digest).")
 
+        if self.locator is not None:
+            if not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048):
+                raise ValueError("locator must be a non-empty string of at most 2048 characters.")
+
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
             "kind": self.kind,
@@ -617,8 +621,8 @@ class DecisionNode:
         if self.context_work_id is not None:
             _check_id(self.context_work_id, "context_work_id")
         if self.locator is not None:
-            if not isinstance(self.locator, str) or len(self.locator) > 2048:
-                raise ValueError("locator must be a string up to 2048 characters.")
+            if not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048):
+                raise ValueError("locator must be a non-empty string of at most 2048 characters.")
         norm_title = canonical_text(self.title)
         object.__setattr__(self, "normalized_title", norm_title)
         digest = compute_decision_digest(
@@ -705,11 +709,17 @@ def canonical_decision_export(item: Any) -> Dict[str, Any]:
 
 
 def canonical_raw_record(d: Mapping[str, Any]) -> Dict[str, Any]:
-    """Normalize raw export records so empty optional fields (metadata {}, empty locators, etc.)
-    do not perturb content identity between wire shapes and canonical runtime states.
+    """Normalize raw export records so empty optional protocol fields do not perturb digests.
+
+    User metadata is strictly isolated: empty metadata {} is omitted, but non-empty
+    metadata preserves all internal keys and values untouched.
     """
     res: Dict[str, Any] = {}
     for k, v in d.items():
+        if k == "metadata":
+            if v and isinstance(v, collections.abc.Mapping) and len(v) > 0:
+                res["metadata"] = _frozen_meta(v).to_dict()
+            continue
         if v is None:
             continue
         if v == "" and k in (
@@ -722,11 +732,8 @@ def canonical_raw_record(d: Mapping[str, Any]) -> Dict[str, Any]:
             "reason",
         ):
             continue
-        if isinstance(v, collections.abc.Mapping):
-            nested = canonical_raw_record(v)
-            if k == "metadata" and len(nested) == 0:
-                continue
-            res[k] = nested
+        if k == "receipt_ref" and isinstance(v, collections.abc.Mapping):
+            res["receipt_ref"] = canonical_raw_record(v)
         else:
             res[k] = v
     return res
@@ -1036,8 +1043,8 @@ class OutcomeCorrection:
         if len(self.rationale) > 4096:
             raise ValueError("Outcome correction 'rationale' must not exceed 4096 characters.")
         if self.locator is not None:
-            if not isinstance(self.locator, str) or len(self.locator) > 2048:
-                raise ValueError("locator must be a string up to 2048 characters.")
+            if not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048):
+                raise ValueError("locator must be a non-empty string of at most 2048 characters.")
         if not isinstance(self.sequence, int) or self.sequence < 1:
             raise ValueError("'sequence' must be an integer >= 1.")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
