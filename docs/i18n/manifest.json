@@ -210,7 +210,7 @@
         "es": {
           "path": "README.es.md",
           "status": "localized_current",
-          "localized_file_sha256": "adc4dbe9ae1d09c6f6091f410e874967da501de98f6c551b91518c7d9e2e0c14",
+          "localized_file_sha256": "e09b637d8fad4b795133e9cafbe2e59e9b7c17588f82a000d7f428ef6806e2ad",
           "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
@@ -250,7 +250,7 @@
         "fr": {
           "path": "README.fr.md",
           "status": "localized_current",
-          "localized_file_sha256": "53b3dd7deb9d67216eaf598efbb65d31fc0e27d8f9c680731189d4fb282d039a",
+          "localized_file_sha256": "74e4f988e429130c7853099a0c17efece530421840a2f013d53c86afe670d062",
           "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
@@ -270,7 +270,7 @@
         "de": {
           "path": "README.de.md",
           "status": "localized_current",
-          "localized_file_sha256": "7bf026ce1f8b6f0f2bd5e838d580f97e288c1645b910151876561ea7216aee27",
+          "localized_file_sha256": "a6b2a449cb119b3b1f3c2f64a88629b116c7b198cd1c51ecfdc61a4f01e06416",
           "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",
@@ -330,7 +330,7 @@
         "ko": {
           "path": "README.ko.md",
           "status": "localized_current",
-          "localized_file_sha256": "9b7dd4cc90a8a3632405eb7807c0f3cf55adb9724c3b4a73591b879ca44e12ac",
+          "localized_file_sha256": "9a948374bacbaba893380be540443d70e4211138d1d232727187c6fb34b6c969",
           "translated_from_source_sha256": "b4000e469eab443f1afa1ad5a38fa1544f3b11ad9597fa7e815e817c479e6101",
           "translated_from_section_hashes": {
             "academic-research-kernel": "09ed339e1e5729232f3aaaf18a531b7d9737ae855752158cac5b568d0a234fec",

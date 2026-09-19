@@ -41,7 +41,12 @@ Los estilos de citación, las directrices de comunicación y los contratos de me
 ## Integración e Instalación
 
 ### 1. Agent Plugins v1 y Servidor MCP
-Soporta stdio MCP (`python scripts/mcp_server.py`) y Agent Plugins v1 portable (`plugin.json`).
+Este repositorio cumple con la especificación neutra **Agent Plugins v1** (`plugin.json`) y expone las herramientas esenciales de verificación académica y recálculo estadístico a través de un **servidor MCP** stdio (`mcp.json` / `python scripts/mcp_server.py`). Compatible con Claude Code, Cursor, Gemini CLI y cualquier entorno moderno de agentes.
+
+```bash
+# Añadir como servidor MCP stdio en su entorno de agentes
+python scripts/mcp_server.py
+```
 
 ### 2. Instalación en Hermes
 
@@ -85,6 +90,10 @@ QA valida metadatos, referencias, patrones de rutas personales y secretos conoci
 Las pruebas de autoría de Hermes fijadas se reutilizan sin cambiar sus reglas por competencia. Las comprobaciones poblacionales de la distribución completa del upstream no se aplican a este tap; nuestro arnés comprueba trece competencias y resuelve referencias contra el catálogo agrupado y opcional fijado. Esto no es una prueba completa de instalación de Hermes. La CI usa la red solo para instalar dependencias; las pruebas PR ordinarias no llaman a API académicas.
 
 La CI ejecuta la suite QA completa mediante GitHub Actions en Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 Preview-Canary (ubuntu-26.04 y ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) y macOS Intel (macos-15-intel) en todas las plataformas y arquitecturas, con 629 pruebas unitarias superadas y validación Canary en vivo de la rama principal de upstream. Un flujo de integración tap separado se ejecuta en las subidas a main: instala el checkout de Hermes fijado registrado en tests/upstream/provenance.json y ejercita tap add, search, install y list contra este repositorio. Las versiones, comprobaciones y limitaciones exactas constan en [la auditoría](docs/audit-20260906.md).
+
+tools/longtail/ aloja el generador determinista de escenarios extremos de cola larga: 4096 combinaciones candidatas con semilla SHA256 sobre los ejes de factores desacoplados, selección voraz de cobertura e informe de cobertura generado en generated-scenarios.json. Es la capa de entrada para someter las competencias a pruebas de estrés; la expansión semántica es una fase independiente.
+
+scripts/scfabric/ es el tejido de computación científica: sonda de hardware, catálogo de backends con filtros de tipo de dato, cinco perfiles de carga de trabajo, banco de pruebas emparejado con verificación de paridad y ComputeReceipt. Las primeras mediciones se encuentran en [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); la regla general es CPU por defecto, y acelerador solo con ComputeReceipt.
 
 ## Documentos de investigación y planificación
 

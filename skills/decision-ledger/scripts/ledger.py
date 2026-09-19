@@ -589,7 +589,6 @@ class DecisionNode:
     metadata: FrozenDict = field(default_factory=FrozenDict)
     normalized_title: str = field(init=False)
     decision_digest: str = field(init=False)
-    include_legacy_decision_type: bool = True
 
     @property
     def is_negative_result(self) -> bool:
@@ -637,10 +636,11 @@ class DecisionNode:
             "title": self.title,
             "normalized_title": self.normalized_title,
             "entry_kind": self.entry_kind,
-            "decision_action": self.decision_action,
             "decision_digest": self.decision_digest,
         }
-        if self.include_legacy_decision_type and self.decision_type is not None:
+        if self.decision_action is not None:
+            d["decision_action"] = self.decision_action
+        if self.decision_type is not None:
             d["decision_type"] = self.decision_type
         if self.context_work_id:
             d["context_work_id"] = self.context_work_id
@@ -649,6 +649,67 @@ class DecisionNode:
         if len(self.metadata) > 0:
             d["metadata"] = self.metadata.to_dict()
         return d
+
+
+def canonical_decision_export(item: Any) -> Dict[str, Any]:
+    """Authoritative canonical representation of a decision in ledger digests.
+
+    Decoupled from legacy wire artifacts (e.g. redundant decision_type or null
+    decision_action on negative results) so that content identity represents
+    pure scholarly decisions and assertions.
+    """
+    if isinstance(item, DecisionNode):
+        d_id = item.id
+        title = item.title
+        norm_title = item.normalized_title
+        entry_kind = item.entry_kind
+        action = item.decision_action
+        digest = item.decision_digest
+        context_work_id = item.context_work_id
+        locator = item.locator
+        meta = item.metadata.to_dict() if hasattr(item.metadata, "to_dict") else dict(item.metadata or {})
+    else:
+        d_id = item["id"]
+        title = item["title"]
+        norm_title = canonical_text(title)
+        entry_kind = item.get("entry_kind") or ("negative_result" if item.get("decision_type") == "negative_result" else "decision")
+        action = item.get("decision_action")
+        if action is None and entry_kind != "negative_result":
+            action = item.get("decision_type") or "explore"
+        digest = item.get("decision_digest") or compute_decision_digest(
+            norm_title,
+            item.get("context_work_id"),
+            item.get("locator"),
+            decision_type="negative_result" if entry_kind == "negative_result" else action,
+        )
+        context_work_id = item.get("context_work_id")
+        locator = item.get("locator")
+        meta = dict(item.get("metadata") or {})
+
+    res = {
+        "id": d_id,
+        "title": title,
+        "normalized_title": norm_title,
+        "entry_kind": entry_kind,
+        "decision_digest": digest,
+    }
+    if action is not None:
+        res["decision_action"] = action
+    if context_work_id:
+        res["context_work_id"] = context_work_id
+    if locator:
+        res["locator"] = locator
+    if meta:
+        res["metadata"] = _frozen_meta(meta).to_dict()
+    return res
+
+
+def canonical_raw_record(d: Mapping[str, Any]) -> Dict[str, Any]:
+    """Normalize raw export records so empty metadata {} does not perturb digests."""
+    res = dict(d)
+    if "metadata" in res and not res["metadata"]:
+        res.pop("metadata")
+    return res
 
 
 @dataclass(frozen=True)
@@ -1052,6 +1113,31 @@ def _dedupe_uncertainty_items(items: List["UncertaintyItem"]) -> List["Uncertain
 # The ledger
 # ---------------------------------------------------------------------------
 
+def canonical_payload_from_export(data: Mapping[str, Any]) -> Dict[str, Any]:
+    """Compute the canonical payload over an export mapping using canonical representations."""
+    return {
+        "protocol": data["protocol"],
+        "ledger_id": data["ledger_id"],
+        "decisions": sorted((canonical_decision_export(d) for d in data["decisions"]), key=lambda x: x["id"]),
+        "bases": sorted(
+            (canonical_raw_record(d) for d in data["bases"]),
+            key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+        ),
+        "forks": sorted(
+            (canonical_raw_record(d) for d in data["forks"]),
+            key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+        ),
+        "state_events": sorted(
+            (canonical_raw_record(d) for d in data["state_events"]),
+            key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+        ),
+        "corrections": sorted(
+            (canonical_raw_record(d) for d in data["corrections"]),
+            key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+        ),
+    }
+
+
 class DecisionLedger:
     """Deterministic append-only Decision & Negative Result Ledger.
 
@@ -1129,7 +1215,6 @@ class DecisionLedger:
         context_work_id: Optional[str] = None,
         locator: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        include_legacy_decision_type: bool = True,
     ) -> DecisionNode:
         node = DecisionNode(
             id=id,
@@ -1140,7 +1225,6 @@ class DecisionLedger:
             context_work_id=context_work_id,
             locator=locator,
             metadata=metadata or {},
-            include_legacy_decision_type=include_legacy_decision_type,
         )
         return self._register_node(self._decisions, node, id, "decision")
 
@@ -1880,21 +1964,21 @@ class DecisionLedger:
         payload = {
             "protocol": PROTOCOL,
             "ledger_id": self.ledger_id,
-            "decisions": sorted((d.to_dict() for d in self._decisions.values()), key=lambda x: x["id"]),
+            "decisions": sorted((canonical_decision_export(d) for d in self._decisions.values()), key=lambda x: x["id"]),
             "bases": sorted(
-                (e.to_dict() for e in self._bases.values()),
+                (canonical_raw_record(e.to_dict()) for e in self._bases.values()),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
             "forks": sorted(
-                (e.to_dict() for e in self._forks.values()),
+                (canonical_raw_record(e.to_dict()) for e in self._forks.values()),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
             "state_events": sorted(
-                (s.to_dict() for s in self._state_events),
+                (canonical_raw_record(s.to_dict()) for s in self._state_events),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
             "corrections": sorted(
-                (c.to_dict() for c in self._corrections.values()),
+                (canonical_raw_record(c.to_dict()) for c in self._corrections.values()),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
         }
@@ -1990,27 +2074,7 @@ class DecisionLedger:
             raise ValueError(f"Export protocol mismatch: expected {PROTOCOL!r}, got {data['protocol']!r}.")
 
         # Gate 1: raw content digest over declared records
-        raw_payload = {
-            "protocol": data["protocol"],
-            "ledger_id": data["ledger_id"],
-            "decisions": sorted(data["decisions"], key=lambda x: x["id"]),
-            "bases": sorted(
-                data["bases"],
-                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
-            ),
-            "forks": sorted(
-                data["forks"],
-                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
-            ),
-            "state_events": sorted(
-                data["state_events"],
-                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
-            ),
-            "corrections": sorted(
-                data["corrections"],
-                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
-            ),
-        }
+        raw_payload = canonical_payload_from_export(data)
         raw_digest = hashlib.sha256(_canonical_json_bytes(raw_payload)).hexdigest().lower()
         if raw_digest != str(data["ledger_digest"]).lower():
             raise ValueError(
@@ -2052,7 +2116,6 @@ class DecisionLedger:
 
         # Replay decisions and assert identity fields match
         for d in data["decisions"]:
-            has_dt = "decision_type" in d
             node = ledger.add_decision(
                 id=d["id"],
                 title=d["title"],
@@ -2062,7 +2125,6 @@ class DecisionLedger:
                 context_work_id=d.get("context_work_id"),
                 locator=d.get("locator"),
                 metadata=d.get("metadata") or {},
-                include_legacy_decision_type=has_dt,
             )
             if node.normalized_title != d.get("normalized_title"):
                 raise ValueError(

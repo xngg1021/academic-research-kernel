@@ -1062,15 +1062,7 @@ def test_from_dict_rejects_identity_field_forgery_even_if_raw_digest_recomputed(
     export = g.to_dict()
     # Attacker tries to forge event_id and recomputes ledger_digest to bypass Gate 1
     export["state_events"][0]["event_id"] = "evt-" + "f" * 32
-    raw_payload = {
-        "protocol": export["protocol"],
-        "ledger_id": export["ledger_id"],
-        "decisions": sorted(export["decisions"], key=lambda x: x["id"]),
-        "bases": sorted(export["bases"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-        "forks": sorted(export["forks"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-        "state_events": sorted(export["state_events"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-        "corrections": sorted(export["corrections"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-    }
+    raw_payload = dl.canonical_payload_from_export(export)
     forged_digest = dl.hashlib.sha256(dl._canonical_json_bytes(raw_payload)).hexdigest().lower()
     export["ledger_digest"] = forged_digest
     export["verification_digest"] = dl.hashlib.sha256(dl._canonical_json_bytes({
@@ -1304,17 +1296,8 @@ def test_from_dict_structural_validation_gate():
     tampered = copy.deepcopy(export)
     tampered["bases"][0]["basis_kind"] = "negative_result"
     # Recalculate digests to bypass Gate 1, Gate 2, and Gate 3
-    tampered["ledger_digest"] = dl.hashlib.sha256(
-        dl._canonical_json_bytes({
-            "protocol": tampered["protocol"],
-            "ledger_id": tampered["ledger_id"],
-            "decisions": sorted(tampered["decisions"], key=lambda x: x["id"]),
-            "bases": sorted(tampered["bases"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-            "forks": sorted(tampered["forks"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-            "state_events": sorted(tampered["state_events"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-            "corrections": sorted(tampered["corrections"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-        })
-    ).hexdigest().lower()
+    raw_payload = dl.canonical_payload_from_export(tampered)
+    tampered["ledger_digest"] = dl.hashlib.sha256(dl._canonical_json_bytes(raw_payload)).hexdigest().lower()
     tampered["verification_digest"] = dl.hashlib.sha256(
         dl._canonical_json_bytes({"ledger_digest": tampered["ledger_digest"], "receipts": tampered["verification_manifest"]})
     ).hexdigest().lower()
@@ -1438,37 +1421,25 @@ def test_sequence_minimum_and_schema_entry_kind_contract():
 
 
 def test_from_dict_without_legacy_decision_type():
-    """Schema allows omitting decision_type in favor of entry_kind/decision_action; from_dict must not KeyError."""
+    """Schema allows omitting decision_type in favor of entry_kind/decision_action; from_dict must not KeyError and digest is invariant."""
     g = dl.DecisionLedger()
     g.add_decision("d1", "Try estimator A", decision_action="explore")
     g.add_negative_result("nr1", "Estimator B fails on long context")
     g.add_basis("nr1", "decision", "d1")
     exp = g.to_dict()
+    orig_digest = exp["ledger_digest"]
 
-    # Omit legacy decision_type entirely
+    # Omit legacy decision_type entirely from wire payload
     for d in exp["decisions"]:
         d.pop("decision_type", None)
-
-    # Recompute raw digest over the modified payload so Gate 1 passes
-    raw_payload = {
-        "protocol": exp["protocol"],
-        "ledger_id": exp["ledger_id"],
-        "decisions": sorted(exp["decisions"], key=lambda x: x["id"]),
-        "bases": sorted(exp["bases"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-        "forks": sorted(exp["forks"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-        "state_events": sorted(exp["state_events"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-        "corrections": sorted(exp["corrections"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
-    }
-    exp["ledger_digest"] = hashlib.sha256(dl._canonical_json_bytes(raw_payload)).hexdigest().lower()
-    vd_payload = {"ledger_digest": exp["ledger_digest"], "receipts": exp["verification_manifest"]}
-    exp["verification_digest"] = hashlib.sha256(dl._canonical_json_bytes(vd_payload)).hexdigest().lower()
 
     # Validate against schema
     schema = json.loads((ROOT / "schemas" / "decision-ledger-receipt.schema.json").read_text(encoding="utf-8"))
     jsonschema.validate(instance=exp, schema=schema)
 
-    # Replay in runtime
+    # Replay in runtime succeeds without needing to forge digests
     loaded = dl.DecisionLedger.from_dict(exp)
+    assert loaded.ledger_digest() == orig_digest
     d1 = loaded.get_decision("d1")
     assert d1.entry_kind == "decision"
     assert d1.decision_action == "explore"

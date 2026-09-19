@@ -169,6 +169,11 @@ def static_checks(root=ROOT):
     }
     if set(locale_profiles.keys()) != EXPECTED_LOCALES:
         errors.append(f"AIDetox profile invariant failed: expected exactly 21 profiles {sorted(EXPECTED_LOCALES)}, got {sorted(locale_profiles.keys())}")
+    for loc_code, prof_data in locale_profiles.items():
+        for rule_grp in ("banned_phrases", "step_broadcasting_markers", "redundant_hedges"):
+            items = prof_data.get(rule_grp)
+            if not isinstance(items, list) or len(items) == 0:
+                errors.append(f"Profile '{loc_code}' invariant failed: rule group '{rule_grp}' must be a non-empty list")
 
     # Legacy Chinese aliases byte-parity gate
     zh_cn = root / "README.zh-CN.md"
@@ -270,10 +275,22 @@ def static_checks(root=ROOT):
                 errors.append(f"i18n manifest incomplete: expected 53 canonical documents, got {len(canonical_docs)}")
             if manifest.get("total_theoretical_instances") != 1113:
                 errors.append(f"i18n manifest invariant failed: expected 1113 theoretical instances, got {manifest.get('total_theoretical_instances')}")
+            recomputed_counts = {
+                "canonical_current": 0,
+                "localized_current": 0,
+                "localized_stale": 0,
+                "queued_for_generation": 0,
+            }
             for doc_entry in canonical_docs:
                 instances = doc_entry.get("localized_instances", {})
                 if set(instances.keys()) != EXPECTED_LOCALES:
                     errors.append(f"i18n manifest instance parity failed for {doc_entry['source_path']}: expected 21 locales, got {sorted(instances.keys())}")
+                for inst_data in instances.values():
+                    st_val = inst_data.get("status")
+                    recomputed_counts[st_val] = recomputed_counts.get(st_val, 0) + 1
+            if manifest.get("status_summary") != recomputed_counts:
+                errors.append(f"i18n manifest status_summary mismatch: declared {manifest.get('status_summary')}, recomputed {recomputed_counts}")
+            for doc_entry in canonical_docs:
                 src_file = root / doc_entry["source_path"]
                 if not src_file.is_file():
                     errors.append(f"i18n manifest source file missing: {doc_entry['source_path']}")

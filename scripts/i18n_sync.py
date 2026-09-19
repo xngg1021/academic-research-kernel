@@ -228,6 +228,34 @@ def resolve_localized_path(item: Dict[str, Any], loc: str) -> str:
         return f"i18n/{loc}/{src}"
 
 
+def verify_content_parity_admission(doc_item: Dict[str, Any], loc: str, loc_file: Path) -> List[str]:
+    """Verify that a localized file meets minimum factual and structural parity before admission as current."""
+    issues = []
+    src_file = ROOT / doc_item["source_path"]
+    if not src_file.is_file() or not loc_file.is_file():
+        return ["missing file"]
+    loc_text = loc_file.read_text(encoding="utf-8")
+    src_text = src_file.read_text(encoding="utf-8")
+
+    # 1. Code blocks parity check
+    src_fences = len(re.findall(r"^```", src_text, re.M))
+    loc_fences = len(re.findall(r"^```", loc_text, re.M))
+    if loc_fences < src_fences:
+        issues.append(f"code fence count deficit: expected at least {src_fences}, got {loc_fences}")
+
+    # 2. For READMEs: check that all 13 skill paths are present and content length is substantial
+    if doc_item["doc_id"] == "doc_root_readme":
+        for s_dir in sorted((ROOT / "skills").iterdir()):
+            if s_dir.is_dir() and (s_dir / "SKILL.md").exists():
+                skill_id = f"skills/{s_dir.name}"
+                if skill_id not in loc_text:
+                    issues.append(f"missing skill anchor: '{skill_id}'")
+        if len(loc_text) < len(src_text) * 0.45:
+            issues.append(f"insufficient content length: {len(loc_text)} bytes vs {len(src_text)} bytes")
+
+    return issues
+
+
 def build_manifest(certify_paths: Optional[List[str]] = None, certify_all_existing: bool = False) -> Dict[str, Any]:
     # Load previous manifest if available
     prev_manifest: Dict[str, Any] = {}
@@ -288,29 +316,32 @@ def build_manifest(certify_paths: Optional[List[str]] = None, certify_all_existi
                 should_certify = (
                     certify_all_existing
                     or (certify_paths and loc_path in certify_paths)
-                    or (prev_inst is None or prev_inst.get("translated_from_source_sha256") is None)
                 )
 
-                if should_certify:
+                admission_issues = verify_content_parity_admission(item, loc, full_loc_path)
+
+                if should_certify and not admission_issues:
                     trans_src_sha = src_sha
                     trans_sec_hashes = sec_hashes
                     status = "localized_current"
                     stale_sections: List[str] = []
                 else:
-                    trans_src_sha = prev_inst.get("translated_from_source_sha256")
-                    trans_sec_hashes = prev_inst.get("translated_from_section_hashes") or {}
-                    if trans_src_sha == src_sha:
+                    trans_src_sha = prev_inst.get("translated_from_source_sha256") if prev_inst else None
+                    trans_sec_hashes = prev_inst.get("translated_from_section_hashes") if prev_inst else {}
+                    if trans_src_sha == src_sha and not admission_issues:
                         status = "localized_current"
                         stale_sections = []
                     else:
                         status = "localized_stale"
                         stale_sections = [
                             sec for sec, h in sec_hashes.items()
-                            if h != trans_sec_hashes.get(sec)
+                            if h != (trans_sec_hashes or {}).get(sec)
                         ]
-                        for sec in trans_sec_hashes:
+                        for sec in (trans_sec_hashes or {}):
                             if sec not in sec_hashes:
                                 stale_sections.append(f"removed: {sec}")
+                        for iss in admission_issues:
+                            stale_sections.append(f"admission_deficit: {iss}")
 
                 instances[loc] = {
                     "path": loc_path,

@@ -38,9 +38,18 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 
 인용 양식, 보고 지침, 메타데이터 규약은 대상 학술지, 연구지원기관, 학문 분야, 관할권에 따라 달라집니다. 본 저장소는 **ISO 690:2021**(서지 참조 및 인용 지침), **ISO 5127:2017**(정보 및 문헌 용어), **W3C PROV**(이력 및 출처 데이터 모델)를 국제 기준으로 삼고, 한국 KS X ISO690 참조, 중국 대륙 GB/T 7714-2025, 스페인 UNE-ISO 690:2024 등 지역 프로필과 APA, IEEE, PRISMA 2020, ICMJE 등 학문 분야별 표준을 지원합니다. 투고 대상 기관이나 학술지의 공식 요건이 항상 최우선합니다. 자세한 내용은 [학술 표준 아키텍처](docs/standards/README.md) 및 [자연스러운 학술 용어 가이드](docs/terminology/README.md)를 참조하십시오.
 
-## Hermes에 설치
+## 통합 및 이식 가능한 사용 (Integration & Portable Usage)
 
-현재 상류 tap 탐지는 `skills/` 바로 아래의 하위 디렉터리를 검사하므로 각 스킬은 그 루트 바로 아래에 위치한다. Hermes 설치 환경에서:
+### 1. 범용 Agent Plugins v1 및 Model Context Protocol (MCP)
+본 저장소는 벤더 중립적인 **Agent Plugins v1** 사양(`plugin.json`)을 준수하며, stdio **MCP 서버**(`mcp.json` / `python scripts/mcp_server.py`)를 통해 핵심 학술 검증 및 통계 재계산 도구를 노출합니다. Claude Code, Cursor, Gemini CLI 및 모든 최신 에이전트 프레임워크와 호환됩니다.
+
+```bash
+# 에이전트 하네스에 stdio MCP 서버로 추가
+python scripts/mcp_server.py
+```
+
+### 2. Hermes 고유 설치
+Hermes 설치 환경에서:
 
 ```bash
 hermes skills tap add xngg1021/academic-research-kernel
@@ -80,6 +89,10 @@ QA는 메타데이터, 참조 파일, 개인 경로·알려진 시크릿 패턴,
 고정된 Hermes 저작 테스트는 스킬별 규칙을 바꾸지 않고 재사용된다. 상류 전체 배포 개체군 검사는 이 tap에 적용되지 않으며, 본 저장소 하네스는 13개 스킬 전체를 검사하고 고정된 번들·선택 카탈로그에 대해 참조를 해석한다. 이는 완전한 Hermes 설치 테스트가 아니다. CI는 의존성 설치에만 네트워크를 사용하며 일반 PR 테스트는 학술 API를 호출하지 않는다.
 
 CI는 GitHub Actions로 Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 프리뷰 Canary (ubuntu-26.04 및 ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), macOS Intel (macos-15-intel) 전 플랫폼 및 전 아키텍처에 걸쳐 실행되며, 629개 단위 테스트 전원 통과와 최신 상류 main 실시간 Canary 검증을 포함한다. 별도의 tap 통합 워크플로가 main 푸시에서 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 이 저장소에 대해 tap add, search, install, list를 수행한다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/audit-20260906.md)에 있다.
+
+tools/longtail/ 디렉터리는 결정론적 극한 롱테일 시나리오 생성기를 호스팅합니다: 분리된 요인 축 전반에 걸친 4096개의 SHA256 시드 조합, 탐욕적 커버리지 선택, 그리고 generated-scenarios.json 내의 기계 계산 커버리지 보고서를 제공합니다. 이는 스킬 스트레스 테스트의 입력 레이어입니다.
+
+scripts/scfabric/ 디렉터리는 과학 계산 및 통계 분석 실행 계층입니다: 하드웨어 프로브, dtype 게이트 백엔드 카탈로그, 5개 워크로드 프로필, 동등성 검증 벤치마크 및 ComputeReceipt를 포함합니다. 측정값은 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)를 참조하십시오.
 
 ## 연구·계획 문서
 

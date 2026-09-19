@@ -41,7 +41,12 @@ Les styles de citation, les critères de rapport et les métadonnées dépendent
 ## Intégration & Installation
 
 ### 1. Agent Plugins v1 & Serveur MCP
-Supporte stdio MCP (`python scripts/mcp_server.py`) et Agent Plugins v1 portable (`plugin.json`).
+Ce dépôt est conforme à la spécification neutre **Agent Plugins v1** (`plugin.json`) et expose les outils essentiels de vérification académique et de recalcul statistique via un **serveur MCP** stdio (`mcp.json` / `python scripts/mcp_server.py`). Compatible avec Claude Code, Cursor, Gemini CLI et tout framework moderne d'agents.
+
+```bash
+# Ajouter en tant que serveur stdio MCP dans votre environnement
+python scripts/mcp_server.py
+```
 
 ### 2. Installation dans Hermes
 
@@ -85,6 +90,10 @@ QA valide les métadonnées, les références, les motifs de chemins personnels 
 Les tests d'autorat Hermes épinglés sont réutilisés sans modifier leurs règles par compétence. Les contrôles de population sur la distribution complète amont ne s'appliquent pas à ce tap ; notre harnais vérifie treize compétences et résout les références contre le catalogue groupé/optionnel épinglé. Ce n'est pas un test d'installation Hermes complet. La CI n'utilise le réseau que pour installer les dépendances ; les tests PR ordinaires n'appellent pas d'API académiques.
 
 La CI exécute la suite QA complète via GitHub Actions sur Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 Preview-Canary (ubuntu-26.04 et ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) et macOS Intel (macos-15-intel) sur toutes les plateformes et architectures, avec 629 tests unitaires réussis et une validation Canary continue de la branche principale amont. Un flux d'intégration tap séparé s'exécute lors des poussées sur main : il installe l'extraction Hermes épinglée consignée dans tests/upstream/provenance.json et exerce tap add, search, install et list contre ce dépôt. Les versions, contrôles et limites exacts figurent dans [l'audit](docs/audit-20260906.md).
+
+tools/longtail/ héberge le générateur déterministe de scénarios extrêmes: 4096 combinaisons candidates initialisées par SHA256 sur les axes de facteurs découplés, sélection gloutonne de couverture et rapport calculé par machine dans generated-scenarios.json. Il s'agit de la couche d'entrée pour tester la robustesse des compétences; l'expansion sémantique est une étape séparée.
+
+scripts/scfabric/ constitue la structure de calcul scientifique: sonde matérielle, catalogue de backends avec contrôles dtype, cinq profils de charge, banc d'essai apparié avec vérification de parité et ComputeReceipt. Les mesures figurent dans [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); la règle générale est le CPU par défaut, et l'accélérateur uniquement avec ComputeReceipt.
 
 ## Documents de recherche et de planification
 

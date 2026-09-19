@@ -41,7 +41,12 @@ Zitierstile, Berichtsrichtlinien und Metadatenspezifikationen hängen von der je
 ## Integration & Installation
 
 ### 1. Agent Plugins v1 & MCP-Server
-Unterstützt stdio MCP (`python scripts/mcp_server.py`) und portable Agent Plugins v1 (`plugin.json`).
+Dieses Repository entspricht der herstellerneutralen Spezifikation **Agent Plugins v1** (`plugin.json`) und stellt grundlegende akademische Verifikations- und statistische Neuberechnungstools über einen stdio **MCP-Server** (`mcp.json` / `python scripts/mcp_server.py`) bereit. Kompatibel mit Claude Code, Cursor, Gemini CLI und modernen Agenten-Frameworks.
+
+```bash
+# Als stdio-MCP-Server in Ihrer Agentenumgebung hinzufügen
+python scripts/mcp_server.py
+```
 
 ### 2. Installation in Hermes
 
