@@ -748,3 +748,83 @@ def test_uncertainty_id_collision_raises_instead_of_merging():
     same = dl.UncertaintyItem(item_id="unc-" + "0" * 16, subject_id="s1", kind="missing_receipt", reason="r1", needs_human=False)
     out = dl._dedupe_uncertainty_items([a, same])
     assert len(out) == 1
+
+
+# ---------------------------------------------------------------------------
+# 17. Basis-transparency: claim chains must ground at receipt anchors
+# ---------------------------------------------------------------------------
+
+def _anchored_receipt_fixture():
+    import hashlib as hl
+    payload = {
+        "claim": "Replicated twice on held-out data.",
+        "evidence_type": "full_text",
+        "locator": "Table 1",
+        "source": "w-1",
+        "support_status": "supported",
+    }
+    cd = hl.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+    receipt = {"schema_version": "1.0", "receipt_id": "ev-1", "claims": [dict(payload, claim_digest=cd)]}
+    ph = hl.sha256(json.dumps(receipt, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+    ref = dl.ReceiptRef(kind="academic_evidence", schema_version="1.0", claim_digest=cd, payload_sha256=ph)
+    return receipt, ref
+
+
+def _unc_kinds(g):
+    return {u.subject_id: u.kind for u in g.export_uncertainties()}
+
+
+def test_unanchored_claim_terminal_surfaces():
+    g = dl.DecisionLedger()
+    g.add_decision(id="bare", title="Bare act")
+    g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g.add_basis("nr1", basis_kind="claim", basis_id="bare")
+    ok, errs = g.validate_ledger()
+    assert ok and not errs  # structural validity unaffected
+    kinds = _unc_kinds(g)
+    assert kinds.get("bare") == "unevidenced_claim_basis"
+
+
+def test_grounded_claim_chain_surfaces_nothing():
+    receipt, ref = _anchored_receipt_fixture()
+    g = dl.DecisionLedger()
+    g.add_decision(id="bare", title="Bare act")
+    g.add_decision(id="pos", title="Root evidence")
+    g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g.add_basis("nr1", basis_kind="claim", basis_id="bare")
+    g.add_basis("bare", basis_kind="claim", basis_id="pos", receipt_ref=ref)
+    g.register_receipt(ref.payload_sha256, receipt)
+    kinds = _unc_kinds(g)
+    assert not any(t == "unevidenced_claim_basis" for t in kinds.values())
+
+
+def test_self_anchored_claim_terminal_still_surfaces():
+    g = dl.DecisionLedger()
+    g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g.add_decision(id="selfish", title="Self anchor")
+    g.add_basis("nr1", basis_kind="claim", basis_id="selfish")
+    g.add_basis("selfish", basis_kind="claim", basis_id="selfish")  # self-edges never ground
+    kinds = _unc_kinds(g)
+    assert kinds.get("selfish") == "unevidenced_claim_basis"
+
+
+def test_ungrounded_claim_cycle_surfaces_both_ends():
+    g = dl.DecisionLedger()
+    g.add_decision(id="x1", title="X1")
+    g.add_decision(id="x2", title="X2")
+    g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g.add_basis("nr1", basis_kind="claim", basis_id="x1")
+    g.add_basis("x1", basis_kind="claim", basis_id="x2")
+    g.add_basis("x2", basis_kind="claim", basis_id="x1")
+    ok, errs = g.validate_ledger()
+    assert ok, errs
+    kinds = _unc_kinds(g)
+    assert kinds.get("x1") == "unevidenced_claim_basis"
+    assert kinds.get("x2") == "unevidenced_claim_basis"
+
+
+def test_isolated_decisions_produce_no_basis_noise():
+    g = dl.DecisionLedger()
+    g.add_decision(id="solo", title="Solo")
+    g.add_decision(id="solo2", title="Solo 2")
+    assert _unc_kinds(g) == {}

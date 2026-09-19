@@ -56,6 +56,15 @@
 
 **验证（第二轮加固后）**：`pytest` 581 项全部通过；`scripts/qa.py` 40 fences PASS。
 
+### 交叉评审合议收口（质询对账 + 未决账本清偿，同 PR 内实施）
+
+五模型盲审（3/5 产出：dsv4pro、gemini38flash、gemini31pro；kimi-k3 连接错误、glm53 配额中断）后完成 Sparse Deliberation 质询与合议：dsv4pro 质询答复 4 项全部 CONCEDE 并独立证实 sequence 修复；未决账本 5 项中 4 项（自指/互指绕过、时序、对象收据崩溃、导出缺队列）已由前两轮加固清偿，剩余 1 项（gemini31pro 的 E102 语义断言）处理如下：
+
+- **[P2→落实] 依据透明规则（basis-transparency）**：claim 证据链必须**终接在带收据锚点的终端**——链条经目标决策自身的 claim 依据传递，自指边永不作数；无收据锚定的终端与永不落地的互指环以新枚举 `unevidenced_claim_basis` 浮出不确定性队列（needs_human=true），结构校验保持确定性不受阻断。E102 的保留决策与语义理由随之完整：`basis_id` 必须是已注册决策（保证引用可追溯），而"证据真实性"由锚定规则与队列承担，两层职责不再含混。
+- schema 不确定性枚举同步扩至六值；新增 5 项对抗回归（59→64 项专项，覆盖无锚终端、锚定链、自指锚点、互指环、孤立决策零噪音），全仓 581→590。
+
+**验证（收口后）**：`pytest` 590 项全部通过；`scripts/qa.py` 40 fences PASS；评审产物（合议报告、未决账本、质询答复）存档于 `D:/hermes-home/you/cross-reviews/pr11-decision-ledger-20260919/`。
+
 ---
 
 ## 2026-09-18（PR #10 / CI & Locator Determinism Maintenance，HEAD / chore/ci-node24-and-locator-determinism）

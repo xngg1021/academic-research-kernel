@@ -249,6 +249,7 @@
             "unsupported_negative_result",
             "missing_receipt",
             "unsupported_pruning",
+            "unevidenced_claim_basis",
             "generic_uncertainty"
           ]
         },

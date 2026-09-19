@@ -32,9 +32,10 @@ Core Invariants:
    A negative_result decision must carry at least one claim-kind basis edge
    whose target is ANOTHER non-negative_result decision (E405/E406). Claim
    bases reference decisions as recorded research acts; evidence chains are
-   transitive through the target's own bases, and unevidenced roots surface
-   via the uncertainty queue. Self-references and negative_result targets
-   are rejected as circular evidence fabrication.
+   transitive through the target's own bases and must ground at a
+   receipt-anchored terminal, otherwise they surface via the uncertainty
+   queue. Self-references and negative_result targets are rejected as
+   circular evidence fabrication.
 7. Prune causality is first-class and acyclic:
    A pruned decision records a closed-vocabulary reason, the pruning
    decision, and the chosen alternative. pruned_by chains must be acyclic
@@ -94,6 +95,7 @@ VALID_UNCERTAINTY_KINDS: set = {
     "unsupported_negative_result",
     "missing_receipt",
     "unsupported_pruning",
+    "unevidenced_claim_basis",
     "generic_uncertainty",
 }
 
@@ -1263,6 +1265,53 @@ class DecisionLedger:
                     f"Pruning decision '{state.pruned_by}' cites no Claim basis; the prune cause needs human review.",
                     True,
                 )
+
+        # Unevidenced claim-basis chains (basis-transparency rule): a
+        # claim-kind basis edge is valid only when the evidence chain it
+        # starts grounds at a receipt-anchored terminal. Chains are
+        # transitive through the target's own claim bases; self-edges never
+        # count as evidence. A terminal without receipt anchoring, or a
+        # cycle that never grounds, surfaces for human review.
+        claim_succ: Dict[str, set] = {}
+        claim_edges: List[Tuple[str, str, DecisionBasisEdge]] = []
+        for e in self._bases.values():
+            if e.basis_kind == "claim" and e.basis_id != e.decision_id:
+                claim_succ.setdefault(e.decision_id, set()).add(e.basis_id)
+                claim_edges.append((e.decision_id, e.basis_id, e))
+
+        def _in_cycle(node: str) -> bool:
+            seen: set = set()
+            stack = list(claim_succ.get(node, ()))
+            while stack:
+                cur = stack.pop()
+                if cur == node:
+                    return True
+                if cur in seen:
+                    continue
+                seen.add(cur)
+                stack.extend(claim_succ.get(cur, ()))
+            return False
+
+        terminal_targets = sorted({v for _u, v, _e in claim_edges if not (claim_succ.get(v, set()) - {v})})
+        for v in terminal_targets:
+            if _in_cycle(v):
+                continue
+            anchored = any(e.receipt_ref is not None for u, vv, e in claim_edges if vv == v)
+            if not anchored:
+                citing = sorted(u for u, vv, _e in claim_edges if vv == v)
+                add(
+                    "unevidenced_claim_basis",
+                    v,
+                    f"Claim-basis chain grounds at '{v}' (cited by {', '.join(citing)}) without any receipt anchoring.",
+                    True,
+                )
+        for v in sorted({v for v in claim_succ if _in_cycle(v)}):
+            add(
+                "unevidenced_claim_basis",
+                v,
+                f"Claim-basis chain through '{v}' never grounds (cycle); no receipt anchoring exists.",
+                True,
+            )
 
         # Dedupe (content-addressed ids guarantee uniqueness) and sort
         return _dedupe_uncertainty_items(items)
