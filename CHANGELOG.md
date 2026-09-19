@@ -25,9 +25,9 @@
 - **跨内核字节兼容**：`canonical_academic_receipt_payload_sha256`、`canonical_evidence_claim_digest`、`validate_lineage_receipt_contract`、`validate_academic_receipt_contract`、`ReceiptRef`、`UncertaintyItem`（四字段含 needs_human 派生公式）与 CEG Kernel v1 逐字节一致，同一收据在两个内核给出相同哈希与相同校验结论，为 PR #12（Research Artifact Ingestion Bridge v1）打通消费路径。
 - **技能文档 (`skills/decision-ledger/SKILL.md`)**：frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
 - **测试 (`tests/test_decision_ledger.py`)**：81 项对抗性回归（词法规范化、类型强制、幂等与冲突拒绝、收据物理校验与篡改检测、悬空边、自指与剪枝环、负结果证据纪律、不确定性队列确定性、深冻结与导出隔离、摘要顺序无关性与敏感性、JSON Schema parity、跨内核字节兼容、StateEvent 全生命周期、递归剪枝链、严格双门 from_dict 回放、_jsonable 失败关闭）。
-- **登记同步**：技能计数 12→13（tests/test_authoring.py、tests/test_harness_neutral.py）、tap 发现清单补 `decision-ledger`（tests/test_tap_discovery.py）、8 个 README 技能表与正文计数更新（并修正 zh-CN/zh-TW 首段计数停留在 11 的历史欠账）、单测基线 526→615。
+- **登记同步**：技能计数 12→13（tests/test_authoring.py、tests/test_harness_neutral.py）、tap 发现清单补 `decision-ledger`（tests/test_tap_discovery.py）、8 个 README 技能表与正文计数更新（并修正 zh-CN/zh-TW 首段计数停留在 11 的历史欠账）、单测基线 526→623。
 
-**验证**：`pytest` 615 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS。
+**验证**：`pytest` 623 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS。
 
 ### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
 
@@ -79,18 +79,25 @@
 
 **验证（本轮加固后）**：`pytest` 608 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
 
-### 合并前最终收口与严格防篡改回放加固（针对合并前复核，同 PR 内实施）
+### 合并前全面收口加固（零债务发布，同 PR 内完整实施）
 
-针对合并前终审提出的双门防篡改、不确定性队列验证、非有限浮点与映射键严格化要求，主线程实施最终加固，彻底消除全部遗留 P1/P2：
+针对合并前终审提出的各项架构完整性、事件历史时序、回放闭环、命名解耦与性能要求，主线程实施彻底加固，完全消解全部 P1/P2/P3，不向后续 PR 遗留任何技术债务：
 
-- **[P1-01] `from_dict()` 双门防篡改验证**：Gate 1 先直接对输入原始记录重算 raw canonical ledger digest，与 declared `ledger_digest` 必须完全一致，任何字段篡改（包含 event_id、sequence、decision_digest、normalized_title、correction_id、outcome_digest）在构造器执行前即被拒；Gate 2 经构造器重放，逐字段断言 identity 字段与 replayed 结果一致，杜绝伪造派生字段通过构造器重算洗白。
-- **[P1-02] `from_dict()` 强制验证完整不确定性队列（含 missing_receipt）**：`uncertainties` 与 `verification_manifest` 纳入必填键校验；基于 manifest 构建虚拟可解析集合，重放重算全部不确定性队列（包括 missing_receipt）与 declared 队列 100% 严格比对，不再跳过缺失收据类未知项，未知与 needs_human 无法被静默抹除或篡改。
-- **[P1/P2] 统一 metadata 与 receipt 严格 JSON-domain 失败关闭**：`_validate_json_metadata_value` 在所有记录（DecisionNode、basis、fork、state event、correction）构造入口统一执行严苛 JSON 域校验，非有限浮点（NaN/Inf）直接抛 `ValueError`（拒绝在内存中生成不可导出/摘要的非法状态）；Mapping key 强制必须为 `str`（非 str 键抛 `TypeError`，杜绝数字键与字符串键静默折叠）；拒绝 set、custom object 与 cyclic containers。
-- **[P2] `verification_manifest` 自包含导出与验证**：`to_dict()` 导出 `verification_manifest`（rid→payload_sha256 映射），使 `verification_digest` 可被第三方独立验算；`from_dict()` 校验 manifest 与 digest 一致性，并支持传入 `receipt_registry` 恢复完整验证态。
-- **[P2] JSON Schema 严格编码状态迁移闭集**：在 `stateEvent.allOf` 中完整实现四状态迁移自动机（genesis→active|pruned、active→pruned、pruned→reopened、reopened→pruned，非法组合 schema 直接报错）。
-- **[P2] 顶层契约与测试基线统一**：README、PR 正文、CHANGELOG 顶层摘要更新为最终六类记录模型与 **615 passed** 新基线；新增 7 项专项对抗测试（76→83 项专项）。
+- **[P1] 修正 outcome correction 历史吞噬 bug**：`OutcomeCorrection` 引入单调 sequence 参与 content-addressed ID 派生；严格比对当前最新事件，仅在与当前最新完全相同时才执行幂等 no-op，历史中再次发生的相同结果（如 negative→positive→negative）正确记录为新事件并影响最新 verdict。
+- **[P1] `from_dict()` 补齐 Gate 4 结构校验**：回放结束时无条件执行 `validate_ledger()`，对带环、悬空边或非法证据闭包的自洽伪造导出执行 fail-closed。
+- **[P1] `from_dict()` 双门防篡改与全量不确定性校验**：Gate 1 原始摘要核验、Gate 2 派生字段一致性断言、Gate 3 全量不确定性队列（基于 manifest 虚拟集合，不跳过 missing_receipt）100% 严格比对。
+- **[P2] 明确 `reopened` 状态语义与属性**：`current_state()` 准确返回 `reopened`，`PruneState` 增加 `is_active`、`is_reopened`、`is_pruned` 属性，`VALID_PRUNE_STATUSES` 与 `VALID_DECISION_STATES` 完全对齐。
+- **[P2] `set_prune(active)` 拒绝静默吞输入**：对已处于 active/reopened 的决策，若传入不同 metadata/receipt_ref 直接抛 `ValueError` 拒绝冲突，杜绝非幂等输入静默丢失。
+- **[P2] 消除与 CEG Claim 的命名冲突**：`basis_kind` 主名称统一为 `"decision"`（支持 `"decision"` 与 `"negative_result"`），原有 `"claim"` 自动规范化为 `"decision"`。
+- **[P2] 补全包级公开导出**：`skills/decision-ledger/scripts/__init__.py` 正式导出 `DecisionStateEvent` 与 `canonical_state_event_tuple`。
+- **[P2] 运行时与 Schema 边界统一**：`DecisionNode`、`OutcomeCorrection` 等公开 dataclass 强制校验 title (<=512)、rationale (<=4096)、locator (<=2048)、sequence (>=0) 等字段范围。
+- **[P2] `from_dict()` 拒绝未知顶层字段**：严格拒绝不在 `ALLOWED_TOP_LEVEL_KEYS` 中的额外键，契约对齐 `additionalProperties: false`。
+- **[P2] `register_receipt()` 规范化字节比较**：收据冲突判断采用 canonical JSON bytes 对比，彻底避免 Python `1 == 1.0` 等宽松判等误判。
+- **[P3] 用户面命名与去黑话**：用户面统一命名为 **Research Decision Log（研究决策与失败记录）**（内部协议保持 `decision-ledger-1.0`）；彻底剥除“Truth Authority”“剪枝因果”“三态不确定性队列”“basis-transparency”等过度工程化用词。
+- **[P3] 全链路性能索引与摘要去重**：建立按决策索引的 `_bases_by_decision`、`_state_events_by_decision`、`_corrections_by_decision`，建立学术收据哈希索引 `_academic_hash_index` 实现 O(1) 检索；`to_dict()` 仅单次计算 digest 与 manifest，杜绝多重重复哈希。
+- **[P3] 测试基线提升**：单测由 615 项升至 **623 项**（91 项专属于 decision-ledger 严苛回归测试），全仓绿灯通过。
 
-**验证（最终收口后）**：`pytest` 615 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
+**验证（最终收口后）**：`pytest` 623 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
 
 ---
 

@@ -1,61 +1,42 @@
 # -*- coding: utf-8 -*-
-"""Decision & Negative Result Ledger Kernel v1.
+"""Research Decision Log (Decision & Negative Result Ledger v1).
 
-Deterministic, append-only ledger for research decisions, negative results,
-prune causality, and outcome corrections. Directly consumes the same receipt
-contracts as the Claim-Evidence Graph Kernel (LineageReceipt and
+Deterministic, append-only event log for research decisions, failed attempts,
+route abandonment reasons, and outcome changes. Directly consumes the same
+receipt contracts as the Claim-Evidence Graph Kernel (LineageReceipt and
 AcademicEvidenceReceipt via a byte-compatible ReceiptRef).
 
-Core Invariants:
-1. Append-only history with no destructive mutation:
-   Decisions, bases, forks, prune states, and outcome corrections are
-   immutable records; outcome changes are recorded as new correction events
-   (content-addressed), never as in-place updates.
-2. Rejection of Truth Authority and subjective scores:
-   No confidence values, no utility scores, no ranking numbers. Verdicts are
-   discrete enumerations; reasons are closed vocabularies plus free-text
-   rationale. The ledger records choices and evidence, it never judges truth.
+Core Principles:
+1. Append-only event history:
+   Decisions, bases, forks, state events, and outcome corrections are immutable
+   records; outcome changes are recorded as new correction events with monotonic
+   sequences, never as in-place updates.
+2. Discrete, objective verdicts without subjective scoring:
+   No pseudo-confidence scores, utility metrics, or subjective ratings.
+   Verdicts are discrete enumerations (positive, negative, inconclusive, unverifiable).
 3. Strongly typed ReceiptRef with strict mutual exclusivity:
-   LineageReceipt requires lineage-receipt-1.0, receipt_id, receipt_digest
-   (no academic fields). AcademicEvidenceReceipt requires 1.0, claim_digest,
-   payload_sha256 (no lineage fields). The contract is byte-compatible with
-   the Claim-Evidence Graph Kernel.
-4. Strict actual payload verification:
-   AcademicEvidenceReceipt payload SHA256 is physically recomputed and
-   asserted; LineageReceipt protocol/id/digest are positively asserted.
-   External registries cannot bypass verification.
+   LineageReceipt requires lineage-receipt-1.0, receipt_id, receipt_digest.
+   AcademicEvidenceReceipt requires 1.0, claim_digest, payload_sha256.
+4. Physical payload verification:
+   AcademicEvidenceReceipt payload SHA256 is physically recomputed and asserted.
+   LineageReceipt protocol/id/digest are positively asserted.
 5. Deeply frozen records & immutable metadata mapping:
-   Every record is a frozen dataclass and every metadata mapping is a
-   FrozenDict, preventing nested mutation drift. Receipt registration
-   deepcopies payloads preventing external mutation.
-6. Negative results are evidence-bearing claims of absence:
-   A negative_result decision must carry at least one claim-kind basis edge
-   whose target is ANOTHER non-negative_result decision (E405/E406). Claim
-   bases reference decisions as recorded research acts; evidence chains are
-   transitive through the target's own bases and must ground at a
-   receipt-anchored terminal, otherwise they surface via the uncertainty
-   queue. Self-references and negative_result targets are rejected as
-   circular evidence fabrication.
-7. Prune causality is first-class and acyclic:
-   A pruned decision records a closed-vocabulary reason, the pruning
-   decision, and the chosen alternative. pruned_by chains must be acyclic
-   (circular pruning fails validation). A pruning decision must cite at
-   least one Claim basis; otherwise the uncertainty queue surfaces it for
-   human review.
-8. Three-state uncertainty queue discipline:
-   unverifiable / unresolved / missing are surfaced as deterministic
-   content-addressed UncertaintyItem records; the queue never blocks
-   deterministic validation of the structural graph.
-9. Order-invariant ledger digest:
-   Full canonical sorting across all records; container insertion order never
-   affects ledger_digest. Registered receipts contribute canonical payload
-   hashes. The one deliberate exception is the ledger-assigned `sequence`
-   counter on outcome corrections: it records true append history, so two
-   ledgers differing only in correction arrival order legitimately digest
-   differently, while idempotent replays digest identically.
+   Every record is a frozen dataclass and every metadata mapping is a FrozenDict,
+   failing closed at construction time on non-JSON domain values.
+6. Negative results require positive evidence bases:
+   A negative_result decision must cite at least one decision-kind basis edge
+   whose target is another (non-negative_result) decision (E405/E406).
+7. Route abandonment reasons are explicit and acyclic:
+   Pruned/closed routes record a closed-vocabulary reason, the pruning decision,
+   and alternative routes. Abandonment causation chains are strictly acyclic.
+8. Unresolved items surfaced as structured uncertainty items:
+   Missing evidence or unanchored chains surface as deterministic UncertaintyItem
+   records without blocking structural validation.
+9. Order-invariant content identity digest:
+   Full canonical sorting across all records. State events and outcome corrections
+   carry monotonic sequence counters recording chronological arrival order.
 10. Lexical canonicalization only:
-   NFC normalization and whitespace compaction; decision titles are never
-   rewritten or paraphrased semantically.
+   NFC normalization and whitespace compaction; decision titles are never rewritten.
 """
 from __future__ import annotations
 
@@ -77,9 +58,9 @@ SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 ID_REGEX = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 
 VALID_DECISION_TYPES: set = {"explore", "commit", "abandon", "revise", "negative_result"}
-VALID_BASIS_KINDS: set = {"claim", "negative_result"}
+VALID_BASIS_KINDS: set = {"decision", "negative_result", "claim"}
 VALID_FORK_RELATIONS: set = {"considered", "explored", "deferred", "rejected"}
-VALID_PRUNE_STATUSES: set = {"active", "pruned"}
+VALID_PRUNE_STATUSES: set = {"active", "pruned", "reopened"}
 VALID_PRUNE_REASONS: set = {
     "resource_exhausted",
     "superseded",
@@ -113,6 +94,20 @@ VALID_UNCERTAINTY_KINDS: set = {
     "unsupported_pruning",
     "unevidenced_claim_basis",
     "generic_uncertainty",
+}
+
+ALLOWED_TOP_LEVEL_KEYS: set = {
+    "protocol",
+    "ledger_id",
+    "ledger_digest",
+    "verification_digest",
+    "verification_manifest",
+    "decisions",
+    "bases",
+    "forks",
+    "state_events",
+    "corrections",
+    "uncertainties",
 }
 
 __all__ = [
@@ -597,6 +592,13 @@ class DecisionNode:
             raise ValueError(f"Invalid decision_type: {self.decision_type!r}. Must be one of {sorted(VALID_DECISION_TYPES)}")
         if not isinstance(self.title, str) or not self.title.strip():
             raise ValueError("Decision 'title' must be a non-empty string.")
+        if len(self.title) > 512:
+            raise ValueError("Decision 'title' must not exceed 512 characters.")
+        if self.context_work_id is not None:
+            _check_id(self.context_work_id, "context_work_id")
+        if self.locator is not None:
+            if not isinstance(self.locator, str) or len(self.locator) > 2048:
+                raise ValueError("locator must be a string up to 2048 characters.")
         norm_title = canonical_text(self.title)
         object.__setattr__(self, "normalized_title", norm_title)
         digest = compute_decision_digest(
@@ -627,7 +629,7 @@ class DecisionNode:
 
 @dataclass(frozen=True)
 class DecisionBasisEdge:
-    """A directed edge: a decision was made on the basis of a claim or a negative result."""
+    """A directed edge: a decision was made on the basis of another decision or a negative result."""
 
     decision_id: str
     basis_kind: str
@@ -637,8 +639,10 @@ class DecisionBasisEdge:
 
     def __post_init__(self):
         _check_id(self.decision_id, "decision_id")
-        if self.basis_kind not in VALID_BASIS_KINDS:
-            raise ValueError(f"Invalid basis_kind: {self.basis_kind!r}. Must be one of {sorted(VALID_BASIS_KINDS)}")
+        if self.basis_kind == "claim":
+            object.__setattr__(self, "basis_kind", "decision")
+        if self.basis_kind not in ("decision", "negative_result"):
+            raise ValueError(f"Invalid basis_kind: {self.basis_kind!r}. Must be 'decision' or 'negative_result'.")
         _check_id(self.basis_id, "basis_id")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
             raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
@@ -707,7 +711,7 @@ def canonical_fork_tuple(edge: DecisionForkEdge) -> Tuple[str, ...]:
 
 @dataclass(frozen=True)
 class PruneState:
-    """Lifecycle state of a decision branch: active, or pruned with closed-vocabulary reason."""
+    """Lifecycle state of a decision branch: active, reopened, or pruned with closed-vocabulary reason."""
 
     decision_id: str
     status: str
@@ -716,6 +720,18 @@ class PruneState:
     alternative_ref: Optional[str] = None
     receipt_ref: Optional[ReceiptRef] = None
     metadata: FrozenDict = field(default_factory=FrozenDict)
+
+    @property
+    def is_active(self) -> bool:
+        return self.status in ("active", "reopened")
+
+    @property
+    def is_pruned(self) -> bool:
+        return self.status == "pruned"
+
+    @property
+    def is_reopened(self) -> bool:
+        return self.status == "reopened"
 
     def __post_init__(self):
         _check_id(self.decision_id, "decision_id")
@@ -736,7 +752,7 @@ class PruneState:
                     raise ValueError(f"Self-referential alternative: decision '{self.decision_id}' cannot be its own alternative.")
         else:
             if self.prune_reason is not None or self.pruned_by is not None or self.alternative_ref is not None:
-                raise ValueError("Active decision must not carry prune_reason/pruned_by/alternative_ref fields.")
+                raise ValueError(f"{self.status.capitalize()} decision must not carry prune_reason/pruned_by/alternative_ref fields.")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
             raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
         object.__setattr__(self, "metadata", _frozen_meta(self.metadata))
@@ -902,6 +918,11 @@ class OutcomeCorrection:
             raise ValueError(f"Invalid verdict: {self.verdict!r}. Must be one of {sorted(VALID_VERDICTS)}")
         if not isinstance(self.rationale, str) or not self.rationale.strip():
             raise ValueError("Outcome correction requires a non-empty 'rationale'.")
+        if len(self.rationale) > 4096:
+            raise ValueError("Outcome correction 'rationale' must not exceed 4096 characters.")
+        if self.locator is not None:
+            if not isinstance(self.locator, str) or len(self.locator) > 2048:
+                raise ValueError("locator must be a string up to 2048 characters.")
         if not isinstance(self.sequence, int) or self.sequence < 0:
             raise ValueError("'sequence' must be a non-negative integer.")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
@@ -1005,7 +1026,7 @@ class DecisionLedger:
     order-invariant.
     """
 
-    def __init__(self, ledger_id: str = "ledger-default"):
+    def __init__(self, ledger_id: str = "default-ledger"):
         if not isinstance(ledger_id, str) or not ledger_id.strip():
             raise ValueError("ledger_id must be a non-empty string.")
         self.ledger_id = ledger_id
@@ -1017,6 +1038,10 @@ class DecisionLedger:
         self._receipts: Dict[str, Any] = {}
         self._next_correction_sequence = 1
         self._next_state_sequence = 1
+        self._bases_by_decision: Dict[str, List[DecisionBasisEdge]] = collections.defaultdict(list)
+        self._state_events_by_decision: Dict[str, List[DecisionStateEvent]] = collections.defaultdict(list)
+        self._corrections_by_decision: Dict[str, List[OutcomeCorrection]] = collections.defaultdict(list)
+        self._academic_hash_index: Dict[str, Any] = {}
 
     # -- registration -------------------------------------------------------
 
@@ -1038,16 +1063,17 @@ class DecisionLedger:
             existing = self._receipts[rid]
             ex_dict = existing.to_dict() if hasattr(existing, "to_dict") else existing
             new_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
-            if ex_dict != new_dict:
+            if _canonical_json_bytes(_jsonable(ex_dict)) != _canonical_json_bytes(_jsonable(new_dict)):
                 raise ValueError(f"Conflicting receipt registration for {rid!r}: existing data differs from new registration.")
             return
         self._receipts[rid] = snapshot
-        # Resolve-by-content note: references carry no registry key of their
-        # own (mirroring the CEG Kernel). At validation time a lineage ref is
-        # looked up by receipt_id and an academic ref by its payload_sha256
-        # key first, then by a canonical payload-hash scan over all entries.
-        # The registration key here is therefore only a registry label; the
-        # receipt_id vs payload_sha256 distinction lives in _resolve_receipt.
+        snap_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
+        if isinstance(snap_dict, dict):
+            try:
+                p_hash = canonical_academic_receipt_payload_sha256(snap_dict)
+                self._academic_hash_index[p_hash] = snapshot
+            except Exception:
+                pass
 
     def _register_node(self, store: Dict[str, Any], obj: Any, obj_id: str, label: str):
         existing = store.get(obj_id)
@@ -1085,6 +1111,8 @@ class DecisionLedger:
         receipt_ref: Optional[ReceiptRef] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> DecisionBasisEdge:
+        if basis_kind == "claim":
+            basis_kind = "decision"
         edge = DecisionBasisEdge(
             decision_id=decision_id,
             basis_kind=basis_kind,
@@ -1097,6 +1125,7 @@ class DecisionLedger:
         if existing is not None:
             return existing
         self._bases[key] = edge
+        self._bases_by_decision[decision_id].append(edge)
         return edge
 
     def add_fork(
@@ -1183,32 +1212,23 @@ class DecisionLedger:
             metadata=metadata or {},
         )
         self._state_events.append(event)
+        self._state_events_by_decision[decision_id].append(event)
         self._next_state_sequence += 1
         return event
 
     def _latest_event(self, decision_id: str) -> Optional[DecisionStateEvent]:
-        """Latest state event for a decision by (sequence, event_id) order."""
-        best: Optional[DecisionStateEvent] = None
-        for e in self._state_events:
-            if e.decision_id != decision_id:
-                continue
-            if best is None or (e.sequence, e.event_id) > (best.sequence, best.event_id):
-                best = e
-        return best
+        """Latest state event for a decision by sequence order."""
+        events = self._state_events_by_decision.get(decision_id)
+        return events[-1] if events else None
 
     def current_state(self, decision_id: str) -> Optional[PruneState]:
         """Derived current lifecycle state of a decision (replayed from events)."""
-        events = sorted(
-            (e for e in self._state_events if e.decision_id == decision_id),
-            key=lambda e: (e.sequence, e.event_id),
-        )
-        if not events:
+        latest = self._latest_event(decision_id)
+        if latest is None:
             return None
-        latest = events[-1]
-        status = "pruned" if latest.to_state == "pruned" else "active"
         return PruneState(
             decision_id=decision_id,
-            status=status,
+            status=latest.to_state,
             prune_reason=latest.reason if latest.to_state == "pruned" else None,
             pruned_by=latest.caused_by if latest.to_state == "pruned" else None,
             alternative_ref=latest.alternative_ref if latest.to_state == "pruned" else None,
@@ -1218,13 +1238,8 @@ class DecisionLedger:
 
     def state_history(self, decision_id: str) -> List[Dict[str, Any]]:
         """Full append-only state transition history of a decision (replayed)."""
-        return [
-            e.to_dict()
-            for e in sorted(
-                (e for e in self._state_events if e.decision_id == decision_id),
-                key=lambda e: (e.sequence, e.event_id),
-            )
-        ]
+        events = self._state_events_by_decision.get(decision_id, [])
+        return [e.to_dict() for e in events]
 
     def set_prune(
         self,
@@ -1240,20 +1255,33 @@ class DecisionLedger:
 
         status='active' with no history registers a genesis active event;
         status='active' on a pruned decision appends a reopened event;
-        status='pruned' appends a pruned event. Repeated identical calls
-        replay idempotently.
+        status='reopened' on a pruned decision appends a reopened event;
+        status='pruned' appends a pruned event.
+        Repeated identical calls replay idempotently. Conflicting active calls fail.
         """
         if status not in VALID_PRUNE_STATUSES:
             raise ValueError(f"Invalid prune status: {status!r}. Must be one of {sorted(VALID_PRUNE_STATUSES)}")
-        if status == "active":
+        if status in ("active", "reopened"):
             if prune_reason is not None or pruned_by is not None or alternative_ref is not None:
-                raise ValueError("Active decision must not carry prune_reason/pruned_by/alternative_ref fields.")
+                raise ValueError(f"{status.capitalize()} decision must not carry prune_reason/pruned_by/alternative_ref fields.")
             current = self.current_state(decision_id)
             if current is None:
                 self.add_state_event(decision_id, to_state="active", receipt_ref=receipt_ref, metadata=metadata)
             elif current.status == "pruned":
                 self.add_state_event(decision_id, to_state="reopened", receipt_ref=receipt_ref, metadata=metadata)
-            # already active: idempotent no-op
+            else:
+                # Already active or reopened: verify strict idempotence
+                latest_ev = self._latest_event(decision_id)
+                if (
+                    latest_ev is not None
+                    and latest_ev.receipt_ref == receipt_ref
+                    and dict(latest_ev.metadata) == dict(metadata or {})
+                ):
+                    return current
+                raise ValueError(
+                    f"Decision '{decision_id}' is already {current.status}; "
+                    "cannot re-activate with conflicting receipt_ref or metadata."
+                )
         else:
             current = self.current_state(decision_id)
             if (
@@ -1279,6 +1307,11 @@ class DecisionLedger:
         assert view is not None
         return view
 
+    def _latest_correction(self, decision_id: str) -> Optional[OutcomeCorrection]:
+        """Latest outcome correction for a decision by sequence order."""
+        corrs = self._corrections_by_decision.get(decision_id)
+        return corrs[-1] if corrs else None
+
     def add_outcome_correction(
         self,
         decision_id: str,
@@ -1288,26 +1321,32 @@ class DecisionLedger:
         locator: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> OutcomeCorrection:
-        probe = OutcomeCorrection(
-            correction_id="probe",
-            decision_id=decision_id,
-            verdict=verdict,
-            rationale=rationale,
-            receipt_ref=receipt_ref,
-            locator=locator,
-            metadata=metadata or {},
-        )
-        content_key = canonical_correction_tuple(probe)[1:]  # everything except the provisional id
-        content_id = "corr-" + hashlib.sha256(_canonical_json_bytes(list(content_key))).hexdigest()[:32]
-        existing = self._corrections.get(content_id)
-        if existing is not None:
-            if canonical_correction_tuple(existing)[1:] == content_key:
-                return existing  # identical content is idempotent
-            raise ValueError(f"Correction content-id collision for {content_id!r}: distinct payloads truncated to the same id.")
+        _check_id(decision_id, "decision_id")
+        latest = self._latest_correction(decision_id)
+        if (
+            latest is not None
+            and latest.verdict == verdict
+            and latest.rationale == rationale
+            and latest.receipt_ref == receipt_ref
+            and latest.locator == locator
+            and dict(latest.metadata) == dict(metadata or {})
+        ):
+            return latest  # idempotent: latest correction is already identical
+
         assigned = self._next_correction_sequence
         self._next_correction_sequence += 1
+        content_tuple = (
+            decision_id,
+            verdict,
+            rationale,
+            canonical_receipt_ref_tuple(receipt_ref),
+            locator or "",
+            assigned,
+            _meta_canonical_json(_frozen_meta(metadata)),
+        )
+        correction_id = "corr-" + hashlib.sha256(_canonical_json_bytes(list(content_tuple))).hexdigest()[:32]
         corr = OutcomeCorrection(
-            correction_id=content_id,
+            correction_id=correction_id,
             decision_id=decision_id,
             verdict=verdict,
             rationale=rationale,
@@ -1316,7 +1355,8 @@ class DecisionLedger:
             sequence=assigned,
             metadata=metadata or {},
         )
-        self._corrections[content_id] = corr
+        self._corrections[correction_id] = corr
+        self._corrections_by_decision[decision_id].append(corr)
         return corr
 
     # -- queries -------------------------------------------------------------
@@ -1349,12 +1389,13 @@ class DecisionLedger:
         return out
 
     def find_decisions_for(self, basis_id: str, basis_kind: Optional[str] = None) -> List[Dict[str, Any]]:
-        """All basis edges citing a given claim/negative-result, sorted deterministically."""
+        """All basis edges citing a given decision/negative-result, sorted deterministically."""
+        target_kind = "decision" if basis_kind == "claim" else basis_kind
         out = []
         for edge in sorted(self._bases.values(), key=canonical_basis_tuple):
             if edge.basis_id != basis_id:
                 continue
-            if basis_kind is not None and edge.basis_kind != basis_kind:
+            if target_kind is not None and edge.basis_kind != target_kind:
                 continue
             out.append(edge.to_dict())
         return out
@@ -1429,10 +1470,10 @@ class DecisionLedger:
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             )
             result["pruned_by_bases"] = bases
-            claim_bases = [b for b in bases if b["basis_kind"] == "claim"]
-            if not claim_bases:
+            decision_bases = [b for b in bases if b["basis_kind"] in ("decision", "claim")]
+            if not decision_bases:
                 result["unsupported_reason"] = (
-                    f"Pruning decision '{state.pruned_by}' cites no Claim basis; "
+                    f"Pruning decision '{state.pruned_by}' cites no decision basis (no Claim basis); "
                     "the prune cause rests on unrecorded judgment and needs human review."
                 )
         if state.alternative_ref:
@@ -1485,8 +1526,8 @@ class DecisionLedger:
             else:
                 if edge.basis_kind == "negative_result" and target.decision_type != "negative_result":
                     errors.append(f"E103 basis kind mismatch: negative_result basis '{edge.basis_id}' targets a '{target.decision_type}' decision")
-                if edge.basis_kind == "claim" and target.decision_type == "negative_result":
-                    errors.append(f"E103 basis kind mismatch: claim basis '{edge.basis_id}' targets a negative_result decision")
+                if edge.basis_kind in ("decision", "claim") and target.decision_type == "negative_result":
+                    errors.append(f"E103 basis kind mismatch: {edge.basis_kind} basis '{edge.basis_id}' targets a negative_result decision")
             self._validate_receipt_ref(edge.receipt_ref, f"basis:{edge.decision_id}>{edge.basis_id}", errors)
 
         # Dangling fork edges + self forks
@@ -1554,31 +1595,31 @@ class DecisionLedger:
                 errors.append(f"E404 negative result '{node.id}' carries no basis edge (assertion of absence needs evidence)")
                 continue
             # self-referential basis is circular evidence fabrication
-            if any(e.basis_kind == "claim" and e.basis_id == node.id for e in bases):
-                errors.append(f"E406 negative result '{node.id}' cites itself as claim evidence (circular evidence fabrication)")
-            claim_bases = [
+            if any(e.basis_kind in ("decision", "claim") and e.basis_id == node.id for e in bases):
+                errors.append(f"E406 negative result '{node.id}' cites itself as evidence (circular evidence fabrication)")
+            decision_bases = [
                 e for e in bases
-                if e.basis_kind == "claim" and e.basis_id != node.id and e.basis_id not in neg_ids
+                if e.basis_kind in ("decision", "claim") and e.basis_id != node.id and e.basis_id not in neg_ids
             ]
-            if not claim_bases:
-                if any(e.basis_kind == "claim" and e.basis_id in neg_ids for e in bases):
+            if not decision_bases:
+                if any(e.basis_kind in ("decision", "claim") and e.basis_id in neg_ids for e in bases):
                     errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
-                elif not any(e.basis_kind == "claim" for e in bases):
+                elif not any(e.basis_kind in ("decision", "claim") for e in bases):
                     errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
 
-        # E407: a negative result whose claim-basis closure contains a cycle
+        # E407: a negative result whose decision-basis closure contains a cycle
         # can never ground at a receipt anchor; that is a deterministic
         # structural fact, so it hard-fails instead of only surfacing in the
         # uncertainty queue.
-        claim_succ_v: Dict[str, set] = {}
+        decision_succ_v: Dict[str, set] = {}
         for e in self._bases.values():
-            if e.basis_kind == "claim" and e.basis_id != e.decision_id:
-                claim_succ_v.setdefault(e.decision_id, set()).add(e.basis_id)
+            if e.basis_kind in ("decision", "claim") and e.basis_id != e.decision_id:
+                decision_succ_v.setdefault(e.decision_id, set()).add(e.basis_id)
 
         def _closure_has_cycle(root: str) -> bool:
             visited: set = set()
             on_path: set = set()
-            stack: List[Tuple[str, Iterator[str]]] = [(root, iter(sorted(claim_succ_v.get(root, ()))))]
+            stack: List[Tuple[str, Iterator[str]]] = [(root, iter(sorted(decision_succ_v.get(root, ()))))]
             on_path.add(root)
             while stack:
                 top, it = stack[-1]
@@ -1589,7 +1630,7 @@ class DecisionLedger:
                     if nxt not in visited:
                         visited.add(nxt)
                         on_path.add(nxt)
-                        stack.append((nxt, iter(sorted(claim_succ_v.get(nxt, ())))))
+                        stack.append((nxt, iter(sorted(decision_succ_v.get(nxt, ())))))
                         advanced = True
                         break
                 if not advanced:
@@ -1678,7 +1719,7 @@ class DecisionLedger:
                     f"Negative result '{node.id}' carries no basis edge; the assertion of absence is unevidenced.",
                     True,
                 )
-            elif not any(e.basis_kind == "claim" for e in bases):
+            elif not any(e.basis_kind in ("decision", "claim") for e in bases):
                 add(
                     "unsupported_negative_result",
                     node.id,
@@ -1686,32 +1727,31 @@ class DecisionLedger:
                     True,
                 )
 
-        # Pruning decisions without any claim basis (derived current prune graph)
+        # Pruning decisions without any decision basis (derived current prune graph)
         for state in self._current_prune_graph().values():
             if not state.pruned_by:
                 continue
-            claim_bases = [
+            decision_bases = [
                 e for e in self._bases.values()
-                if e.decision_id == state.pruned_by and e.basis_kind == "claim"
+                if e.decision_id == state.pruned_by and e.basis_kind in ("decision", "claim")
             ]
-            if not claim_bases:
+            if not decision_bases:
                 add(
                     "unsupported_pruning",
                     state.decision_id,
-                    f"Pruning decision '{state.pruned_by}' cites no Claim basis; the prune cause needs human review.",
+                    f"Pruning decision '{state.pruned_by}' cites no decision basis; the prune cause needs human review.",
                     True,
                 )
 
-        # Unevidenced claim-basis chains (basis-transparency rule): a
-        # claim-kind basis edge is valid only when the evidence chain it
-        # starts grounds at a receipt-anchored terminal. Chains are
-        # transitive through the target's own claim bases; self-edges never
-        # count as evidence. A terminal without receipt anchoring, or a
-        # cycle that never grounds, surfaces for human review.
+        # Unevidenced decision-basis chains: a decision-kind basis edge is valid
+        # only when the evidence chain it starts grounds at a receipt-anchored
+        # terminal. Chains are transitive through the target's own bases;
+        # self-edges never count as evidence. A terminal without receipt
+        # anchoring, or a cycle that never grounds, surfaces for review.
         claim_succ: Dict[str, set] = {}
         claim_edges: List[Tuple[str, str, DecisionBasisEdge]] = []
         for e in self._bases.values():
-            if e.basis_kind == "claim" and e.basis_id != e.decision_id:
+            if e.basis_kind in ("decision", "claim") and e.basis_id != e.decision_id:
                 claim_succ.setdefault(e.decision_id, set()).add(e.basis_id)
                 claim_edges.append((e.decision_id, e.basis_id, e))
 
@@ -1790,6 +1830,13 @@ class DecisionLedger:
         }
         return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest().lower()
 
+    def _compute_verification_manifest(self) -> Dict[str, str]:
+        """Compute the canonical verification manifest (receipt_id -> payload_sha256)."""
+        return {
+            rid: canonical_ledger_payload_sha256(_jsonable(r))
+            for rid, r in sorted(self._receipts.items())
+        }
+
     def verification_digest(self) -> str:
         """Digest of the ledger content identity plus the local receipt registry.
 
@@ -1798,30 +1845,27 @@ class DecisionLedger:
         alongside ledger_digest so a verifier can distinguish content from
         verification state.
         """
-        manifest = {
-            rid: canonical_ledger_payload_sha256(_jsonable(r))
-            for rid, r in sorted(self._receipts.items())
-        }
+        manifest = self._compute_verification_manifest()
         payload = {"ledger_digest": self.ledger_digest(), "receipts": manifest}
         return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest().lower()
 
     def to_dict(self) -> Dict[str, Any]:
         """Export an immutable deep representation with content identity and verification digests."""
-        manifest = {
-            rid: canonical_ledger_payload_sha256(_jsonable(r))
-            for rid, r in sorted(self._receipts.items())
-        }
+        ld = self.ledger_digest()
+        manifest = self._compute_verification_manifest()
+        vd_payload = {"ledger_digest": ld, "receipts": manifest}
+        vd = hashlib.sha256(_canonical_json_bytes(vd_payload)).hexdigest().lower()
         d: Dict[str, Any] = {
             "protocol": PROTOCOL,
             "ledger_id": self.ledger_id,
-            "ledger_digest": self.ledger_digest(),
-            "verification_digest": self.verification_digest(),
+            "ledger_digest": ld,
+            "verification_digest": vd,
             "verification_manifest": manifest,
             "decisions": [self._decisions[k].to_dict() for k in sorted(self._decisions)],
             "bases": [self._bases[k].to_dict() for k in sorted(self._bases)],
             "forks": [self._forks[k].to_dict() for k in sorted(self._forks)],
             "state_events": [e.to_dict() for e in sorted(self._state_events, key=lambda x: (x.sequence, x.event_id))],
-            "corrections": [self._corrections[k].to_dict() for k in sorted(self._corrections)],
+            "corrections": [c.to_dict() for c in sorted(self._corrections.values(), key=lambda x: (x.sequence, x.correction_id))],
             "uncertainties": [u.to_dict() for u in self.export_uncertainties()],
         }
         return copy.deepcopy(d)
@@ -1834,7 +1878,7 @@ class DecisionLedger:
     ) -> "DecisionLedger":
         """Strict replay loader: rebuild a ledger from a to_dict() export.
 
-        Two-gate verification for tamper fail-closed:
+        Four-gate verification for complete fail-closed defense:
         1. Raw digest verification: computes the canonical ledger payload directly
            over declared records in `data`. Any tampering with exported fields
            (event_id, sequence, decision_digest, normalized_title, correction_id,
@@ -1848,10 +1892,15 @@ class DecisionLedger:
            - If `receipt_registry` is provided, receipts are registered and
              `verification_digest` is re-asserted.
            - Uncertainty queue is recomputed and strictly compared to declared
-             uncertainties. Content uncertainties can never be deleted or modified.
+             uncertainties (no uncertainties, including missing_receipt, skipped).
+        4. Structural graph validation: validate_ledger() is executed on the replayed
+           ledger; exports with cycles, dangling edges, or invalid evidence fail closed.
         """
         if not isinstance(data, collections.abc.Mapping):
             raise TypeError("from_dict expects a mapping produced by DecisionLedger.to_dict().")
+        unexpected = set(data.keys()) - ALLOWED_TOP_LEVEL_KEYS
+        if unexpected:
+            raise ValueError(f"Unexpected top-level fields in export: {sorted(unexpected)}")
         for key in (
             "protocol",
             "ledger_id",
@@ -2065,5 +2114,10 @@ class DecisionLedger:
                 f"Export uncertainty queue mismatch: declared {len(declared_unc)} items, "
                 f"recomputed {len(recomputed_unc)} items. Uncertainty records cannot be modified or suppressed."
             )
+
+        # Gate 4: Structural validation on replayed ledger
+        valid, errors = ledger.validate_ledger()
+        if not valid:
+            raise ValueError(f"Replayed ledger failed structural validation: {'; '.join(errors)}")
 
         return ledger

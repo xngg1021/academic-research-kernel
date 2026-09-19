@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/xngg1021/academic-research-kernel/schemas/decision-ledger-receipt.schema.json",
   "title": "DecisionLedgerReceipt",
-  "description": "Deterministic export of a Decision & Negative Result Ledger v1: decisions, basis edges, fork edges, prune states, outcome corrections, and the uncertainty queue. No confidence scores; verdicts are discrete enumerations.",
+  "description": "Deterministic export of a Research Decision Log (Decision & Negative Result Ledger v1): decisions, basis edges, fork edges, state events, outcome corrections, and the uncertainty queue. No confidence scores; verdicts are discrete enumerations.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -143,8 +143,9 @@
         "basis_kind": {
           "type": "string",
           "enum": [
-            "claim",
-            "negative_result"
+            "decision",
+            "negative_result",
+            "claim"
           ]
         },
         "basis_id": {

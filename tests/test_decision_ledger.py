@@ -1261,3 +1261,137 @@ def test_from_dict_verifies_missing_receipt_uncertainty_against_manifest():
             u["needs_human"] = True
     with pytest.raises(ValueError, match="Export uncertainty queue mismatch"):
         dl.DecisionLedger.from_dict(tampered3)
+
+
+def test_repeated_identical_outcome_after_intervening_outcome():
+    """An outcome identical to a past outcome must be recorded as a new event if intervening outcomes occurred."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Evaluate model")
+    c1 = g.add_outcome_correction("d1", "negative", "initial failure")
+    c2 = g.add_outcome_correction("d1", "positive", "fixed after rework")
+    # Repeated identical payload to c1 after c2:
+    c3 = g.add_outcome_correction("d1", "negative", "initial failure")
+    assert c3.correction_id != c1.correction_id
+    assert c3.sequence == 3
+    assert g.outcome_of("d1")["latest_verdict"] == "negative"
+    assert g.outcome_of("d1")["latest_correction_id"] == c3.correction_id
+    assert g.outcome_of("d1")["correction_count"] == 3
+
+    # Immediate repetition of c3 is strictly idempotent
+    c4 = g.add_outcome_correction("d1", "negative", "initial failure")
+    assert c4.correction_id == c3.correction_id
+    assert c4.sequence == 3
+    assert g.outcome_of("d1")["correction_count"] == 3
+
+    # Replay round-trip preserves all 3 corrections
+    export = g.to_dict()
+    assert len(export["corrections"]) == 3
+    replayed = dl.DecisionLedger.from_dict(export)
+    assert replayed.outcome_of("d1")["latest_verdict"] == "negative"
+    assert replayed.outcome_of("d1")["correction_count"] == 3
+
+
+def test_from_dict_structural_validation_gate():
+    """from_dict must execute validate_ledger and fail closed on structural flaws."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "D1", decision_type="explore")
+    g.add_decision("d2", "D2", decision_type="explore")
+    g.add_basis("d2", "decision", "d1")
+    export = g.to_dict()
+
+    # Tamper with basis_kind to 'negative_result' (E103 target type mismatch)
+    tampered = copy.deepcopy(export)
+    tampered["bases"][0]["basis_kind"] = "negative_result"
+    # Recalculate digests to bypass Gate 1, Gate 2, and Gate 3
+    tampered["ledger_digest"] = dl.hashlib.sha256(
+        dl._canonical_json_bytes({
+            "protocol": tampered["protocol"],
+            "ledger_id": tampered["ledger_id"],
+            "decisions": sorted(tampered["decisions"], key=lambda x: x["id"]),
+            "bases": sorted(tampered["bases"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+            "forks": sorted(tampered["forks"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+            "state_events": sorted(tampered["state_events"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+            "corrections": sorted(tampered["corrections"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+        })
+    ).hexdigest().lower()
+    tampered["verification_digest"] = dl.hashlib.sha256(
+        dl._canonical_json_bytes({"ledger_digest": tampered["ledger_digest"], "receipts": tampered["verification_manifest"]})
+    ).hexdigest().lower()
+    tampered["uncertainties"] = [
+        u.to_dict() for u in dl.DecisionLedger(ledger_id=g.ledger_id).export_uncertainties()
+    ]
+    with pytest.raises(ValueError, match="structural validation|E103"):
+        dl.DecisionLedger.from_dict(tampered)
+
+
+def test_from_dict_rejects_unknown_top_level_fields():
+    """from_dict strictly rejects unknown top-level keys matching additionalProperties: false."""
+    g = dl.DecisionLedger()
+    export = g.to_dict()
+    export["unexpected_extra_key"] = "forbidden"
+    with pytest.raises(ValueError, match="Unexpected top-level fields"):
+        dl.DecisionLedger.from_dict(export)
+
+
+def test_reopened_status_and_properties():
+    """current_state reflects reopened status with is_active=True and is_reopened=True."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Route A")
+    g.set_prune("d1", "pruned", prune_reason="superseded")
+    p1 = g.current_state("d1")
+    assert p1.status == "pruned"
+    assert p1.is_pruned is True
+    assert p1.is_active is False
+
+    g.set_prune("d1", "reopened")
+    p2 = g.current_state("d1")
+    assert p2.status == "reopened"
+    assert p2.is_reopened is True
+    assert p2.is_active is True
+    assert p2.is_pruned is False
+
+
+def test_set_prune_active_conflicting_parameters_rejected():
+    """Re-activating an active decision with conflicting parameters must raise ValueError."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Route A")
+    g.set_prune("d1", "active", metadata={"priority": "high"})
+
+    # Identical active call is idempotent
+    g.set_prune("d1", "active", metadata={"priority": "high"})
+
+    # Conflicting active call fails closed
+    with pytest.raises(ValueError, match="already active|conflicting"):
+        g.set_prune("d1", "active", metadata={"priority": "low"})
+
+
+def test_basis_kind_decision_and_normalization():
+    """basis_kind='decision' works natively and 'claim' normalizes to 'decision'."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Source")
+    g.add_decision("d2", "Target 1")
+    g.add_decision("d3", "Target 2")
+    e1 = g.add_basis("d2", "decision", "d1")
+    assert e1.basis_kind == "decision"
+    e2 = g.add_basis("d3", "claim", "d1")
+    assert e2.basis_kind == "decision"
+    # Query supports both
+    found = g.find_decisions_for("d1", basis_kind="claim")
+    assert len(found) == 2
+
+
+def test_register_receipt_canonical_bytes_conflict_rejection():
+    """register_receipt rejects conflicting registrations differing only in canonical JSON encoding."""
+    g = dl.DecisionLedger()
+    g.register_receipt("r1", {"metric": 1})
+    # Float vs int: in python 1 == 1.0, but in canonical JSON bytes '1' != '1.0'
+    with pytest.raises(ValueError, match="Conflicting receipt registration"):
+        g.register_receipt("r1", {"metric": 1.0})
+
+
+def test_package_exports_state_events():
+    """__init__.py must export DecisionStateEvent and canonical_state_event_tuple."""
+    import importlib
+    pkg = importlib.import_module("skills.decision-ledger.scripts")
+    assert hasattr(pkg, "DecisionStateEvent")
+    assert hasattr(pkg, "canonical_state_event_tuple")
