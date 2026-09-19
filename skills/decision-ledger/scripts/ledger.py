@@ -64,6 +64,7 @@ import collections.abc
 import copy
 import hashlib
 import json
+import math
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -209,15 +210,19 @@ def canonical_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
 def _jsonable(obj: Any, _seen: Optional[set] = None) -> Any:
     """Deterministically convert a registered payload to JSON-able structures.
 
-    Strictly bounded domain: JSON primitives, mappings, lists/tuples, and
-    objects exposing to_dict() (unwrapped recursively). Everything else FAILS
-    CLOSED (TypeError): no repr() fallback (non-deterministic across
-    processes, and an arbitrary code path on foreign objects). Cyclic
-    containers are rejected (ValueError).
+    Strictly bounded domain: JSON primitives (str, int, finite float, bool, None),
+    mappings with strictly string keys, lists/tuples, and objects exposing
+    to_dict() (unwrapped recursively). Everything else FAILS CLOSED (TypeError /
+    ValueError): no repr() fallback, no non-finite floats (NaN/Inf), no non-string
+    mapping keys, and cyclic containers are rejected.
     """
     if _seen is None:
         _seen = set()
-    if isinstance(obj, (str, int, float, bool)) or obj is None:
+    if isinstance(obj, (str, int, bool)) or obj is None:
+        return obj
+    if isinstance(obj, float):
+        if not math.isfinite(obj):
+            raise ValueError(f"Non-finite float {obj!r} is not permitted in canonical payloads.")
         return obj
     oid = id(obj)
     if oid in _seen:
@@ -225,7 +230,12 @@ def _jsonable(obj: Any, _seen: Optional[set] = None) -> Any:
     if isinstance(obj, collections.abc.Mapping):
         _seen.add(oid)
         try:
-            return {str(k): _jsonable(v, _seen) for k, v in obj.items()}
+            res: Dict[str, Any] = {}
+            for k, v in obj.items():
+                if not isinstance(k, str):
+                    raise TypeError(f"Mapping key must be str, got {type(k).__name__!r}: {k!r}")
+                res[k] = _jsonable(v, _seen)
+            return res
         finally:
             _seen.discard(oid)
     if isinstance(obj, (list, tuple)):
@@ -243,7 +253,7 @@ def _jsonable(obj: Any, _seen: Optional[set] = None) -> Any:
             _seen.discard(oid)
     raise TypeError(
         f"Unsupported payload type {type(obj).__name__!r} for canonical serialization: "
-        "only JSON primitives, mappings, sequences, and objects with to_dict() are allowed."
+        "only JSON primitives, mappings with string keys, sequences, and objects with to_dict() are allowed."
     )
 
 
@@ -1733,11 +1743,16 @@ class DecisionLedger:
 
     def to_dict(self) -> Dict[str, Any]:
         """Export an immutable deep representation with content identity and verification digests."""
+        manifest = {
+            rid: canonical_ledger_payload_sha256(_jsonable(r))
+            for rid, r in sorted(self._receipts.items())
+        }
         d: Dict[str, Any] = {
             "protocol": PROTOCOL,
             "ledger_id": self.ledger_id,
             "ledger_digest": self.ledger_digest(),
             "verification_digest": self.verification_digest(),
+            "verification_manifest": manifest,
             "decisions": [self._decisions[k].to_dict() for k in sorted(self._decisions)],
             "bases": [self._bases[k].to_dict() for k in sorted(self._bases)],
             "forks": [self._forks[k].to_dict() for k in sorted(self._forks)],
@@ -1748,23 +1763,93 @@ class DecisionLedger:
         return copy.deepcopy(d)
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "DecisionLedger":
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        receipt_registry: Optional[Mapping[str, Any]] = None,
+    ) -> "DecisionLedger":
         """Strict replay loader: rebuild a ledger from a to_dict() export.
 
-        Re-validates the export contract, replays every record through the
-        kernel constructors (which re-validate), restores ledger-assigned
-        sequence counters, and fails closed on any ledger_digest mismatch.
-        The receipt registry (verification cache) is intentionally NOT part
-        of the export: verification_digest is preserved for reference but the
-        registry starts empty and callers re-register receipts to re-verify.
+        Two-gate verification for tamper fail-closed:
+        1. Raw digest verification: computes the canonical ledger payload directly
+           over declared records in `data`. Any tampering with exported fields
+           (event_id, sequence, decision_digest, normalized_title, correction_id,
+           outcome_digest, etc.) immediately fails against `ledger_digest`.
+        2. Replay & invariant verification: replays records through constructors,
+           which re-evaluate transition legality, sequence progression, and
+           identity derivation. Every replayed record is verified to match the
+           declared record exactly.
+        3. Verification manifest & uncertainty queue gates:
+           - Declared `verification_manifest` is verified against `verification_digest`.
+           - If `receipt_registry` is provided, receipts are registered and
+             `verification_digest` is re-asserted.
+           - Uncertainty queue is recomputed and strictly compared to declared
+             uncertainties. Content uncertainties can never be deleted or modified.
         """
         if not isinstance(data, collections.abc.Mapping):
             raise TypeError("from_dict expects a mapping produced by DecisionLedger.to_dict().")
-        for key in ("protocol", "ledger_id", "ledger_digest", "decisions", "bases", "forks", "state_events", "corrections"):
+        for key in (
+            "protocol",
+            "ledger_id",
+            "ledger_digest",
+            "verification_digest",
+            "verification_manifest",
+            "decisions",
+            "bases",
+            "forks",
+            "state_events",
+            "corrections",
+            "uncertainties",
+        ):
             if key not in data:
                 raise ValueError(f"Export contract violation: missing required key {key!r}.")
         if data["protocol"] != PROTOCOL:
             raise ValueError(f"Export protocol mismatch: expected {PROTOCOL!r}, got {data['protocol']!r}.")
+
+        # Gate 1: raw content digest over declared records
+        raw_payload = {
+            "protocol": data["protocol"],
+            "ledger_id": data["ledger_id"],
+            "decisions": sorted(data["decisions"], key=lambda x: x["id"]),
+            "bases": sorted(
+                data["bases"],
+                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+            ),
+            "forks": sorted(
+                data["forks"],
+                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+            ),
+            "state_events": sorted(
+                data["state_events"],
+                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+            ),
+            "corrections": sorted(
+                data["corrections"],
+                key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+            ),
+        }
+        raw_digest = hashlib.sha256(_canonical_json_bytes(raw_payload)).hexdigest().lower()
+        if raw_digest != str(data["ledger_digest"]).lower():
+            raise ValueError(
+                f"Export content tampering detected: raw payload digest {raw_digest!r} "
+                f"does not match declared ledger_digest {data['ledger_digest']!r}."
+            )
+
+        # Gate 2: verification manifest vs verification digest
+        v_manifest = data.get("verification_manifest", {})
+        if not isinstance(v_manifest, collections.abc.Mapping):
+            raise ValueError("Export verification_manifest must be an object/mapping.")
+        v_payload = {
+            "ledger_digest": str(data["ledger_digest"]).lower(),
+            "receipts": v_manifest,
+        }
+        v_digest = hashlib.sha256(_canonical_json_bytes(v_payload)).hexdigest().lower()
+        if v_digest != str(data["verification_digest"]).lower():
+            raise ValueError(
+                f"Export verification manifest mismatch: recomputed verification digest {v_digest!r} "
+                f"does not match declared verification_digest {data['verification_digest']!r}."
+            )
+
         ledger = cls(ledger_id=data["ledger_id"])
 
         def _ref(d: Any) -> Optional[ReceiptRef]:
@@ -1782,8 +1867,9 @@ class DecisionLedger:
                 locator=d.get("locator"),
             )
 
+        # Replay decisions and assert identity fields match
         for d in data["decisions"]:
-            ledger.add_decision(
+            node = ledger.add_decision(
                 id=d["id"],
                 title=d["title"],
                 decision_type=d["decision_type"],
@@ -1791,6 +1877,18 @@ class DecisionLedger:
                 locator=d.get("locator"),
                 metadata=d.get("metadata") or {},
             )
+            if node.normalized_title != d.get("normalized_title"):
+                raise ValueError(
+                    f"Replayed decision normalized_title mismatch for {d['id']!r}: "
+                    f"declared {d.get('normalized_title')!r}, recomputed {node.normalized_title!r}."
+                )
+            if node.decision_digest != d.get("decision_digest"):
+                raise ValueError(
+                    f"Replayed decision digest mismatch for {d['id']!r}: "
+                    f"declared {d.get('decision_digest')!r}, recomputed {node.decision_digest!r}."
+                )
+
+        # Replay bases
         for e in data["bases"]:
             ledger.add_basis(
                 decision_id=e["decision_id"],
@@ -1799,6 +1897,8 @@ class DecisionLedger:
                 receipt_ref=_ref(e.get("receipt_ref")),
                 metadata=e.get("metadata") or {},
             )
+
+        # Replay forks
         for e in data["forks"]:
             ledger.add_fork(
                 decision_id=e["decision_id"],
@@ -1807,9 +1907,9 @@ class DecisionLedger:
                 receipt_ref=_ref(e.get("receipt_ref")),
                 metadata=e.get("metadata") or {},
             )
-        # State events replay in sequence order, preserving original sequences.
+
+        # Replay state events in sequence order and assert identity fields match
         for e in sorted(data["state_events"], key=lambda x: x.get("sequence", 0)):
-            # Transition legality is re-checked against the replayed history.
             from_state = e.get("from_state")
             current = ledger.current_state(e["decision_id"])
             current_from: Optional[str] = None
@@ -1819,10 +1919,10 @@ class DecisionLedger:
                     current_from = hist[-1]["to_state"]
             if current_from != from_state:
                 raise ValueError(
-                    f"Export replay violation: state event {e['event_id']!r} declares from_state={from_state!r} "
+                    f"Export replay violation: state event {e.get('event_id')!r} declares from_state={from_state!r} "
                     f"but replayed history is at {current_from!r}."
                 )
-            ledger.add_state_event(
+            ev = ledger.add_state_event(
                 decision_id=e["decision_id"],
                 to_state=e["to_state"],
                 reason=e.get("reason"),
@@ -1831,9 +1931,20 @@ class DecisionLedger:
                 receipt_ref=_ref(e.get("receipt_ref")),
                 metadata=e.get("metadata") or {},
             )
-        # Corrections replay in sequence order.
+            if ev.event_id != e.get("event_id"):
+                raise ValueError(
+                    f"Replayed state event event_id mismatch for {e['decision_id']!r}: "
+                    f"declared {e.get('event_id')!r}, recomputed {ev.event_id!r}."
+                )
+            if ev.sequence != e.get("sequence"):
+                raise ValueError(
+                    f"Replayed state event sequence mismatch for {e.get('event_id')!r}: "
+                    f"declared {e.get('sequence')!r}, recomputed {ev.sequence!r}."
+                )
+
+        # Replay corrections in sequence order and assert identity fields match
         for c in sorted(data["corrections"], key=lambda x: x.get("sequence", 0)):
-            ledger.add_outcome_correction(
+            corr = ledger.add_outcome_correction(
                 decision_id=c["decision_id"],
                 verdict=c["verdict"],
                 rationale=c["rationale"],
@@ -1841,9 +1952,60 @@ class DecisionLedger:
                 locator=c.get("locator"),
                 metadata=c.get("metadata") or {},
             )
+            if corr.correction_id != c.get("correction_id"):
+                raise ValueError(
+                    f"Replayed correction correction_id mismatch for {c['decision_id']!r}: "
+                    f"declared {c.get('correction_id')!r}, recomputed {corr.correction_id!r}."
+                )
+            if corr.sequence != c.get("sequence"):
+                raise ValueError(
+                    f"Replayed correction sequence mismatch for {c.get('correction_id')!r}: "
+                    f"declared {c.get('sequence')!r}, recomputed {corr.sequence!r}."
+                )
+            if corr.outcome_digest != c.get("outcome_digest"):
+                raise ValueError(
+                    f"Replayed correction outcome_digest mismatch for {c.get('correction_id')!r}: "
+                    f"declared {c.get('outcome_digest')!r}, recomputed {corr.outcome_digest!r}."
+                )
+
+        # Check replayed ledger_digest
         recomputed = ledger.ledger_digest()
         if recomputed != str(data["ledger_digest"]).lower():
             raise ValueError(
                 f"Export digest mismatch on replay: declared {data['ledger_digest']!r}, recomputed {recomputed!r}."
             )
+
+        # Optional receipt registry population
+        if receipt_registry is not None:
+            for rid, r in sorted(receipt_registry.items()):
+                ledger.register_receipt(rid, r)
+            if ledger.verification_digest() != str(data["verification_digest"]).lower():
+                raise ValueError(
+                    f"Provided receipt_registry verification digest mismatch: recomputed {ledger.verification_digest()!r} "
+                    f"does not match declared verification_digest {data['verification_digest']!r}."
+                )
+
+        # Gate 3: Uncertainty queue verification
+        declared_unc = sorted(data["uncertainties"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False))
+        recomputed_unc = sorted(
+            (u.to_dict() for u in ledger.export_uncertainties()),
+            key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
+        )
+        if receipt_registry is not None or not v_manifest:
+            if declared_unc != recomputed_unc:
+                raise ValueError(
+                    f"Export uncertainty queue mismatch: declared {len(declared_unc)} items, "
+                    f"recomputed {len(recomputed_unc)} items. Uncertainty records cannot be modified or suppressed."
+                )
+        else:
+            # When receipt_registry is omitted but verification_manifest is non-empty,
+            # content-derived uncertainties must match 100% exactly.
+            dec_content = [u for u in declared_unc if u.get("kind") != "missing_receipt"]
+            rec_content = [u for u in recomputed_unc if u.get("kind") != "missing_receipt"]
+            if dec_content != rec_content:
+                raise ValueError(
+                    f"Export content uncertainty queue mismatch: declared {len(dec_content)} items, "
+                    f"recomputed {len(rec_content)} items. Uncertainty records cannot be modified or suppressed."
+                )
+
         return ledger

@@ -10,6 +10,7 @@
     "ledger_id",
     "ledger_digest",
     "verification_digest",
+    "verification_manifest",
     "decisions",
     "bases",
     "forks",
@@ -33,6 +34,13 @@
     "verification_digest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
+    },
+    "verification_manifest": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
     },
     "decisions": {
       "type": "array",
@@ -328,6 +336,82 @@
                   ]
                 }
               ]
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "required": [
+                "from_state"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "to_state": {
+                "enum": [
+                  "active",
+                  "pruned"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "from_state": {
+                "const": "active"
+              }
+            },
+            "required": [
+              "from_state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "to_state": {
+                "const": "pruned"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "from_state": {
+                "const": "pruned"
+              }
+            },
+            "required": [
+              "from_state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "to_state": {
+                "const": "reopened"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "from_state": {
+                "const": "reopened"
+              }
+            },
+            "required": [
+              "from_state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "to_state": {
+                "const": "pruned"
+              }
             }
           }
         }

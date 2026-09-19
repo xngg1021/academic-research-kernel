@@ -998,7 +998,7 @@ def test_e304_tail_nodes_not_reported_as_cycle_members():
 # 19. from_dict replay loader (P2-07)
 # ---------------------------------------------------------------------------
 
-def test_from_dict_round_trip_preserves_everything():
+def test_from_dict_round_trip_content_ledger():
     g = _populated_ledger()
     g.add_outcome_correction("d-a", verdict="negative", rationale="did not replicate")
     g.set_prune("d-a", "active")
@@ -1011,11 +1011,97 @@ def test_from_dict_round_trip_preserves_everything():
     assert g2.outcome_of("d-a") == g.outcome_of("d-a")
 
 
+def test_from_dict_round_trip_with_receipt_registry():
+    lineage, ref = _lineage_fixture()
+    g = dl.DecisionLedger(ledger_id="with-receipts")
+    g.add_decision(id="d1", title="x")
+    g.add_decision(id="d2", title="y")
+    g.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g.register_receipt("lin-77", lineage)
+    export = g.to_dict()
+    assert export["verification_manifest"] == {"lin-77": dl.canonical_ledger_payload_sha256(dl._jsonable(lineage))}
+    # With receipt_registry passed to from_dict, full round trip succeeds including verification_digest
+    g2 = dl.DecisionLedger.from_dict(export, receipt_registry={"lin-77": lineage})
+    assert g2.ledger_digest() == g.ledger_digest()
+    assert g2.verification_digest() == g.verification_digest()
+    assert g2.to_dict() == g.to_dict()
+    assert [u.to_dict() for u in g2.export_uncertainties()] == export["uncertainties"]
+
+
+def test_schema_validates_state_transition_automaton():
+    schema = json.loads((ROOT / "schemas" / "decision-ledger-receipt.schema.json").read_text(encoding="utf-8"))
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.set_prune("d1", "active")
+    g.set_prune("d1", "pruned", prune_reason="superseded")
+    export = g.to_dict()
+    jsonschema.validate(instance=export, schema=schema)
+    # Tamper: illegal transition in schema (active -> reopened)
+    bad_export = copy.deepcopy(export)
+    bad_export["state_events"][1]["to_state"] = "reopened"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance=bad_export, schema=schema)
+    # Tamper: genesis reopened
+    bad_export2 = copy.deepcopy(export)
+    bad_export2["state_events"][0]["to_state"] = "reopened"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance=bad_export2, schema=schema)
+
+
 def test_from_dict_rejects_tampered_export():
     g = _populated_ledger()
     export = g.to_dict()
     export["decisions"][0]["title"] = "TAMPERED"
-    with pytest.raises(ValueError, match="digest mismatch"):
+    with pytest.raises(ValueError, match="tampering detected|digest mismatch"):
+        dl.DecisionLedger.from_dict(export)
+
+
+def test_from_dict_rejects_identity_field_forgery_even_if_raw_digest_recomputed():
+    g = _populated_ledger()
+    export = g.to_dict()
+    # Attacker tries to forge event_id and recomputes ledger_digest to bypass Gate 1
+    export["state_events"][0]["event_id"] = "evt-" + "f" * 32
+    raw_payload = {
+        "protocol": export["protocol"],
+        "ledger_id": export["ledger_id"],
+        "decisions": sorted(export["decisions"], key=lambda x: x["id"]),
+        "bases": sorted(export["bases"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+        "forks": sorted(export["forks"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+        "state_events": sorted(export["state_events"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+        "corrections": sorted(export["corrections"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+    }
+    forged_digest = dl.hashlib.sha256(dl._canonical_json_bytes(raw_payload)).hexdigest().lower()
+    export["ledger_digest"] = forged_digest
+    export["verification_digest"] = dl.hashlib.sha256(dl._canonical_json_bytes({
+        "ledger_digest": forged_digest, "receipts": export["verification_manifest"]
+    })).hexdigest().lower()
+    # Gate 1 passes, but Gate 2 catches event_id forgery during replay
+    with pytest.raises(ValueError, match="event_id mismatch"):
+        dl.DecisionLedger.from_dict(export)
+
+
+def test_from_dict_rejects_uncertainty_queue_tampering():
+    g = dl.DecisionLedger()
+    g.add_decision(id="nr-lonely", title="no evidence", decision_type="negative_result")
+    export = g.to_dict()
+    assert len(export["uncertainties"]) >= 1
+    # Tamper 1: strip all uncertainties
+    tampered1 = copy.deepcopy(export)
+    tampered1["uncertainties"] = []
+    with pytest.raises(ValueError, match="uncertainty queue mismatch"):
+        dl.DecisionLedger.from_dict(tampered1)
+    # Tamper 2: flip needs_human from True to False
+    tampered2 = copy.deepcopy(export)
+    tampered2["uncertainties"][0]["needs_human"] = False
+    with pytest.raises(ValueError, match="uncertainty queue mismatch"):
+        dl.DecisionLedger.from_dict(tampered2)
+
+
+def test_from_dict_rejects_verification_manifest_tampering():
+    g = _populated_ledger()
+    export = g.to_dict()
+    export["verification_manifest"]["forged_receipt"] = "a" * 64
+    with pytest.raises(ValueError, match="verification manifest mismatch"):
         dl.DecisionLedger.from_dict(export)
 
 
@@ -1036,7 +1122,8 @@ def test_from_dict_rejects_corrupted_state_sequence():
     g.set_prune("d1", "pruned", prune_reason="superseded")
     export = g.to_dict()
     export["state_events"][1]["from_state"] = "reopened"  # impossible chain
-    with pytest.raises(ValueError, match="from_state|Illegal state transition"):
+    # Gate 1 catches tampering; if bypass attempted, Gate 2 catches from_state mismatch
+    with pytest.raises(ValueError, match="tampering detected|from_state|Illegal state transition"):
         dl.DecisionLedger.from_dict(export)
 
 
@@ -1049,11 +1136,25 @@ def test_jsonable_fails_closed_on_foreign_objects_and_cycles():
     cyc["self"] = cyc
     with pytest.raises(ValueError, match="Cyclic"):
         dl._jsonable(cyc)
+    # Non-finite float fail-closed
+    with pytest.raises(ValueError, match="Non-finite float"):
+        dl._jsonable(float("nan"))
+    with pytest.raises(ValueError, match="Non-finite float"):
+        dl._jsonable(float("inf"))
+    with pytest.raises(ValueError, match="Non-finite float"):
+        dl._jsonable(float("-inf"))
+    # Non-string mapping key fail-closed
+    with pytest.raises(TypeError, match="Mapping key must be str"):
+        dl._jsonable({1: "int_key"})
     g = dl.DecisionLedger()
     with pytest.raises(TypeError):
         g.register_receipt("x", Foreign())
     with pytest.raises(ValueError, match="Cyclic"):
         g.register_receipt("x", cyc)
+    with pytest.raises(ValueError, match="Non-finite float"):
+        g.register_receipt("x", {"metric": float("nan")})
+    with pytest.raises(TypeError, match="Mapping key must be str"):
+        g.register_receipt("x", {42: "bad_key"})
 
 
 def test_correction_id_width_and_collision_defense():
