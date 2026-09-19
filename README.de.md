@@ -20,7 +20,7 @@ SLL erlaubt weitgehend Nutzung, Studium, Änderung, kommerzielle Nutzung, Verbre
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.2.0 | Identität und quellenspezifische Zitationszahlen gegenprüfen; Aktualisierungs-/Rücknahmesignale prüfen; OA-Text auffinden und PDF-Identität verifizieren |
 | `skills/literature-analysis` | 1.3.0 | Zwölf Workflows: Themenähnlichkeit, lokale Textüberschneidung, Gegenbeweise, Autorenprofile, Probegutachten, Fehlschlussprüfung, Review-Matrix, Zeitschriftenkandidaten, BibTeX, zweisprachiges Lesen, Forschungslücken-Screening, Reproduktion |
-| `skills/academic-writing` | 1.1.1 | Redigieren, Zitierhilfe (APA, MLA, Chicago, IEEE, AMA, GB/T), Zeitschriftenvorgaben, optionale Erkennungsdienste, Einreichungsmaterialien, chinesische akademische Anforderungen |
+| `skills/academic-writing` | 1.1.1 | Lektorat, Zitierrichtlinien (ISO 690, APA, MLA, Chicago, IEEE, AMA sowie regionale Profile), Zeitschriftenhinweise, optionale Prüfdienste, Einreichungsunterlagen und institutionelle Anforderungen |
 | `skills/math-computation` | 1.2.1 | Bestehendes Domänen-/Aufgaben-Routing mit korrigierten numerischen und statistischen Beispielen; vier domänenspezifische Referenzdateien |
 | `skills/quantitative-paper-audit` | 1.1.0 | Berichtete Statistiken neu berechnen (Effektgröße, p-Werte, Konfidenzintervalle, OR/RR, erreichte Power) und numerische Abweichungen erkennen |
 | `skills/research-reproducibility` | 1.0.1 | Vierzehnstufige Reproduktionsaudit-Pipeline mit strukturierter Checkliste, fünf Faktenstufen und reproduzierbaren Audit-Nachweisen |

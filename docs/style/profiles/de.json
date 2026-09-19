@@ -1,0 +1,21 @@
+{
+  "locale": "de",
+  "language": "German",
+  "banned_phrases": [
+    "Es ist wichtig zu beachten",
+    "Nicht zuletzt",
+    "Wegweisend",
+    "Paradigmenwechsel",
+    "Ein neues Kapitel aufschlagen"
+  ],
+  "step_broadcasting_markers": [
+    "Schritt 1:",
+    "Schritt 2:",
+    "Zusammenfassend,",
+    "Konkret wie folgt:"
+  ],
+  "redundant_hedges": [
+    "Es liegt auf der Hand",
+    "Zweifellos"
+  ]
+}

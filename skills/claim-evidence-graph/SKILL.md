@@ -1,6 +1,6 @@
 ---
 name: claim-evidence-graph
-description: 确定性科学论断-证据图内核 (Claim-Evidence Graph v1)，打通论断、事实收据与计算谱系.
+description: 确定性科学论断-证据图 (Claim-Evidence Graph v1)，连接学术论断、证据记录与计算过程追溯.
 version: 1.0.0
 author: Junfu Shi (SJF, xngg1021), Hermes Agent
 license: LicenseRef-Source-Lineage-1.0

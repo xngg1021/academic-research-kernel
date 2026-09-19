@@ -1,0 +1,25 @@
+{
+  "locale": "en",
+  "language": "English",
+  "banned_phrases": [
+    "delve into",
+    "testament to",
+    "revolutionize",
+    "pivotal role",
+    "game changer",
+    "tapestry of",
+    "beacon of",
+    "foster collaboration"
+  ],
+  "step_broadcasting_markers": [
+    "Step 1,",
+    "Step 2,",
+    "In summary,",
+    "To conclude,"
+  ],
+  "redundant_hedges": [
+    "it is important to note that",
+    "it should be noted that",
+    "needless to say"
+  ]
+}

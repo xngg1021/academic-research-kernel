@@ -87,7 +87,6 @@
         "id",
         "title",
         "normalized_title",
-        "decision_type",
         "entry_kind",
         "decision_digest"
       ],

@@ -1,6 +1,7 @@
 """Offline QA. Executes only classified smoke fences, always in fresh subprocesses."""
 import argparse
 import ast
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -130,6 +131,7 @@ def static_checks(root=ROOT):
                 errors.extend(f'{path.relative_to(root)}:{i}: {e}' for e in code_issues(code))
         except (ValueError, SyntaxError) as e:
             errors.append(str(e))
+    # 1. Terminology registry gate
     term_reg_path = root / "docs" / "terminology" / "registry.json"
     if term_reg_path.is_file():
         try:
@@ -155,6 +157,43 @@ def static_checks(root=ROOT):
                         errors.append(f"{rel_str}: banned jargon detected: '{term}'")
         except Exception as e:
             errors.append(f"terminology registry QA check failed: {e}")
+
+    # 2. AIDetox style contract and prohibited patterns gate
+    aidetox_path = root / "docs" / "style" / "aidetox-contract.json"
+    if aidetox_path.is_file():
+        try:
+            aidetox_contract = json.loads(aidetox_path.read_text(encoding="utf-8"))
+            prohibited_patterns = []
+            for pat_group in aidetox_contract.get("prohibited_patterns", {}).values():
+                prohibited_patterns.extend(pat_group)
+            for doc_path in root.rglob("*.md"):
+                if '.git' in doc_path.parts:
+                    continue
+                rel_str = "/".join(doc_path.relative_to(root).parts)
+                if any(ex in rel_str for ex in ["CHANGELOG", "audit", "aidetox-contract", "proposal-priors", "terminology", "standards"]):
+                    continue
+                doc_text = doc_path.read_text(encoding="utf-8")
+                for pat in prohibited_patterns:
+                    if pat in doc_text:
+                        errors.append(f"{rel_str}: AIDetox prohibited pattern detected: '{pat}'")
+        except Exception as e:
+            errors.append(f"AIDetox contract QA check failed: {e}")
+
+    # 3. Multilingual synchronization manifest integrity gate
+    manifest_path = root / "docs" / "i18n" / "manifest.json"
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for doc_entry in manifest.get("documents", []):
+                src_file = root / doc_entry["source_path"]
+                if not src_file.is_file():
+                    errors.append(f"i18n manifest source file missing: {doc_entry['source_path']}")
+                    continue
+                content_sha = hashlib.sha256(src_file.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+                if content_sha != doc_entry.get("source_sha256"):
+                    errors.append(f"i18n manifest source SHA mismatch for {doc_entry['source_path']} (run scripts/i18n_sync.py to refresh)")
+        except Exception as e:
+            errors.append(f"i18n manifest QA check failed: {e}")
     for path in root.rglob('*'):
         if not path.is_file() or '.git' in path.parts or '__pycache__' in path.parts or '.pytest_cache' in path.parts:
             continue

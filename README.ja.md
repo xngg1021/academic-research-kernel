@@ -20,7 +20,7 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.2.0 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証 |
 | `skills/literature-analysis` | 1.3.0 | 12 のワークフロー:トピック類似度、局所テキスト重複、反証、著者プロファイル、模擬査読、誤謬検査、レビューマトリクス、投稿先候補、BibTeX、バイリンガル読解、研究ギャップ探索、再現 |
-| `skills/academic-writing` | 1.1.1 | 編集、引用ガイダンス(APA、MLA、Chicago、IEEE、AMA、GB/T)、ジャーナル指示、任意の検出サービス、投稿資料、中国語学術要件 |
+| `skills/academic-writing` | 1.1.1 | 論文推敲、引用基準案内（ISO 690 国際基準および地域・機関別プロファイル）、投稿規程、検出サービス、投稿資料、審査要件 |
 | `skills/math-computation` | 1.2.1 | 既存の領域・タスク経路と修正済みの数値・統計例題、領域別リファレンス 4 編 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 論文が報告する統計量(効果量、p 値、信頼区間、OR/RR、検出力)の再計算と数値不整合の検出 |
 | `skills/research-reproducibility` | 1.0.1 | 構造化チェックリスト、5段階の事実、再現可能な監査記録を備えた14段階の再現監査パイプライン |

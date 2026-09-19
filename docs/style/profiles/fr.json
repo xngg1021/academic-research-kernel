@@ -1,0 +1,21 @@
+{
+  "locale": "fr",
+  "language": "French",
+  "banned_phrases": [
+    "Il convient de noter",
+    "Il va sans dire",
+    "Révolutionner",
+    "Ouvrir de nouveaux horizons",
+    "Changement de paradigme"
+  ],
+  "step_broadcasting_markers": [
+    "Étape 1 :",
+    "Étape 2 :",
+    "En résumé,",
+    "Comme suit :"
+  ],
+  "redundant_hedges": [
+    "Il est indéniable que",
+    "De toute évidence"
+  ]
+}

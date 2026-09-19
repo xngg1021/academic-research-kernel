@@ -20,7 +20,7 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.2.0 | 신원과 출처별 인용 수 교차 확인, 갱신·철회 신호 점검, OA 원문 위치 파악과 PDF 신원 검증 |
 | `skills/literature-analysis` | 1.3.0 | 12개 워크플로: 주제 유사도, 국소 텍스트 중복, 반증, 저자 프로필, 모의 심사, 오류 점검, 리뷰 매트릭스, 저널 후보, BibTeX, 이중언어 독해, 연구 공백 선별, 재현 |
-| `skills/academic-writing` | 1.1.1 | 편집, 인용 안내(APA, MLA, Chicago, IEEE, AMA, GB/T), 저널 지침, 선택적 탐지 서비스, 투고 자료, 중국어 학술 요건 |
+| `skills/academic-writing` | 1.1.1 | 논문 보조 편집, 인용 규범 안내(ISO 690 국제 기준 및 지역·기관 프로필), 저널 투고 지침, 선택적 탐지 서비스, 투고 자료 및 심사 요건 |
 | `skills/math-computation` | 1.2.1 | 기존 영역·과제 라우팅과 수정된 수치·통계 예제, 분야별 참조 문서 4편 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 논문이 보고한 통계량(효과 크기, p값, 신뢰구간, OR/RR, 달성 검정력) 재계산과 수치 불일치 탐지 |
 | `skills/research-reproducibility` | 1.0.1 | 구조화된 점검표, 5단계 사실, 재현 가능한 감사 기록을 갖춘 14단계 재현 감사 파이프라인 |

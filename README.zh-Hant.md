@@ -20,7 +20,7 @@ SLL 廣泛允許使用、研究、修改、商用、分發與專有增補，受�
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.2.0 | 交叉核對身份與來源特定的被引數；檢查更新與撤稿訊號；定位開放獲取文本並核驗 PDF 身份 |
 | `skills/literature-analysis` | 1.3.0 | 十二個工作流：主題相似、局部文本重疊、反證、作者檔案、模擬評審、謬誤檢查、評審矩陣、期刊候選、BibTeX、雙語閱讀、研究空白篩查、復現 |
-| `skills/academic-writing` | 1.1.1 | 編輯、引文規範（APA、MLA、Chicago、IEEE、AMA、GB/T）、期刊須知、可選檢測服務、投稿材料、中文學術要求 |
+| `skills/academic-writing` | 1.1.1 | 論文輔助編輯、引用規範指南（支援 ISO 690 國際基準與地區/機構規範）、期刊投稿指引、可選檢測服務、投稿資料以及高校盲審要求 |
 | `skills/math-computation` | 1.2.1 | 既有領域與任務路由及修正後的數值與統計示例；四篇領域參考文件 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 反算論文報告的統計量（效應量、p 值、信賴區間、OR/RR、實現功效）並檢測數值錯配 |
 | `skills/research-reproducibility` | 1.0.1 | 十四階段復現審計流水線，含結構化核驗清單、五層事實與可復現審計紀錄 |
