@@ -14,25 +14,25 @@ Bản phát hành này áp dụng **Source Lineage License 1.0** cho các tài l
 
 | Kỹ năng | Phiên bản | Mô tả |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | Xác minh chéo định danh và số lượng trích dẫn; kiểm tra tín hiệu cập nhật và rút bài báo; định vị văn bản truy cập mở và danh tính PDF |
+| `skills/literature-analysis` | 1.3.0 | Mười hai quy trình: độ tương đồng chủ đề, trùng lặp văn bản, bằng chứng phản biện, hồ sơ tác giả, phản biện thử nghiệm và kiểm tra ngụy biện |
+| `skills/academic-writing` | 1.1.1 | Biên tập học thuật, hướng dẫn trích dẫn (ISO 690, APA, MLA, Chicago, IEEE, AMA và hồ sơ khu vực), và quy định của tạp chí |
+| `skills/math-computation` | 1.2.1 | Định tuyến miền toán học và thống kê với các công thức số học tính toán; tệp tham chiếu nâng cao |
+| `skills/quantitative-paper-audit` | 1.1.0 | Tính toán lại các thống kê được công bố (kích thước hiệu ứng, giá trị p, khoảng tin cậy, OR/RR) và phát hiện sai lệch số liệu |
+| `skills/research-reproducibility` | 1.0.1 | Quy trình kiểm toán khả năng tái lập 14 giai đoạn với danh mục kiểm tra có cấu trúc và hồ sơ tái lập minh bạch |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Nhật ký tìm kiếm PRISMA, sàng lọc tài liệu, chuyển đổi kích thước hiệu ứng, phân tích tính không đồng nhất và tổng hợp meta |
+| `skills/literature-watch` | 1.1.0 | Giám sát hàng tuần: theo dõi chủ đề, tác giả và trích dẫn DOI trên OpenAlex và Crossref, tự động loại trừ trùng lặp |
+| `skills/retraction-watch` | 1.1.0 | Giám sát hàng tuần: kiểm tra lại danh sách theo dõi DOI với chỉ mục rút bài và cập nhật từ OpenAlex và Crossref |
+| `skills/research-object-identity` | 1.1.0 | Định danh tài nguyên nghiên cứu tất định và truy xuất nguồn gốc với xác thực đồ thị nhân quả DAG |
+| `skills/claim-evidence-graph` | 1.0.0 | Liên kết tất định giữa luận điểm khoa học, hồ sơ bằng chứng và nguồn gốc tính toán |
+| `skills/decision-ledger` | 1.0.0 | Nhật ký Quyết định Nghiên cứu: nhật ký chỉ ghi thêm tất định ghi lại các quyết định nghiên cứu, kết quả âm tính và trạng thái tuyến đường |
+| `skills/cross-review-five` | 2.0.0 | Điều phối hội đồng đa phản biện động cho các mô hình không đồng nhất với phân bổ Kuhn-Munkres và thảo luận thưa v2 |
 
 ## Tiêu chuẩn Học thuật và Hồ sơ Đa quốc gia
 
 Kho lưu trữ thiết lập **ISO 690:2021** (Tài liệu tham khảo thư mục), **ISO 5127:2017** (Khái niệm và từ vựng) và **W3C PROV** (Mô hình nguồn gốc) làm nền tảng quốc tế, cùng với các tiêu chuẩn chuyên ngành (APA 7th, IEEE, PRISMA 2020, ICMJE). Xem [Kiến trúc Tiêu chuẩn](../../docs/standards/README.md) và [Hướng dẫn Thuật ngữ](../../docs/terminology/README.md).
 
-## Integration & Portable Usage
+## Tích hợp và Sử dụng Di động
 
 ```bash
 python scripts/mcp_server.py

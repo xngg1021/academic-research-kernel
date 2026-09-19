@@ -14,25 +14,25 @@ Repozytorium przyjmuje **Source Lineage License 1.0** dla materiałów objętych
 
 | Umiejętność | Wersja | Opis |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | Weryfikacja tożsamości i liczby cytowań; sprawdzanie aktualizacji i retrakcji; wyszukiwanie otwartego tekstu oraz weryfikacja plików PDF |
+| `skills/literature-analysis` | 1.3.0 | Dwanaście procedur roboczych: podobieństwo tematów, nakładanie tekstu, kontrargumenty, profile autorów, symulacja recenzji i weryfikacja błędów logicznych |
+| `skills/academic-writing` | 1.1.1 | Redakcja naukowa, wskazówki dotyczące cytowań (ISO 690, APA, MLA, Chicago, IEEE, AMA i profile regionalne) oraz wytyczne dla autorów |
+| `skills/math-computation` | 1.2.1 | Przekierowywanie zadań matematycznych i statystycznych z gotowymi formułami numerycznymi; zaawansowane pliki referencyjne |
+| `skills/quantitative-paper-audit` | 1.1.0 | Ponowne przeliczanie statystyk (wielkość efektu, wartości p, przedziały ufności, OR/RR) oraz wykrywanie rozbieżności liczbowych |
+| `skills/research-reproducibility` | 1.0.1 | 14-etapowa ścieżka audytu powtarzalności ze ustrukturyzowanymi listami kontrolnymi i weryfikowalnymi raportami |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Protokoły wyszukiwania PRISMA, selekcja literatury, konwersja wielkości efektu, heterogeniczność i łączenie danych metaanalitycznych |
+| `skills/literature-watch` | 1.1.0 | Cotygodniowy monitoring: śledzenie tematów, autorów i cytowań DOI w OpenAlex i Crossref z deduplikacją |
+| `skills/retraction-watch` | 1.1.0 | Cotygodniowy monitoring: weryfikacja listy DOI pod kątem retrakcji i sygnałów aktualizacji w OpenAlex i Crossref |
+| `skills/research-object-identity` | 1.1.0 | Deterministyczna identyfikacja zasobów badawczych i śledzenie pochodzenia z walidacją przyczynowego grafu DAG |
+| `skills/claim-evidence-graph` | 1.0.0 | Deterministyczne łączenie twierdzeń naukowych, dowodów badawczych i obliczeniowego pochodzenia |
+| `skills/decision-ledger` | 1.0.0 | Rejestr Decyzji Badawczych: deterministyczny, oparty na dopisywaniu rejestr decyzji, wyników negatywnych i statusu ścieżek badawczych |
+| `skills/cross-review-five` | 2.0.0 | Dynamiczna orkiestracja wieloosobowego panelu recenzenckiego dla heterogenicznych modeli z algorytmem Kuhna-Munkresa i rzadką deliberacją v2 |
 
 ## Standardy Naukowe i Profile Wielojęzyczne
 
 Repozytorium ustanawia **ISO 690:2021** (Przypisy bibliograficzne), **ISO 5127:2017** (Słownictwo i pojęcia) oraz **W3C PROV** (Model proweniencji) jako międzynarodowe linie bazowe, obok profili regionalnych i standardów dziedzinowych (APA 7th, IEEE, PRISMA 2020, ICMJE). Zobacz [Architekturę Standardów](../../docs/standards/README.md) oraz [Przewodnik Terminologiczny](../../docs/terminology/README.md).
 
-## Integration & Portable Usage
+## Integracja i przenośne użycie
 
 ```bash
 python scripts/mcp_server.py

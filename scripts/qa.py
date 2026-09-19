@@ -71,7 +71,6 @@ def reference_issues(path, root=ROOT):
         elif not dest.resolve().is_relative_to(root.resolve()):
             errors.append(f'reference outside repository: {target}')
         else:
-            # Compare actual directory-entry spellings, also on case-insensitive hosts.
             actual = path.parent
             for part in Path(target).parts:
                 if part == '..':
@@ -123,7 +122,7 @@ def static_checks(root=ROOT):
         except (AssertionError, KeyError, IndexError, TypeError, yaml.YAMLError) as e:
             errors.append(f'{path.relative_to(root)}: frontmatter/verification {e}')
     for path in sorted(root.rglob('*.md')):
-        if '.git' in path.parts:
+        if '.git' in path.parts or '.pytest_cache' in path.parts:
             continue
         errors.extend(f'{path.relative_to(root)}: {e}' for e in reference_issues(path, root))
         try:
@@ -131,6 +130,39 @@ def static_checks(root=ROOT):
                 errors.extend(f'{path.relative_to(root)}:{i}: {e}' for e in code_issues(code))
         except (ValueError, SyntaxError) as e:
             errors.append(str(e))
+
+    # Load i18n manifest metadata for document classifications
+    doc_meta_by_path = {}
+    manifest_path = root / "docs" / "i18n" / "manifest.json"
+    manifest = {}
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for doc_entry in manifest.get("documents", []):
+                doc_meta_by_path[doc_entry["source_path"]] = {
+                    "genre": doc_entry.get("genre", "user_facing_documentation"),
+                    "intensity": doc_entry.get("aidetox_intensity", "strong"),
+                    "locale": doc_entry.get("source_locale", "en"),
+                }
+                for loc, inst in doc_entry.get("localized_instances", {}).items():
+                    doc_meta_by_path[inst["path"]] = {
+                        "genre": doc_entry.get("genre", "user_facing_documentation"),
+                        "intensity": doc_entry.get("aidetox_intensity", "strong"),
+                        "locale": loc,
+                    }
+        except Exception as e:
+            errors.append(f"i18n manifest load failed: {e}")
+
+    # Load all 21 locale profiles
+    profiles_dir = root / "docs" / "style" / "profiles"
+    locale_profiles = {}
+    if profiles_dir.is_dir():
+        for prof_file in sorted(profiles_dir.glob("*.json")):
+            try:
+                locale_profiles[prof_file.stem] = json.loads(prof_file.read_text(encoding="utf-8"))
+            except Exception as e:
+                errors.append(f"failed loading profile {prof_file.name}: {e}")
+
     # 1. Terminology registry gate
     term_reg_path = root / "docs" / "terminology" / "registry.json"
     if term_reg_path.is_file():
@@ -146,45 +178,71 @@ def static_checks(root=ROOT):
                 "causalidad de poda", "台账内核", "Truth Authority", "State Ledger本体"
             ])
             for doc_path in root.rglob("*.md"):
-                if '.git' in doc_path.parts:
+                if '.git' in doc_path.parts or '.pytest_cache' in doc_path.parts:
                     continue
                 rel_str = "/".join(doc_path.relative_to(root).parts)
-                if any(ex in rel_str for ex in ["CHANGELOG", "audit", "post-pr9-roadmap", "pain-atlas", "research-plan", "terminology", "standards", "references/china-academia", "post-pr6-roadmap", "proposal-priors", "scientific-compute-fabric.md"]):
+                meta = doc_meta_by_path.get(rel_str)
+                intensity = meta["intensity"] if meta else ("audit_safe" if any(k in rel_str for k in ["CHANGELOG", "LICENSE", "SOURCE-LINEAGE", "audit"]) else "strong")
+                if intensity != "strong" or "docs/terminology" in rel_str:
                     continue
                 doc_text = doc_path.read_text(encoding="utf-8")
                 for term in banned_jargon:
                     if term in doc_text:
-                        errors.append(f"{rel_str}: banned jargon detected: '{term}'")
+                        errors.append(f"{rel_str}: user-facing doc contains banned jargon: '{term}'")
         except Exception as e:
             errors.append(f"terminology registry QA check failed: {e}")
 
-    # 2. AIDetox style contract and prohibited patterns gate
+    # 2. AIDetox style contract and per-locale profiles gate
     aidetox_path = root / "docs" / "style" / "aidetox-contract.json"
     if aidetox_path.is_file():
         try:
             aidetox_contract = json.loads(aidetox_path.read_text(encoding="utf-8"))
-            prohibited_patterns = []
-            for pat_group in aidetox_contract.get("prohibited_patterns", {}).values():
-                prohibited_patterns.extend(pat_group)
+            prohibited_patterns = aidetox_contract.get("prohibited_patterns", {})
             for doc_path in root.rglob("*.md"):
-                if '.git' in doc_path.parts:
+                if '.git' in doc_path.parts or '.pytest_cache' in doc_path.parts:
                     continue
                 rel_str = "/".join(doc_path.relative_to(root).parts)
-                if any(ex in rel_str for ex in ["CHANGELOG", "audit", "aidetox-contract", "proposal-priors", "terminology", "standards"]):
+                meta = doc_meta_by_path.get(rel_str)
+                intensity = meta["intensity"] if meta else ("audit_safe" if any(k in rel_str for k in ["CHANGELOG", "LICENSE", "SOURCE-LINEAGE", "audit"]) else "strong")
+                loc = meta["locale"] if meta else "en"
+
+                if intensity == "audit_safe" or any(ex in rel_str for ex in ["aidetox-contract", "docs/terminology", "docs/standards"]):
                     continue
+
                 doc_text = doc_path.read_text(encoding="utf-8")
-                for pat in prohibited_patterns:
-                    if pat in doc_text:
-                        errors.append(f"{rel_str}: AIDetox prohibited pattern detected: '{pat}'")
+
+                # Universal Chinese prohibited patterns for Chinese documentation
+                if loc in ("zh-Hans", "zh-Hant") or any(ord(c) > 127 for c in rel_str):
+                    for pat in prohibited_patterns.get("synthetic_hyperbole", []) + prohibited_patterns.get("jargon_stacking", []):
+                        if pat in doc_text:
+                            errors.append(f"{rel_str}: AIDetox prohibited pattern detected: '{pat}'")
+                    if intensity == "strong":
+                        for pat in prohibited_patterns.get("step_broadcasting", []):
+                            if pat in doc_text:
+                                errors.append(f"{rel_str}: AIDetox step broadcasting detected: '{pat}'")
+
+                # Dedicated per-locale profile check for user-facing documentation
+                if intensity == "strong" and loc in locale_profiles:
+                    prof = locale_profiles[loc]
+                    for phrase in prof.get("banned_phrases", []):
+                        if phrase.lower() in doc_text.lower():
+                            errors.append(f"{rel_str}: [{loc}] banned phrase detected: '{phrase}'")
+                    for marker in prof.get("step_broadcasting_markers", []):
+                        if marker.lower() in doc_text.lower():
+                            errors.append(f"{rel_str}: [{loc}] step broadcasting detected: '{marker}'")
+                    for hedge in prof.get("redundant_hedges", []):
+                        if hedge.lower() in doc_text.lower():
+                            errors.append(f"{rel_str}: [{loc}] redundant hedge detected: '{hedge}'")
         except Exception as e:
             errors.append(f"AIDetox contract QA check failed: {e}")
 
     # 3. Multilingual synchronization manifest integrity gate
-    manifest_path = root / "docs" / "i18n" / "manifest.json"
-    if manifest_path.is_file():
+    if manifest:
         try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            for doc_entry in manifest.get("documents", []):
+            canonical_docs = manifest.get("documents", [])
+            if len(canonical_docs) != 53:
+                errors.append(f"i18n manifest incomplete: expected 53 canonical documents, got {len(canonical_docs)}")
+            for doc_entry in canonical_docs:
                 src_file = root / doc_entry["source_path"]
                 if not src_file.is_file():
                     errors.append(f"i18n manifest source file missing: {doc_entry['source_path']}")
@@ -192,8 +250,24 @@ def static_checks(root=ROOT):
                 content_sha = hashlib.sha256(src_file.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
                 if content_sha != doc_entry.get("source_sha256"):
                     errors.append(f"i18n manifest source SHA mismatch for {doc_entry['source_path']} (run scripts/i18n_sync.py to refresh)")
+
+                for loc, inst in doc_entry.get("localized_instances", {}).items():
+                    st = inst.get("status")
+                    if st in ("localized_current", "localized_stale"):
+                        loc_file = root / inst["path"]
+                        if not loc_file.is_file():
+                            errors.append(f"Missing physical localized file for {inst['path']}")
+                            continue
+                        cur_loc_sha = hashlib.sha256(loc_file.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+                        if cur_loc_sha != inst.get("localized_file_sha256"):
+                            errors.append(f"SHA mismatch for localized file {inst['path']} (run scripts/i18n_sync.py to refresh)")
+                        if st == "localized_current" and inst.get("translated_from_source_sha256") != doc_entry["source_sha256"]:
+                            errors.append(f"Falsely marked localized_current for stale source: {inst['path']}")
+                        if st == "localized_stale" and inst.get("translated_from_source_sha256") == doc_entry["source_sha256"]:
+                            errors.append(f"Falsely marked localized_stale for synchronized source: {inst['path']}")
         except Exception as e:
             errors.append(f"i18n manifest QA check failed: {e}")
+
     for path in root.rglob('*'):
         if not path.is_file() or '.git' in path.parts or '__pycache__' in path.parts or '.pytest_cache' in path.parts:
             continue

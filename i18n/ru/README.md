@@ -14,25 +14,25 @@
 
 | Навык | Версия | Описание |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | Перекрестная проверка идентификации и цитирований; отслеживание обновлений и отзывов статей; поиск открытого доступа и верификация PDF |
+| `skills/literature-analysis` | 1.3.0 | Двенадцать рабочих процессов: тематическое сходство, текстовые совпадения, контрсвидетельства, профили авторов, симуляция рецензирования, проверка ошибок |
+| `skills/academic-writing` | 1.1.1 | Академическое редактирование, руководства по цитированию (ISO 690, APA, MLA, Chicago, IEEE, AMA и региональные профили), правила журналов |
+| `skills/math-computation` | 1.2.1 | Маршрутизация математических и статистических задач с готовыми алгоритмами; расширенные справочные файлы |
+| `skills/quantitative-paper-audit` | 1.1.0 | Пересчет опубликованных статистических показателей (размер эффекта, p-значения, ДИ, отношение шансов/рисков) и выявление расхождений |
+| `skills/research-reproducibility` | 1.0.1 | Четырнадцатиэтапный конвейер аудита воспроизводимости со структурированными чек-листами и проверяемыми протоколами |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Поисковые протоколы PRISMA, скрининг литературы, конвертация размера эффекта, анализ гетерогенности и мета-анализ |
+| `skills/literature-watch` | 1.1.0 | Еженедельный мониторинг: отслеживание тем, авторов и цитирований DOI в OpenAlex и Crossref с дедупликацией |
+| `skills/retraction-watch` | 1.1.0 | Еженедельный мониторинг: проверка списка DOI по базам отзывов OpenAlex и записям обновлений Crossref |
+| `skills/research-object-identity` | 1.1.0 | Детерминированная идентификация исследовательских ресурсов и отслеживание происхождения с валидацией причинного DAG |
+| `skills/claim-evidence-graph` | 1.0.0 | Детерминированное связывание научных утверждений, доказательств и вычислительного происхождения |
+| `skills/decision-ledger` | 1.0.0 | Журнал исследовательских решений: детерминированный журнал только для добавления решений, отрицательных результатов и статуса маршрутов |
+| `skills/cross-review-five` | 2.0.0 | Динамическая оркестрация панели рецензентов для гетерогенных моделей с алгоритмом Куна-Манкреса и разреженным обсуждением v2 |
 
 ## Академические стандарты и международные профили
 
 Репозиторий устанавливает **ISO 690:2021** (Библиографические ссылки), **ISO 5127:2017** (Терминология и понятия) и **W3C PROV** (Модель происхождения) в качестве международных базовых линий, наряду с региональными профилями и дисциплинарными стандартами (APA 7th, IEEE, PRISMA 2020, ICMJE). См. [Архитектуру стандартов](../../docs/standards/README.md) и [Руководство по терминологии](../../docs/terminology/README.md).
 
-## Integration & Portable Usage
+## Интеграция и переносимое использование
 
 ```bash
 python scripts/mcp_server.py

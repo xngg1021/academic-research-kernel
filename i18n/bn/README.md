@@ -14,25 +14,25 @@
 
 | দক্ষতা | সংস্করণ | বিবরণ |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | পরিচয় ও উদ্ধৃতি সংখ্যা যাচাই; আপডেট ও প্রত্যাহার সংকেত পরিদর্শন; ওপেন অ্যাক্সেস পাঠ্য সন্ধান এবং পিডিএফ পরিচয় যাচাই |
+| `skills/literature-analysis` | 1.3.0 | বারোটি কর্মপ্রবাহ: বিষয়বস্তুর মিল, পাঠ্যের পুনরাবৃত্তি, পাল্টা প্রমাণ, লেখক প্রোফাইল, পরীক্ষামূলক পর্যালোচনা এবং যুক্তিদোষ যাচাই |
+| `skills/academic-writing` | 1.1.1 | প্রাতিষ্ঠানিক সম্পাদনা, উদ্ধৃতি নির্দেশিকা (ISO 690, APA, MLA, Chicago, IEEE, AMA এবং আঞ্চলিক প্রোফাইল) এবং জার্নাল বিধিমালা |
+| `skills/math-computation` | 1.2.1 | গাণিতিক ও পরিসংখ্যানগত পদ্ধতির মাধ্যমে ডোমেন রাউটিং; উন্নত রেফারেন্স নথি |
+| `skills/quantitative-paper-audit` | 1.1.0 | প্রকাশিত পরিসংখ্যানের পুনর্গণনা (প্রভাবের আকার, পি-মান, আত্মবিশ্বাসের ব্যবধান, OR/RR) এবং অসঙ্গতি শনাক্তকরণ |
+| `skills/research-reproducibility` | 1.0.1 | চৌদ্দ-পর্যায়ের পুনরুৎপাদনযোগ্যতা নিরীক্ষা পাইপলাইন, কাঠামোগত চেকলিস্ট এবং যাচাইযোগ্য রেকর্ড সহ |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA অনুসন্ধান লগ, সাহিত্য বাছাই লগ, প্রভাবের আকার রূপান্তর, ভিন্নতা বিশ্লেষণ এবং মেটা-বিশ্লেষণ সংকলন |
+| `skills/literature-watch` | 1.1.0 | সাপ্তাহিক পর্যবেক্ষণ: OpenAlex এবং Crossref-এ বিষয়, লেখক এবং DOI উদ্ধৃতি নজরদারি; ডুপ্লিকেট বর্জন |
+| `skills/retraction-watch` | 1.1.0 | সাপ্তাহিক পর্যবেক্ষণ: ওপেনঅ্যালেক্স এবং ক্রসরেফ-এর প্রত্যাহার ও আপডেট রেকর্ডের বিপরীতে ডিওআই নজরদারি তালিকা যাচাই |
+| `skills/research-object-identity` | 1.1.0 | কারণিক ডিএজি যাচাইকরণ সহ গবেষণা সম্পদের সুনির্দিষ্ট পরিচয় নির্ধারণ এবং উৎস সন্ধান |
+| `skills/claim-evidence-graph` | 1.0.0 | বৈজ্ঞানিক দাবি ও প্রমাণের সুনির্দিষ্ট সংযোগ যা দাবি, প্রমাণ রেকর্ড এবং গাণিতিক উৎসকে সংযুক্ত করে |
+| `skills/decision-ledger` | 1.0.0 | গবেষণা সিদ্ধান্ত লগ: গবেষণা সিদ্ধান্ত, নেতিবাচক ফলাফল এবং অনুসন্ধান পথের স্থিতির একটি সুনির্দিষ্ট অপরিবর্তনীয় লগ |
+| `skills/cross-review-five` | 2.0.0 | কুহন-মাঙ্করেস অ্যাসাইনমেন্ট এবং স্পার্স ডেলিবারেশন v2 সহ ভিন্নধর্মী মডেলের জন্য গতিশীল বহু-পর্যালোচক প্যানেল সমন্বয় |
 
 ## একাডেমিক মানদণ্ড এবং গ্লোবাল প্রোফাইল বেসলাইন
 
 সংগ্রহস্থলটি আন্তর্জাতিক বেসলাইন হিসাবে **ISO 690:2021** (গ্রন্থপঞ্জিগত রেফারেন্স), **ISO 5127:2017** (শব্দভাণ্ডার) এবং **W3C PROV** (উৎস মডেল) প্রতিষ্ঠা করে। বিস্তারিত জানার জন্য [মানক আর্কিটেকচার](../../docs/standards/README.md) এবং [পরিভাষা নির্দেশিকা](../../docs/terminology/README.md) দেখুন।
 
-## Integration & Portable Usage
+## ইন্টিগ্রেশন এবং পোর্টেবল ব্যবহার
 
 ```bash
 python scripts/mcp_server.py

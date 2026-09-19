@@ -14,25 +14,25 @@ Bu anlık görüntü, [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md) dos
 
 | Beceri | Sürüm | Açıklama |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | Kimlik ve alıntı sayılarının çapraz doğrulaması; güncelleme ve geri çekme sinyallerinin denetimi; açık erişimli metin bulma ve PDF doğrulaması |
+| `skills/literature-analysis` | 1.3.0 | On iki iş akışı: konu benzerliği, metin örtüşmesi, karşıt kanıtlar, yazar profilleri, deneme hakemliği ve safsata kontrolleri |
+| `skills/academic-writing` | 1.1.1 | Akademik düzenleme, alıntı kılavuzları (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller) ve dergi kuralları |
+| `skills/math-computation` | 1.2.1 | Sayısal ve istatistiksel tariflerle matematiksel alan yönlendirmesi; gelişmiş referans dosyaları |
+| `skills/quantitative-paper-audit` | 1.1.0 | Bildirilen istatistiklerin yeniden hesaplanması (etki büyüklüğü, p değerleri, güven aralıkları, OR/RR) ve tutarsızlıkların tespiti |
+| `skills/research-reproducibility` | 1.0.1 | Yapılandırılmış kontrol listeleri ve tekrarlanabilir denetim kayıtları içeren 14 aşamalı tekrarlanabilirlik denetim hattı |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA arama kayıtları, literatür tarama kayıtları, etki büyüklüğü dönüşümü, heterojenlik ve meta-analiz birleştirme |
+| `skills/literature-watch` | 1.1.0 | Haftalık izleme: OpenAlex ve Crossref üzerinde konuları, yazarları ve DOI alıntılarını yinelemesiz takip etme |
+| `skills/retraction-watch` | 1.1.0 | Haftalık izleme: OpenAlex geri çekme indeksleri ve Crossref güncellemelerine karşı DOI izleme listesini kontrol etme |
+| `skills/research-object-identity` | 1.1.0 | Nedensel DAG doğrulaması ile deterministik araştırma kaynağı tanımlama ve kaynak izleme |
+| `skills/claim-evidence-graph` | 1.0.0 | Bilimsel iddialar, kanıt kayıtları ve hesaplamalı kaynak arasında deterministik bağlantı kurma |
+| `skills/decision-ledger` | 1.0.0 | Araştırma Karar Günlüğü: kararların, olumsuz sonuçların ve rota durumlarının deterministik, yalnızca eklemeli günlüğü |
+| `skills/cross-review-five` | 2.0.0 | Kuhn-Munkres eşleştirmesi ve seyrek müzakere v2 ile heterojen modeller için dinamik çoklu hakem paneli orkestrasyonu |
 
 ## Akademik Standartlar ve Çoklu Profil Temeli
 
 Depo, **ISO 690:2021** (Bibliyografik referanslar), **ISO 5127:2017** (Temel kavramlar ve sözlük) ve **W3C PROV** (Köken veri modeli) standartlarını uluslararası temel olarak kabul eder. Ayrıntılar için [Standartlar Mimarisi](../../docs/standards/README.md) ve [Terminoloji Kılavuzu](../../docs/terminology/README.md) belgelerine bakınız.
 
-## Integration & Portable Usage
+## Entegrasyon ve Taşınabilir Kullanım
 
 ```bash
 python scripts/mcp_server.py

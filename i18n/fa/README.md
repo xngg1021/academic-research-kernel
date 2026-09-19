@@ -14,25 +14,25 @@
 
 | مهارت | نسخه | شرح |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | راستی‌آزمایی متقابل هویت و شمارش ارجاعات؛ بررسی سیگنال‌های به‌روزرسانی و سلب اعتبار؛ یافتن متن دسترسی آزاد و تأیید هویت PDF |
+| `skills/literature-analysis` | 1.3.0 | دوازده جریان کاری: تشابه موضوعی، همپوشانی متن، شواهد متقابل، مشخصات نویسندگان، داوری آزمایشی و ارزیابی مغالطات |
+| `skills/academic-writing` | 1.1.1 | ویرایش علمی، راهنمای استناد (ISO 690، APA، MLA، شیکاگو، IEEE، AMA و الگوهای منطقه‌ای) و قوانین مجلات |
+| `skills/math-computation` | 1.2.1 | مسیریابی محاسبات ریاضی و آماری با روش‌های عددی معتبر؛ پرونده‌های مرجع پیشرفته |
+| `skills/quantitative-paper-audit` | 1.1.0 | محاسبه مجدد آمارهای گزارش‌شده (اندازه اثر، مقادیر p، فواصل اطمینان، OR/RR) و شناسایی مغایرت‌های عددی |
+| `skills/research-reproducibility` | 1.0.1 | خط لوله ممیزی تکرارپذیری ۱۴ مرحله‌ای با چک‌لیست‌های ساختاریافته و سوابق ممیزی قابل بازتولید |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | گزارش‌های جستجوی PRISMA، غربالگری متون، تبدیل اندازه اثر، ناهمگونی و تجمیع متادیتا |
+| `skills/literature-watch` | 1.1.0 | رصد هفتگی: پایش موضوعات، نویسندگان و ارجاعات DOI در OpenAlex و Crossref با حذف موارد تکراری |
+| `skills/retraction-watch` | 1.1.0 | رصد هفتگی: بررسی مجدد فهرست DOI در برابر نمایه‌های سلب اعتبار و سوابق به‌روزرسانی OpenAlex و Crossref |
+| `skills/research-object-identity` | 1.1.0 | شناسایی قطعی منابع پژوهشی و رهگیری تبار محاسباتی با اعتبارسنجی گراف جهت‌دار غیرمدور علی |
+| `skills/claim-evidence-graph` | 1.0.0 | پیوند قطعی میان ادعاهای علمی، سوابق شواهد و تبار محاسباتی |
+| `skills/decision-ledger` | 1.0.0 | دفتر ثبت تصمیمات پژوهشی: گزارش قطعی و فقط-افزودنی از تصمیمات پژوهشی، نتایج منفی و وضعیت مسیرهای تحقیق |
+| `skills/cross-review-five` | 2.0.0 | هماهنگ‌سازی پویا هیئت چندداوری برای مدل‌های ناهمگون با الگوریتم کوهن-مانکرز و رایزنی تنک نسخه ۲ |
 
 ## استانداردهای علمی و مبناهای چندگانه
 
 این مخزن استانداردهای بین‌المللی **ISO 690:2021** (ارجاع‌دهی کتابشناختی)، **ISO 5127:2017** (مفاهیم و اصطلاحات) و **W3C PROV** (مدل ردگیری منشأ) را مبنا قرار می‌دهد. رجوع کنید به [معماری استانداردها](../../docs/standards/README.md) و [راهنمای اصطلاحات](../../docs/terminology/README.md).
 
-## Integration & Portable Usage
+## یکپارچه‌سازی و استفاده قابل حمل
 
 ```bash
 python scripts/mcp_server.py

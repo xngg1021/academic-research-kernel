@@ -14,25 +14,25 @@
 
 | مہارت | ورژن | تفصیل |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | شناخت اور حوالہ جات کی گنتی کی تصدیق؛ اپ ڈیٹس اور مضامین کی واپسی کی جانچ؛ اوپن ایکسیس متون کی تلاش اور پی ڈی ایف شناخت کی توثیق |
+| `skills/literature-analysis` | 1.3.0 | بارہ ورک فلو: موضوع کی مشابہت، متن کا اشتراک، جوابی شواہد، مصنفین کے پروفائلز، نقلی جائزہ اور منطقی مغالطوں کی جانچ |
+| `skills/academic-writing` | 1.1.1 | علمی ترمیم، حوالہ جاتی رہنمائی (ISO 690، APA، MLA، شکاگو، IEEE، AMA اور علاقائی پروفائلز) اور جریدے کے اصول |
+| `skills/math-computation` | 1.2.1 | ریاضی اور شماریاتی طریقوں کے ساتھ ڈومین روٹنگ؛ جدید حوالہ جاتی فائلیں |
+| `skills/quantitative-paper-audit` | 1.1.0 | شائع شدہ شماریات کا دوبارہ حساب (اثر کا حجم، p-قدریں، اعتماد کے وقفے، OR/RR) اور تضادات کی نشاندہی |
+| `skills/research-reproducibility` | 1.0.1 | چودہ مراحل پر مشتمل دوبارہ تخلیق کی صلاحیت کا آڈٹ پائپ لائن بمعہ باقاعدہ جانچ پڑتال کی فہرستیں اور تصدیق شدہ ریکارڈ |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA تلاش کے لاگز، لٹریچر اسکریننگ لاگز، اثر کے حجم کی تبدیلی، عدم ہم آہنگی اور میٹا اینالیسس پولنگ |
+| `skills/literature-watch` | 1.1.0 | ہفتہ وار نگرانی: OpenAlex اور Crossref پر موضوعات، مصنفین اور DOI حوالہ جات کی جانچ؛ تکرار کا خاتمہ |
+| `skills/retraction-watch` | 1.1.0 | ہفتہ وار نگرانی: OpenAlex اور Crossref کے مضامین واپس لینے اور اپ ڈیٹ کے ریکارڈز کے مطابق DOI واچ لسٹ کی دوبارہ جانچ |
+| `skills/research-object-identity` | 1.1.0 | قطعی تحقیقی وسائل کی شناخت اور سائنسی شجرہ کا پتہ لگانا بمعہ تصدیق شدہ سببی DAG |
+| `skills/claim-evidence-graph` | 1.0.0 | سائنسی دعووں، شواہد کے ریکارڈز اور کمپیوٹیشنل ماخذ کو باہم مربوط کرنے والا قطعی گراف |
+| `skills/decision-ledger` | 1.0.0 | تحقیقی فیصلوں کا لاگ: تحقیقی فیصلوں، منفی نتائج اور تحقیقی راستوں کی صورتحال کا ایک قطعی لاگ |
+| `skills/cross-review-five` | 2.0.0 | کہن-منکرس الگورتھم اور اسپیئرس ڈیلیبریشن v2 کے ساتھ متنوع ماڈلز کے لیے کثیر جائزہ پینل کی ہم آہنگی |
 
 ## تعلیمی معیارات اور بین الاقوامی پروفائلز
 
 یہ مخزن بین الاقوامی بنیادی اصول کے طور پر **ISO 690:2021**، **ISO 5127:2017** اور **W3C PROV** قائم کرتا ہے۔ مزید تفصیلات کے لیے [معیارات کا خاکہ](../../docs/standards/README.md) اور [اصطلاحات کی رہنمائی](../../docs/terminology/README.md) ملاحظہ کریں۔
 
-## Integration & Portable Usage
+## انضمام اور پورٹیبل استعمال
 
 ```bash
 python scripts/mcp_server.py

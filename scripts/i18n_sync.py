@@ -3,16 +3,18 @@
 """Deterministic Multilingual Documentation Synchronization Engine.
 
 Computes whole-file and section-level cryptographic hashes (SHA-256) for all
-canonical logical markdown documents, tracks parity across 21 target locales,
-and verifies synchronization status against docs/i18n/manifest.json.
+53 canonical logical markdown documents, tracks parity across 21 target locales,
+and verifies synchronization status against docs/i18n/manifest.json with
+explicit section-level staleness detection.
 """
 
+import argparse
 import hashlib
 import json
 import re
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs" / "i18n" / "manifest.json"
@@ -71,7 +73,7 @@ def extract_section_hashes(text: str) -> Dict[str, str]:
 def discover_canonical_documents() -> List[Dict[str, Any]]:
     docs = []
 
-    # 1. Root documents
+    # 1. Root documents (7 canonical documents)
     docs.append({
         "doc_id": "doc_root_readme",
         "canonical_title": "Academic Research Kernel Readme",
@@ -96,8 +98,40 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "genre": "historical_and_audit_records",
         "aidetox_intensity": "audit_safe",
     })
+    docs.append({
+        "doc_id": "doc_root_contributing",
+        "canonical_title": "Contributing Guidelines",
+        "source_path": "CONTRIBUTING.md",
+        "source_locale": "en",
+        "genre": "user_facing_documentation",
+        "aidetox_intensity": "strong",
+    })
+    docs.append({
+        "doc_id": "doc_root_license_application",
+        "canonical_title": "License Application Scope",
+        "source_path": "LICENSE-APPLICATION.md",
+        "source_locale": "en",
+        "genre": "historical_and_audit_records",
+        "aidetox_intensity": "audit_safe",
+    })
+    docs.append({
+        "doc_id": "doc_root_license_history",
+        "canonical_title": "License History and Terminal Snapshots",
+        "source_path": "LICENSE-HISTORY.md",
+        "source_locale": "en",
+        "genre": "historical_and_audit_records",
+        "aidetox_intensity": "audit_safe",
+    })
+    docs.append({
+        "doc_id": "doc_root_source_lineage",
+        "canonical_title": "Source Lineage and Intellectual Predecessors",
+        "source_path": "SOURCE-LINEAGE.md",
+        "source_locale": "en",
+        "genre": "historical_and_audit_records",
+        "aidetox_intensity": "audit_safe",
+    })
 
-    # 2. Skills and References
+    # 2. Skills, References, and Skill-internal documentation
     skills_dir = ROOT / "skills"
     for s_dir in sorted(skills_dir.iterdir()):
         if s_dir.is_dir() and (s_dir / "SKILL.md").exists():
@@ -122,13 +156,25 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                         "genre": "user_facing_documentation",
                         "aidetox_intensity": "strong",
                     })
+            s_docs_dir = s_dir / "docs"
+            if s_docs_dir.is_dir():
+                for sd_file in sorted(s_docs_dir.glob("*.md")):
+                    sd_stem = sd_file.stem
+                    docs.append({
+                        "doc_id": f"doc_{s_name.replace('-', '_')}_{sd_stem.replace('-', '_')}",
+                        "canonical_title": f"{s_name} Document: {sd_stem}",
+                        "source_path": f"skills/{s_name}/docs/{sd_file.name}",
+                        "source_locale": "zh-Hans",
+                        "genre": "technical_and_schema_specifications",
+                        "aidetox_intensity": "medium",
+                    })
 
-    # 3. Docs
+    # 3. Docs directory (10 canonical documents)
     docs_dir = ROOT / "docs"
     for d_file in sorted(docs_dir.glob("*.md")):
         d_stem = d_file.stem
         if d_stem in ["pain-atlas-v0.zh", "research-plan-v0.zh"]:
-            continue  # localized counterparts
+            continue  # localized counterparts of pain-atlas-v0.en and research-plan-v0.en
         docs.append({
             "doc_id": f"doc_{d_stem.replace('-', '_').replace('.', '_')}",
             "canonical_title": f"Documentation: {d_stem}",
@@ -153,9 +199,50 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
     return docs
 
 
-def build_manifest() -> Dict[str, Any]:
+def resolve_localized_path(item: Dict[str, Any], loc: str) -> str:
+    """Resolve standard physical file path for a localized counterpart."""
+    src = item["source_path"]
+    if item["doc_id"] == "doc_root_readme":
+        if loc == "zh-Hans":
+            return "README.zh-Hans.md"
+        elif loc == "zh-Hant":
+            return "README.zh-Hant.md"
+        elif (ROOT / f"README.{loc}.md").is_file():
+            return f"README.{loc}.md"
+        else:
+            return f"i18n/{loc}/README.md"
+    elif src == "docs/pain-atlas-v0.en.md" and loc == "zh-Hans":
+        return "docs/pain-atlas-v0.zh.md"
+    elif src == "docs/research-plan-v0.en.md" and loc == "zh-Hans":
+        return "docs/research-plan-v0.zh.md"
+    elif src.startswith("docs/"):
+        base_name = src.replace("docs/", "")
+        return f"i18n/{loc}/docs/{base_name}"
+    else:
+        return f"i18n/{loc}/{src}"
+
+
+def build_manifest(certify_paths: Optional[List[str]] = None, certify_all_existing: bool = False) -> Dict[str, Any]:
+    # Load previous manifest if available
+    prev_manifest: Dict[str, Any] = {}
+    prev_docs: Dict[str, Dict[str, Any]] = {}
+    if MANIFEST_PATH.is_file():
+        try:
+            prev_manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+            for d in prev_manifest.get("documents", []):
+                prev_docs[d["doc_id"]] = d
+        except Exception:
+            pass
+
     canonical_docs = discover_canonical_documents()
     doc_entries = []
+
+    counts = {
+        "canonical_current": 0,
+        "localized_current": 0,
+        "localized_stale": 0,
+        "queued_for_generation": 0,
+    }
 
     for item in canonical_docs:
         src_path = ROOT / item["source_path"]
@@ -165,6 +252,9 @@ def build_manifest() -> Dict[str, Any]:
         src_sha = compute_sha256(text)
         sec_hashes = extract_section_hashes(text)
 
+        prev_doc_entry = prev_docs.get(item["doc_id"])
+        prev_instances = prev_doc_entry.get("localized_instances", {}) if prev_doc_entry else {}
+
         instances: Dict[str, Any] = {}
         for loc_info in TARGET_LOCALES:
             loc = loc_info["code"]
@@ -172,48 +262,71 @@ def build_manifest() -> Dict[str, Any]:
                 instances[loc] = {
                     "path": item["source_path"],
                     "status": "canonical_current",
-                    "localized_from_sha": src_sha,
+                    "localized_file_sha256": src_sha,
+                    "translated_from_source_sha256": src_sha,
+                    "translated_from_section_hashes": sec_hashes,
+                    "stale_sections": [],
                     "last_verified": "2026-09-19",
                 }
+                counts["canonical_current"] += 1
                 continue
 
-            # Check existing localized paths
-            loc_path = None
-            if item["doc_id"] == "doc_root_readme":
-                if loc == "zh-Hans":
-                    loc_path = "README.zh-Hans.md"
-                elif loc == "zh-Hant":
-                    loc_path = "README.zh-Hant.md"
-                elif (ROOT / f"README.{loc}.md").is_file():
-                    loc_path = f"README.{loc}.md"
-                elif (ROOT / f"i18n/{loc}/README.md").is_file():
-                    loc_path = f"i18n/{loc}/README.md"
-                else:
-                    loc_path = f"i18n/{loc}/README.md"
-            elif item["source_path"].startswith("docs/"):
-                base_name = item["source_path"].replace("docs/", "")
-                if (ROOT / f"i18n/{loc}/docs/{base_name}").is_file():
-                    loc_path = f"i18n/{loc}/docs/{base_name}"
-                else:
-                    loc_path = f"i18n/{loc}/docs/{base_name}"
-            else:
-                loc_path = f"i18n/{loc}/{item['source_path']}"
-
+            loc_path = resolve_localized_path(item, loc)
             full_loc_path = ROOT / loc_path
+            prev_inst = prev_instances.get(loc)
+
             if full_loc_path.is_file():
+                loc_text = full_loc_path.read_text(encoding="utf-8")
+                loc_sha = compute_sha256(loc_text)
+
+                should_certify = (
+                    certify_all_existing
+                    or (certify_paths and loc_path in certify_paths)
+                    or (prev_inst is None or prev_inst.get("translated_from_source_sha256") is None)
+                )
+
+                if should_certify:
+                    trans_src_sha = src_sha
+                    trans_sec_hashes = sec_hashes
+                    status = "localized_current"
+                    stale_sections: List[str] = []
+                else:
+                    trans_src_sha = prev_inst.get("translated_from_source_sha256")
+                    trans_sec_hashes = prev_inst.get("translated_from_section_hashes") or {}
+                    if trans_src_sha == src_sha:
+                        status = "localized_current"
+                        stale_sections = []
+                    else:
+                        status = "localized_stale"
+                        stale_sections = [
+                            sec for sec, h in sec_hashes.items()
+                            if h != trans_sec_hashes.get(sec)
+                        ]
+                        for sec in trans_sec_hashes:
+                            if sec not in sec_hashes:
+                                stale_sections.append(f"removed: {sec}")
+
                 instances[loc] = {
                     "path": loc_path,
-                    "status": "localized_current",
-                    "localized_from_sha": src_sha,
+                    "status": status,
+                    "localized_file_sha256": loc_sha,
+                    "translated_from_source_sha256": trans_src_sha,
+                    "translated_from_section_hashes": trans_sec_hashes,
+                    "stale_sections": stale_sections,
                     "last_verified": "2026-09-19",
                 }
+                counts[status] += 1
             else:
                 instances[loc] = {
                     "path": loc_path,
                     "status": "queued_for_generation",
-                    "localized_from_sha": None,
+                    "localized_file_sha256": None,
+                    "translated_from_source_sha256": None,
+                    "translated_from_section_hashes": None,
+                    "stale_sections": [],
                     "last_verified": "2026-09-19",
                 }
+                counts["queued_for_generation"] += 1
 
         doc_entries.append({
             "doc_id": item["doc_id"],
@@ -229,25 +342,66 @@ def build_manifest() -> Dict[str, Any]:
 
     manifest_data = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "title": "Multilingual Scholarly Documentation Synchronization Manifest",
-        "description": "Cryptographically authenticated synchronization manifest tracking whole-file SHA-256 and section-level hashes for all canonical documents across 21 locales.",
+        "description": "Cryptographically authenticated synchronization manifest tracking whole-file SHA-256 and section-level hashes for all 53 canonical documents across 21 locales.",
         "governing_registries": {
             "standards_registry_version": "1.1.0",
             "terminology_registry_version": "2.0.0",
             "aidetox_contract_version": "1.0.0",
         },
         "target_locales": TARGET_LOCALES,
-        "total_logical_documents": len(doc_entries),
+        "total_canonical_documents": len(doc_entries),
+        "total_theoretical_instances": len(doc_entries) * len(TARGET_LOCALES),
+        "status_summary": counts,
         "documents": doc_entries,
     }
     return manifest_data
 
 
 def main():
-    manifest = build_manifest()
+    parser = argparse.ArgumentParser(description="Deterministic Multilingual Documentation Synchronization Engine.")
+    parser.add_argument("--certify", nargs="*", help="Mark specific localized paths as synchronized with current source.")
+    parser.add_argument("--certify-all-existing", action="store_true", help="Certify all currently existing localized files against current canonical source.")
+    parser.add_argument("--check", action="store_true", help="Check manifest validity without modifying files.")
+    args = parser.parse_args()
+
+    if args.check:
+        if not MANIFEST_PATH.is_file():
+            print("ERROR: manifest.json does not exist.")
+            sys.exit(1)
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        errors = []
+        for doc in manifest.get("documents", []):
+            src_file = ROOT / doc["source_path"]
+            if not src_file.is_file():
+                errors.append(f"Missing source file: {doc['source_path']}")
+                continue
+            cur_sha = compute_sha256(src_file.read_text(encoding="utf-8"))
+            if cur_sha != doc["source_sha256"]:
+                errors.append(f"Stale source SHA for: {doc['source_path']}")
+            for loc, inst in doc.get("localized_instances", {}).items():
+                if inst["status"] in ("localized_current", "localized_stale"):
+                    loc_file = ROOT / inst["path"]
+                    if not loc_file.is_file():
+                        errors.append(f"Missing localized file: {inst['path']}")
+                    else:
+                        cur_loc_sha = compute_sha256(loc_file.read_text(encoding="utf-8"))
+                        if cur_loc_sha != inst["localized_file_sha256"]:
+                            errors.append(f"Localized file content changed without manifest update: {inst['path']}")
+        if errors:
+            print(f"Manifest check FAILED with {len(errors)} errors:")
+            for err in errors:
+                print(f"  - {err}")
+            sys.exit(1)
+        print("Manifest check PASSED: all sources and localized instances match registered SHA-256 digests.")
+        sys.exit(0)
+
+    manifest = build_manifest(certify_paths=args.certify, certify_all_existing=args.certify_all_existing)
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"Successfully generated {MANIFEST_PATH.relative_to(ROOT)} with {manifest['total_logical_documents']} logical documents across 21 locales.")
+    summary = manifest["status_summary"]
+    print(f"Successfully generated {MANIFEST_PATH.relative_to(ROOT)} with {manifest['total_canonical_documents']} canonical documents across 21 locales.")
+    print(f"Status breakdown: canonical_current={summary['canonical_current']}, localized_current={summary['localized_current']}, localized_stale={summary['localized_stale']}, queued_for_generation={summary['queued_for_generation']}.")
 
 
 if __name__ == "__main__":

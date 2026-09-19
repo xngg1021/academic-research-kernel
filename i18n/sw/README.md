@@ -14,25 +14,25 @@ Toleo hili linatumia **Source Lineage License 1.0** kwa nyenzo zilizobainishwa k
 
 | Ujuzi | Toleo | Maelezo |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | Uthibitishaji mtambuka wa utambulisho na idadi ya nukuu; ukaguzi wa masasisho na ufutaji wa machapisho; upatikanaji wa maandishi wazi na uthibitishaji wa PDF |
+| `skills/literature-analysis` | 1.3.0 | Mifumo kumi na miwili ya kazi: mfanano wa mada, mwingiliano wa maandishi, ushahidi kinzani, wasifu wa waandishi, majaribio ya mapitio na ukaguzi wa hoja |
+| `skills/academic-writing` | 1.1.1 | Uhariri wa kitaaluma, mwongozo wa unukuu (ISO 690, APA, MLA, Chicago, IEEE, AMA na maelezo mafupi ya kikanda) na sheria za majarida |
+| `skills/math-computation` | 1.2.1 | Uelekezaji wa hesabu na takwimu kupitia mbinu za kihesabu; faili za marejeleo ya juu |
+| `skills/quantitative-paper-audit` | 1.1.0 | Ukokotoaji upya wa takwimu zilizoripotiwa (ukubwa wa athari, viwango vya p, vipindi vya kuaminika, OR/RR) na utambuzi wa kutofautiana |
+| `skills/research-reproducibility` | 1.0.1 | Mchakato wa hatua 14 wa ukaguzi wa uwezo wa kurudia matokeo wenye orodha zilizopangwa na rekodi thabiti |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Kumbukumbu za utafutaji za PRISMA, uchujaji wa maandiko, ubadilishaji wa ukubwa wa athari, na uchambuzi meta |
+| `skills/literature-watch` | 1.1.0 | Ufuatiliaji wa kila wiki: fuatilia mada, waandishi na nukuu za DOI kwenye OpenAlex na Crossref bila marudio |
+| `skills/retraction-watch` | 1.1.0 | Ufuatiliaji wa kila wiki: kagua upya orodha ya DOI dhidi ya kumbukumbu za ufutaji na masasisho ya OpenAlex na Crossref |
+| `skills/research-object-identity` | 1.1.0 | Utambulisho wa uhakika wa rasilimali za utafiti na ufuatiliaji wa asili wenye uthibitisho wa DAG ya kisababishi |
+| `skills/claim-evidence-graph` | 1.0.0 | Uunganishaji thabiti wa madai ya kisayansi na rekodi za ushahidi pamoja na asili ya kimahesabu |
+| `skills/decision-ledger` | 1.0.0 | Kumbukumbu ya Maamuzi ya Utafiti: rekodi thabiti ya kuongeza tu ya maamuzi ya utafiti, matokeo hasi na hali ya njia |
+| `skills/cross-review-five` | 2.0.0 | Uratibu thabiti wa jopo la wakaguzi wengi kwa mifano mbalimbali kwa kutumia ugawaji wa Kuhn-Munkres na majadiliano ya v2 |
 
 ## Viwango vya Kitaaluma na Mwongozo wa Kimataifa
 
 Hifadhi hii inaweka **ISO 690:2021** (Marejeleo ya kibibliografia), **ISO 5127:2017** (Msingi na msamiati), na **W3C PROV** (Muundo wa data wa asili) kama misingi ya kimataifa, sambamba na viwango vya kitaalamu (APA 7th, IEEE, PRISMA 2020, ICMJE). Tazama [Muundo wa Viwango](../../docs/standards/README.md) na [Mwongozo wa Istilahi](../../docs/terminology/README.md).
 
-## Integration & Portable Usage
+## Muunganisho na Matumizi Yanayohamishika
 
 ```bash
 python scripts/mcp_server.py

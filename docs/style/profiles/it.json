@@ -1,0 +1,24 @@
+{
+  "locale": "it",
+  "language": "Italian",
+  "banned_phrases": [
+    "immergersi in",
+    "testimonianza di",
+    "rivoluzionare",
+    "ruolo fondamentale",
+    "punto di svolta",
+    "faro di speranza",
+    "favorire la collaborazione"
+  ],
+  "step_broadcasting_markers": [
+    "Passo 1:",
+    "Passo 2:",
+    "In sintesi,",
+    "In conclusione,"
+  ],
+  "redundant_hedges": [
+    "È importante notare che",
+    "Vale la pena sottolineare che",
+    "Inutile dire che"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "locale": "pt",
+  "language": "Portuguese",
+  "banned_phrases": [
+    "mergulhar em",
+    "testemunho de",
+    "revolucionar",
+    "papel crucial",
+    "divisor de águas",
+    "farol de esperança",
+    "fomentar a colaboração"
+  ],
+  "step_broadcasting_markers": [
+    "Passo 1:",
+    "Passo 2:",
+    "Em resumo,",
+    "Para concluir,"
+  ],
+  "redundant_hedges": [
+    "Vale a pena notar que",
+    "É importante destacar que",
+    "Desnecessário dizer que"
+  ]
+}

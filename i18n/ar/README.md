@@ -14,25 +14,25 @@
 
 | المهارة | الإصدار | الوصف |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Cross-check identity and citation counts; inspect updates and retractions; locate OA text |
-| `skills/literature-analysis` | 1.3.0 | Twelve workflows: similarity, overlap, counter-evidence, author profiles, mock reviews, fallacy checks |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA and regional profiles), journal rules |
-| `skills/math-computation` | 1.2.1 | Domain and task routing with numerical and statistical recipes; advanced reference files |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, power) and detect discrepancies |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured checklists and reproducible records |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening logs, effect-size conversion, heterogeneity, and pooling |
-| `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors, and DOI citing works on OpenAlex and Crossref |
-| `skills/retraction-watch` | 1.1.0 | Weekly blueprint: monitor DOI watchlist against retraction indexes and update signals |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking; sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and provenance |
-| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic log of research decisions, failed attempts, and route status |
-| `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting heterogeneous models with Kuhn-Munkres matching |
+| `skills/academic-source-verification` | 1.2.0 | التحقق المتبادل من الهوية وإحصاءات الاقتباس؛ فحص إشارات التحديث وسحب الأبحاث؛ تحديد نصوص الوصول المفتوح والتحقق من هوية PDF |
+| `skills/literature-analysis` | 1.3.0 | اثنا عشر مسار عمل: تشابه الموضوعات، تداخل النصوص، الأدلة المعاكسة، ملفات المؤلفين، محاكاة مراجعة النظراء، وفحص المغالطات |
+| `skills/academic-writing` | 1.1.1 | التحرير الأكاديمي، إرشادات الاقتباس (ISO 690 و APA و MLA و Chicago و IEEE و AMA وملفات التعريف الإقليمية)، وقواعد المجلات العلمية |
+| `skills/math-computation` | 1.2.1 | توجيه المسائل الرياضية والإحصائية مع خوارزميات عددية مجربة؛ ملفات مرجعية متقدمة |
+| `skills/quantitative-paper-audit` | 1.1.0 | إعادة حساب الإحصاءات المنشورة (حجم الأثر، قيم p، فترات الثقة، نسب الأرجحية/المخاطر) واكتشاف التناقضات الحسابية |
+| `skills/research-reproducibility` | 1.0.1 | مسار تدقيق قابلية إعادة الإنتاج في 14 مرحلة مع قوائم فحص منظمة وسجلات تدقيق قابلة للتكرار |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | سجلات بحث PRISMA، فرز الدراسات السابقة، تحويل حجم الأثر، تحليل التباين والدمج التلوي |
+| `skills/literature-watch` | 1.1.0 | رصد أسبوعي: تتبع الموضوعات والمؤلفين والاستشهادات بمعرفات DOI على OpenAlex و Crossref مع منع التكرار |
+| `skills/retraction-watch` | 1.1.0 | رصد أسبوعي: التحقق من قائمة DOI المراقبة مقابل فهارس سحب الأبحاث وسجلات التحديث في OpenAlex و Crossref |
+| `skills/research-object-identity` | 1.1.0 | تحديد قطعي لموارد البحث وتتبع النسب مع التحقق من صحة المخطط السببي الموجه (DAG) |
+| `skills/claim-evidence-graph` | 1.0.0 | ربط قطعي بين الادعاءات العلمية وسجلات الأدلة وسلسلة النسب الحسابية |
+| `skills/decision-ledger` | 1.0.0 | سجل قرارات البحث: سجل قطعي للإلحاق فقط لقرارات البحث، والنتائج السلبية، وحالة المسارات البحثية |
+| `skills/cross-review-five` | 2.0.0 | تنسيق ديناميكي للجنة مراجعة متعددة النماذج غير المتجانسة مع خوارزمية كوهن-مانكرس والمداولة المشتتة v2 |
 
 ## المعايير الأكاديمية والخطوط الأساسية متعددة الأنماط
 
 يعتمد المستودع **ISO 690:2021** (المراجع الببليوغرافية) و **ISO 5127:2017** (المفاهيم والمصطلحات) و **W3C PROV** (نموذج بيانات التتبع) كخطوط أساسية دولية، إلى جانب المعايير التخصصية (APA 7th، IEEE، PRISMA 2020، ICMJE). انظر [بنية المعايير](../../docs/standards/README.md) و [دليل المصطلحات](../../docs/terminology/README.md).
 
-## Integration & Portable Usage
+## التكامل والاستخدام المحمول
 
 ```bash
 python scripts/mcp_server.py

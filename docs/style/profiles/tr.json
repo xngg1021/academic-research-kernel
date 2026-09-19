@@ -1,0 +1,23 @@
+{
+  "locale": "tr",
+  "language": "Turkish",
+  "banned_phrases": [
+    "derinlemesine incelemek",
+    "kanıtı niteliğinde",
+    "devrim yaratmak",
+    "kilit rol",
+    "dönüm noktası",
+    "iş birliğini teşvik etmek"
+  ],
+  "step_broadcasting_markers": [
+    "Adım 1:",
+    "Adım 2:",
+    "Özetle,",
+    "Sonuç olarak,"
+  ],
+  "redundant_hedges": [
+    "Belirtmek gerekir ki",
+    "Vurgulamak önemlidir ki",
+    "Söylemeye gerek yok ki"
+  ]
+}
