@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Scholarly Standards and Profiles Registry",
-  "description": "Authoritative registry of international standards, regional profiles, and disciplinary publishing guidelines.",
+  "description": "Authoritative registry of international standards, regional profiles, and disciplinary publishing guidelines with verifiable provenance evidence.",
   "resolution_hierarchy": [
     "target_venue_or_funder_requirements",
     "disciplinary_reporting_standards",
@@ -15,51 +15,93 @@
       "standard": "ISO 690:2021",
       "title": "Information and documentation — Guidelines for bibliographic references and citations to information resources",
       "scope": "Universal multilingual citation and bibliographic reference baseline",
-      "status": "active"
+      "authority_url": "https://www.iso.org/standard/72642.html",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "ISO 690:2010"
+    },
+    "terminology_principles": {
+      "standard": "ISO 704:2022",
+      "title": "Terminology work — Principles and methods",
+      "scope": "Standardized principles for concepts, definitions, designations, and terminology formation",
+      "authority_url": "https://www.iso.org/standard/79077.html",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "ISO 704:2009"
+    },
+    "terminology_harmonization": {
+      "standard": "ISO 860:2007",
+      "title": "Terminology work — Harmonization of concepts and terms",
+      "scope": "Methodological harmonization of concepts, concept systems, and terms across multilingual domains",
+      "authority_url": "https://www.iso.org/standard/40130.html",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "ISO 860:1996"
     },
     "terminology_and_concepts": {
       "standard": "ISO 5127:2017",
       "title": "Information and documentation — Foundation and vocabulary",
-      "scope": "Core concepts and definitions in documentation and library science",
-      "status": "confirmed_2025"
+      "scope": "Core concepts and definitions in documentation, archival, and library science",
+      "authority_url": "https://www.iso.org/standard/59743.html",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "ISO 5127:2001"
     },
     "provenance_and_traceability": {
       "standard": "W3C PROV",
       "title": "W3C PROV Data Model and Ontology (PROV-DM / PROV-O)",
       "scope": "Entities, activities, and agents involved in producing research artifacts",
-      "status": "w3c_recommendation"
+      "authority_url": "https://www.w3.org/TR/prov-overview/",
+      "verified_at": "2026-09-19",
+      "evidence_status": "w3c_recommendation",
+      "supersedes": null
     },
     "research_data_metadata": {
       "standard": "DataCite Metadata Schema 4.7",
       "title": "DataCite Metadata Schema for the Publication and Citation of Research Data and Artifacts",
       "date": "2026-03-03",
       "scope": "Global multilingual schema for persistent identifier (DOI) metadata",
-      "status": "active"
+      "authority_url": "https://schema.datacite.org/meta/kernel-4.7/",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "DataCite Metadata Schema 4.6"
     },
     "contributor_roles": {
       "standard": "ANSI/NISO CRediT Z39.104-2022",
       "title": "Contributor Roles Taxonomy",
       "scope": "14 standard contributor roles in scholarly research",
-      "status": "ansi_niso_standard"
+      "authority_url": "https://www.niso.org/publications/z39104-2022-credit",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "CRediT Taxonomy v1 (informal)"
     },
     "journal_article_exchange": {
       "standard": "ANSI/NISO JATS Z39.96-2024 v1.4",
       "title": "Journal Article Tag Suite",
       "scope": "XML format for archiving and exchanging journal articles",
-      "status": "active"
+      "authority_url": "https://www.niso.org/publications/z3996-2024-jats",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "JATS 1.3 (2021)"
     },
     "systematic_reviews": {
       "standard": "PRISMA 2020",
       "title": "Preferred Reporting Items for Systematic Reviews and Meta-Analyses",
       "scope": "Evidence-based minimum set of items for reporting in systematic reviews",
-      "status": "active"
+      "authority_url": "https://www.prisma-statement.org/prisma-2020-checklist",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "PRISMA 2009"
     },
     "medical_publishing": {
       "standard": "ICMJE Recommendations",
       "title": "Recommendations for the Conduct, Reporting, Editing, and Publication of Scholarly Work in Medical Journals",
       "date": "2026-01",
       "scope": "Authorship, peer review, and ethics in biomedical literature",
-      "status": "active"
+      "authority_url": "https://www.icmje.org/recommendations/",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "ICMJE Recommendations (May 2023)"
     }
   },
   "regional_profiles": {
@@ -69,7 +111,11 @@
       "title": "Information and documentation — Rules for bibliographic references and citations to information resources",
       "published": "2025-12-02",
       "effective": "2026-07-01",
-      "scope": "Mainland Chinese universities, publishers, and thesis guidelines"
+      "scope": "Mainland Chinese universities, publishers, and thesis guidelines",
+      "authority_url": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=C6CE52E55AC09B9C79A20AEA77CEDD14",
+      "verified_at": "2026-09-19",
+      "evidence_status": "published_effective_2026_07_01",
+      "supersedes": "GB/T 7714-2015"
     },
     "spain": {
       "profile_id": "profile-es",
@@ -77,7 +123,11 @@
       "title": "Información y documentación. Directrices para la redacción de referencias bibliográficas y de citas de recursos de información",
       "effective": "2024-04",
       "relationship": "Identical adoption of ISO 690:2021",
-      "scope": "Spanish academic and scientific institutions"
+      "scope": "Spanish academic and scientific institutions",
+      "authority_url": "https://www.une.org/encuentre-tu-norma/busca-tu-norma/norma?c=N0072551",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "UNE 50104:1994"
     },
     "france": {
       "profile_id": "profile-fr",
@@ -85,7 +135,11 @@
       "title": "Information et documentation - Principes directeurs pour la rédaction des références bibliographiques et des citations des ressources d'information",
       "agency": "AFNOR",
       "relationship": "French national standard corresponding to ISO 690:2021",
-      "scope": "French research organisms and higher education"
+      "scope": "French research organisms and higher education",
+      "authority_url": "https://norminfo.afnor.org/consultation/nf-iso-690",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "NF Z44-005"
     },
     "germany": {
       "profile_id": "profile-de",
@@ -93,35 +147,51 @@
       "title": "Information und Dokumentation - Richtlinien für Titelangaben und Zitierung von Informationsressourcen",
       "agency": "DIN NID",
       "relationship": "German adoption of ISO 690:2021",
-      "scope": "German academic institutions and libraries"
+      "scope": "German academic institutions and libraries",
+      "authority_url": "https://www.din.de/en/getting-involved/standards-committees/nid/publications",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "DIN 1505-2"
     },
     "korea": {
       "profile_id": "profile-kr",
       "national_standard": "KS X ISO690",
       "title": "문헌정보 — 정보자원의 서지참조 및 인용 지침",
       "revision_date": "2013-12-19",
-      "scope": "Korean national standard reference; institutional publisher guidelines take precedence"
+      "scope": "Korean national standard reference; institutional publisher guidelines take precedence",
+      "authority_url": "https://standard.go.kr/KSCI/standardIntro/getStandardSearchView.do?ksNo=KSA0001",
+      "verified_at": "2026-09-19",
+      "evidence_status": "confirmed_active",
+      "supersedes": "KS C 5600"
     },
     "japan": {
       "profile_id": "profile-jp",
       "reference_standard": "JIS X 0807:1999",
       "title": "電子文献の引用法",
-      "notes": "Electronic citation guideline; Japanese academic societies typically maintain distinct disciplinary house styles"
+      "notes": "Electronic citation guideline; Japanese academic societies typically maintain distinct disciplinary house styles",
+      "authority_url": "https://www.jisc.go.jp/",
+      "verified_at": "2026-09-19",
+      "evidence_status": "active_standard",
+      "supersedes": null
     },
     "taiwan": {
       "profile_id": "profile-tw",
       "reference_standard": "CNS 13611",
       "title": "書目參考",
       "agency": "BSMI",
-      "notes": "Catalogued bibliographic reference standard; target university or journal requirements take precedence"
+      "notes": "Catalogued bibliographic reference standard; target university or journal requirements take precedence",
+      "authority_url": "https://www.cnsonline.com.tw/",
+      "verified_at": "2026-09-19",
+      "evidence_status": "active_standard",
+      "supersedes": null
     }
   },
   "disciplinary_styles": {
-    "apa": { "name": "APA 7th Edition", "disciplines": ["Psychology", "Social Sciences", "Education"] },
-    "ieee": { "name": "IEEE Style", "disciplines": ["Electrical Engineering", "Computer Science", "Telecommunications"] },
-    "acm": { "name": "ACM Reference Format", "disciplines": ["Computing", "Software Engineering"] },
-    "vancouver": { "name": "Vancouver Style", "disciplines": ["Medicine", "Biomedical Sciences"] },
-    "chicago": { "name": "Chicago Manual of Style (17th/18th)", "disciplines": ["History", "Humanities", "Publishing"] },
-    "mla": { "name": "MLA 9th Edition", "disciplines": ["Literature", "Linguistics", "Cultural Studies"] }
+    "apa": { "name": "APA 7th Edition", "disciplines": ["Psychology", "Social Sciences", "Education"], "authority_url": "https://apastyle.apa.org/" },
+    "ieee": { "name": "IEEE Style", "disciplines": ["Electrical Engineering", "Computer Science", "Telecommunications"], "authority_url": "https://ieeeauthorcenter.ieee.org/" },
+    "acm": { "name": "ACM Reference Format", "disciplines": ["Computing", "Software Engineering"], "authority_url": "https://www.acm.org/publications/authors/reference-formatting" },
+    "vancouver": { "name": "Vancouver Style", "disciplines": ["Medicine", "Biomedical Sciences"], "authority_url": "https://www.nlm.nih.gov/bsd/uniform_requirements.html" },
+    "chicago": { "name": "Chicago Manual of Style (17th/18th)", "disciplines": ["History", "Humanities", "Publishing"], "authority_url": "https://www.chicagomanualofstyle.org/" },
+    "mla": { "name": "MLA 9th Edition", "disciplines": ["Literature", "Linguistics", "Cultural Studies"], "authority_url": "https://style.mla.org/" }
   }
 }

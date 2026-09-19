@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "title": "Multilingual Scholarly Documentation Synchronization Manifest",
+  "description": "Deterministic manifest tracking logical documents, 21 target locales, cryptographic section hashes, terminology registry alignment, and AIDetox contract status.",
+  "target_locales": [
+    { "code": "en", "name": "English", "tier": "global_core" },
+    { "code": "zh-Hans", "name": "Simplified Chinese", "tier": "global_core", "legacy_alias": "zh-CN" },
+    { "code": "zh-Hant", "name": "Traditional Chinese", "tier": "global_core", "legacy_alias": "zh-TW" },
+    { "code": "es", "name": "Spanish", "tier": "global_core" },
+    { "code": "pt", "name": "Portuguese", "tier": "global_core" },
+    { "code": "fr", "name": "French", "tier": "global_core" },
+    { "code": "de", "name": "German", "tier": "global_core" },
+    { "code": "ru", "name": "Russian", "tier": "global_core" },
+    { "code": "ja", "name": "Japanese", "tier": "global_core" },
+    { "code": "ko", "name": "Korean", "tier": "global_core" },
+    { "code": "id", "name": "Indonesian", "tier": "global_core" },
+    { "code": "it", "name": "Italian", "tier": "global_core" },
+    { "code": "hi", "name": "Hindi", "tier": "demographic_regional" },
+    { "code": "ar", "name": "Modern Standard Arabic", "tier": "demographic_regional" },
+    { "code": "bn", "name": "Bengali", "tier": "demographic_regional" },
+    { "code": "ur", "name": "Urdu", "tier": "demographic_regional" },
+    { "code": "vi", "name": "Vietnamese", "tier": "demographic_regional" },
+    { "code": "tr", "name": "Turkish", "tier": "demographic_regional" },
+    { "code": "fa", "name": "Persian", "tier": "demographic_regional" },
+    { "code": "sw", "name": "Swahili", "tier": "demographic_regional" },
+    { "code": "pl", "name": "Polish", "tier": "european_academic" }
+  ],
+  "governing_registries": {
+    "standards_registry_version": "1.1.0",
+    "terminology_registry_version": "2.0.0",
+    "aidetox_contract_version": "1.0.0"
+  },
+  "documents": [
+    {
+      "doc_id": "readme",
+      "canonical_title": "Academic Research Kernel Readme",
+      "source_path": "README.md",
+      "source_locale": "en",
+      "genre": "user_facing_documentation",
+      "aidetox_intensity": "strong",
+      "localized_instances": {
+        "en": { "path": "README.md", "status": "canonical_current", "last_verified": "2026-09-19" },
+        "zh-Hans": { "path": "README.zh-CN.md", "alias_for": "README.zh-Hans.md", "status": "localized_current", "last_verified": "2026-09-19" },
+        "zh-Hant": { "path": "README.zh-TW.md", "alias_for": "README.zh-Hant.md", "status": "localized_current", "last_verified": "2026-09-19" },
+        "ja": { "path": "README.ja.md", "status": "localized_current", "last_verified": "2026-09-19" },
+        "ko": { "path": "README.ko.md", "status": "localized_current", "last_verified": "2026-09-19" },
+        "de": { "path": "README.de.md", "status": "localized_current", "last_verified": "2026-09-19" },
+        "fr": { "path": "README.fr.md", "status": "localized_current", "last_verified": "2026-09-19" },
+        "es": { "path": "README.es.md", "status": "localized_current", "last_verified": "2026-09-19" },
+        "pt": { "path": "i18n/pt/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "ru": { "path": "i18n/ru/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "id": { "path": "i18n/id/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "it": { "path": "i18n/it/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "hi": { "path": "i18n/hi/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "ar": { "path": "i18n/ar/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "bn": { "path": "i18n/bn/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "ur": { "path": "i18n/ur/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "vi": { "path": "i18n/vi/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "tr": { "path": "i18n/tr/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "fa": { "path": "i18n/fa/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "sw": { "path": "i18n/sw/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" },
+        "pl": { "path": "i18n/pl/README.md", "status": "queued_for_generation", "last_verified": "2026-09-19" }
+      }
+    },
+    {
+      "doc_id": "skill_decision_ledger",
+      "canonical_title": "Research Decision Log Skill Specification",
+      "source_path": "skills/decision-ledger/SKILL.md",
+      "source_locale": "en",
+      "genre": "user_facing_documentation",
+      "aidetox_intensity": "strong",
+      "localized_instances": {
+        "en": { "path": "skills/decision-ledger/SKILL.md", "status": "canonical_current", "last_verified": "2026-09-19" },
+        "zh-Hans": { "path": "i18n/zh-Hans/skills/decision-ledger/SKILL.md", "status": "queued_for_generation", "last_verified": "2026-09-19" }
+      }
+    }
+  ]
+}

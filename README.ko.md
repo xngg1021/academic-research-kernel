@@ -79,9 +79,9 @@ QA는 메타데이터, 참조 파일, 개인 경로·알려진 시크릿 패턴,
 
 고정된 Hermes 저작 테스트는 스킬별 규칙을 바꾸지 않고 재사용된다. 상류 전체 배포 개체군 검사는 이 tap에 적용되지 않으며, 본 저장소 하네스는 13개 스킬 전체를 검사하고 고정된 번들·선택 카탈로그에 대해 참조를 해석한다. 이는 완전한 Hermes 설치 테스트가 아니다. CI는 의존성 설치에만 네트워크를 사용하며 일반 PR 테스트는 학술 API를 호출하지 않는다.
 
-CI는 GitHub Actions로 Ubuntu(Python 3.12와 3.13), Windows, macOS에서 전체 QA 스위트를 실행한다. 별도의 tap 통합 워크플로가 main 푸시에서 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 이 저장소에 대해 tap add, search, install, list를 수행한다. 신규 Hermes 세션과 모든 의존성 버전 조합의 검증은 주장하지 않는다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/audit-20260906.md)에 있다.
+CI는 GitHub Actions로 Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 프리뷰 Canary (ubuntu-26.04 및 ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), macOS Intel (macos-15-intel) 전 플랫폼 및 전 아키텍처에 걸쳐 실행되며, 625개 단위 테스트 전원 통과와 최신 상류 main 실시간 Canary 검증을 포함한다. 별도의 tap 통합 워크플로가 main 푸시에서 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 이 저장소에 대해 tap add, search, install, list를 수행한다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/audit-20260906.md)에 있다.
 
 ## 연구·계획 문서
 
 - [고통 지도 v0(영어)](docs/pain-atlas-v0.en.md), [中文版](docs/pain-atlas-v0.zh.md): 학술 지식 작업 생애주기의 마찰점. 정량 주장에는 출처 검증 상태를 붙인다.
-- [연구 계획 v0(영어)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): 14개 아키텍처 프리미티브, Research Object 모델, 4개 평면, 후보 방향, 1단계 요인 분해 행렬.
+- [연구 계획 v0(영어)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): Research Object 모델, 핵심 역량 영역, 후보 방향, 1단계 요인 분해 행렬.

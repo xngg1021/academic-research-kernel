@@ -1,6 +1,6 @@
 ---
 name: research-object-identity
-description: 研究对象身份归一、聚合五态判定与生产谱系内核 (Provenance Kernel v1).
+description: 研究对象身份归一、聚合五态判定与来源追溯及谱系存证 (Provenance Tracking v1).
 version: 1.1.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
@@ -24,7 +24,7 @@ metadata:
 
 Research Object Identity & Provenance Kernel v1：研究对象身份判定与科研生产谱系的**确定性公共骨架**。本技能包含两大核心子系统：
 1. **身份与版本关系层**（[`scripts/identity.py`](scripts/identity.py)）：标识符归一（normalize）、候选记录聚合判定（resolve）、关系与版本谱系建边（link）。
-2. **生产谱系内核（Provenance Kernel v1）**（[`scripts/provenance.py`](scripts/provenance.py)）：借鉴 W3C PROV-DM 规范，确立计算活动（Activity）与产物实体（Entity）为一等公民，提供严格因果 DAG 校验与毫秒级脱机反向溯源，产出符合 [`../../schemas/lineage-receipt.schema.json`](../../schemas/lineage-receipt.schema.json) 的确定性存证回执。
+2. **来源追溯与谱系存证（Provenance Tracking v1）**（[`scripts/provenance.py`](scripts/provenance.py)）：借鉴 W3C PROV-DM 规范，确立计算活动（Activity）与产物实体（Entity）为一等公民，提供严格因果 DAG 校验与毫秒级脱机反向溯源，产出符合 [`../../schemas/lineage-receipt.schema.json`](../../schemas/lineage-receipt.schema.json) 的确定性存证回执。
 
 纯标准库、无网络依赖、无外部大模型调用。判定与验证结论一律为离散字段，**严禁任何置信分数与模糊打分**。
 
@@ -79,7 +79,7 @@ Research Object Identity & Provenance Kernel v1：研究对象身份判定与科
 - `lineage`（preprint_to_vor、correction、retraction、version_chain）：双向回填，保留方向。
 evidence 必须包含：source、queried_at、match_fields、conflict_fields、human_confirmed 五项。
 
-## 工作流四：生产谱系内核与可重放回执 (Provenance Kernel)
+## 工作流四：来源追溯与可重放回执 (Provenance Tracking)
 
 使用 `provenance` 模块构建全流程生产谱系网络：
 
@@ -139,7 +139,7 @@ exact = rid.resolve([
     {'identifiers': [{'type': 'doi', 'value': 'doi:10.1/A'}], 'title': 'T', 'authors': ['A, B'], 'year': 2020}])
 assert exact['verdict'] == 'EXACT' and exact['human_confirmed'] is False
 
-# 3. 生产谱系内核冒烟测试
+# 3. 来源追溯与谱系存证冒烟测试
 graph = pr.LineageGraph()
 e_in = graph.add_entity("raw_1", "data_snapshot")
 e_out = graph.add_entity("clean_1", "data_snapshot")

@@ -88,6 +88,7 @@
         "title",
         "normalized_title",
         "decision_type",
+        "entry_kind",
         "decision_digest"
       ],
       "properties": {
@@ -97,7 +98,8 @@
         },
         "title": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "maxLength": 512
         },
         "normalized_title": {
           "type": "string"
@@ -137,15 +139,63 @@
           "pattern": "^[0-9a-f]{64}$"
         },
         "context_work_id": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
         },
         "locator": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 2048
         },
         "metadata": {
           "type": "object"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "entry_kind": {
+                "const": "negative_result"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "decision_type": {
+                "const": "negative_result"
+              },
+              "decision_action": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "entry_kind": {
+                "const": "decision"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "decision_action"
+            ],
+            "properties": {
+              "decision_action": {
+                "type": "string",
+                "enum": [
+                  "explore",
+                  "commit",
+                  "abandon",
+                  "revise"
+                ]
+              }
+            }
+          }
+        }
+      ]
     },
     "basisEdge": {
       "type": "object",
@@ -468,7 +518,8 @@
         },
         "rationale": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "maxLength": 4096
         },
         "outcome_digest": {
           "type": "string",
@@ -482,7 +533,8 @@
           "$ref": "#/$defs/receiptRef"
         },
         "locator": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 2048
         },
         "metadata": {
           "type": "object"

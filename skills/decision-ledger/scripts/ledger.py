@@ -793,10 +793,8 @@ class RouteStatus:
         }
         if self.stop_reason:
             d["stop_reason"] = self.stop_reason
-            d["prune_reason"] = self.stop_reason
         if self.closed_by:
             d["closed_by"] = self.closed_by
-            d["pruned_by"] = self.closed_by
         if self.alternative_ref:
             d["alternative_ref"] = self.alternative_ref
         if self.receipt_ref is not None:
@@ -821,7 +819,7 @@ def canonical_prune_tuple(state: RouteStatus) -> Tuple[str, ...]:
 
 @dataclass(frozen=True)
 class DecisionStateEvent:
-    """An append-only state transition event for a decision (the State Ledger本体).
+    """An append-only state transition event for a decision.
 
     History is a sequence of these events; the current lifecycle state of a
     decision is always DERIVED by replaying its events. `from_state` is None
@@ -835,7 +833,7 @@ class DecisionStateEvent:
     decision_id: str
     from_state: Optional[str]
     to_state: str
-    sequence: int = 0
+    sequence: int = 1
     reason: Optional[str] = None
     caused_by: Optional[str] = None
     alternative_ref: Optional[str] = None
@@ -857,13 +855,13 @@ class DecisionStateEvent:
             if self.reason not in VALID_PRUNE_REASONS:
                 raise ValueError(f"Invalid prune reason: {self.reason!r}. Must be one of {sorted(VALID_PRUNE_REASONS)}")
         else:
-            if self.reason is not None:
-                if self.to_state != "reopened":
-                    raise ValueError(f"'reason' is only allowed for pruned or reopened states, got to_state={self.to_state!r}.")
+            if self.reason is not None and self.to_state == "active":
+                raise ValueError(f"State transition to 'active' cannot take a reason (reason was {self.reason!r}).")
+            if self.reason is not None and self.to_state == "reopened":
                 if self.reason not in VALID_REOPEN_REASONS:
                     raise ValueError(f"Invalid reopen reason: {self.reason!r}. Must be one of {sorted(VALID_REOPEN_REASONS)}")
-            if self.to_state == "active" and (self.caused_by is not None or self.alternative_ref is not None):
-                raise ValueError("Genesis active event must not carry caused_by/alternative_ref.")
+            if self.caused_by is not None or self.alternative_ref is not None:
+                raise ValueError(f"Only 'pruned' transitions may carry caused_by/alternative_ref.")
         if self.caused_by is not None:
             _check_id(self.caused_by, "caused_by")
             if self.caused_by == self.decision_id:
@@ -874,8 +872,8 @@ class DecisionStateEvent:
                 raise ValueError(f"Self-referential alternative: decision '{self.decision_id}' cannot be its own alternative.")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
             raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
-        if not isinstance(self.sequence, int) or self.sequence < 0:
-            raise ValueError("'sequence' must be a non-negative integer.")
+        if not isinstance(self.sequence, int) or self.sequence < 1:
+            raise ValueError("'sequence' must be an integer >= 1.")
         object.__setattr__(self, "metadata", _frozen_meta(self.metadata))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -942,7 +940,7 @@ class OutcomeCorrection:
     outcome_digest: str = field(init=False)
     receipt_ref: Optional[ReceiptRef] = None
     locator: Optional[str] = None
-    sequence: int = 0
+    sequence: int = 1
     metadata: FrozenDict = field(default_factory=FrozenDict)
 
     def __post_init__(self):
@@ -957,8 +955,8 @@ class OutcomeCorrection:
         if self.locator is not None:
             if not isinstance(self.locator, str) or len(self.locator) > 2048:
                 raise ValueError("locator must be a string up to 2048 characters.")
-        if not isinstance(self.sequence, int) or self.sequence < 0:
-            raise ValueError("'sequence' must be a non-negative integer.")
+        if not isinstance(self.sequence, int) or self.sequence < 1:
+            raise ValueError("'sequence' must be an integer >= 1.")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
             raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
         digest = compute_outcome_digest(
@@ -1617,19 +1615,13 @@ class DecisionLedger:
         """Resolve a ReceiptRef to a registered receipt payload (CEG-compatible lookup).
 
         lineage refs resolve by receipt_id; academic_evidence refs resolve by
-        payload_sha256 key first (O(1) index), then by canonical payload hash scan.
+        payload_sha256 in strictly O(1) time via the academic hash index.
         """
         if ref.kind == "lineage":
             return self._receipts.get(ref.receipt_id)
         if ref.payload_sha256 in self._receipts:
             return self._receipts[ref.payload_sha256]
-        if ref.payload_sha256 in self._academic_hash_index:
-            return self._academic_hash_index[ref.payload_sha256]
-        for reg_val in self._receipts.values():
-            val_dict = reg_val if isinstance(reg_val, dict) else (reg_val.to_dict() if hasattr(reg_val, "to_dict") else {})
-            if canonical_academic_receipt_payload_sha256(val_dict) == ref.payload_sha256:
-                return val_dict
-        return None
+        return self._academic_hash_index.get(ref.payload_sha256)
 
     def _validate_receipt_ref(self, ref: Optional[ReceiptRef], subject: str, errors: List[str]):
         if ref is None:

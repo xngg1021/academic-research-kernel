@@ -130,20 +130,31 @@ def static_checks(root=ROOT):
                 errors.extend(f'{path.relative_to(root)}:{i}: {e}' for e in code_issues(code))
         except (ValueError, SyntaxError) as e:
             errors.append(str(e))
-    banned_jargon = [
-        "レジャー",
-        "영수증",
-        "Beschneidungskausalität",
-        "causalité d’élagage",
-        "causalidad de poda",
-        "台账内核",
-        "Truth Authority",
-    ]
-    for r_path in root.glob("README*.md"):
-        r_text = r_path.read_text(encoding="utf-8")
-        for word in banned_jargon:
-            if word in r_text:
-                errors.append(f"{r_path.name}: banned user-facing jargon detected: '{word}'")
+    term_reg_path = root / "docs" / "terminology" / "registry.json"
+    if term_reg_path.is_file():
+        try:
+            term_reg = json.loads(term_reg_path.read_text(encoding="utf-8"))
+            banned_jargon = set()
+            for c_info in term_reg.get("concepts", {}).values():
+                if c_info.get("forbidden_in_user_docs"):
+                    for loc_list in c_info.get("deprecated_labels", {}).values():
+                        banned_jargon.update(loc_list)
+            banned_jargon.update([
+                "レジャー", "영수증", "Beschneidungskausalität", "causalité d’élagage",
+                "causalidad de poda", "台账内核", "Truth Authority", "State Ledger本体"
+            ])
+            for doc_path in root.rglob("*.md"):
+                if '.git' in doc_path.parts:
+                    continue
+                rel_str = "/".join(doc_path.relative_to(root).parts)
+                if any(ex in rel_str for ex in ["CHANGELOG", "audit", "post-pr9-roadmap", "pain-atlas", "research-plan", "terminology", "standards", "references/china-academia", "post-pr6-roadmap", "proposal-priors", "scientific-compute-fabric.md"]):
+                    continue
+                doc_text = doc_path.read_text(encoding="utf-8")
+                for term in banned_jargon:
+                    if term in doc_text:
+                        errors.append(f"{rel_str}: banned jargon detected: '{term}'")
+        except Exception as e:
+            errors.append(f"terminology registry QA check failed: {e}")
     for path in root.rglob('*'):
         if not path.is_file() or '.git' in path.parts or '__pycache__' in path.parts or '.pytest_cache' in path.parts:
             continue

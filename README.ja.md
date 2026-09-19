@@ -87,9 +87,9 @@ QA はメタデータ、リファレンス、個人パス・既知シークレ�
 
 固定された Hermes オーサリングテストは、スキルごとの規則を変えずに再利用される。上流の全配布個体数チェックはこの tap には適用されず、本リポジトリのハーネスは 13 のスキルすべてを検査し、固定されたバンドル・任意カタログに対してリファレンスを解決する。これは完全な Hermes インストールテストではない。CI は依存のインストールにのみネットワークを使用し、通常の PR テストは学術 API を呼び出さない。
 
-CI は GitHub Actions により Ubuntu(Python 3.12 と 3.13)、Windows、macOS で完全な QA スイートを実行する。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、このリポジトリに対して tap add、search、install、list を実行する。新規の Hermes セッションやすべての依存バージョン組合せの検証は主張しない。正確なバージョン、チェック項目、制約は[監査文書](docs/audit-20260906.md)にある。
+CI は GitHub Actions により Linux x86_64 (Python 3.10-3.14)、Linux ARM64 (ubuntu-24.04-arm)、Ubuntu 26.04 プレビュー Canary (ubuntu-26.04 および ubuntu-26.04-arm)、Windows x86_64、Windows ARM64 (windows-11-arm)、macOS ARM64 (macos-latest)、macOS Intel (macos-15-intel) の全プラットフォーム・全アーキテクチャを網羅し、625 件の単体テストがすべて合格、上流 main 最新ブランチに対するリアルタイム Canary 検証も含めて実行される。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、このリポジトリに対して tap add、search、install、list を実行する。正確なバージョン、チェック項目、制約は[監査文書](docs/audit-20260906.md)にある。
 
 ## 研究・計画文書
 
 - [ペインポイント図鑑 v0(英語)](docs/pain-atlas-v0.en.md)、[中文版](docs/pain-atlas-v0.zh.md):学術知識作業のライフサイクル上の摩擦点。定量主張には出典検証状態を付す。
-- [研究計画 v0(英語)](docs/research-plan-v0.en.md)、[中文版](docs/research-plan-v0.zh.md):14 のアーキテクチャプリミティブ、Research Object モデル、4 平面、候補方向、第 1 段階の因子分解行列。
+- [研究計画 v0(英語)](docs/research-plan-v0.en.md)、[中文版](docs/research-plan-v0.zh.md):Research Object モデル、中核機能領域、候補方向、第 1 段階の因子分解行列。

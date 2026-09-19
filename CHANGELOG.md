@@ -12,25 +12,27 @@
 
 - **核心数据契约 (`schemas/decision-ledger-receipt.schema.json`)**：
   - JSON Schema draft 2020-12、`additionalProperties: false`、协议常量 `decision-ledger-1.0`；
-  - 核心记录模型：`decisions`（区分 entry_kind 与 decision_action，严禁将失败结果与决策行为混维）、`bases`（decision / negative_result 依据边，彻底移除 claim 别名）、`forks`（considered/explored/deferred/rejected 分支边，含 `receipt_ref`）、`state_events`（追加式状态转移事件，驱动生命周期状态）、`corrections`（128 位内容 ID 与单调 sequence 结果修正）、`uncertainties`（离散枚举）；导出包含 `verification_manifest` 与 `verification_digest`，内容身份与本地验证态严格解耦；
+  - 核心记录模型：`decisions`（区分 entry_kind 与 decision_action，严禁将失败结果与决策行为混维，Schema 严格校验 entry_kind 与 decision_action 的条件映射）、`bases`（decision / negative_result 依据边，彻底移除 claim 别名）、`forks`（considered/explored/deferred/rejected 分支边，含 `receipt_ref`）、`state_events`（追加式状态转移事件，sequence >= 1，驱动生命周期状态）、`corrections`（128 位内容 ID 与单调 sequence >= 1 结果修正）、`uncertainties`（离散枚举）；导出包含 `verification_manifest` 与 `verification_digest`，内容身份与本地验证态严格解耦；字段长度与正则模式（title 512、locator 2048、rationale 4096、context_work_id ID 规范）在 Schema 与 Python 间实现 100% 严格一致；
   - `receiptRef` 复用 CEG 的 `oneOf` 双契约（lineage / academic_evidence），与 `schemas/claim-evidence-graph.schema.json` 逐字段一致。
 - **确定性内核 (`skills/decision-ledger/scripts/ledger.py`)**：
-  - 自然科研 API：正式暴露 `RouteStatus`、`record_route_status()`、`trace_stop_reason()`、`add_negative_result()` 等科研语义接口，兼容保留内部别名；
+  - 自然科研 API：正式暴露 `RouteStatus`、`record_route_status()`、`trace_stop_reason()`、`add_negative_result()` 等科研语义接口，兼容保留内部别名；`RouteStatus.to_dict()` 仅输出标准科研状态字段，不泄露内部算法名；
   - 状态变更历史纯追加：所有记录为 frozen dataclass + `FrozenDict`（`MappingProxyType` 背板真不可变）；当前状态（active/pruned/reopened）由追加式 `DecisionStateEvent` 重放派生，严格状态迁移闭集自动机校验，`current_state()` 正确暴露 `reopened` 状态；
-  - 结果修正时序严格保护：`OutcomeCorrection` 引入单调 sequence 参与 ID 派生，幂等仅对当前最新事件生效，历史中再次发生的相同结果正确记录为新事件；
+  - 结果修正时序严格保护：`OutcomeCorrection` 引入单调 sequence 参与 ID 派生，sequence 严格要求 >= 1，幂等仅对当前最新事件生效，历史中再次发生的相同结果正确记录为新事件；
   - 失败尝试存证纪律：`negative_result` 必须携带依据边（E404），必须有决策类正证据基础（E405），依据类型与目标决策类型强校验（E103），自指或负结果互指判错（E406），负结果依据闭包成环硬失败（E407）；
   - 路线终止原因与可追溯性：封闭词表终止原因 + `closed_by` 主导决策 + `alternative_ref` 备选路径；派生当前图终止链严格无环（E304，路径索引法只报真环成员）；`trace_stop_reason` 递归返回完整因果链；
-  - 单遍图分析与全链路索引：单遍 Tarjan's SCC 算法提取强连通分量与环可达集；建立按决策索引的 `_bases_by_decision`、`_bases_by_target`、`_state_events_by_decision`、`_corrections_by_decision` 与 `_academic_hash_index`，检索均达 O(1)；`to_dict()` 单次流计算哈希与清单；
+  - 单遍图分析与全链路索引：单遍 Tarjan's SCC 算法提取强连通分量与环可达集；建立按决策索引的 `_bases_by_decision`、`_bases_by_target`、`_state_events_by_decision`、`_corrections_by_decision` 与 `_academic_hash_index`，`_resolve_receipt` 直接基于索引实现真正的严格 O(1) 检索；`to_dict()` 单次流计算哈希与清单；
   - 严格回放加载器 `from_dict`：四门严密防篡改（Gate 1 原始摘要核验、Gate 2 派生一致性断言、Gate 3 全量不确定性队列（含 missing_receipt）100% 验证、Gate 4 图结构强校验 `validate_ledger()` fail-closed）；严格拒绝额外顶层字段；
   - 构造期严厉失败关闭：`_validate_json_metadata_value` 拦截非有限浮点（NaN/Inf）、非字符串键、非法对象与循环引用；收据冲突采用规范 JSON 字节流比对。
 - **全球学术标准基线 (`docs/standards/`) 与自然术语清单 (`docs/terminology/`)**：
-  - 确立 ISO 690:2021、ISO 5127:2017 与 W3C PROV 为全球基线，解耦语言与司法管辖区规范；
-  - 建立机器可读标准清单 `docs/standards/registry.json` 与术语清单 `docs/terminology/registry.json`；
-  - 重构 8 个语言版本 README，彻底剔除机器翻译生造黑话。
+  - 确立 ISO 690:2021、ISO 704:2022、ISO 860:2007、ISO 5127:2017 与 W3C PROV 为全球基线，解耦语言与司法管辖区规范；标准注册表逐项完善 `authority_url`、`verified_at`、`evidence_status` 与 `supersedes` 证据链；
+  - 建立机器可读标准清单 `docs/standards/registry.json` 与涵盖 18 组概念、202 个跨语言术语的 `docs/terminology/registry.json`；
+  - 建立 AIDetox 公开文档写作契约 `docs/style/aidetox-contract.json` 与多语言同步清册 `docs/i18n/manifest.json`；
+  - 重构 8 个语言版本 README，彻底剔除机器翻译生造黑话，统一跨平台 CI 矩阵描述与底部能力领域概括；
+  - `scripts/qa.py` 静态门禁全仓扫描用户端 Markdown 拦截 202 个生造词与内部黑话。
 - **技能文档 (`skills/decision-ledger/SKILL.md`)**：以自然科研语言重写，frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
-- **测试 (`tests/test_decision_ledger.py`)**：92 项对抗性回归，单测基线升至 **624 passed**。
+- **测试 (`tests/test_decision_ledger.py`)**：93 项对抗性回归，单测基线升至 **625 passed**。
 
-**验证**：`pytest` 624 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
+**验证**：`pytest` 625 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
 
 ### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
 
@@ -98,9 +100,9 @@
 - **[P2] `register_receipt()` 规范化字节比较**：收据冲突判断采用 canonical JSON bytes 对比，彻底避免 Python `1 == 1.0` 等宽松判等误判。
 - **[P3] 用户面命名与去黑话**：用户面统一命名为 **Research Decision Log（研究决策与失败记录）**（内部协议保持 `decision-ledger-1.0`）；彻底剥除“Truth Authority”“剪枝因果”“三态不确定性队列”“basis-transparency”等过度工程化用词。
 - **[P3] 全链路性能索引与摘要去重**：建立按决策索引的 `_bases_by_decision`、`_state_events_by_decision`、`_corrections_by_decision`，建立学术收据哈希索引 `_academic_hash_index` 实现 O(1) 检索；`to_dict()` 仅单次计算 digest 与 manifest，杜绝多重重复哈希。
-- **[P3] 测试基线提升**：单测由 615 项升至 **624 项**（92 项专属于 decision-ledger 严苛回归测试），全仓绿灯通过。
+- **[P3] 测试基线提升**：单测由 615 项升至 **625 项**（93 项专属于 decision-ledger 严苛回归测试），全仓绿灯通过。
 
-**验证（最终收口后）**：`pytest` 624 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
+**验证（最终收口后）**：`pytest` 625 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
 
 ---
 

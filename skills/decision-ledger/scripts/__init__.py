@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Decision & Negative Result Ledger Kernel v1.
+"""Research Decision Log (Decision & Negative Result Ledger Kernel v1).
 
-Deterministic, append-only ledger for research decisions, negative results,
-prune causality, and outcome corrections. Pure standard library, no LLM, no
+Deterministic, append-only event log for research decisions, failed attempts,
+route stop reasons, and outcome changes. Pure standard library, no LLM, no
 network. Consumes the same receipt contracts as the Claim-Evidence Graph
 Kernel (LineageReceipt, AcademicEvidenceReceipt).
 """

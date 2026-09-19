@@ -114,9 +114,9 @@ import os
 from pathlib import Path
 base = Path(os.environ.get('SKILL_DIR', '.')).expanduser().resolve()
 text = (base / 'references/citation-styles.md').read_text(encoding='utf-8')
-for style in ('APA', 'MLA', 'Chicago', 'IEEE', 'AMA', 'GB/T 7714'):
+for style in ('ISO 690', 'APA', 'MLA', 'Chicago', 'IEEE', 'AMA', 'GB/T 7714'):
     assert style in text, f'引用风格 {style} 缺失'
-for ref in ('submission-letters.md', 'china-academia.md'):
+for ref in ('submission-letters.md', 'china-academia.md', 'mainland-china-academia.md'):
     assert (base / 'references' / ref).is_file(), f'{ref} 缺失'
 print('academic-writing reference verification passed')
 ```

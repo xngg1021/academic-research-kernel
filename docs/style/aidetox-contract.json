@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "title": "AIDetox Scholarly Documentation Style Contract",
+  "description": "Deterministic documentation writing standards and stylistic invariants frozen from the AIDetox research kernel for multilingual scholarly repositories.",
+  "provenance": {
+    "source_repository": "xngg1021/ai-flavor-detox",
+    "source_commit": "229caddc0ac9c1f8028d28d72ae085905cb02eb5",
+    "frozen_at": "2026-09-19"
+  },
+  "invariants": {
+    "universal_protected_tokens": [
+      "numbers_and_quantities",
+      "urls_and_doi_links",
+      "code_blocks_and_inline_identifiers",
+      "cryptographic_hashes_and_shas",
+      "api_symbols_and_function_signatures",
+      "logical_negations",
+      "comparative_and_directional_claims",
+      "bibliographic_citations",
+      "table_row_and_column_memberships",
+      "ordered_and_unordered_list_items",
+      "section_structural_hierarchy",
+      "factual_evidence_sources"
+    ],
+    "authoring_principles": [
+      "Identity of speaker is explicit; facts have verifiable sources.",
+      "Expressions provide genuine informational increment, not formulaic filler.",
+      "Contradictions and negative findings are preserved rather than smoothed over.",
+      "No fabricated operational details or unevidenced certainty.",
+      "Style fixes must never alter numbers, negations, comparisons, code, or links.",
+      "Qualitative assessments report concrete discrete features and counts rather than subjective composite scores."
+    ]
+  },
+  "document_genres": {
+    "user_facing_documentation": {
+      "target": ["README*.md", "skills/*/SKILL.md", "docs/guides/*.md"],
+      "aidetox_intensity": "strong",
+      "rules": "Task-oriented, natural academic register, devoid of engineering jargon and formulaic step broadcasting."
+    },
+    "technical_and_schema_specifications": {
+      "target": ["schemas/*.json", "docs/standards/*.md", "docs/terminology/*.md"],
+      "aidetox_intensity": "medium",
+      "rules": "Clarity prioritized; precise technical terminology and schema constraints preserved verbatim."
+    },
+    "research_plans_and_evaluations": {
+      "target": ["docs/*roadmap*.md", "docs/*plan*.md"],
+      "aidetox_intensity": "medium",
+      "rules": "Eliminate synthetic hype phrases; preserve dialectical argumentation and epistemic uncertainty."
+    },
+    "historical_and_audit_records": {
+      "target": ["CHANGELOG.md", "docs/audits/*.md"],
+      "aidetox_intensity": "audit_safe",
+      "rules": "Preserve historical terms and verbatim quotes; restrict edits to grammatical clarity without rewriting factual history."
+    }
+  },
+  "prohibited_patterns": {
+    "step_broadcasting": [
+      "第1步", "第2步", "首先进行", "接下来我们", "具体如下"
+    ],
+    "synthetic_hyperbole": [
+      "注入新动能", "开启新篇章", "未来可期", "值得注意的是", "由此可见", "不难发现", "综上所述"
+    ],
+    "jargon_stacking": [
+      "赋能", "抓手", "闭环", "心智", "打通"
+    ]
+  }
+}

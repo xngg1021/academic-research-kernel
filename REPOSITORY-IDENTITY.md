@@ -20,7 +20,7 @@
 
 ## 2. 身份迁移原因与定位跃迁
 
-随着 **PR #5**（Harness-neutral 中立传输契约、stdio MCP 工具服务、Agent Plugins v1 规范支持）与 **PR #6**（W3C PROV 风格的生产谱系内核与可重放 `LineageReceipt`）先后通过全架构严格 CI 合入 `main`：
+随着 **PR #5**（Harness-neutral 中立传输契约、stdio MCP 工具服务、Agent Plugins v1 规范支持）与 **PR #6**（W3C PROV 风格的来源追溯核心与可重放 `LineageReceipt`）先后通过全架构严格 CI 合入 `main`：
 1. 本仓库已经从“服务于 Hermes 单一智能体的技能包”，彻底演进为**跨智能体生态中立的科研基础设施公共内核**；
 2. 消除旧名称对外部智能体（Claude Code、Cursor、Gemini CLI 等）科研用户的认知壁垒；
 3. 现行 JSON Schemas `$id`、多语言安装指南与 MCP 服务名称已完整对齐新命名。

@@ -394,7 +394,7 @@ def test_uncertainty_for_unsupported_pruning():
 def test_trace_prune_cause_full_chain():
     g = _populated_ledger()
     tr = g.trace_prune_cause("d-c")
-    assert tr["prune_state"]["prune_reason"] == "resource_exhausted"
+    assert tr["prune_state"]["stop_reason"] == "resource_exhausted"
     assert tr["pruned_by_decision"]["id"] == "d-b"
     assert tr["alternative_decision"]["id"] == "d-a"
     assert tr["unsupported_reason"] is None
@@ -1421,3 +1421,16 @@ def test_route_status_natural_scientific_api():
     assert trace["route_status"]["stop_reason"] == "resource_exhausted"
     assert len(trace["stop_chain"]) == 1
     assert trace["stop_chain"][0]["closed_by"] == "d-commit"
+
+
+def test_sequence_minimum_and_schema_entry_kind_contract():
+    """sequence must be >= 1 for state events and corrections; entry_kind is enforced."""
+    with pytest.raises(ValueError, match="'sequence' must be an integer >= 1"):
+        dl.DecisionStateEvent(event_id="evt-" + "1" * 32, decision_id="d1", from_state=None, to_state="active", sequence=0)
+    with pytest.raises(ValueError, match="'sequence' must be an integer >= 1"):
+        dl.OutcomeCorrection(correction_id="corr-" + "1" * 32, decision_id="d1", verdict="positive", rationale="works", sequence=0)
+
+    evt = dl.DecisionStateEvent(event_id="evt-" + "1" * 32, decision_id="d1", from_state=None, to_state="active", sequence=1)
+    assert evt.sequence == 1
+    corr = dl.OutcomeCorrection(correction_id="corr-" + "1" * 32, decision_id="d1", verdict="positive", rationale="works", sequence=1)
+    assert corr.sequence == 1
