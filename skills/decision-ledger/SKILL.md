@@ -34,15 +34,15 @@ Decision & Negative Result Ledger Kernel v1：科研决策与负结果的**确�
 
 ## 核心设计纪律
 
-1. **只追加、不销改 (Append-only)**：决策、依据、分支、剪枝状态与结果修正均为不可变记录；结论变化以新的内容寻址修正事件入账。
+1. **只追加、不销改 (Append-only)**：决策、依据、分支、状态事件与结果修正均为不可变记录；生命周期状态（active/pruned/reopened）由追加式状态事件重放派生，结论变化以新的内容寻址修正事件入账，从不原地改写历史。
 2. **拒绝真理裁判所 (Truth Authority)**：无置信分、无效用分、无排名数值；裁决是离散枚举（`positive`/`negative`/`inconclusive`/`unverifiable`），台账记录选择与证据，不判定真理。
 3. **负结果是携带证据的缺席断言**：`negative_result` 决策必须携带至少一条依据边，且必须有 `claim` 类依据；仅由其他负结果支撑的负结果无法通过校验（E405）。
-4. **剪枝因果是一等公民且严格无环**：剪枝状态记录封闭词表原因（`resource_exhausted`、`superseded`、`contradicted` 等）与剪枝决策、备选路径；`pruned_by` 链成环直接判错（E304）。
+4. **剪枝因果是一等公民且严格无环**：剪枝以状态事件入账，记录封闭词表原因（`resource_exhausted`、`superseded`、`contradicted` 等）与剪枝决策、备选路径；`caused_by` 链在派生当前图上严格无环（E304）；`trace_prune_cause` 递归返回完整剪枝链，缺 claim 依据的剪枝给出确定性 `unsupported_reason`。
 5. **强类型收据引用与严格互斥**：`lineage` 引用要求 `receipt_id` 与 `receipt_digest`；`academic_evidence` 引用要求 `claim_digest` 与 `payload_sha256`；契约与 CEG 内核逐字节兼容。
 6. **物理级收据校验**：学术收据负载 SHA256 物理重算断言，注册表键无法绕过哈希校验；谱系收据正向断言协议、收据 ID 与摘要。
 7. **深度冻结**：所有记录为 frozen dataclass，元数据为 `FrozenDict`；注册收据深拷贝，杜绝外部变异漂移。
 8. **三态不确定性队列**：`decision_without_basis`、`unsupported_negative_result`、`missing_receipt`、`unsupported_pruning` 以内容寻址确定性 ID 入队，均不阻断结构校验。
-9. **顺序无关台账摘要**：全量规范化排序，插入顺序不影响 `ledger_digest`；注册收据以规范化负载哈希参与摘要。
+9. **顺序无关内容身份摘要**：`ledger_digest` 只覆盖台账记录（决策、依据、分支、状态事件、修正），本地收据注册表（验证缓存）不进入内容身份——同一台账无论注册标签如何命名，摘要恒等；验证态另计 `verification_digest`。唯一例外：修正与状态事件的 `sequence` 计数器记录真实追加历史，合法影响摘要。
 10. **词汇级规范化**：NFC 与空白压缩，绝不语义改写决策标题。
 
 ## Verification

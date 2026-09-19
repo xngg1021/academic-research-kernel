@@ -67,6 +67,7 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Tuple
 
 PROTOCOL = "decision-ledger-1.0"
@@ -88,6 +89,20 @@ VALID_PRUNE_REASONS: set = {
     "investigator_error",
     "other",
 }
+VALID_DECISION_STATES: set = {"active", "pruned", "reopened"}
+VALID_REOPEN_REASONS: set = {
+    "new_evidence",
+    "scope_change",
+    "investigator_reconsideration",
+    "error_correction",
+    "other",
+}
+VALID_STATE_TRANSITIONS: Dict[Optional[str], set] = {
+    None: {"active", "pruned"},          # genesis
+    "active": {"pruned"},
+    "pruned": {"reopened"},
+    "reopened": {"pruned"},
+}
 VALID_VERDICTS: set = {"positive", "negative", "inconclusive", "unverifiable"}
 VALID_RECEIPT_KINDS: set = {"academic_evidence", "lineage"}
 VALID_UNCERTAINTY_KINDS: set = {
@@ -107,6 +122,7 @@ __all__ = [
     "DecisionBasisEdge",
     "DecisionForkEdge",
     "PruneState",
+    "DecisionStateEvent",
     "OutcomeCorrection",
     "UncertaintyItem",
     "DecisionLedger",
@@ -115,6 +131,7 @@ __all__ = [
     "compute_outcome_digest",
     "canonical_basis_tuple",
     "canonical_fork_tuple",
+    "canonical_state_event_tuple",
     "canonical_receipt_ref_tuple",
     "canonical_ledger_payload_sha256",
     "canonical_academic_receipt_payload_sha256",
@@ -189,23 +206,45 @@ def canonical_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
     return hashlib.sha256(_canonical_json_bytes(payload_dict)).hexdigest().lower()
 
 
-def _jsonable(obj: Any) -> Any:
-    """Deterministically convert an arbitrary registered payload to JSON-able structures.
+def _jsonable(obj: Any, _seen: Optional[set] = None) -> Any:
+    """Deterministically convert a registered payload to JSON-able structures.
 
-    Mappings, lists, tuples, and JSON primitives pass through; objects exposing
-    to_dict() are unwrapped recursively; anything else degrades to repr().
-    This keeps ledger_digest total (never TypeError) while staying deterministic.
+    Strictly bounded domain: JSON primitives, mappings, lists/tuples, and
+    objects exposing to_dict() (unwrapped recursively). Everything else FAILS
+    CLOSED (TypeError): no repr() fallback (non-deterministic across
+    processes, and an arbitrary code path on foreign objects). Cyclic
+    containers are rejected (ValueError).
     """
-    if isinstance(obj, collections.abc.Mapping):
-        return {str(k): _jsonable(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [_jsonable(v) for v in obj]
+    if _seen is None:
+        _seen = set()
     if isinstance(obj, (str, int, float, bool)) or obj is None:
         return obj
+    oid = id(obj)
+    if oid in _seen:
+        raise ValueError("Cyclic container in receipt payload: canonical serialization refuses cyclic references.")
+    if isinstance(obj, collections.abc.Mapping):
+        _seen.add(oid)
+        try:
+            return {str(k): _jsonable(v, _seen) for k, v in obj.items()}
+        finally:
+            _seen.discard(oid)
+    if isinstance(obj, (list, tuple)):
+        _seen.add(oid)
+        try:
+            return [_jsonable(v, _seen) for v in obj]
+        finally:
+            _seen.discard(oid)
     to_dict = getattr(obj, "to_dict", None)
     if callable(to_dict):
-        return _jsonable(to_dict())
-    return repr(obj)
+        _seen.add(oid)
+        try:
+            return _jsonable(to_dict(), _seen)
+        finally:
+            _seen.discard(oid)
+    raise TypeError(
+        f"Unsupported payload type {type(obj).__name__!r} for canonical serialization: "
+        "only JSON primitives, mappings, sequences, and objects with to_dict() are allowed."
+    )
 
 
 def canonical_academic_receipt_payload_sha256(receipt_dict: Mapping[str, Any]) -> str:
@@ -262,12 +301,11 @@ def _thaw_val(val: Any) -> Any:
 class FrozenDict(collections.abc.Mapping):
     """Immutable mapping with deep freezing.
 
-    The internal store lives in a private-class slot reachable only through
-    name mangling; every mutating dunder raises, so ordinary and reflective
-    call paths cannot rewrite entries. The hash is recomputed from current
-    content on every call (entries are small), so the hash unconditionally
-    reflects the current content — no cache to go stale, even under
-    out-of-contract slot tampering.
+    The backing store is a MappingProxyType created at construction time; no
+    mutable dict reference ever leaves the object, so there is NO reachable
+    path — ordinary, reflective, or slot-based — to rewrite an entry. The
+    hash is recomputed from current content on every call (entries are
+    small), so the hash unconditionally reflects the content.
     """
 
     __slots__ = ("_data",)
@@ -280,7 +318,7 @@ class FrozenDict(collections.abc.Mapping):
         else:
             source = dict(mapping_or_iterable)
         frozen = {str(k): _freeze_val(v) for k, v in source.items()}
-        object.__setattr__(self, "_data", frozen)
+        object.__setattr__(self, "_data", MappingProxyType(frozen))
 
     def __setattr__(self, key: str, value: Any):
         raise TypeError(f"'{self.__class__.__name__}' object does not support mutation.")
@@ -675,6 +713,113 @@ def canonical_prune_tuple(state: PruneState) -> Tuple[str, ...]:
 
 
 @dataclass(frozen=True)
+class DecisionStateEvent:
+    """An append-only state transition event for a decision (the State Ledger本体).
+
+    History is a sequence of these events; the current lifecycle state of a
+    decision is always DERIVED by replaying its events. `from_state` is None
+    only for the genesis event. `reason` is required when to_state='pruned'
+    (closed vocabulary VALID_PRUNE_REASONS) and optional when
+    to_state='reopened' (closed vocabulary VALID_REOPEN_REASONS). `sequence`
+    is a ledger-assigned monotonic insertion counter (1-based).
+    """
+
+    event_id: str
+    decision_id: str
+    from_state: Optional[str]
+    to_state: str
+    sequence: int = 0
+    reason: Optional[str] = None
+    caused_by: Optional[str] = None
+    alternative_ref: Optional[str] = None
+    receipt_ref: Optional[ReceiptRef] = None
+    metadata: FrozenDict = field(default_factory=FrozenDict)
+
+    def __post_init__(self):
+        _check_id(self.event_id, "event_id")
+        _check_id(self.decision_id, "decision_id")
+        if self.from_state is not None and self.from_state not in VALID_DECISION_STATES:
+            raise ValueError(f"Invalid from_state: {self.from_state!r}. Must be None or one of {sorted(VALID_DECISION_STATES)}")
+        if self.to_state not in VALID_DECISION_STATES:
+            raise ValueError(f"Invalid to_state: {self.to_state!r}. Must be one of {sorted(VALID_DECISION_STATES)}")
+        if self.from_state is not None and self.from_state == self.to_state:
+            raise ValueError(f"Degenerate transition {self.from_state!r} -> {self.to_state!r} is not a state event.")
+        if self.to_state == "pruned":
+            if not self.reason:
+                raise ValueError("Pruned state event requires a non-empty 'reason'.")
+            if self.reason not in VALID_PRUNE_REASONS:
+                raise ValueError(f"Invalid prune reason: {self.reason!r}. Must be one of {sorted(VALID_PRUNE_REASONS)}")
+        else:
+            if self.reason is not None:
+                if self.to_state != "reopened":
+                    raise ValueError(f"'reason' is only allowed for pruned or reopened states, got to_state={self.to_state!r}.")
+                if self.reason not in VALID_REOPEN_REASONS:
+                    raise ValueError(f"Invalid reopen reason: {self.reason!r}. Must be one of {sorted(VALID_REOPEN_REASONS)}")
+            if self.to_state == "active" and (self.caused_by is not None or self.alternative_ref is not None):
+                raise ValueError("Genesis active event must not carry caused_by/alternative_ref.")
+        if self.caused_by is not None:
+            _check_id(self.caused_by, "caused_by")
+            if self.caused_by == self.decision_id:
+                raise ValueError(f"Circular state causation: decision '{self.decision_id}' cannot be caused by itself.")
+        if self.alternative_ref is not None:
+            _check_id(self.alternative_ref, "alternative_ref")
+            if self.alternative_ref == self.decision_id:
+                raise ValueError(f"Self-referential alternative: decision '{self.decision_id}' cannot be its own alternative.")
+        if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
+            raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
+        if not isinstance(self.sequence, int) or self.sequence < 0:
+            raise ValueError("'sequence' must be a non-negative integer.")
+        object.__setattr__(self, "metadata", _frozen_meta(self.metadata))
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {
+            "event_id": self.event_id,
+            "decision_id": self.decision_id,
+            "to_state": self.to_state,
+            "sequence": self.sequence,
+        }
+        if self.from_state is not None:
+            d["from_state"] = self.from_state
+        if self.reason:
+            d["reason"] = self.reason
+        if self.caused_by:
+            d["caused_by"] = self.caused_by
+        if self.alternative_ref:
+            d["alternative_ref"] = self.alternative_ref
+        if self.receipt_ref is not None:
+            d["receipt_ref"] = self.receipt_ref.to_dict()
+        if len(self.metadata) > 0:
+            d["metadata"] = self.metadata.to_dict()
+        return d
+
+
+def canonical_state_event_tuple(e: DecisionStateEvent) -> Tuple[str, ...]:
+    return canonical_state_event_tuple_from(
+        e.decision_id, e.from_state, e.to_state, e.reason, e.caused_by, e.alternative_ref, e.receipt_ref, dict(e.metadata)
+    )
+
+
+def canonical_state_event_tuple_from(
+    decision_id: str,
+    from_state: Optional[str],
+    to_state: str,
+    reason: Optional[str],
+    caused_by: Optional[str],
+    alternative_ref: Optional[str],
+    receipt_ref: Optional[ReceiptRef],
+    metadata: Mapping[str, Any],
+) -> Tuple[str, ...]:
+    return (
+        decision_id,
+        from_state or "",
+        to_state,
+        reason or "",
+        caused_by or "",
+        alternative_ref or "",
+    ) + canonical_receipt_ref_tuple(receipt_ref) + (_meta_canonical_json(_frozen_meta(metadata)),)
+
+
+@dataclass(frozen=True)
 class OutcomeCorrection:
     """An append-only outcome verdict for a decision (never an in-place update).
 
@@ -810,10 +955,11 @@ class DecisionLedger:
         self._decisions: Dict[str, DecisionNode] = {}
         self._bases: Dict[Tuple[str, ...], DecisionBasisEdge] = {}
         self._forks: Dict[Tuple[str, ...], DecisionForkEdge] = {}
-        self._prune_states: Dict[str, PruneState] = {}
+        self._state_events: List[DecisionStateEvent] = []
         self._corrections: Dict[str, OutcomeCorrection] = {}
         self._receipts: Dict[str, Any] = {}
         self._next_correction_sequence = 1
+        self._next_state_sequence = 1
 
     # -- registration -------------------------------------------------------
 
@@ -828,6 +974,9 @@ class DecisionLedger:
             raise ValueError("receipt_id must be a non-empty string.")
         rid = receipt_id.strip()
         snapshot = copy.deepcopy(receipt_data)
+        # Fail fast: only JSON-domain payloads (or to_dict() objects) may enter
+        # the registry; anything else would poison canonical digests later.
+        _jsonable(snapshot)
         if rid in self._receipts:
             existing = self._receipts[rid]
             ex_dict = existing.to_dict() if hasattr(existing, "to_dict") else existing
@@ -915,6 +1064,111 @@ class DecisionLedger:
         self._forks[key] = edge
         return edge
 
+    def add_state_event(
+        self,
+        decision_id: str,
+        to_state: str,
+        reason: Optional[str] = None,
+        caused_by: Optional[str] = None,
+        alternative_ref: Optional[str] = None,
+        receipt_ref: Optional[ReceiptRef] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> DecisionStateEvent:
+        """Append a state transition event (the State Ledger本体).
+
+        The transition must be legal from the decision's current replayed
+        state (VALID_STATE_TRANSITIONS): genesis -> active|pruned,
+        active -> pruned, pruned -> reopened, reopened -> pruned.
+        Repeating the EXACT current state with an identical payload is an
+        idempotent no-op (returns the latest event, appends nothing);
+        identical transitions at different history positions are distinct
+        events (event_id binds content+sequence).
+        """
+        latest = self._latest_event(decision_id)
+        if latest is not None and latest.to_state == to_state:
+            if (
+                latest.reason == reason
+                and latest.caused_by == caused_by
+                and latest.alternative_ref == alternative_ref
+                and latest.receipt_ref == receipt_ref
+                and dict(latest.metadata) == dict(metadata or {})
+            ):
+                return latest  # idempotent no-op: current state already matches payload
+        current_from: Optional[str] = latest.to_state if latest is not None else None
+        if to_state not in VALID_STATE_TRANSITIONS.get(current_from, set()):
+            raise ValueError(
+                f"Illegal state transition for decision {decision_id!r}: "
+                f"{current_from!r} -> {to_state!r}. Legal transitions: "
+                f"{sorted(VALID_STATE_TRANSITIONS.get(current_from, set()))}"
+            )
+        if current_from == to_state:
+            raise ValueError(
+                f"Degenerate transition {current_from!r} -> {to_state!r} for decision {decision_id!r} "
+                "with a differing payload is not a state event."
+            )
+        assigned = self._next_state_sequence
+        content_key = canonical_state_event_tuple_from(
+            decision_id, current_from, to_state, reason, caused_by, alternative_ref, receipt_ref, metadata or {}
+        )
+        event_id = "evt-" + hashlib.sha256(
+            _canonical_json_bytes({"content": list(content_key), "sequence": assigned})
+        ).hexdigest()[:32]
+        event = DecisionStateEvent(
+            event_id=event_id,
+            decision_id=decision_id,
+            from_state=current_from,
+            to_state=to_state,
+            reason=reason,
+            caused_by=caused_by,
+            alternative_ref=alternative_ref,
+            receipt_ref=receipt_ref,
+            sequence=assigned,
+            metadata=metadata or {},
+        )
+        self._state_events.append(event)
+        self._next_state_sequence += 1
+        return event
+
+    def _latest_event(self, decision_id: str) -> Optional[DecisionStateEvent]:
+        """Latest state event for a decision by (sequence, event_id) order."""
+        best: Optional[DecisionStateEvent] = None
+        for e in self._state_events:
+            if e.decision_id != decision_id:
+                continue
+            if best is None or (e.sequence, e.event_id) > (best.sequence, best.event_id):
+                best = e
+        return best
+
+    def current_state(self, decision_id: str) -> Optional[PruneState]:
+        """Derived current lifecycle state of a decision (replayed from events)."""
+        events = sorted(
+            (e for e in self._state_events if e.decision_id == decision_id),
+            key=lambda e: (e.sequence, e.event_id),
+        )
+        if not events:
+            return None
+        latest = events[-1]
+        status = "pruned" if latest.to_state == "pruned" else "active"
+        return PruneState(
+            decision_id=decision_id,
+            status=status,
+            prune_reason=latest.reason if latest.to_state == "pruned" else None,
+            pruned_by=latest.caused_by if latest.to_state == "pruned" else None,
+            alternative_ref=latest.alternative_ref if latest.to_state == "pruned" else None,
+            receipt_ref=latest.receipt_ref if latest.to_state == "pruned" else None,
+            metadata=dict(latest.metadata),
+        )
+
+    def state_history(self, decision_id: str) -> List[Dict[str, Any]]:
+        """Full append-only state transition history of a decision (replayed)."""
+        return [
+            e.to_dict()
+            for e in sorted(
+                (e for e in self._state_events if e.decision_id == decision_id),
+                key=lambda e: (e.sequence, e.event_id),
+            )
+        ]
+
     def set_prune(
         self,
         decision_id: str,
@@ -925,22 +1179,48 @@ class DecisionLedger:
         receipt_ref: Optional[ReceiptRef] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> PruneState:
-        state = PruneState(
-            decision_id=decision_id,
-            status=status,
-            prune_reason=prune_reason,
-            pruned_by=pruned_by,
-            alternative_ref=alternative_ref,
-            receipt_ref=receipt_ref,
-            metadata=metadata or {},
-        )
-        existing = self._prune_states.get(decision_id)
-        if existing is not None:
-            if canonical_prune_tuple(existing) != canonical_prune_tuple(state):
-                raise ValueError(f"Conflicting prune state for decision {decision_id!r}: the ledger is append-only, one state per decision.")
-            return existing
-        self._prune_states[decision_id] = state
-        return state
+        """Compatibility wrapper: append a state event and return the derived view.
+
+        status='active' with no history registers a genesis active event;
+        status='active' on a pruned decision appends a reopened event;
+        status='pruned' appends a pruned event. Repeated identical calls
+        replay idempotently.
+        """
+        if status not in VALID_PRUNE_STATUSES:
+            raise ValueError(f"Invalid prune status: {status!r}. Must be one of {sorted(VALID_PRUNE_STATUSES)}")
+        if status == "active":
+            if prune_reason is not None or pruned_by is not None or alternative_ref is not None:
+                raise ValueError("Active decision must not carry prune_reason/pruned_by/alternative_ref fields.")
+            current = self.current_state(decision_id)
+            if current is None:
+                self.add_state_event(decision_id, to_state="active", receipt_ref=receipt_ref, metadata=metadata)
+            elif current.status == "pruned":
+                self.add_state_event(decision_id, to_state="reopened", receipt_ref=receipt_ref, metadata=metadata)
+            # already active: idempotent no-op
+        else:
+            current = self.current_state(decision_id)
+            if (
+                current is not None
+                and current.status == "pruned"
+                and current.prune_reason == prune_reason
+                and current.pruned_by == pruned_by
+                and current.alternative_ref == alternative_ref
+                and current.receipt_ref == receipt_ref
+                and dict(current.metadata) == dict(metadata or {})
+            ):
+                return current  # idempotent replay: already pruned with identical payload
+            self.add_state_event(
+                decision_id,
+                to_state="pruned",
+                reason=prune_reason,
+                caused_by=pruned_by,
+                alternative_ref=alternative_ref,
+                receipt_ref=receipt_ref,
+                metadata=metadata,
+            )
+        view = self.current_state(decision_id)
+        assert view is not None
+        return view
 
     def add_outcome_correction(
         self,
@@ -961,15 +1241,11 @@ class DecisionLedger:
             metadata=metadata or {},
         )
         content_key = canonical_correction_tuple(probe)[1:]  # everything except the provisional id
-        content_id = "corr-" + hashlib.sha256(_canonical_json_bytes(list(content_key))).hexdigest()[:16]
+        content_id = "corr-" + hashlib.sha256(_canonical_json_bytes(list(content_key))).hexdigest()[:32]
         existing = self._corrections.get(content_id)
         if existing is not None:
-            return existing  # identical content is idempotent
-        # 64-bit truncated content id: defend against cross-payload collision
-        if any(
-            c.correction_id == content_id and canonical_correction_tuple(c)[1:] != content_key
-            for c in self._corrections.values()
-        ):
+            if canonical_correction_tuple(existing)[1:] == content_key:
+                return existing  # identical content is idempotent
             raise ValueError(f"Correction content-id collision for {content_id!r}: distinct payloads truncated to the same id.")
         assigned = self._next_correction_sequence
         self._next_correction_sequence += 1
@@ -1026,23 +1302,68 @@ class DecisionLedger:
             out.append(edge.to_dict())
         return out
 
-    def trace_prune_cause(self, decision_id: str) -> Dict[str, Any]:
-        """Causal trace of why a branch was pruned: reason, pruning decision, its bases.
+    def _current_prune_graph(self) -> Dict[str, PruneState]:
+        """Derived map of currently-pruned decisions to their derived state views."""
+        latest: Dict[str, DecisionStateEvent] = {}
+        for e in self._state_events:
+            prev = latest.get(e.decision_id)
+            if prev is None or (e.sequence, e.event_id) > (prev.sequence, prev.event_id):
+                latest[e.decision_id] = e
+        out: Dict[str, PruneState] = {}
+        for did, e in latest.items():
+            if e.to_state == "pruned":
+                out[did] = PruneState(
+                    decision_id=did,
+                    status="pruned",
+                    prune_reason=e.reason,
+                    pruned_by=e.caused_by,
+                    alternative_ref=e.alternative_ref,
+                    receipt_ref=e.receipt_ref,
+                    metadata=dict(e.metadata),
+                )
+        return out
 
-        unsupported_reason is a deterministic free-text explanation when the
-        pruning decision lacks any Claim basis; None when properly supported.
+    def trace_prune_cause(self, decision_id: str) -> Dict[str, Any]:
+        """Recursive causal trace of why a branch was pruned.
+
+        Returns the derived current prune state and the full prune_chain:
+        each link lists the pruned decision, its closed-vocabulary reason,
+        the pruning decision and that decision's claim bases. The chain
+        stops at an unpruned decision, an unregistered reference, or a
+        detected cycle (cycle_break flag). unsupported_reason is a
+        deterministic free-text explanation when the pruning decision lacks
+        any Claim basis; None when properly supported.
         """
-        state = self._prune_states.get(decision_id)
+        graph = self._current_prune_graph()
+        state = graph.get(decision_id)
         result: Dict[str, Any] = {
             "decision_id": decision_id,
             "prune_state": state.to_dict() if state else None,
             "pruned_by_decision": None,
             "alternative_decision": None,
             "pruned_by_bases": [],
+            "prune_chain": [],
             "unsupported_reason": None,
         }
-        if state is None or state.status != "pruned":
+        if state is None:
             return result
+
+        visited: set = set()
+        cur: Optional[str] = decision_id
+        while cur is not None and cur in graph and cur not in visited:
+            visited.add(cur)
+            link_state = graph[cur]
+            link: Dict[str, Any] = {
+                "decision_id": cur,
+                "prune_reason": link_state.prune_reason,
+                "pruned_by": link_state.pruned_by,
+                "alternative_ref": link_state.alternative_ref,
+            }
+            result["prune_chain"].append(link)
+            cur = link_state.pruned_by
+        if cur is not None and cur in visited:
+            result["cycle_break"] = cur
+
         if state.pruned_by:
             node = self._decisions.get(state.pruned_by)
             result["pruned_by_decision"] = node.to_dict() if node else None
@@ -1097,12 +1418,18 @@ class DecisionLedger:
         """Structural validation. Returns (ok, sorted unique errors)."""
         errors: List[str] = []
 
-        # Dangling basis edges
+        # Dangling basis edges + strongly typed basis targets
         for edge in sorted(self._bases.values(), key=canonical_basis_tuple):
             if edge.decision_id not in self._decisions:
                 errors.append(f"E101 dangling basis edge: decision '{edge.decision_id}' is not registered")
-            if edge.basis_id not in self._decisions:
+            target = self._decisions.get(edge.basis_id)
+            if target is None:
                 errors.append(f"E102 dangling basis edge: basis '{edge.basis_id}' ({edge.basis_kind}) is not a registered decision")
+            else:
+                if edge.basis_kind == "negative_result" and target.decision_type != "negative_result":
+                    errors.append(f"E103 basis kind mismatch: negative_result basis '{edge.basis_id}' targets a '{target.decision_type}' decision")
+                if edge.basis_kind == "claim" and target.decision_type == "negative_result":
+                    errors.append(f"E103 basis kind mismatch: claim basis '{edge.basis_id}' targets a negative_result decision")
             self._validate_receipt_ref(edge.receipt_ref, f"basis:{edge.decision_id}>{edge.basis_id}", errors)
 
         # Dangling fork edges + self forks
@@ -1116,39 +1443,39 @@ class DecisionLedger:
                 errors.append(f"E203 dangling fork edge: alternative '{edge.alternative_id}' is not registered")
             self._validate_receipt_ref(edge.receipt_ref, f"fork:{edge.decision_id}>{edge.alternative_id}", errors)
 
-        # Prune states
-        for state in sorted(self._prune_states.values(), key=canonical_prune_tuple):
-            if state.decision_id not in self._decisions:
-                errors.append(f"E301 prune state for unregistered decision '{state.decision_id}'")
-            if state.status == "pruned":
-                if state.pruned_by and state.pruned_by not in self._decisions:
-                    errors.append(f"E302 pruning decision '{state.pruned_by}' is not registered")
-                if state.alternative_ref and state.alternative_ref not in self._decisions:
-                    errors.append(f"E303 alternative '{state.alternative_ref}' is not registered")
-            self._validate_receipt_ref(state.receipt_ref, f"prune:{state.decision_id}", errors)
+        # Prune states (derived from append-only state events)
+        for event in sorted(self._state_events, key=canonical_state_event_tuple):
+            if event.decision_id not in self._decisions:
+                errors.append(f"E301 state event '{event.event_id}' for unregistered decision '{event.decision_id}'")
+            if event.to_state == "pruned":
+                if event.caused_by and event.caused_by not in self._decisions:
+                    errors.append(f"E302 pruning decision '{event.caused_by}' is not registered")
+                if event.alternative_ref and event.alternative_ref not in self._decisions:
+                    errors.append(f"E303 alternative '{event.alternative_ref}' is not registered")
+            self._validate_receipt_ref(event.receipt_ref, f"state_event:{event.event_id}", errors)
 
-        # Circular pruning chains (pruned_by graph must be acyclic)
-        pruned_by: Dict[str, str] = {
+        # Circular pruning chains on the DERIVED current prune graph
+        # (path-indexed: tail nodes entering a cycle are not cycle members)
+        pruned_by_graph: Dict[str, str] = {
             s.decision_id: s.pruned_by
-            for s in self._prune_states.values()
-            if s.status == "pruned" and s.pruned_by
+            for s in self._current_prune_graph().values()
+            if s.pruned_by
         }
         reported_cycle_nodes: set = set()
-        for start in sorted(pruned_by):
+        for start in sorted(pruned_by_graph):
             if start in reported_cycle_nodes:
                 continue
-            seen = {start}
-            cur = pruned_by.get(start)
-            while cur is not None:
-                if cur in seen:
-                    # canonical representative = smallest id in the cycle
-                    if cur not in reported_cycle_nodes:
-                        cycle_nodes = sorted(seen & (set(pruned_by) | {cur}))
-                        errors.append(f"E304 circular pruning chain detected at '{cur}' (cycle members: {', '.join(cycle_nodes)})")
-                        reported_cycle_nodes.update(cycle_nodes)
-                    break
-                seen.add(cur)
-                cur = pruned_by.get(cur)
+            path: Dict[str, int] = {}
+            cur: Optional[str] = start
+            while cur is not None and cur in pruned_by_graph and cur not in path and cur not in reported_cycle_nodes:
+                path[cur] = len(path)
+                cur = pruned_by_graph.get(cur)
+            if cur is not None and cur in path:
+                cycle = [n for n, i in sorted(path.items(), key=lambda kv: kv[1]) if i >= path[cur]]
+                k = cycle.index(min(cycle))
+                cycle = cycle[k:] + cycle[:k]
+                errors.append(f"E304 circular pruning chain detected (cycle members: {', '.join(cycle)})")
+                reported_cycle_nodes.update(cycle)
 
         # Corrections reference registered decisions
         for corr in sorted(self._corrections.values(), key=canonical_correction_tuple):
@@ -1181,6 +1508,41 @@ class DecisionLedger:
                     errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
                 elif not any(e.basis_kind == "claim" for e in bases):
                     errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
+
+        # E407: a negative result whose claim-basis closure contains a cycle
+        # can never ground at a receipt anchor; that is a deterministic
+        # structural fact, so it hard-fails instead of only surfacing in the
+        # uncertainty queue.
+        claim_succ_v: Dict[str, set] = {}
+        for e in self._bases.values():
+            if e.basis_kind == "claim" and e.basis_id != e.decision_id:
+                claim_succ_v.setdefault(e.decision_id, set()).add(e.basis_id)
+
+        def _closure_has_cycle(root: str) -> bool:
+            visited: set = set()
+            on_path: set = set()
+            stack: List[Tuple[str, Iterator[str]]] = [(root, iter(sorted(claim_succ_v.get(root, ()))))]
+            on_path.add(root)
+            while stack:
+                top, it = stack[-1]
+                advanced = False
+                for nxt in it:
+                    if nxt in on_path:
+                        return True
+                    if nxt not in visited:
+                        visited.add(nxt)
+                        on_path.add(nxt)
+                        stack.append((nxt, iter(sorted(claim_succ_v.get(nxt, ())))))
+                        advanced = True
+                        break
+                if not advanced:
+                    on_path.discard(top)
+                    stack.pop()
+            return False
+
+        for node in sorted(self._decisions.values(), key=lambda d: d.id):
+            if node.decision_type == "negative_result" and _closure_has_cycle(node.id):
+                errors.append(f"E407 negative result '{node.id}': claim-basis closure contains a cycle that can never ground at a receipt anchor")
 
         unique = sorted(set(errors))
         return (len(unique) == 0, unique)
@@ -1225,8 +1587,8 @@ class DecisionLedger:
             missing(edge.receipt_ref, f"basis:{edge.decision_id}>{edge.basis_id}")
         for edge in self._forks.values():
             missing(edge.receipt_ref, f"fork:{edge.decision_id}>{edge.alternative_id}")
-        for state in self._prune_states.values():
-            missing(state.receipt_ref, f"prune:{state.decision_id}")
+        for event in self._state_events:
+            missing(event.receipt_ref, f"state_event:{event.event_id}")
         for corr in self._corrections.values():
             missing(corr.receipt_ref, f"correction:{corr.correction_id}")
 
@@ -1250,9 +1612,9 @@ class DecisionLedger:
                     True,
                 )
 
-        # Pruning decisions without any claim basis
-        for state in self._prune_states.values():
-            if state.status != "pruned" or not state.pruned_by:
+        # Pruning decisions without any claim basis (derived current prune graph)
+        for state in self._current_prune_graph().values():
+            if not state.pruned_by:
                 continue
             claim_bases = [
                 e for e in self._bases.values()
@@ -1319,11 +1681,17 @@ class DecisionLedger:
     # -- export ------------------------------------------------------------
 
     def ledger_digest(self) -> str:
-        """Order-invariant digest over all records and registered receipt payloads.
+        """Order-invariant CONTENT identity digest over all ledger records.
 
-        Container insertion order never affects the digest; the ledger-assigned
-        correction `sequence` counters are the single intentional exception
-        (they encode true append history).
+        Hashes only decisions, bases, forks, state events, and outcome
+        corrections. The local receipt registry (a verification cache with
+        caller-chosen labels) never enters the content identity: ReceiptRef
+        records already carry receipt_digest/payload_sha256, so the same
+        records with the same evidence digests always digest identically
+        regardless of how the local registry is labelled. Container insertion
+        order never affects the digest; the ledger-assigned `sequence`
+        counters on corrections and state events are the single intentional
+        exception (they encode true append history).
         """
         payload = {
             "protocol": PROTOCOL,
@@ -1337,32 +1705,145 @@ class DecisionLedger:
                 (e.to_dict() for e in self._forks.values()),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
-            "prune_states": sorted(
-                (s.to_dict() for s in self._prune_states.values()),
+            "state_events": sorted(
+                (s.to_dict() for s in self._state_events),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
             "corrections": sorted(
                 (c.to_dict() for c in self._corrections.values()),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
-            "receipts": {
-                rid: canonical_ledger_payload_sha256(_jsonable(r))
-                for rid, r in sorted(self._receipts.items())
-            },
         }
         return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest().lower()
 
+    def verification_digest(self) -> str:
+        """Digest of the ledger content identity plus the local receipt registry.
+
+        Separated from ledger_digest so the registry's caller-chosen labels
+        and cache state are never conflated with content identity. Exported
+        alongside ledger_digest so a verifier can distinguish content from
+        verification state.
+        """
+        manifest = {
+            rid: canonical_ledger_payload_sha256(_jsonable(r))
+            for rid, r in sorted(self._receipts.items())
+        }
+        payload = {"ledger_digest": self.ledger_digest(), "receipts": manifest}
+        return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest().lower()
+
     def to_dict(self) -> Dict[str, Any]:
-        """Export an immutable deep representation with the order-invariant digest."""
+        """Export an immutable deep representation with content identity and verification digests."""
         d: Dict[str, Any] = {
             "protocol": PROTOCOL,
             "ledger_id": self.ledger_id,
             "ledger_digest": self.ledger_digest(),
+            "verification_digest": self.verification_digest(),
             "decisions": [self._decisions[k].to_dict() for k in sorted(self._decisions)],
             "bases": [self._bases[k].to_dict() for k in sorted(self._bases)],
             "forks": [self._forks[k].to_dict() for k in sorted(self._forks)],
-            "prune_states": [self._prune_states[k].to_dict() for k in sorted(self._prune_states)],
+            "state_events": [e.to_dict() for e in sorted(self._state_events, key=lambda x: (x.sequence, x.event_id))],
             "corrections": [self._corrections[k].to_dict() for k in sorted(self._corrections)],
             "uncertainties": [u.to_dict() for u in self.export_uncertainties()],
         }
         return copy.deepcopy(d)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "DecisionLedger":
+        """Strict replay loader: rebuild a ledger from a to_dict() export.
+
+        Re-validates the export contract, replays every record through the
+        kernel constructors (which re-validate), restores ledger-assigned
+        sequence counters, and fails closed on any ledger_digest mismatch.
+        The receipt registry (verification cache) is intentionally NOT part
+        of the export: verification_digest is preserved for reference but the
+        registry starts empty and callers re-register receipts to re-verify.
+        """
+        if not isinstance(data, collections.abc.Mapping):
+            raise TypeError("from_dict expects a mapping produced by DecisionLedger.to_dict().")
+        for key in ("protocol", "ledger_id", "ledger_digest", "decisions", "bases", "forks", "state_events", "corrections"):
+            if key not in data:
+                raise ValueError(f"Export contract violation: missing required key {key!r}.")
+        if data["protocol"] != PROTOCOL:
+            raise ValueError(f"Export protocol mismatch: expected {PROTOCOL!r}, got {data['protocol']!r}.")
+        ledger = cls(ledger_id=data["ledger_id"])
+
+        def _ref(d: Any) -> Optional[ReceiptRef]:
+            if d is None:
+                return None
+            if not isinstance(d, collections.abc.Mapping):
+                raise ValueError("receipt_ref must be a mapping or null.")
+            return ReceiptRef(
+                kind=d["kind"],
+                schema_version=d["schema_version"],
+                receipt_id=d.get("receipt_id"),
+                receipt_digest=d.get("receipt_digest"),
+                claim_digest=d.get("claim_digest"),
+                payload_sha256=d.get("payload_sha256"),
+                locator=d.get("locator"),
+            )
+
+        for d in data["decisions"]:
+            ledger.add_decision(
+                id=d["id"],
+                title=d["title"],
+                decision_type=d["decision_type"],
+                context_work_id=d.get("context_work_id"),
+                locator=d.get("locator"),
+                metadata=d.get("metadata") or {},
+            )
+        for e in data["bases"]:
+            ledger.add_basis(
+                decision_id=e["decision_id"],
+                basis_kind=e["basis_kind"],
+                basis_id=e["basis_id"],
+                receipt_ref=_ref(e.get("receipt_ref")),
+                metadata=e.get("metadata") or {},
+            )
+        for e in data["forks"]:
+            ledger.add_fork(
+                decision_id=e["decision_id"],
+                alternative_id=e["alternative_id"],
+                relation=e["relation"],
+                receipt_ref=_ref(e.get("receipt_ref")),
+                metadata=e.get("metadata") or {},
+            )
+        # State events replay in sequence order, preserving original sequences.
+        for e in sorted(data["state_events"], key=lambda x: x.get("sequence", 0)):
+            # Transition legality is re-checked against the replayed history.
+            from_state = e.get("from_state")
+            current = ledger.current_state(e["decision_id"])
+            current_from: Optional[str] = None
+            if current is not None:
+                hist = ledger.state_history(e["decision_id"])
+                if hist:
+                    current_from = hist[-1]["to_state"]
+            if current_from != from_state:
+                raise ValueError(
+                    f"Export replay violation: state event {e['event_id']!r} declares from_state={from_state!r} "
+                    f"but replayed history is at {current_from!r}."
+                )
+            ledger.add_state_event(
+                decision_id=e["decision_id"],
+                to_state=e["to_state"],
+                reason=e.get("reason"),
+                caused_by=e.get("caused_by"),
+                alternative_ref=e.get("alternative_ref"),
+                receipt_ref=_ref(e.get("receipt_ref")),
+                metadata=e.get("metadata") or {},
+            )
+        # Corrections replay in sequence order.
+        for c in sorted(data["corrections"], key=lambda x: x.get("sequence", 0)):
+            ledger.add_outcome_correction(
+                decision_id=c["decision_id"],
+                verdict=c["verdict"],
+                rationale=c["rationale"],
+                receipt_ref=_ref(c.get("receipt_ref")),
+                locator=c.get("locator"),
+                metadata=c.get("metadata") or {},
+            )
+        recomputed = ledger.ledger_digest()
+        if recomputed != str(data["ledger_digest"]).lower():
+            raise ValueError(
+                f"Export digest mismatch on replay: declared {data['ledger_digest']!r}, recomputed {recomputed!r}."
+            )
+        return ledger

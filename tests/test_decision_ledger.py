@@ -170,8 +170,13 @@ def test_prune_state_conflict_rejected():
     g = dl.DecisionLedger()
     g.add_decision(id="d1", title="x")
     g.set_prune("d1", "active")
-    with pytest.raises(ValueError, match="append-only"):
-        g.set_prune("d1", "pruned", prune_reason="superseded")
+    g.set_prune("d1", "pruned", prune_reason="superseded")
+    # identical replay is idempotent (no new event)
+    g.set_prune("d1", "pruned", prune_reason="superseded")
+    assert len(g.state_history("d1")) == 2
+    # conflicting re-prune while still pruned: illegal transition, must reopen first
+    with pytest.raises(ValueError, match="Illegal state transition|Degenerate transition"):
+        g.set_prune("d1", "pruned", prune_reason="other")
 
 
 def test_receipt_registration_conflict_rejected_and_deepcopied():
@@ -453,10 +458,31 @@ def test_ledger_digest_receipt_sensitivity():
     g.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
     before = g.ledger_digest()
     g.register_receipt("lin-77", lineage)
-    after = g.ledger_digest()
-    assert before != after
+    # content identity is registry-independent; verification state is separate
+    assert g.ledger_digest() == before
+    v_before = g.verification_digest()
+    assert v_before != before
     g.register_receipt("lin-77", copy.deepcopy(lineage))
-    assert g.ledger_digest() == after
+    assert g.ledger_digest() == before
+    assert g.verification_digest() == v_before
+
+
+def test_ledger_digest_registry_label_independence():
+    lineage, ref = _lineage_fixture()
+    g1 = dl.DecisionLedger(ledger_id="r")
+    g1.add_decision(id="d1", title="x")
+    g1.add_decision(id="d2", title="y")
+    g1.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g1.register_receipt("lin-77", lineage)
+    g2 = dl.DecisionLedger(ledger_id="r")
+    g2.add_decision(id="d1", title="x")
+    g2.add_decision(id="d2", title="y")
+    g2.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g2.register_receipt("arbitrary-label", copy.deepcopy(lineage))
+    # same records + same receipt bytes, different registry labels -> same content identity
+    assert g1.ledger_digest() == g2.ledger_digest()
+    # verification digests may differ in label, but both are stable and 64-hex
+    assert len(g1.verification_digest()) == 64 and len(g2.verification_digest()) == 64
 
 
 def test_ledger_digest_metadata_sensitivity():
@@ -593,8 +619,9 @@ def test_negative_result_mutual_claim_cycle_rejected():
     g.add_basis("nr1", basis_kind="claim", basis_id="nr2")
     g.add_basis("nr2", basis_kind="claim", basis_id="nr1")
     ok, errs = g.validate_ledger()
+    codes = " ".join(errs)
     assert not ok
-    assert all("E405" in e for e in errs) and errs
+    assert "E405" in codes and "E103" in codes and "E407" in codes
 
 
 def test_negative_result_mixed_basis_still_requires_external_claim():
@@ -602,13 +629,16 @@ def test_negative_result_mixed_basis_still_requires_external_claim():
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
     g.add_decision(id="nr2", title="B fails", decision_type="negative_result")
     g.add_decision(id="pos", title="positive evidence")
-    g.add_basis("nr1", basis_kind="claim", basis_id="nr2")  # fake claim
-    g.add_basis("nr1", basis_kind="negative_result", basis_id="pos")  # noise
+    g.add_basis("nr1", basis_kind="claim", basis_id="nr2")  # fake claim (negative_result target)
+    g.add_basis("nr1", basis_kind="negative_result", basis_id="pos")  # kind mismatch noise
     g.add_basis("nr2", basis_kind="claim", basis_id="pos")  # nr2 properly evidenced
     ok, errs = g.validate_ledger()
-    assert not ok and any("E405" in e for e in errs)
-    g.add_basis("nr1", basis_kind="claim", basis_id="pos")  # real external claim
-    ok2, errs2 = g.validate_ledger()
+    assert not ok and any("E405" in e or "E103" in e for e in errs)
+    g2 = dl.DecisionLedger()
+    g2.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g2.add_decision(id="pos", title="positive evidence")
+    g2.add_basis("nr1", basis_kind="claim", basis_id="pos")  # real external claim
+    ok2, errs2 = g2.validate_ledger()
     assert ok2, errs2
 
 
@@ -707,13 +737,19 @@ def test_to_dict_exports_uncertainties_matching_schema():
 # 16. Cross-review hardening round 2 (dsv4pro findings)
 # ---------------------------------------------------------------------------
 
-def test_frozen_dict_hash_tracks_content_even_under_slot_tamper():
+def test_frozen_dict_backing_store_rejects_slot_writes():
     fd = dl.FrozenDict({"a": 1})
     h1 = hash(fd)
-    fd._data["b"] = 2  # out-of-contract slot write; must not serve stale hash
-    h2 = hash(fd)
-    assert h1 != h2
-    assert hash(fd) == hash(dl.FrozenDict({"a": 1, "b": 2}))
+    with pytest.raises(TypeError):
+        fd._data["b"] = 2  # MappingProxyType backing: no reachable mutation path
+    assert hash(fd) == h1
+    assert fd == {"a": 1}
+
+
+def test_frozen_dict_hash_stable_and_mapping_semantics():
+    fd = dl.FrozenDict({"a": 1})
+    assert hash(fd) == hash(dl.FrozenDict({"a": 1}))
+    assert dl.FrozenDict({"a": {"x": [1, 2]}}) == {"a": {"x": [1, 2]}}
 
 
 def test_frozen_dict_mapping_equality_semantics():
@@ -808,7 +844,7 @@ def test_self_anchored_claim_terminal_still_surfaces():
     assert kinds.get("selfish") == "unevidenced_claim_basis"
 
 
-def test_ungrounded_claim_cycle_surfaces_both_ends():
+def test_ungrounded_claim_cycle_hard_fails_for_negative_result():
     g = dl.DecisionLedger()
     g.add_decision(id="x1", title="X1")
     g.add_decision(id="x2", title="X2")
@@ -817,7 +853,20 @@ def test_ungrounded_claim_cycle_surfaces_both_ends():
     g.add_basis("x1", basis_kind="claim", basis_id="x2")
     g.add_basis("x2", basis_kind="claim", basis_id="x1")
     ok, errs = g.validate_ledger()
-    assert ok, errs
+    assert not ok and any("E407" in e for e in errs)
+
+
+def test_ungrounded_claim_cycle_without_negative_result_surfaces_as_uncertainty():
+    g = dl.DecisionLedger()
+    g.add_decision(id="x1", title="X1")
+    g.add_decision(id="x2", title="X2")
+    g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g.add_decision(id="pos", title="anchor")
+    g.add_basis("nr1", basis_kind="claim", basis_id="pos")  # nr itself properly evidenced
+    g.add_basis("x1", basis_kind="claim", basis_id="x2")
+    g.add_basis("x2", basis_kind="claim", basis_id="x1")
+    ok, errs = g.validate_ledger()
+    assert ok, errs  # cycle unconnected to any negative result: uncertainty only
     kinds = _unc_kinds(g)
     assert kinds.get("x1") == "unevidenced_claim_basis"
     assert kinds.get("x2") == "unevidenced_claim_basis"
@@ -828,3 +877,190 @@ def test_isolated_decisions_produce_no_basis_noise():
     g.add_decision(id="solo", title="Solo")
     g.add_decision(id="solo2", title="Solo 2")
     assert _unc_kinds(g) == {}
+
+
+# ---------------------------------------------------------------------------
+# 18. State Ledger: append-only state events (P1-01 refactor)
+# ---------------------------------------------------------------------------
+
+def test_state_event_full_transition_history():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.add_decision(id="judge", title="judge")
+    g.set_prune("d1", "active")
+    g.set_prune("d1", "pruned", prune_reason="resource_exhausted", pruned_by="judge")
+    g.set_prune("d1", "active")  # reopened
+    g.set_prune("d1", "pruned", prune_reason="contradicted", pruned_by="judge")
+    hist = g.state_history("d1")
+    assert [h["to_state"] for h in hist] == ["active", "pruned", "reopened", "pruned"]
+    assert [h["sequence"] for h in hist] == [1, 2, 3, 4]
+    assert hist[1]["from_state"] == "active" and hist[2]["from_state"] == "pruned"
+    assert hist[2].get("reason") is None  # reopened reason optional
+    assert g.current_state("d1").status == "pruned"
+
+
+def test_state_event_illegal_transitions_rejected():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    with pytest.raises(ValueError, match="Illegal state transition"):
+        g.add_state_event("d1", to_state="reopened")  # genesis must be active|pruned
+    g.add_state_event("d1", to_state="active")
+    with pytest.raises(ValueError, match="Illegal state transition"):
+        g.add_state_event("d1", to_state="reopened")  # active -> reopened not allowed
+
+
+def test_state_event_genesis_pruned_allowed():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    e = g.add_state_event("d1", to_state="pruned", reason="out_of_scope")
+    assert e.from_state is None and e.to_state == "pruned"
+    assert g.current_state("d1").status == "pruned"
+
+
+def test_state_event_reopen_requires_closed_vocab_reason():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.set_prune("d1", "active")
+    g.set_prune("d1", "pruned", prune_reason="superseded")
+    with pytest.raises(ValueError, match="reopen reason|Invalid reopen"):
+        g.add_state_event("d1", to_state="reopened", reason="vibes")
+    e = g.add_state_event("d1", to_state="reopened", reason="new_evidence")
+    assert e.reason == "new_evidence"
+
+
+def test_state_event_digest_encodes_arrival_history():
+    g1 = dl.DecisionLedger(ledger_id="s")
+    g1.add_decision(id="d1", title="x")
+    g1.set_prune("d1", "active")
+    g1.set_prune("d1", "pruned", prune_reason="superseded")
+    g2 = dl.DecisionLedger(ledger_id="s")
+    g2.add_decision(id="d1", title="x")
+    g2.set_prune("d1", "pruned", prune_reason="superseded")  # genesis pruned
+    g2.set_prune("d1", "active")  # reopened... wait pruned->active illegal via wrapper? reopened then
+    assert g1.ledger_digest() != g2.ledger_digest()
+
+
+def test_state_event_idempotent_content_replay():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.add_decision(id="j", title="j")
+    e1 = g.add_state_event("d1", to_state="active")
+    e1b = g.add_state_event("d1", to_state="active")
+    assert e1b.event_id == e1.event_id
+    e2 = g.add_state_event("d1", to_state="pruned", reason="superseded", caused_by="j")
+    e2b = g.add_state_event("d1", to_state="pruned", reason="superseded", caused_by="j")
+    assert e2b.event_id == e2.event_id
+    assert len(g.state_history("d1")) == 2
+
+
+def test_trace_prune_cause_recursive_chain():
+    g = dl.DecisionLedger()
+    for did in ["d-a", "d-b", "d-c", "judge"]:
+        g.add_decision(id=did, title=did)
+    g.add_basis("judge", basis_kind="claim", basis_id="d-a")
+    g.set_prune("d-c", "pruned", prune_reason="superseded", pruned_by="d-b")
+    g.set_prune("d-b", "pruned", prune_reason="resource_exhausted", pruned_by="judge")
+    tr = g.trace_prune_cause("d-c")
+    assert [l["decision_id"] for l in tr["prune_chain"]] == ["d-c", "d-b"]
+    assert tr["prune_chain"][0]["prune_reason"] == "superseded"
+    assert tr["pruned_by_decision"]["id"] == "d-b"
+
+
+def test_prune_cycle_break_after_reopen_clears_current_cycle():
+    g = dl.DecisionLedger()
+    for did in ["p1", "p2"]:
+        g.add_decision(id=did, title=did)
+    g.set_prune("p1", "pruned", prune_reason="superseded", pruned_by="p2")
+    g.set_prune("p2", "pruned", prune_reason="superseded", pruned_by="p1")
+    ok, errs = g.validate_ledger()
+    assert any("E304" in e for e in errs)
+    # reopen p1 breaks the CURRENT cycle
+    g.set_prune("p1", "active")
+    ok2, errs2 = g.validate_ledger()
+    assert not any("E304" in e for e in errs2)
+
+
+def test_e304_tail_nodes_not_reported_as_cycle_members():
+    g = dl.DecisionLedger()
+    for did in ["a1", "b1", "c1"]:
+        g.add_decision(id=did, title=did)
+    g.set_prune("a1", "pruned", prune_reason="superseded", pruned_by="b1")
+    g.set_prune("b1", "pruned", prune_reason="superseded", pruned_by="c1")
+    g.set_prune("c1", "pruned", prune_reason="superseded", pruned_by="b1")
+    ok, errs = g.validate_ledger()
+    e304 = [e for e in errs if "E304" in e]
+    assert len(e304) == 1
+    members = e304[0].split("members:")[1]
+    assert "a1" not in members and "b1" in members and "c1" in members
+
+
+# ---------------------------------------------------------------------------
+# 19. from_dict replay loader (P2-07)
+# ---------------------------------------------------------------------------
+
+def test_from_dict_round_trip_preserves_everything():
+    g = _populated_ledger()
+    g.add_outcome_correction("d-a", verdict="negative", rationale="did not replicate")
+    g.set_prune("d-a", "active")
+    g.set_prune("d-a", "pruned", prune_reason="contradicted", pruned_by="d-b")
+    export = g.to_dict()
+    g2 = dl.DecisionLedger.from_dict(export)
+    assert g2.ledger_digest() == g.ledger_digest()
+    assert g2.to_dict() == g.to_dict()
+    assert g2.state_history("d-a") == g.state_history("d-a")
+    assert g2.outcome_of("d-a") == g.outcome_of("d-a")
+
+
+def test_from_dict_rejects_tampered_export():
+    g = _populated_ledger()
+    export = g.to_dict()
+    export["decisions"][0]["title"] = "TAMPERED"
+    with pytest.raises(ValueError, match="digest mismatch"):
+        dl.DecisionLedger.from_dict(export)
+
+
+def test_from_dict_rejects_protocol_mismatch_and_missing_keys():
+    g = _populated_ledger()
+    export = g.to_dict()
+    bad = dict(export, protocol="decision-ledger-9.9")
+    with pytest.raises(ValueError, match="protocol mismatch"):
+        dl.DecisionLedger.from_dict(bad)
+    with pytest.raises(ValueError, match="missing required key"):
+        dl.DecisionLedger.from_dict({"protocol": "decision-ledger-1.0"})
+
+
+def test_from_dict_rejects_corrupted_state_sequence():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.set_prune("d1", "active")
+    g.set_prune("d1", "pruned", prune_reason="superseded")
+    export = g.to_dict()
+    export["state_events"][1]["from_state"] = "reopened"  # impossible chain
+    with pytest.raises(ValueError, match="from_state|Illegal state transition"):
+        dl.DecisionLedger.from_dict(export)
+
+
+def test_jsonable_fails_closed_on_foreign_objects_and_cycles():
+    class Foreign:
+        pass
+    with pytest.raises(TypeError, match="Unsupported payload type"):
+        dl._jsonable(Foreign())
+    cyc = {}
+    cyc["self"] = cyc
+    with pytest.raises(ValueError, match="Cyclic"):
+        dl._jsonable(cyc)
+    g = dl.DecisionLedger()
+    with pytest.raises(TypeError):
+        g.register_receipt("x", Foreign())
+    with pytest.raises(ValueError, match="Cyclic"):
+        g.register_receipt("x", cyc)
+
+
+def test_correction_id_width_and_collision_defense():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    c = g.add_outcome_correction("d1", verdict="negative", rationale="r")
+    assert c.correction_id.startswith("corr-") and len(c.correction_id) == 37
+    # idempotent replay identical content
+    c2 = g.add_outcome_correction("d1", verdict="negative", rationale="r")
+    assert c2.correction_id == c.correction_id and c2.sequence == c.sequence

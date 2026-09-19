@@ -63,7 +63,20 @@
 - **[P2→落实] 依据透明规则（basis-transparency）**：claim 证据链必须**终接在带收据锚点的终端**——链条经目标决策自身的 claim 依据传递，自指边永不作数；无收据锚定的终端与永不落地的互指环以新枚举 `unevidenced_claim_basis` 浮出不确定性队列（needs_human=true），结构校验保持确定性不受阻断。E102 的保留决策与语义理由随之完整：`basis_id` 必须是已注册决策（保证引用可追溯），而"证据真实性"由锚定规则与队列承担，两层职责不再含混。
 - schema 不确定性枚举同步扩至六值；新增 5 项对抗回归（59→64 项专项，覆盖无锚终端、锚定链、自指锚点、互指环、孤立决策零噪音），全仓 581→590。
 
-**验证（收口后）**：`pytest` 590 项全部通过；`scripts/qa.py` 40 fences PASS；评审产物（合议报告、未决账本、质询答复）存档于 `D:/hermes-home/you/cross-reviews/pr11-decision-ledger-20260919/`。
+### 外部评审集中加固（第三方 P1 簇全清，同 PR 内实施）
+
+外部评审针对合并前 HEAD 提出 6 簇 P1 与 9 项 P2，主线程逐项实测复核后全部属实并实施修复（`pytest` 590→608 项全绿，qa.py 40 fences PASS）：
+
+- **[P1-01] State Ledger 本真化**：`PruneState` 单快照改为追加式 `DecisionStateEvent`（from_state/to_state/reason/caused_by/alternative_ref/receipt_ref/sequence），生命周期状态由事件重放派生；`current_state`/`state_history` 全部就绪；合法迁移闭集（genesis→active|pruned、active→pruned、pruned→reopened、reopened→pruned）强校验，重复同负载调用幂等 no-op，event_id 绑定 内容+序号 保证历史中两次相同迁移互不吞并；`PruneState` 降为派生视图，`set_prune` 保留兼容包装。
+- **[P1-02] FrozenDict 真不可变**：背板从裸 dict 改 `MappingProxyType`，构造后无任何可达的变异路径（slot 写入直接 TypeError）；哈希每次现算。
+- **[P1-03] forkEdge schema ABI 对齐**：`receipt_ref` 补入 `$defs.forkEdge`，schema 增加 uncertainties 必填、stateEvent 完整定义（含 if/then 跨字段约束：pruned 必填封闭词表 reason、active 禁带因果字段）、`correction_id` 升 `^corr-[0-9a-f]{32}$`、sequence 下限 1、lineage receipt_id minLength 1。
+- **[P1-04] basis_kind↔目标类型强校验**：新增 E103（`negative_result` 依据必须指向负结果决策、`claim` 依据不得指向负结果决策），类型化依据边不再是自报标签。
+- **[P1-05] 内容身份与验证态解耦**：`ledger_digest` 不再包含本地收据注册表（注册标签不再污染摘要，同一台账不同标签恒等）；新增 `verification_digest` 独立承载验证态；导出与 schema 同步。
+- **[P1-06] `_jsonable` 严格失败关闭**：删除 `repr()` 回退（跨进程非确定且在外来对象上是任意代码路径），仅允许 JSON 原语/Mapping/序列/to_dict 对象，其余 TypeError；环形容器拒绝；`register_receipt` 注册即 fail-fast。
+- **[P2] 其余落实**：修正碰撞防御死代码（重排为先比对全负载再幂等返回）+ 修正 ID 升 128 位；E407 负结果证据闭包成环硬失败（确定性结构事实不再仅浮出队列）；E304 尾巴节点修正（路径索引法，只报真环成员）+ reopen 破环后派生当前图环消失；`trace_prune_cause` 递归返回完整剪枝链；新增严格回放加载器 `from_dict`（契约校验→构造器重放→迁移链复核→摘要重算比对，篡改导出 fail closed）；README/PR 验证基线统一至 608。
+- **暂缓项**：CEG/Ledger 契约共享模块抽取（scripts/contracts/evidence.py）归入 PR #12 桥接统一处理，本 PR 以跨内核字节兼容回归测试钉住两侧契约；P3 性能项（SCC 统一、索引、digest 增量缓存）登记待办，不改变语义。
+
+**验证（本轮加固后）**：`pytest` 608 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
 
 ---
 

@@ -9,11 +9,13 @@
     "protocol",
     "ledger_id",
     "ledger_digest",
+    "verification_digest",
     "decisions",
     "bases",
     "forks",
-    "prune_states",
-    "corrections"
+    "state_events",
+    "corrections",
+    "uncertainties"
   ],
   "properties": {
     "protocol": {
@@ -25,6 +27,10 @@
       "minLength": 1
     },
     "ledger_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "verification_digest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
@@ -46,10 +52,10 @@
         "$ref": "#/$defs/forkEdge"
       }
     },
-    "prune_states": {
+    "state_events": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/pruneState"
+        "$ref": "#/$defs/stateEvent"
       }
     },
     "corrections": {
@@ -69,7 +75,13 @@
     "decision": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "title", "normalized_title", "decision_type", "decision_digest"],
+      "required": [
+        "id",
+        "title",
+        "normalized_title",
+        "decision_type",
+        "decision_digest"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -84,7 +96,13 @@
         },
         "decision_type": {
           "type": "string",
-          "enum": ["explore", "commit", "abandon", "revise", "negative_result"]
+          "enum": [
+            "explore",
+            "commit",
+            "abandon",
+            "revise",
+            "negative_result"
+          ]
         },
         "decision_digest": {
           "type": "string",
@@ -104,7 +122,11 @@
     "basisEdge": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["decision_id", "basis_kind", "basis_id"],
+      "required": [
+        "decision_id",
+        "basis_kind",
+        "basis_id"
+      ],
       "properties": {
         "decision_id": {
           "type": "string",
@@ -112,7 +134,10 @@
         },
         "basis_kind": {
           "type": "string",
-          "enum": ["claim", "negative_result"]
+          "enum": [
+            "claim",
+            "negative_result"
+          ]
         },
         "basis_id": {
           "type": "string",
@@ -129,7 +154,11 @@
     "forkEdge": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["decision_id", "alternative_id", "relation"],
+      "required": [
+        "decision_id",
+        "alternative_id",
+        "relation"
+      ],
       "properties": {
         "decision_id": {
           "type": "string",
@@ -141,40 +170,63 @@
         },
         "relation": {
           "type": "string",
-          "enum": ["considered", "explored", "deferred", "rejected"]
+          "enum": [
+            "considered",
+            "explored",
+            "deferred",
+            "rejected"
+          ]
+        },
+        "receipt_ref": {
+          "$ref": "#/$defs/receiptRef"
         },
         "metadata": {
           "type": "object"
         }
       }
     },
-    "pruneState": {
+    "stateEvent": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["decision_id", "status"],
+      "required": [
+        "event_id",
+        "decision_id",
+        "to_state",
+        "sequence"
+      ],
       "properties": {
+        "event_id": {
+          "type": "string",
+          "pattern": "^evt-[0-9a-f]{32}$"
+        },
         "decision_id": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
         },
-        "status": {
-          "type": "string",
-          "enum": ["active", "pruned"]
-        },
-        "prune_reason": {
+        "from_state": {
           "type": "string",
           "enum": [
-            "resource_exhausted",
-            "superseded",
-            "contradicted",
-            "out_of_scope",
-            "duplicate",
-            "external_constraint",
-            "investigator_error",
-            "other"
+            "active",
+            "pruned",
+            "reopened"
           ]
         },
-        "pruned_by": {
+        "to_state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "pruned",
+            "reopened"
+          ]
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reason": {
+          "type": "string"
+        },
+        "caused_by": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
         },
@@ -188,16 +240,114 @@
         "metadata": {
           "type": "object"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "to_state": {
+                "const": "pruned"
+              }
+            },
+            "required": [
+              "to_state"
+            ]
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "enum": [
+                  "resource_exhausted",
+                  "superseded",
+                  "contradicted",
+                  "out_of_scope",
+                  "duplicate",
+                  "external_constraint",
+                  "investigator_error",
+                  "other"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "to_state": {
+                "const": "reopened"
+              }
+            },
+            "required": [
+              "to_state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "new_evidence",
+                  "scope_change",
+                  "investigator_reconsideration",
+                  "error_correction",
+                  "other"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "to_state": {
+                "const": "active"
+              }
+            },
+            "required": [
+              "to_state"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "reason"
+                  ]
+                },
+                {
+                  "required": [
+                    "caused_by"
+                  ]
+                },
+                {
+                  "required": [
+                    "alternative_ref"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     "outcomeCorrection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["correction_id", "decision_id", "verdict", "rationale", "outcome_digest", "sequence"],
+      "required": [
+        "correction_id",
+        "decision_id",
+        "verdict",
+        "rationale",
+        "outcome_digest",
+        "sequence"
+      ],
       "properties": {
         "correction_id": {
           "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+          "pattern": "^corr-[0-9a-f]{32}$"
         },
         "decision_id": {
           "type": "string",
@@ -205,7 +355,12 @@
         },
         "verdict": {
           "type": "string",
-          "enum": ["positive", "negative", "inconclusive", "unverifiable"]
+          "enum": [
+            "positive",
+            "negative",
+            "inconclusive",
+            "unverifiable"
+          ]
         },
         "rationale": {
           "type": "string",
@@ -217,7 +372,7 @@
         },
         "sequence": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 1
         },
         "receipt_ref": {
           "$ref": "#/$defs/receiptRef"
@@ -233,7 +388,13 @@
     "uncertaintyItem": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["item_id", "subject_id", "kind", "reason", "needs_human"],
+      "required": [
+        "item_id",
+        "subject_id",
+        "kind",
+        "reason",
+        "needs_human"
+      ],
       "properties": {
         "item_id": {
           "type": "string",
@@ -279,7 +440,8 @@
               "const": "lineage-receipt-1.0"
             },
             "receipt_id": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "receipt_digest": {
               "type": "string",
@@ -289,7 +451,12 @@
               "type": "string"
             }
           },
-          "required": ["kind", "schema_version", "receipt_id", "receipt_digest"]
+          "required": [
+            "kind",
+            "schema_version",
+            "receipt_id",
+            "receipt_digest"
+          ]
         },
         {
           "description": "AcademicEvidenceReceipt reference",
@@ -314,7 +481,12 @@
               "type": "string"
             }
           },
-          "required": ["kind", "schema_version", "claim_digest", "payload_sha256"]
+          "required": [
+            "kind",
+            "schema_version",
+            "claim_digest",
+            "payload_sha256"
+          ]
         }
       ]
     }
