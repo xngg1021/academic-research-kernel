@@ -57,8 +57,10 @@ PROTOCOL = "decision-ledger-1.0"
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 ID_REGEX = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 
+VALID_ENTRY_KINDS: set = {"decision", "negative_result"}
+VALID_DECISION_ACTIONS: set = {"explore", "commit", "abandon", "revise"}
 VALID_DECISION_TYPES: set = {"explore", "commit", "abandon", "revise", "negative_result"}
-VALID_BASIS_KINDS: set = {"decision", "negative_result", "claim"}
+VALID_BASIS_KINDS: set = {"decision", "negative_result"}
 VALID_FORK_RELATIONS: set = {"considered", "explored", "deferred", "rejected"}
 VALID_PRUNE_STATUSES: set = {"active", "pruned", "reopened"}
 VALID_PRUNE_REASONS: set = {
@@ -575,21 +577,39 @@ def _meta_canonical_json(metadata: FrozenDict) -> str:
 
 @dataclass(frozen=True)
 class DecisionNode:
-    """A research decision: an explore/commit/abandon/revise act or a negative result."""
+    """A research decision or recorded failed attempt (negative result)."""
 
     id: str
     title: str
     decision_type: str = "explore"
+    entry_kind: str = "decision"
+    decision_action: Optional[str] = None
     context_work_id: Optional[str] = None
     locator: Optional[str] = None
     metadata: FrozenDict = field(default_factory=FrozenDict)
     normalized_title: str = field(init=False)
     decision_digest: str = field(init=False)
 
+    @property
+    def is_negative_result(self) -> bool:
+        return self.entry_kind == "negative_result"
+
     def __post_init__(self):
         _check_id(self.id, "decision id")
         if self.decision_type not in VALID_DECISION_TYPES:
             raise ValueError(f"Invalid decision_type: {self.decision_type!r}. Must be one of {sorted(VALID_DECISION_TYPES)}")
+        # Disambiguate entry_kind vs decision_action
+        if self.entry_kind == "negative_result" or self.decision_type == "negative_result":
+            object.__setattr__(self, "entry_kind", "negative_result")
+            object.__setattr__(self, "decision_action", None)
+            object.__setattr__(self, "decision_type", "negative_result")
+        else:
+            object.__setattr__(self, "entry_kind", "decision")
+            action = self.decision_action or self.decision_type or "explore"
+            if action not in VALID_DECISION_ACTIONS:
+                raise ValueError(f"Invalid decision_action: {action!r}. Must be one of {sorted(VALID_DECISION_ACTIONS)}")
+            object.__setattr__(self, "decision_action", action)
+            object.__setattr__(self, "decision_type", action)
         if not isinstance(self.title, str) or not self.title.strip():
             raise ValueError("Decision 'title' must be a non-empty string.")
         if len(self.title) > 512:
@@ -615,6 +635,8 @@ class DecisionNode:
             "id": self.id,
             "title": self.title,
             "normalized_title": self.normalized_title,
+            "entry_kind": self.entry_kind,
+            "decision_action": self.decision_action,
             "decision_type": self.decision_type,
             "decision_digest": self.decision_digest,
         }
@@ -639,10 +661,8 @@ class DecisionBasisEdge:
 
     def __post_init__(self):
         _check_id(self.decision_id, "decision_id")
-        if self.basis_kind == "claim":
-            object.__setattr__(self, "basis_kind", "decision")
-        if self.basis_kind not in ("decision", "negative_result"):
-            raise ValueError(f"Invalid basis_kind: {self.basis_kind!r}. Must be 'decision' or 'negative_result'.")
+        if self.basis_kind not in VALID_BASIS_KINDS:
+            raise ValueError(f"Invalid basis_kind: {self.basis_kind!r}. Must be one of {sorted(VALID_BASIS_KINDS)}")
         _check_id(self.basis_id, "basis_id")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
             raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
@@ -710,16 +730,18 @@ def canonical_fork_tuple(edge: DecisionForkEdge) -> Tuple[str, ...]:
 
 
 @dataclass(frozen=True)
-class PruneState:
-    """Lifecycle state of a decision branch: active, reopened, or pruned with closed-vocabulary reason."""
+class RouteStatus:
+    """Lifecycle status of a research route: active, reopened, or stopped with explicit reason."""
 
     decision_id: str
     status: str
-    prune_reason: Optional[str] = None
-    pruned_by: Optional[str] = None
+    stop_reason: Optional[str] = None
+    closed_by: Optional[str] = None
     alternative_ref: Optional[str] = None
     receipt_ref: Optional[ReceiptRef] = None
     metadata: FrozenDict = field(default_factory=FrozenDict)
+    prune_reason: Optional[str] = None
+    pruned_by: Optional[str] = None
 
     @property
     def is_active(self) -> bool:
@@ -735,24 +757,31 @@ class PruneState:
 
     def __post_init__(self):
         _check_id(self.decision_id, "decision_id")
+        reason = self.stop_reason or self.prune_reason
+        caused = self.closed_by or self.pruned_by
+        object.__setattr__(self, "stop_reason", reason)
+        object.__setattr__(self, "prune_reason", reason)
+        object.__setattr__(self, "closed_by", caused)
+        object.__setattr__(self, "pruned_by", caused)
+
         if self.status not in VALID_PRUNE_STATUSES:
-            raise ValueError(f"Invalid prune status: {self.status!r}. Must be one of {sorted(VALID_PRUNE_STATUSES)}")
+            raise ValueError(f"Invalid route status: {self.status!r}. Must be one of {sorted(VALID_PRUNE_STATUSES)}")
         if self.status == "pruned":
-            if not self.prune_reason:
-                raise ValueError("Pruned decision requires a non-empty 'prune_reason'.")
-            if self.prune_reason not in VALID_PRUNE_REASONS:
-                raise ValueError(f"Invalid prune_reason: {self.prune_reason!r}. Must be one of {sorted(VALID_PRUNE_REASONS)}")
-            if self.pruned_by is not None:
-                _check_id(self.pruned_by, "pruned_by")
-                if self.pruned_by == self.decision_id:
-                    raise ValueError(f"Circular pruning: decision '{self.decision_id}' cannot prune itself.")
+            if not self.stop_reason:
+                raise ValueError("Stopped/pruned route requires a non-empty 'stop_reason' / 'prune_reason'.")
+            if self.stop_reason not in VALID_PRUNE_REASONS:
+                raise ValueError(f"Invalid stop_reason / prune_reason: {self.stop_reason!r}. Must be one of {sorted(VALID_PRUNE_REASONS)}")
+            if self.closed_by is not None:
+                _check_id(self.closed_by, "closed_by")
+                if self.closed_by == self.decision_id:
+                    raise ValueError(f"Circular closure / Circular pruning: decision '{self.decision_id}' cannot prune itself.")
             if self.alternative_ref is not None:
                 _check_id(self.alternative_ref, "alternative_ref")
                 if self.alternative_ref == self.decision_id:
-                    raise ValueError(f"Self-referential alternative: decision '{self.decision_id}' cannot be its own alternative.")
+                    raise ValueError(f"Self-referential alternative: route '{self.decision_id}' cannot be its own alternative.")
         else:
-            if self.prune_reason is not None or self.pruned_by is not None or self.alternative_ref is not None:
-                raise ValueError(f"{self.status.capitalize()} decision must not carry prune_reason/pruned_by/alternative_ref fields.")
+            if self.stop_reason is not None or self.closed_by is not None or self.alternative_ref is not None:
+                raise ValueError(f"Active decision must not carry stop_reason/prune_reason/closed_by/alternative_ref fields.")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
             raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
         object.__setattr__(self, "metadata", _frozen_meta(self.metadata))
@@ -762,10 +791,12 @@ class PruneState:
             "decision_id": self.decision_id,
             "status": self.status,
         }
-        if self.prune_reason:
-            d["prune_reason"] = self.prune_reason
-        if self.pruned_by:
-            d["pruned_by"] = self.pruned_by
+        if self.stop_reason:
+            d["stop_reason"] = self.stop_reason
+            d["prune_reason"] = self.stop_reason
+        if self.closed_by:
+            d["closed_by"] = self.closed_by
+            d["pruned_by"] = self.closed_by
         if self.alternative_ref:
             d["alternative_ref"] = self.alternative_ref
         if self.receipt_ref is not None:
@@ -775,12 +806,15 @@ class PruneState:
         return d
 
 
-def canonical_prune_tuple(state: PruneState) -> Tuple[str, ...]:
+PruneState = RouteStatus
+
+
+def canonical_prune_tuple(state: RouteStatus) -> Tuple[str, ...]:
     return (
         state.decision_id,
         state.status,
-        state.prune_reason or "",
-        state.pruned_by or "",
+        state.stop_reason or "",
+        state.closed_by or "",
         state.alternative_ref or "",
     ) + canonical_receipt_ref_tuple(state.receipt_ref) + (_meta_canonical_json(state.metadata),)
 
@@ -1039,6 +1073,7 @@ class DecisionLedger:
         self._next_correction_sequence = 1
         self._next_state_sequence = 1
         self._bases_by_decision: Dict[str, List[DecisionBasisEdge]] = collections.defaultdict(list)
+        self._bases_by_target: Dict[str, List[DecisionBasisEdge]] = collections.defaultdict(list)
         self._state_events_by_decision: Dict[str, List[DecisionStateEvent]] = collections.defaultdict(list)
         self._corrections_by_decision: Dict[str, List[OutcomeCorrection]] = collections.defaultdict(list)
         self._academic_hash_index: Dict[str, Any] = {}
@@ -1089,6 +1124,8 @@ class DecisionLedger:
         id: str,
         title: str,
         decision_type: str = "explore",
+        entry_kind: str = "decision",
+        decision_action: Optional[str] = None,
         context_work_id: Optional[str] = None,
         locator: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -1097,11 +1134,33 @@ class DecisionLedger:
             id=id,
             title=title,
             decision_type=decision_type,
+            entry_kind=entry_kind,
+            decision_action=decision_action,
             context_work_id=context_work_id,
             locator=locator,
             metadata=metadata or {},
         )
         return self._register_node(self._decisions, node, id, "decision")
+
+    def add_negative_result(
+        self,
+        id: str,
+        title: str,
+        context_work_id: Optional[str] = None,
+        locator: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> DecisionNode:
+        """First-class helper to record a failed attempt / negative result."""
+        return self.add_decision(
+            id=id,
+            title=title,
+            decision_type="negative_result",
+            entry_kind="negative_result",
+            decision_action=None,
+            context_work_id=context_work_id,
+            locator=locator,
+            metadata=metadata,
+        )
 
     def add_basis(
         self,
@@ -1111,8 +1170,8 @@ class DecisionLedger:
         receipt_ref: Optional[ReceiptRef] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> DecisionBasisEdge:
-        if basis_kind == "claim":
-            basis_kind = "decision"
+        if basis_kind not in VALID_BASIS_KINDS:
+            raise ValueError(f"Invalid basis_kind: {basis_kind!r}. Must be one of {sorted(VALID_BASIS_KINDS)}")
         edge = DecisionBasisEdge(
             decision_id=decision_id,
             basis_kind=basis_kind,
@@ -1126,6 +1185,7 @@ class DecisionLedger:
             return existing
         self._bases[key] = edge
         self._bases_by_decision[decision_id].append(edge)
+        self._bases_by_target[basis_id].append(edge)
         return edge
 
     def add_fork(
@@ -1241,29 +1301,27 @@ class DecisionLedger:
         events = self._state_events_by_decision.get(decision_id, [])
         return [e.to_dict() for e in events]
 
-    def set_prune(
+    def record_route_status(
         self,
         decision_id: str,
         status: str,
-        prune_reason: Optional[str] = None,
-        pruned_by: Optional[str] = None,
+        stop_reason: Optional[str] = None,
+        closed_by: Optional[str] = None,
         alternative_ref: Optional[str] = None,
         receipt_ref: Optional[ReceiptRef] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> PruneState:
-        """Compatibility wrapper: append a state event and return the derived view.
-
-        status='active' with no history registers a genesis active event;
-        status='active' on a pruned decision appends a reopened event;
-        status='reopened' on a pruned decision appends a reopened event;
-        status='pruned' appends a pruned event.
-        Repeated identical calls replay idempotently. Conflicting active calls fail.
-        """
+        # compatibility keyword arguments:
+        prune_reason: Optional[str] = None,
+        pruned_by: Optional[str] = None,
+    ) -> RouteStatus:
+        """Record the lifecycle status of a route (active, reopened, or stopped/pruned)."""
+        reason = stop_reason or prune_reason
+        caused = closed_by or pruned_by
         if status not in VALID_PRUNE_STATUSES:
-            raise ValueError(f"Invalid prune status: {status!r}. Must be one of {sorted(VALID_PRUNE_STATUSES)}")
+            raise ValueError(f"Invalid route status: {status!r}. Must be one of {sorted(VALID_PRUNE_STATUSES)}")
         if status in ("active", "reopened"):
-            if prune_reason is not None or pruned_by is not None or alternative_ref is not None:
-                raise ValueError(f"{status.capitalize()} decision must not carry prune_reason/pruned_by/alternative_ref fields.")
+            if reason is not None or caused is not None or alternative_ref is not None:
+                raise ValueError(f"{status.capitalize()} decision must not carry stop_reason/closed_by/alternative_ref fields.")
             current = self.current_state(decision_id)
             if current is None:
                 self.add_state_event(decision_id, to_state="active", receipt_ref=receipt_ref, metadata=metadata)
@@ -1287,8 +1345,8 @@ class DecisionLedger:
             if (
                 current is not None
                 and current.status == "pruned"
-                and current.prune_reason == prune_reason
-                and current.pruned_by == pruned_by
+                and (current.stop_reason == reason or current.prune_reason == reason)
+                and (current.closed_by == caused or current.pruned_by == caused)
                 and current.alternative_ref == alternative_ref
                 and current.receipt_ref == receipt_ref
                 and dict(current.metadata) == dict(metadata or {})
@@ -1297,8 +1355,8 @@ class DecisionLedger:
             self.add_state_event(
                 decision_id,
                 to_state="pruned",
-                reason=prune_reason,
-                caused_by=pruned_by,
+                reason=reason,
+                caused_by=caused,
                 alternative_ref=alternative_ref,
                 receipt_ref=receipt_ref,
                 metadata=metadata,
@@ -1306,6 +1364,8 @@ class DecisionLedger:
         view = self.current_state(decision_id)
         assert view is not None
         return view
+
+    set_prune = record_route_status
 
     def _latest_correction(self, decision_id: str) -> Optional[OutcomeCorrection]:
         """Latest outcome correction for a decision by sequence order."""
@@ -1366,10 +1426,7 @@ class DecisionLedger:
 
     def outcome_of(self, decision_id: str) -> Dict[str, Any]:
         """Latest outcome verdict for a decision (true insertion order via sequence)."""
-        related = sorted(
-            (c for c in self._corrections.values() if c.decision_id == decision_id),
-            key=lambda c: (c.sequence, c.correction_id),
-        )
+        related = self._corrections_by_decision.get(decision_id, [])
         return {
             "decision_id": decision_id,
             "correction_count": len(related),
@@ -1390,56 +1447,50 @@ class DecisionLedger:
 
     def find_decisions_for(self, basis_id: str, basis_kind: Optional[str] = None) -> List[Dict[str, Any]]:
         """All basis edges citing a given decision/negative-result, sorted deterministically."""
-        target_kind = "decision" if basis_kind == "claim" else basis_kind
+        candidates = self._bases_by_target.get(basis_id, [])
         out = []
-        for edge in sorted(self._bases.values(), key=canonical_basis_tuple):
-            if edge.basis_id != basis_id:
-                continue
-            if target_kind is not None and edge.basis_kind != target_kind:
+        for edge in sorted(candidates, key=canonical_basis_tuple):
+            if basis_kind is not None and edge.basis_kind != basis_kind:
                 continue
             out.append(edge.to_dict())
         return out
 
-    def _current_prune_graph(self) -> Dict[str, PruneState]:
-        """Derived map of currently-pruned decisions to their derived state views."""
-        latest: Dict[str, DecisionStateEvent] = {}
-        for e in self._state_events:
-            prev = latest.get(e.decision_id)
-            if prev is None or (e.sequence, e.event_id) > (prev.sequence, prev.event_id):
-                latest[e.decision_id] = e
-        out: Dict[str, PruneState] = {}
-        for did, e in latest.items():
-            if e.to_state == "pruned":
-                out[did] = PruneState(
+    def _current_prune_graph(self) -> Dict[str, RouteStatus]:
+        """Derived map of currently stopped/pruned decisions to their derived state views."""
+        out: Dict[str, RouteStatus] = {}
+        for did, events in self._state_events_by_decision.items():
+            if events and events[-1].to_state == "pruned":
+                e = events[-1]
+                out[did] = RouteStatus(
                     decision_id=did,
                     status="pruned",
-                    prune_reason=e.reason,
-                    pruned_by=e.caused_by,
+                    stop_reason=e.reason,
+                    closed_by=e.caused_by,
                     alternative_ref=e.alternative_ref,
                     receipt_ref=e.receipt_ref,
                     metadata=dict(e.metadata),
                 )
         return out
 
-    def trace_prune_cause(self, decision_id: str) -> Dict[str, Any]:
-        """Recursive causal trace of why a branch was pruned.
+    def trace_stop_reason(self, decision_id: str) -> Dict[str, Any]:
+        """Recursive causal trace of why a research route was stopped.
 
-        Returns the derived current prune state and the full prune_chain:
-        each link lists the pruned decision, its closed-vocabulary reason,
-        the pruning decision and that decision's claim bases. The chain
-        stops at an unpruned decision, an unregistered reference, or a
-        detected cycle (cycle_break flag). unsupported_reason is a
-        deterministic free-text explanation when the pruning decision lacks
-        any Claim basis; None when properly supported.
+        Returns the derived current route status and the full stop_chain:
+        each link lists the stopped route, its closed-vocabulary reason,
+        the closure decision and that decision's decision bases.
         """
         graph = self._current_prune_graph()
         state = graph.get(decision_id)
         result: Dict[str, Any] = {
             "decision_id": decision_id,
+            "route_status": state.to_dict() if state else None,
             "prune_state": state.to_dict() if state else None,
+            "closed_by_decision": None,
             "pruned_by_decision": None,
             "alternative_decision": None,
+            "closed_by_bases": [],
             "pruned_by_bases": [],
+            "stop_chain": [],
             "prune_chain": [],
             "unsupported_reason": None,
         }
@@ -1453,46 +1504,127 @@ class DecisionLedger:
             link_state = graph[cur]
             link: Dict[str, Any] = {
                 "decision_id": cur,
-                "prune_reason": link_state.prune_reason,
-                "pruned_by": link_state.pruned_by,
+                "stop_reason": link_state.stop_reason,
+                "prune_reason": link_state.stop_reason,
+                "closed_by": link_state.closed_by,
+                "pruned_by": link_state.closed_by,
                 "alternative_ref": link_state.alternative_ref,
             }
+            result["stop_chain"].append(link)
             result["prune_chain"].append(link)
-            cur = link_state.pruned_by
+            cur = link_state.closed_by
         if cur is not None and cur in visited:
             result["cycle_break"] = cur
 
-        if state.pruned_by:
-            node = self._decisions.get(state.pruned_by)
+        target_closure = state.closed_by
+        if target_closure:
+            node = self._decisions.get(target_closure)
+            result["closed_by_decision"] = node.to_dict() if node else None
             result["pruned_by_decision"] = node.to_dict() if node else None
             bases = sorted(
-                (e.to_dict() for e in self._bases.values() if e.decision_id == state.pruned_by),
+                (e.to_dict() for e in self._bases_by_decision.get(target_closure, [])),
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             )
+            result["closed_by_bases"] = bases
             result["pruned_by_bases"] = bases
-            decision_bases = [b for b in bases if b["basis_kind"] in ("decision", "claim")]
+            decision_bases = [b for b in bases if b["basis_kind"] == "decision"]
             if not decision_bases:
                 result["unsupported_reason"] = (
-                    f"Pruning decision '{state.pruned_by}' cites no decision basis (no Claim basis); "
-                    "the prune cause rests on unrecorded judgment and needs human review."
+                    f"Closure decision '{target_closure}' cites no decision basis (no Claim basis); "
+                    "the stop cause rests on unrecorded judgment and needs human review."
                 )
         if state.alternative_ref:
             alt = self._decisions.get(state.alternative_ref)
             result["alternative_decision"] = alt.to_dict() if alt else None
         return result
 
-    # -- validation ------------------------------------------------------------
+    trace_prune_cause = trace_stop_reason
+
+    # -- validation & graph analysis -------------------------------------------
+
+    def _build_graph_analysis(self) -> Dict[str, Any]:
+        """Single-pass graph analysis: adjacency, cycle nodes (via Tarjan's SCC), and cycle reachability."""
+        succ: Dict[str, set] = collections.defaultdict(set)
+        for edge in self._bases.values():
+            if edge.basis_kind == "decision" and edge.basis_id != edge.decision_id:
+                succ[edge.decision_id].add(edge.basis_id)
+
+        index = 0
+        indices: Dict[str, int] = {}
+        lowlink: Dict[str, int] = {}
+        on_stack: set = set()
+        stack: List[str] = []
+        cycle_nodes: set = set()
+
+        for start in sorted(succ.keys()):
+            if start not in indices:
+                call_stack: List[Tuple[str, Iterator[str]]] = [(start, iter(sorted(succ.get(start, ()))))]
+                indices[start] = lowlink[start] = index
+                index += 1
+                stack.append(start)
+                on_stack.add(start)
+
+                while call_stack:
+                    u, it = call_stack[-1]
+                    advanced = False
+                    for v in it:
+                        if v not in indices:
+                            indices[v] = lowlink[v] = index
+                            index += 1
+                            stack.append(v)
+                            on_stack.add(v)
+                            call_stack.append((v, iter(sorted(succ.get(v, ())))))
+                            advanced = True
+                            break
+                        elif v in on_stack:
+                            lowlink[u] = min(lowlink[u], indices[v])
+                    if not advanced:
+                        call_stack.pop()
+                        if call_stack:
+                            parent = call_stack[-1][0]
+                            lowlink[parent] = min(lowlink[parent], lowlink[u])
+                        if lowlink[u] == indices[u]:
+                            scc: List[str] = []
+                            while True:
+                                w = stack.pop()
+                                on_stack.remove(w)
+                                scc.append(w)
+                                if w == u:
+                                    break
+                            if len(scc) > 1 or (len(scc) == 1 and scc[0] in succ.get(scc[0], ())):
+                                cycle_nodes.update(scc)
+
+        cycle_reachable: set = set(cycle_nodes)
+        rev_succ: Dict[str, set] = collections.defaultdict(set)
+        for u, neighbors in succ.items():
+            for v in neighbors:
+                rev_succ[v].add(u)
+        bfs = list(cycle_nodes)
+        while bfs:
+            curr = bfs.pop(0)
+            for prev in rev_succ.get(curr, ()):
+                if prev not in cycle_reachable:
+                    cycle_reachable.add(prev)
+                    bfs.append(prev)
+
+        return {
+            "succ": succ,
+            "cycle_nodes": cycle_nodes,
+            "cycle_reachable": cycle_reachable,
+        }
 
     def _resolve_receipt(self, ref: ReceiptRef) -> Optional[Any]:
         """Resolve a ReceiptRef to a registered receipt payload (CEG-compatible lookup).
 
         lineage refs resolve by receipt_id; academic_evidence refs resolve by
-        payload_sha256 key first, then by canonical payload hash scan.
+        payload_sha256 key first (O(1) index), then by canonical payload hash scan.
         """
         if ref.kind == "lineage":
             return self._receipts.get(ref.receipt_id)
         if ref.payload_sha256 in self._receipts:
             return self._receipts[ref.payload_sha256]
+        if ref.payload_sha256 in self._academic_hash_index:
+            return self._academic_hash_index[ref.payload_sha256]
         for reg_val in self._receipts.values():
             val_dict = reg_val if isinstance(reg_val, dict) else (reg_val.to_dict() if hasattr(reg_val, "to_dict") else {})
             if canonical_academic_receipt_payload_sha256(val_dict) == ref.payload_sha256:
@@ -1526,8 +1658,8 @@ class DecisionLedger:
             else:
                 if edge.basis_kind == "negative_result" and target.decision_type != "negative_result":
                     errors.append(f"E103 basis kind mismatch: negative_result basis '{edge.basis_id}' targets a '{target.decision_type}' decision")
-                if edge.basis_kind in ("decision", "claim") and target.decision_type == "negative_result":
-                    errors.append(f"E103 basis kind mismatch: {edge.basis_kind} basis '{edge.basis_id}' targets a negative_result decision")
+                if edge.basis_kind == "decision" and target.decision_type == "negative_result":
+                    errors.append(f"E103 basis kind mismatch: decision basis '{edge.basis_id}' targets a negative_result decision")
             self._validate_receipt_ref(edge.receipt_ref, f"basis:{edge.decision_id}>{edge.basis_id}", errors)
 
         # Dangling fork edges + self forks
@@ -1553,11 +1685,10 @@ class DecisionLedger:
             self._validate_receipt_ref(event.receipt_ref, f"state_event:{event.event_id}", errors)
 
         # Circular pruning chains on the DERIVED current prune graph
-        # (path-indexed: tail nodes entering a cycle are not cycle members)
         pruned_by_graph: Dict[str, str] = {
-            s.decision_id: s.pruned_by
+            s.decision_id: s.closed_by
             for s in self._current_prune_graph().values()
-            if s.pruned_by
+            if s.closed_by
         }
         reported_cycle_nodes: set = set()
         for start in sorted(pruned_by_graph):
@@ -1581,65 +1712,26 @@ class DecisionLedger:
                 errors.append(f"E401 outcome correction '{corr.correction_id}' references unregistered decision '{corr.decision_id}'")
             self._validate_receipt_ref(corr.receipt_ref, f"correction:{corr.correction_id}", errors)
 
-        # Negative results must be evidence-bearing (E404/E405)
-        # A negative result may only rest on claim-type bases that reference
-        # OTHER (non-negative-result) decisions: a self-reference or a
-        # mutual negative_result<->claim cycle would fabricate positive
-        # evidence out of the assertions of absence themselves.
+        # Negative results must be evidence-bearing (E404/E405/E406/E407)
         neg_ids = {n.id for n in self._decisions.values() if n.decision_type == "negative_result"}
+        analysis = self._build_graph_analysis()
+
         for node in sorted(self._decisions.values(), key=lambda d: d.id):
             if node.decision_type != "negative_result":
                 continue
-            bases = [e for e in self._bases.values() if e.decision_id == node.id]
+            bases = self._bases_by_decision.get(node.id, [])
             if not bases:
                 errors.append(f"E404 negative result '{node.id}' carries no basis edge (assertion of absence needs evidence)")
                 continue
-            # self-referential basis is circular evidence fabrication
-            if any(e.basis_kind in ("decision", "claim") and e.basis_id == node.id for e in bases):
+            if any(e.basis_kind == "decision" and e.basis_id == node.id for e in bases):
                 errors.append(f"E406 negative result '{node.id}' cites itself as evidence (circular evidence fabrication)")
             decision_bases = [
                 e for e in bases
-                if e.basis_kind in ("decision", "claim") and e.basis_id != node.id and e.basis_id not in neg_ids
+                if e.basis_kind == "decision" and e.basis_id != node.id and e.basis_id not in neg_ids
             ]
             if not decision_bases:
-                if any(e.basis_kind in ("decision", "claim") and e.basis_id in neg_ids for e in bases):
-                    errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
-                elif not any(e.basis_kind in ("decision", "claim") for e in bases):
-                    errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
-
-        # E407: a negative result whose decision-basis closure contains a cycle
-        # can never ground at a receipt anchor; that is a deterministic
-        # structural fact, so it hard-fails instead of only surfacing in the
-        # uncertainty queue.
-        decision_succ_v: Dict[str, set] = {}
-        for e in self._bases.values():
-            if e.basis_kind in ("decision", "claim") and e.basis_id != e.decision_id:
-                decision_succ_v.setdefault(e.decision_id, set()).add(e.basis_id)
-
-        def _closure_has_cycle(root: str) -> bool:
-            visited: set = set()
-            on_path: set = set()
-            stack: List[Tuple[str, Iterator[str]]] = [(root, iter(sorted(decision_succ_v.get(root, ()))))]
-            on_path.add(root)
-            while stack:
-                top, it = stack[-1]
-                advanced = False
-                for nxt in it:
-                    if nxt in on_path:
-                        return True
-                    if nxt not in visited:
-                        visited.add(nxt)
-                        on_path.add(nxt)
-                        stack.append((nxt, iter(sorted(decision_succ_v.get(nxt, ())))))
-                        advanced = True
-                        break
-                if not advanced:
-                    on_path.discard(top)
-                    stack.pop()
-            return False
-
-        for node in sorted(self._decisions.values(), key=lambda d: d.id):
-            if node.decision_type == "negative_result" and _closure_has_cycle(node.id):
+                errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
+            if node.id in analysis["cycle_reachable"]:
                 errors.append(f"E407 negative result '{node.id}': claim-basis closure contains a cycle that can never ground at a receipt anchor")
 
         unique = sorted(set(errors))
@@ -1648,18 +1740,9 @@ class DecisionLedger:
     # -- uncertainty queue -------------------------------------------------
 
     def export_uncertainties(self, manifest_override: Optional[Mapping[str, str]] = None) -> List[UncertaintyItem]:
-        """Deterministic three-state uncertainty queue (content-addressed ids).
-
-        When manifest_override is provided, receipt resolvability is evaluated
-        against the declared verification manifest (used during replay when raw
-        receipt payloads are not loaded locally).
-        """
+        """Deterministic three-state uncertainty queue (content-addressed ids)."""
         items: List[UncertaintyItem] = []
 
-        # Uncertainty item_id derivation is byte-compatible with the CEG
-        # Kernel: sha256 over {kind, needs_human, reason, subject_id} sorted
-        # keys, truncated to 16 hex chars, prefixed with "unc-". Cross-kernel
-        # queue merging (PR #12) then sees identical ids for identical items.
         def add(kind: str, subject_id: str, reason: str, needs_human: bool):
             payload = json.dumps(
                 {
@@ -1711,7 +1794,7 @@ class DecisionLedger:
         for node in self._decisions.values():
             if node.decision_type != "negative_result":
                 continue
-            bases = [e for e in self._bases.values() if e.decision_id == node.id]
+            bases = self._bases_by_decision.get(node.id, [])
             if not bases:
                 add(
                     "decision_without_basis",
@@ -1719,7 +1802,7 @@ class DecisionLedger:
                     f"Negative result '{node.id}' carries no basis edge; the assertion of absence is unevidenced.",
                     True,
                 )
-            elif not any(e.basis_kind in ("decision", "claim") for e in bases):
+            elif not any(e.basis_kind == "decision" for e in bases):
                 add(
                     "unsupported_negative_result",
                     node.id,
@@ -1727,50 +1810,31 @@ class DecisionLedger:
                     True,
                 )
 
-        # Pruning decisions without any decision basis (derived current prune graph)
+        # Stopped routes without any decision basis (derived current route graph)
         for state in self._current_prune_graph().values():
-            if not state.pruned_by:
+            if not state.closed_by:
                 continue
             decision_bases = [
-                e for e in self._bases.values()
-                if e.decision_id == state.pruned_by and e.basis_kind in ("decision", "claim")
+                e for e in self._bases_by_decision.get(state.closed_by, [])
+                if e.basis_kind == "decision"
             ]
             if not decision_bases:
                 add(
                     "unsupported_pruning",
                     state.decision_id,
-                    f"Pruning decision '{state.pruned_by}' cites no decision basis; the prune cause needs human review.",
+                    f"Pruning decision '{state.closed_by}' cites no decision basis (no Claim basis); the prune cause needs human review.",
                     True,
                 )
 
-        # Unevidenced decision-basis chains: a decision-kind basis edge is valid
-        # only when the evidence chain it starts grounds at a receipt-anchored
-        # terminal. Chains are transitive through the target's own bases;
-        # self-edges never count as evidence. A terminal without receipt
-        # anchoring, or a cycle that never grounds, surfaces for review.
-        claim_succ: Dict[str, set] = {}
-        claim_edges: List[Tuple[str, str, DecisionBasisEdge]] = []
-        for e in self._bases.values():
-            if e.basis_kind in ("decision", "claim") and e.basis_id != e.decision_id:
-                claim_succ.setdefault(e.decision_id, set()).add(e.basis_id)
-                claim_edges.append((e.decision_id, e.basis_id, e))
-
-        def _in_cycle(node: str) -> bool:
-            seen: set = set()
-            stack = list(claim_succ.get(node, ()))
-            while stack:
-                cur = stack.pop()
-                if cur == node:
-                    return True
-                if cur in seen:
-                    continue
-                seen.add(cur)
-                stack.extend(claim_succ.get(cur, ()))
-            return False
+        # Single-pass graph analysis for terminal reachability and cycles
+        analysis = self._build_graph_analysis()
+        claim_succ = analysis["succ"]
+        claim_edges = [(e.decision_id, e.basis_id, e) for e in self._bases.values() if e.basis_kind == "decision"]
+        cycle_nodes = analysis["cycle_nodes"]
 
         terminal_targets = sorted({v for _u, v, _e in claim_edges if not (claim_succ.get(v, set()) - {v})})
         for v in terminal_targets:
-            if _in_cycle(v):
+            if v in cycle_nodes:
                 continue
             anchored = any(e.receipt_ref is not None for u, vv, e in claim_edges if vv == v)
             if not anchored:
@@ -1781,7 +1845,7 @@ class DecisionLedger:
                     f"Claim-basis chain grounds at '{v}' (cited by {', '.join(citing)}) without any receipt anchoring.",
                     True,
                 )
-        for v in sorted({v for v in claim_succ if _in_cycle(v)}):
+        for v in sorted({v for v in claim_succ if v in cycle_nodes}):
             add(
                 "unevidenced_claim_basis",
                 v,
@@ -1789,7 +1853,6 @@ class DecisionLedger:
                 True,
             )
 
-        # Dedupe (content-addressed ids guarantee uniqueness) and sort
         return _dedupe_uncertainty_items(items)
 
     # -- export ------------------------------------------------------------

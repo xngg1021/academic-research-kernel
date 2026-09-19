@@ -112,6 +112,26 @@
             "negative_result"
           ]
         },
+        "entry_kind": {
+          "type": "string",
+          "enum": [
+            "decision",
+            "negative_result"
+          ]
+        },
+        "decision_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "explore",
+            "commit",
+            "abandon",
+            "revise",
+            null
+          ]
+        },
         "decision_digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
@@ -144,8 +164,7 @@
           "type": "string",
           "enum": [
             "decision",
-            "negative_result",
-            "claim"
+            "negative_result"
           ]
         },
         "basis_id": {

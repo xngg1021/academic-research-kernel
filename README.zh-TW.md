@@ -23,16 +23,20 @@ SLL 廣泛允許使用、研究、修改、商用、分發與專有增補，受�
 | `skills/academic-writing` | 1.1.1 | 編輯、引文規範（APA、MLA、Chicago、IEEE、AMA、GB/T）、期刊須知、可選檢測服務、投稿材料、中文學術要求 |
 | `skills/math-computation` | 1.2.1 | 既有領域與任務路由及修正後的數值與統計示例；四篇領域參考文件 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 反算論文報告的統計量（效應量、p 值、信賴區間、OR/RR、實現功效）並檢測數值錯配 |
-| `skills/research-reproducibility` | 1.0.1 | 十四階段復現審計流水線，含結構化清單引擎、五層事實與四態回執 |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 檢索日誌、篩選台帳、效應量換算、異質性、固定與隨機效應合併、敏感性與發表偏倚診斷 |
+| `skills/research-reproducibility` | 1.0.1 | 十四階段復現審計流水線，含結構化核驗清單、五層事實與可復現審計紀錄 |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 檢索日誌、文獻篩選紀錄、效應量換算、異質性、固定與隨機效應合併、敏感性與發表偏倚診斷 |
 | `skills/literature-watch` | 1.1.0 | 週更藍圖：監控主題、作者與 DOI 在 OpenAlex 與 Crossref 的新作品；去重並只報告新增 |
 | `skills/retraction-watch` | 1.1.0 | 週更藍圖：對照 OpenAlex is_retracted 與 Crossref 更新記錄（update-to 訊號）複查 DOI 監控清單；只報告狀態變化 |
-| `skills/research-object-identity` | 1.1.0 | 確定性研究物件身份層與生產譜系核心（Provenance Kernel v1）：識別符歸一、五態判定、內容定址衍生圖、因果 DAG 校驗與毫秒級離線逆向溯源 |
-| `skills/claim-evidence-graph` | 1.0.0 | 確定性科學論斷-證據圖核心：連接學術論斷、實證證據錨點、事實核驗與計算譜系 |
-| `skills/decision-ledger` | 1.0.0 | 確定性追加式決策與負結果台帳內核：決策圖譜、失敗路徑存證、剪枝因果追溯與內容定址結果修正 |
+| `skills/research-object-identity` | 1.1.0 | 確定性科研資源識別與來源追溯：識別符歸一、五態判定、內容定址衍生圖、因果 DAG 校驗與毫秒級離線逆向溯源 |
+| `skills/claim-evidence-graph` | 1.0.0 | 確定性主張與證據關聯：連接學術主張、實證證據紀錄、事實查核與計算過程追溯 |
+| `skills/decision-ledger` | 1.0.0 | 研究決策與失敗紀錄：記錄科研選擇、失敗嘗試存證、為什麼放棄某路線與按時序追加結果修正 |
 | `skills/cross-review-five` | 2.0.0 | 動態多席位異構模型/子代理交叉審議（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini 等）：v2 四階段 Sparse Deliberation 流（盲審產出、斷言級聚類合併、基於匈牙利算法的全局最優互補錯排匿名質詢、對賬與未決保護賬本，支持 P0-P3 嚴重級別） |
 
-十三個技能共含 21 篇 Markdown 參考文件，按需加載。GB/T 7714-2025 已生效；寫作參考區分其已核實生效日期與顯式標註的 2015 示例。完全符合 2025 版需以目標機構的模板或標準文本為準。
+十三個技能共含 21 篇 Markdown 參考文件，按需加載。
+
+## 學術規範與多區域基線
+
+學術引文、元數據與報告規範遵循目標期刊、資助機構、學科與司法管轄區規則。倉庫確立 **ISO 690:2021**（參考文獻與引文指南）、**ISO 5127:2017**（文獻與資訊概念詞彙）與 **W3C PROV**（溯源資料模型）為全球基線，並支援台灣 CNS 13611、大陸地區 GB/T 7714-2025 等地區 Profile 與 APA、IEEE、PRISMA 2020、ICMJE 等學科規範。目標機構具體要求優先於預設規則。詳見[學術規範架構](docs/standards/README.md)與[自然學術術語指南](docs/terminology/README.md)。
 
 ## 安裝與集成
 

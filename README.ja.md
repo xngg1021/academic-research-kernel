@@ -23,16 +23,20 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 | `skills/academic-writing` | 1.1.1 | 編集、引用ガイダンス(APA、MLA、Chicago、IEEE、AMA、GB/T)、ジャーナル指示、任意の検出サービス、投稿資料、中国語学術要件 |
 | `skills/math-computation` | 1.2.1 | 既存の領域・タスク経路と修正済みの数値・統計例題、領域別リファレンス 4 編 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 論文が報告する統計量(効果量、p 値、信頼区間、OR/RR、検出力)の再計算と数値不整合の検出 |
-| `skills/research-reproducibility` | 1.0.1 | 構造化チェックリストエンジン、5 段階の事実、4 状態のレシートを備えた 14 段階の再現監査パイプライン |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 検索ログ、スクリーニング台帳、効果量換算、異質性、固定・変量効果の統合、感度分析、出版バイアス診断 |
+| `skills/research-reproducibility` | 1.0.1 | 構造化チェックリスト、5段階の事実、再現可能な監査記録を備えた14段階の再現監査パイプライン |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 検索ログ、文献選定記録、効果量換算、異質性、固定・変量効果の統合、感度分析、出版バイアス診断 |
 | `skills/literature-watch` | 1.1.0 | 週次ブループリント:OpenAlex と Crossref でトピック、著者、DOI の新規作品を監視し、重複排除のうえ新規のみ報告 |
 | `skills/retraction-watch` | 1.1.0 | 週次ブループリント:OpenAlex の is_retracted と Crossref 更新レコード(update-to シグナル)に対して DOI 監視リストを再検査し、状態変化のみ報告 |
-| `skills/research-object-identity` | 1.1.0 | 決定論的研究対象識別および生産来歴カーネル (Provenance Kernel v1)：識別子正規化、5状態判定、コンテンツアドレス指定派生グラフ、因果DAG検証、ミリ秒単位のオフライン逆方向追跡 |
-| `skills/claim-evidence-graph` | 1.0.0 | 決定論的科学主張・証拠グラフカーネル：主張、証拠アンカー、検証レシート、計算来歴の接続 |
-| `skills/decision-ledger` | 1.0.0 | 決定論的な追記専用レジャー:研究上の意思決定、ネガティブ結果、プルーニング因果、結果訂正を記録 |
+| `skills/research-object-identity` | 1.1.0 | 決定論的研究資源の識別および来歴・トレーサビリティ：識別子正規化、5状態判定、コンテンツアドレス指定派生グラフ、因果DAG検証、ミリ秒単位のオフライン逆方向追跡 |
+| `skills/claim-evidence-graph` | 1.0.0 | 決定論的主張と根拠の対応関係：科学的主張、実証証拠記録、計算来歴の接続 |
+| `skills/decision-ledger` | 1.0.0 | 研究上の意思決定と失敗記録：研究上の選択、失敗試行の記録、路線の断念理由、結果の訂正履歴を追記記録 |
 | `skills/cross-review-five` | 2.0.0 | 動的マルチモデル／サブエージェント協調クロスレビュー（Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Geminiなど）：v2 4段階Sparse Deliberationパイプライン（ハンガリー法による最適マッチング、P0-P3重要度判定対応） |
 
-13 のスキルには 21 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれる。GB/T 7714-2025 が施行されており、執筆リファレンスは検証済みの発効日と明示的に 2015 年例とラベル付けされたものを区別する。2025 年版への完全準拠には対象機関のテンプレートまたは標準本文が必要である。
+13 のスキルには 21 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれる。
+
+## 学術標準とグローバル・プロファイル基準
+
+引用スタイル、報告ガイドライン、メタデータ規約は対象ジャーナル、助成機関、学問分野、司法管轄区に依存します。本リポジトリは **ISO 690:2021**（書誌参照および引用指針）、**ISO 5127:2017**（情報・ドキュメンテーション用語）、**W3C PROV**（来歴データモデル）を国際基準として確立し、各国の地域プロファイル（日本の学協会指針・JIS X 0807参考、中国大陸 GB/T 7714-2025、スペイン UNE-ISO 690 等）および分野別標準（APA、IEEE、PRISMA 2020、ICMJE 等）に対応しています。投稿先機関・学会の要求事項が常に優先されます。詳細は[学術標準アーキテクチャ](docs/standards/README.md)および[自然な学術用語ガイド](docs/terminology/README.md)を参照してください。
 
 ## 統合とポータブル利用
 

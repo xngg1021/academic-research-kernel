@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "title": "Scholarly Standards and Profiles Registry",
+  "description": "Authoritative registry of international standards, regional profiles, and disciplinary publishing guidelines.",
+  "resolution_hierarchy": [
+    "target_venue_or_funder_requirements",
+    "disciplinary_reporting_standards",
+    "applicable_regional_or_national_profiles",
+    "international_baseline_standards",
+    "generic_style_fallback"
+  ],
+  "international_baselines": {
+    "bibliographic_references": {
+      "standard": "ISO 690:2021",
+      "title": "Information and documentation — Guidelines for bibliographic references and citations to information resources",
+      "scope": "Universal multilingual citation and bibliographic reference baseline",
+      "status": "active"
+    },
+    "terminology_and_concepts": {
+      "standard": "ISO 5127:2017",
+      "title": "Information and documentation — Foundation and vocabulary",
+      "scope": "Core concepts and definitions in documentation and library science",
+      "status": "confirmed_2025"
+    },
+    "provenance_and_traceability": {
+      "standard": "W3C PROV",
+      "title": "W3C PROV Data Model and Ontology (PROV-DM / PROV-O)",
+      "scope": "Entities, activities, and agents involved in producing research artifacts",
+      "status": "w3c_recommendation"
+    },
+    "research_data_metadata": {
+      "standard": "DataCite Metadata Schema 4.7",
+      "title": "DataCite Metadata Schema for the Publication and Citation of Research Data and Artifacts",
+      "date": "2026-03-03",
+      "scope": "Global multilingual schema for persistent identifier (DOI) metadata",
+      "status": "active"
+    },
+    "contributor_roles": {
+      "standard": "ANSI/NISO CRediT Z39.104-2022",
+      "title": "Contributor Roles Taxonomy",
+      "scope": "14 standard contributor roles in scholarly research",
+      "status": "ansi_niso_standard"
+    },
+    "journal_article_exchange": {
+      "standard": "ANSI/NISO JATS Z39.96-2024 v1.4",
+      "title": "Journal Article Tag Suite",
+      "scope": "XML format for archiving and exchanging journal articles",
+      "status": "active"
+    },
+    "systematic_reviews": {
+      "standard": "PRISMA 2020",
+      "title": "Preferred Reporting Items for Systematic Reviews and Meta-Analyses",
+      "scope": "Evidence-based minimum set of items for reporting in systematic reviews",
+      "status": "active"
+    },
+    "medical_publishing": {
+      "standard": "ICMJE Recommendations",
+      "title": "Recommendations for the Conduct, Reporting, Editing, and Publication of Scholarly Work in Medical Journals",
+      "date": "2026-01",
+      "scope": "Authorship, peer review, and ethics in biomedical literature",
+      "status": "active"
+    }
+  },
+  "regional_profiles": {
+    "mainland_china": {
+      "profile_id": "profile-cn",
+      "national_standard": "GB/T 7714-2025",
+      "title": "Information and documentation — Rules for bibliographic references and citations to information resources",
+      "published": "2025-12-02",
+      "effective": "2026-07-01",
+      "scope": "Mainland Chinese universities, publishers, and thesis guidelines"
+    },
+    "spain": {
+      "profile_id": "profile-es",
+      "national_standard": "UNE-ISO 690:2024",
+      "title": "Información y documentación. Directrices para la redacción de referencias bibliográficas y de citas de recursos de información",
+      "effective": "2024-04",
+      "relationship": "Identical adoption of ISO 690:2021",
+      "scope": "Spanish academic and scientific institutions"
+    },
+    "france": {
+      "profile_id": "profile-fr",
+      "national_standard": "NF ISO 690",
+      "title": "Information et documentation - Principes directeurs pour la rédaction des références bibliographiques et des citations des ressources d'information",
+      "agency": "AFNOR",
+      "relationship": "French national standard corresponding to ISO 690:2021",
+      "scope": "French research organisms and higher education"
+    },
+    "germany": {
+      "profile_id": "profile-de",
+      "national_standard": "DIN ISO 690:2021",
+      "title": "Information und Dokumentation - Richtlinien für Titelangaben und Zitierung von Informationsressourcen",
+      "agency": "DIN NID",
+      "relationship": "German adoption of ISO 690:2021",
+      "scope": "German academic institutions and libraries"
+    },
+    "korea": {
+      "profile_id": "profile-kr",
+      "national_standard": "KS X ISO690",
+      "title": "문헌정보 — 정보자원의 서지참조 및 인용 지침",
+      "revision_date": "2013-12-19",
+      "scope": "Korean national standard reference; institutional publisher guidelines take precedence"
+    },
+    "japan": {
+      "profile_id": "profile-jp",
+      "reference_standard": "JIS X 0807:1999",
+      "title": "電子文献の引用法",
+      "notes": "Electronic citation guideline; Japanese academic societies typically maintain distinct disciplinary house styles"
+    },
+    "taiwan": {
+      "profile_id": "profile-tw",
+      "reference_standard": "CNS 13611",
+      "title": "書目參考",
+      "agency": "BSMI",
+      "notes": "Catalogued bibliographic reference standard; target university or journal requirements take precedence"
+    }
+  },
+  "disciplinary_styles": {
+    "apa": { "name": "APA 7th Edition", "disciplines": ["Psychology", "Social Sciences", "Education"] },
+    "ieee": { "name": "IEEE Style", "disciplines": ["Electrical Engineering", "Computer Science", "Telecommunications"] },
+    "acm": { "name": "ACM Reference Format", "disciplines": ["Computing", "Software Engineering"] },
+    "vancouver": { "name": "Vancouver Style", "disciplines": ["Medicine", "Biomedical Sciences"] },
+    "chicago": { "name": "Chicago Manual of Style (17th/18th)", "disciplines": ["History", "Humanities", "Publishing"] },
+    "mla": { "name": "MLA 9th Edition", "disciplines": ["Literature", "Linguistics", "Cultural Studies"] }
+  }
+}

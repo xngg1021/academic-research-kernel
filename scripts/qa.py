@@ -130,6 +130,20 @@ def static_checks(root=ROOT):
                 errors.extend(f'{path.relative_to(root)}:{i}: {e}' for e in code_issues(code))
         except (ValueError, SyntaxError) as e:
             errors.append(str(e))
+    banned_jargon = [
+        "レジャー",
+        "영수증",
+        "Beschneidungskausalität",
+        "causalité d’élagage",
+        "causalidad de poda",
+        "台账内核",
+        "Truth Authority",
+    ]
+    for r_path in root.glob("README*.md"):
+        r_text = r_path.read_text(encoding="utf-8")
+        for word in banned_jargon:
+            if word in r_text:
+                errors.append(f"{r_path.name}: banned user-facing jargon detected: '{word}'")
     for path in root.rglob('*'):
         if not path.is_file() or '.git' in path.parts or '__pycache__' in path.parts or '.pytest_cache' in path.parts:
             continue

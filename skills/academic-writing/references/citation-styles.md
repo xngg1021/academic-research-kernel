@@ -2,6 +2,19 @@
 
 核查于 2026-09-06；这是常用速查，不代替各风格完整手册。排版条目前先确认目标刊物的具体要求；缺字段一律标【待补】，不编造。
 
+## ISO 690:2021（国际基线标准）
+
+国际标准化组织关于各类信息资源引文与参考文献的现行国际标准（Information and documentation — Guidelines for bibliographic references and citations to information resources）。适用于多语言与跨国研究环境，支持著者-出版年制与顺序编码制两种体系。
+
+著者-出版年制文中引用：（Author Year, p. xx）；三位及以上列首位作者加 et al.。
+
+期刊文章条目（著者-出版年）：
+
+    LASTNAME, Firstname, Year. Article title. Journal Title. Vol. x, no. y, pp. xx-xx. DOI: 10.xxxx/xxxx.
+
+- 作者姓名：姓全大写，名全写或首字母；多作者条目使用一致标点。
+- 国际适用：作为多语言科研基准，并为西班牙 UNE-ISO 690:2024、法国 NF ISO 690、德国 DIN ISO 690:2021 等国家标准所等同采用。
+
 ## APA 7th（版权年 2020）
 
 文中引用：（Author, Year），两位作者（Author & Author, Year），三位及以上第一作者后 et al.（Smith et al., 2020）。

@@ -118,9 +118,9 @@ def test_basis_edge_validation():
     with pytest.raises(ValueError, match="basis_kind"):
         dl.DecisionBasisEdge(decision_id="d1", basis_kind="vibes", basis_id="d2")
     with pytest.raises(TypeError):
-        dl.DecisionBasisEdge(decision_id="d1", basis_kind="claim", basis_id="d2", receipt_ref="not-a-ref")
+        dl.DecisionBasisEdge(decision_id="d1", basis_kind="decision", basis_id="d2", receipt_ref="not-a-ref")
     lineage, ref = _lineage_fixture()
-    e = dl.DecisionBasisEdge(decision_id="d1", basis_kind="claim", basis_id="d2", receipt_ref=ref)
+    e = dl.DecisionBasisEdge(decision_id="d1", basis_kind="decision", basis_id="d2", receipt_ref=ref)
     assert e.to_dict()["receipt_ref"]["kind"] == "lineage"
 
 
@@ -216,7 +216,7 @@ def test_academic_receipt_physical_verification():
     g = dl.DecisionLedger()
     g.add_decision(id="d1", title="x")
     g.add_decision(id="d2", title="y")
-    g.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     g.register_receipt(ref.payload_sha256, receipt)  # CEG-compatible key convention
     ok, errs = g.validate_ledger()
     assert ok, errs
@@ -231,7 +231,7 @@ def test_academic_receipt_physical_verification():
     g2 = dl.DecisionLedger()
     g2.add_decision(id="d1", title="x")
     g2.add_decision(id="d2", title="y")
-    g2.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g2.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     g2.register_receipt(ref.payload_sha256, tampered)
     ok3, errs3 = g2.validate_ledger()
     assert not ok3 and any("payload SHA256 mismatch" in e for e in errs3)
@@ -242,7 +242,7 @@ def test_unregistered_receipt_surfaces_as_uncertainty_not_error():
     g = dl.DecisionLedger()
     g.add_decision(id="d1", title="x")
     g.add_decision(id="d2", title="y")
-    g.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     ok, errs = g.validate_ledger()
     assert ok and not errs  # structural validation stays deterministic
     unc = g.export_uncertainties()
@@ -254,7 +254,7 @@ def test_lineage_receipt_positive_assertion():
     g = dl.DecisionLedger()
     g.add_decision(id="d1", title="x")
     g.add_decision(id="d2", title="y")
-    g.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     bad = dict(lineage, receipt_digest="b" * 64)
     g.register_receipt("lin-77", bad)
     ok, errs = g.validate_ledger()
@@ -274,8 +274,8 @@ def _populated_ledger():
         ("nr-1", "B fails on long docs", "negative_result"),
     ]:
         g.add_decision(id=did, title=title, decision_type=typ)
-    g.add_basis("d-b", basis_kind="claim", basis_id="d-a")
-    g.add_basis("nr-1", basis_kind="claim", basis_id="d-a")
+    g.add_basis("d-b", basis_kind="decision", basis_id="d-a")
+    g.add_basis("nr-1", basis_kind="decision", basis_id="d-a")
     g.add_fork("d-b", "d-c", relation="considered")
     g.set_prune("d-c", "pruned", prune_reason="resource_exhausted", pruned_by="d-b", alternative_ref="d-a")
     return g
@@ -290,7 +290,7 @@ def test_populated_ledger_valid():
 def test_dangling_edges_detected():
     g = dl.DecisionLedger()
     g.add_decision(id="d1", title="x")
-    g.add_basis("d1", basis_kind="claim", basis_id="ghost")
+    g.add_basis("d1", basis_kind="decision", basis_id="ghost")
     g.add_fork("ghost2", "d1", relation="considered")
     g.add_outcome_correction("ghost3", verdict="negative", rationale="r")
     ok, errs = g.validate_ledger()
@@ -358,7 +358,7 @@ def test_negative_result_with_claim_basis_passes():
     g2 = dl.DecisionLedger()
     g2.add_decision(id="d1", title="positive evidence", decision_type="explore")
     g2.add_decision(id="nr1", title="B fails", decision_type="negative_result")
-    g2.add_basis("nr1", basis_kind="claim", basis_id="d1")
+    g2.add_basis("nr1", basis_kind="decision", basis_id="d1")
     ok2, errs2 = g2.validate_ledger()
     assert ok2, errs2
 
@@ -438,7 +438,7 @@ def test_ledger_digest_order_invariant():
         ("add_decision", dict(id="d-z", title="Z last")),
         ("add_decision", dict(id="d-m", title="M middle")),
         ("add_decision", dict(id="d-a", title="A first")),
-        ("add_basis", dict(decision_id="d-a", basis_kind="claim", basis_id="d-m")),
+        ("add_basis", dict(decision_id="d-a", basis_kind="decision", basis_id="d-m")),
         ("add_fork", dict(decision_id="d-a", alternative_id="d-z", relation="considered")),
     ]
     g1 = dl.DecisionLedger(ledger_id="o")
@@ -455,7 +455,7 @@ def test_ledger_digest_receipt_sensitivity():
     g = dl.DecisionLedger(ledger_id="r")
     g.add_decision(id="d1", title="x")
     g.add_decision(id="d2", title="y")
-    g.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     before = g.ledger_digest()
     g.register_receipt("lin-77", lineage)
     # content identity is registry-independent; verification state is separate
@@ -472,12 +472,12 @@ def test_ledger_digest_registry_label_independence():
     g1 = dl.DecisionLedger(ledger_id="r")
     g1.add_decision(id="d1", title="x")
     g1.add_decision(id="d2", title="y")
-    g1.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g1.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     g1.register_receipt("lin-77", lineage)
     g2 = dl.DecisionLedger(ledger_id="r")
     g2.add_decision(id="d1", title="x")
     g2.add_decision(id="d2", title="y")
-    g2.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g2.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     g2.register_receipt("arbitrary-label", copy.deepcopy(lineage))
     # same records + same receipt bytes, different registry labels -> same content identity
     assert g1.ledger_digest() == g2.ledger_digest()
@@ -515,7 +515,7 @@ def test_find_negative_results_and_decisions_for():
     negs = g.find_negative_results()
     assert len(negs) == 1 and negs[0]["id"] == "nr-1"
     assert negs[0]["outcome"]["correction_count"] == 0
-    users = g.find_decisions_for("d-a", basis_kind="claim")
+    users = g.find_decisions_for("d-a", basis_kind="decision")
     assert {u["decision_id"] for u in users} == {"d-b", "nr-1"}
 
 
@@ -527,11 +527,11 @@ def test_to_dict_matches_json_schema():
     schema = json.loads((ROOT / "schemas" / "decision-ledger-receipt.schema.json").read_text(encoding="utf-8"))
     g = _populated_ledger()
     _, receipt, ref = _receipt_fixture()
-    g.add_basis("d-b", basis_kind="claim", basis_id="d-a", receipt_ref=ref)
+    g.add_basis("d-b", basis_kind="decision", basis_id="d-a", receipt_ref=ref)
     g.register_receipt(ref.payload_sha256, receipt)
     lineage, lref = _lineage_fixture()
     g.add_decision(id="d-l", title="lineage decision")
-    g.add_basis("d-l", basis_kind="claim", basis_id="d-a", receipt_ref=lref)
+    g.add_basis("d-l", basis_kind="decision", basis_id="d-a", receipt_ref=lref)
     g.register_receipt("lin-77", lineage)
     export = g.to_dict()
     export["uncertainties"] = [u.to_dict() for u in g.export_uncertainties()]
@@ -607,7 +607,7 @@ def test_dataclass_frozen_flags():
 def test_negative_result_self_reference_rejected():
     g = dl.DecisionLedger()
     g.add_decision(id="nr1", title="I failed because I say so", decision_type="negative_result")
-    g.add_basis("nr1", basis_kind="claim", basis_id="nr1")
+    g.add_basis("nr1", basis_kind="decision", basis_id="nr1")
     ok, errs = g.validate_ledger()
     assert not ok and any("E406" in e for e in errs) and any("E405" in e for e in errs)
 
@@ -616,8 +616,8 @@ def test_negative_result_mutual_claim_cycle_rejected():
     g = dl.DecisionLedger()
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
     g.add_decision(id="nr2", title="B fails", decision_type="negative_result")
-    g.add_basis("nr1", basis_kind="claim", basis_id="nr2")
-    g.add_basis("nr2", basis_kind="claim", basis_id="nr1")
+    g.add_basis("nr1", basis_kind="decision", basis_id="nr2")
+    g.add_basis("nr2", basis_kind="decision", basis_id="nr1")
     ok, errs = g.validate_ledger()
     codes = " ".join(errs)
     assert not ok
@@ -629,15 +629,15 @@ def test_negative_result_mixed_basis_still_requires_external_claim():
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
     g.add_decision(id="nr2", title="B fails", decision_type="negative_result")
     g.add_decision(id="pos", title="positive evidence")
-    g.add_basis("nr1", basis_kind="claim", basis_id="nr2")  # fake claim (negative_result target)
+    g.add_basis("nr1", basis_kind="decision", basis_id="nr2")  # fake claim (negative_result target)
     g.add_basis("nr1", basis_kind="negative_result", basis_id="pos")  # kind mismatch noise
-    g.add_basis("nr2", basis_kind="claim", basis_id="pos")  # nr2 properly evidenced
+    g.add_basis("nr2", basis_kind="decision", basis_id="pos")  # nr2 properly evidenced
     ok, errs = g.validate_ledger()
     assert not ok and any("E405" in e or "E103" in e for e in errs)
     g2 = dl.DecisionLedger()
     g2.add_decision(id="nr1", title="A fails", decision_type="negative_result")
     g2.add_decision(id="pos", title="positive evidence")
-    g2.add_basis("nr1", basis_kind="claim", basis_id="pos")  # real external claim
+    g2.add_basis("nr1", basis_kind="decision", basis_id="pos")  # real external claim
     ok2, errs2 = g2.validate_ledger()
     assert ok2, errs2
 
@@ -674,13 +674,13 @@ def test_ledger_digest_never_crashes_on_object_receipts():
     g1 = dl.DecisionLedger(ledger_id="obj")
     g1.add_decision(id="d1", title="x")
     g1.add_decision(id="d2", title="y")
-    g1.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g1.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     g1.register_receipt("x", FakeReceipt())
     d1 = g1.ledger_digest()  # must not raise TypeError
     g2 = dl.DecisionLedger(ledger_id="obj")
     g2.add_decision(id="d1", title="x")
     g2.add_decision(id="d2", title="y")
-    g2.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g2.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     g2.register_receipt("x", FakeReceipt().to_dict())
     assert g2.ledger_digest() == d1  # same content, same digest
 
@@ -766,7 +766,7 @@ def test_uncertainty_item_id_formula_matches_ceg_kernel():
     g.add_decision(id="d1", title="x")
     g.add_decision(id="d2", title="y")
     lref = dl.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="ghost", receipt_digest="a" * 64)
-    g.add_basis("d2", "claim", "d1", receipt_ref=lref)
+    g.add_basis("d2", "decision", "d1", receipt_ref=lref)
     item = g.export_uncertainties()[0]
     payload = json.dumps(
         {"kind": item.kind, "needs_human": item.needs_human, "reason": item.reason, "subject_id": item.subject_id},
@@ -814,7 +814,7 @@ def test_unanchored_claim_terminal_surfaces():
     g = dl.DecisionLedger()
     g.add_decision(id="bare", title="Bare act")
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
-    g.add_basis("nr1", basis_kind="claim", basis_id="bare")
+    g.add_basis("nr1", basis_kind="decision", basis_id="bare")
     ok, errs = g.validate_ledger()
     assert ok and not errs  # structural validity unaffected
     kinds = _unc_kinds(g)
@@ -827,8 +827,8 @@ def test_grounded_claim_chain_surfaces_nothing():
     g.add_decision(id="bare", title="Bare act")
     g.add_decision(id="pos", title="Root evidence")
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
-    g.add_basis("nr1", basis_kind="claim", basis_id="bare")
-    g.add_basis("bare", basis_kind="claim", basis_id="pos", receipt_ref=ref)
+    g.add_basis("nr1", basis_kind="decision", basis_id="bare")
+    g.add_basis("bare", basis_kind="decision", basis_id="pos", receipt_ref=ref)
     g.register_receipt(ref.payload_sha256, receipt)
     kinds = _unc_kinds(g)
     assert not any(t == "unevidenced_claim_basis" for t in kinds.values())
@@ -838,8 +838,8 @@ def test_self_anchored_claim_terminal_still_surfaces():
     g = dl.DecisionLedger()
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
     g.add_decision(id="selfish", title="Self anchor")
-    g.add_basis("nr1", basis_kind="claim", basis_id="selfish")
-    g.add_basis("selfish", basis_kind="claim", basis_id="selfish")  # self-edges never ground
+    g.add_basis("nr1", basis_kind="decision", basis_id="selfish")
+    g.add_basis("selfish", basis_kind="decision", basis_id="selfish")  # self-edges never ground
     kinds = _unc_kinds(g)
     assert kinds.get("selfish") == "unevidenced_claim_basis"
 
@@ -849,9 +849,9 @@ def test_ungrounded_claim_cycle_hard_fails_for_negative_result():
     g.add_decision(id="x1", title="X1")
     g.add_decision(id="x2", title="X2")
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
-    g.add_basis("nr1", basis_kind="claim", basis_id="x1")
-    g.add_basis("x1", basis_kind="claim", basis_id="x2")
-    g.add_basis("x2", basis_kind="claim", basis_id="x1")
+    g.add_basis("nr1", basis_kind="decision", basis_id="x1")
+    g.add_basis("x1", basis_kind="decision", basis_id="x2")
+    g.add_basis("x2", basis_kind="decision", basis_id="x1")
     ok, errs = g.validate_ledger()
     assert not ok and any("E407" in e for e in errs)
 
@@ -862,9 +862,9 @@ def test_ungrounded_claim_cycle_without_negative_result_surfaces_as_uncertainty(
     g.add_decision(id="x2", title="X2")
     g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
     g.add_decision(id="pos", title="anchor")
-    g.add_basis("nr1", basis_kind="claim", basis_id="pos")  # nr itself properly evidenced
-    g.add_basis("x1", basis_kind="claim", basis_id="x2")
-    g.add_basis("x2", basis_kind="claim", basis_id="x1")
+    g.add_basis("nr1", basis_kind="decision", basis_id="pos")  # nr itself properly evidenced
+    g.add_basis("x1", basis_kind="decision", basis_id="x2")
+    g.add_basis("x2", basis_kind="decision", basis_id="x1")
     ok, errs = g.validate_ledger()
     assert ok, errs  # cycle unconnected to any negative result: uncertainty only
     kinds = _unc_kinds(g)
@@ -957,7 +957,7 @@ def test_trace_prune_cause_recursive_chain():
     g = dl.DecisionLedger()
     for did in ["d-a", "d-b", "d-c", "judge"]:
         g.add_decision(id=did, title=did)
-    g.add_basis("judge", basis_kind="claim", basis_id="d-a")
+    g.add_basis("judge", basis_kind="decision", basis_id="d-a")
     g.set_prune("d-c", "pruned", prune_reason="superseded", pruned_by="d-b")
     g.set_prune("d-b", "pruned", prune_reason="resource_exhausted", pruned_by="judge")
     tr = g.trace_prune_cause("d-c")
@@ -1016,7 +1016,7 @@ def test_from_dict_round_trip_with_receipt_registry():
     g = dl.DecisionLedger(ledger_id="with-receipts")
     g.add_decision(id="d1", title="x")
     g.add_decision(id="d2", title="y")
-    g.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     g.register_receipt("lin-77", lineage)
     export = g.to_dict()
     assert export["verification_manifest"] == {"lin-77": dl.canonical_ledger_payload_sha256(dl._jsonable(lineage))}
@@ -1204,7 +1204,7 @@ def test_metadata_json_domain_fail_closed_at_constructor_time():
 
     # Edge and event metadata constructors also fail-closed
     with pytest.raises(ValueError, match="Non-finite float"):
-        g.add_basis("d_valid", "claim", "d_valid", metadata={"f": float("nan")})
+        g.add_basis("d_valid", "decision", "d_valid", metadata={"f": float("nan")})
     with pytest.raises(TypeError, match="Metadata mapping key must be str|FrozenDict key must be str"):
         g.add_fork("d_valid", "d_valid", metadata={99: "err"})
     with pytest.raises(TypeError, match="Unsupported metadata value type"):
@@ -1223,8 +1223,8 @@ def test_from_dict_verifies_missing_receipt_uncertainty_against_manifest():
     g.add_decision(id="d1", title="D1")
     g.add_decision(id="d2", title="D2")
     g.add_decision(id="d3", title="D3")
-    g.add_basis("d2", "claim", "d1", receipt_ref=ref_present)
-    g.add_basis("d3", "claim", "d1", receipt_ref=ref_missing)
+    g.add_basis("d2", "decision", "d1", receipt_ref=ref_present)
+    g.add_basis("d3", "decision", "d1", receipt_ref=ref_missing)
     g.register_receipt("lin-present", lin)
 
     export = g.to_dict()
@@ -1366,18 +1366,16 @@ def test_set_prune_active_conflicting_parameters_rejected():
 
 
 def test_basis_kind_decision_and_normalization():
-    """basis_kind='decision' works natively and 'claim' normalizes to 'decision'."""
+    """basis_kind='decision' works natively and 'claim' is strictly rejected."""
     g = dl.DecisionLedger()
     g.add_decision("d1", "Source")
     g.add_decision("d2", "Target 1")
-    g.add_decision("d3", "Target 2")
     e1 = g.add_basis("d2", "decision", "d1")
     assert e1.basis_kind == "decision"
-    e2 = g.add_basis("d3", "claim", "d1")
-    assert e2.basis_kind == "decision"
-    # Query supports both
-    found = g.find_decisions_for("d1", basis_kind="claim")
-    assert len(found) == 2
+    with pytest.raises(ValueError, match="Invalid basis_kind: 'claim'"):
+        g.add_basis("d2", "claim", "d1")
+    found = g.find_decisions_for("d1", basis_kind="decision")
+    assert len(found) == 1
 
 
 def test_register_receipt_canonical_bytes_conflict_rejection():
@@ -1395,3 +1393,31 @@ def test_package_exports_state_events():
     pkg = importlib.import_module("skills.decision-ledger.scripts")
     assert hasattr(pkg, "DecisionStateEvent")
     assert hasattr(pkg, "canonical_state_event_tuple")
+    assert hasattr(pkg, "RouteStatus")
+
+
+def test_route_status_natural_scientific_api():
+    """record_route_status and trace_stop_reason provide human-readable scientific API."""
+    g = dl.DecisionLedger()
+    g.add_decision("d-commit", "Adopt Model A", decision_type="commit")
+    g.add_negative_result("nr-fails", "Baseline B fails on long context")
+    nr = g.get_decision("nr-fails")
+    assert nr.is_negative_result is True
+    assert nr.entry_kind == "negative_result"
+    assert nr.decision_action is None
+    cm = g.get_decision("d-commit")
+    assert cm.entry_kind == "decision"
+    assert cm.decision_action == "commit"
+
+    # Stop a route using human scientific vocabulary
+    st = g.record_route_status("nr-fails", status="pruned", stop_reason="resource_exhausted", closed_by="d-commit")
+    assert isinstance(st, dl.RouteStatus)
+    assert st.stop_reason == "resource_exhausted"
+    assert st.closed_by == "d-commit"
+    assert st.is_pruned is True
+
+    # Trace stop reason
+    trace = g.trace_stop_reason("nr-fails")
+    assert trace["route_status"]["stop_reason"] == "resource_exhausted"
+    assert len(trace["stop_chain"]) == 1
+    assert trace["stop_chain"][0]["closed_by"] == "d-commit"

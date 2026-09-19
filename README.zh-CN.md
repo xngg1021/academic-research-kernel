@@ -23,16 +23,20 @@ SLL 广泛允许使用、研究、修改、商用、分发与专有增补，受�
 | `skills/academic-writing` | 1.1.1 | 编辑、引文规范（APA、MLA、Chicago、IEEE、AMA、GB/T）、期刊须知、可选检测服务、投稿材料、中文学术要求 |
 | `skills/math-computation` | 1.2.1 | 既有领域与任务路由及修正后的数值与统计示例；四篇领域参考文件 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 反算论文报告的统计量（效应量、p 值、置信区间、OR/RR、实现功效）并检测数值错配 |
-| `skills/research-reproducibility` | 1.0.1 | 十四阶段复现审计流水线，含结构化清单引擎、五层事实与四态回执 |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 检索日志、筛选台账、效应量换算、异质性、固定与随机效应合并、敏感性与发表偏倚诊断 |
+| `skills/research-reproducibility` | 1.0.1 | 十四阶段复现审计流水线，含结构化核验清单、五层事实与可复现审计记录 |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 检索日志、文献筛选记录、效应量换算、异质性、固定与随机效应合并、敏感性与发表偏倚诊断 |
 | `skills/literature-watch` | 1.1.0 | 周更蓝图：监控主题、作者与 DOI 在 OpenAlex 与 Crossref 的新作品；去重并只报告新增 |
 | `skills/retraction-watch` | 1.1.0 | 周更蓝图：对照 OpenAlex is_retracted 与 Crossref 更新记录（update-to 信号）复查 DOI 监控清单；只报告状态变化 |
-| `skills/research-object-identity` | 1.1.0 | 确定性研究对象身份层与生产谱系内核（Provenance Kernel v1）：标识符归一、五态判定、内容寻址衍生图、因果 DAG 校验与毫秒级脱机逆向溯源 |
-| `skills/claim-evidence-graph` | 1.0.0 | 确定性科学论断-证据图内核：连接学术论断、实证证据锚点、事实核验与计算谱系 |
-| `skills/decision-ledger` | 1.0.0 | 确定性追加式决策与负结果台账内核：决策图谱、失败路径存证、剪枝因果追溯与内容寻址结果修正 |
+| `skills/research-object-identity` | 1.1.0 | 确定性科研资源标识与来源追溯：标识符归一、五态判定、内容寻址衍生图、因果 DAG 校验与毫秒级脱机逆向溯源 |
+| `skills/claim-evidence-graph` | 1.0.0 | 确定性学术论断与证据关联：连接科学论断、实证证据记录、事实核验与计算过程追溯 |
+| `skills/decision-ledger` | 1.0.0 | 研究决策与失败记录：记录科研选择、失败尝试存证、为什么放弃某路线与按时序追加结果修正 |
 | `skills/cross-review-five` | 2.0.0 | 动态多席位异构模型/子代理交叉审议（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini 等）：v2 四阶段 Sparse Deliberation 流（盲审产出、断言级聚类合并、基于匈牙利算法的全局最优互补错排匿名质询、对账与未决保护账本，支持 P0-P3 严重级别） |
 
-十三个技能共含 21 篇 Markdown 参考文件，按需加载。GB/T 7714-2025 已生效；写作参考区分其已核实生效日期与显式标注的 2015 示例。完全符合 2025 版需以目标机构的模板或标准文本为准。
+十三个技能共含 21 篇 Markdown 参考文件，按需加载。
+
+## 学术规范与多区域基线
+
+学术引文、元数据与报告规范遵循目标期刊、资助机构、学科与司法辖区规则。仓库确立 **ISO 690:2021**（参考文献与引文指南）、**ISO 5127:2017**（文献与信息概念词汇）与 **W3C PROV**（溯源数据模型）为全球基线，并支持中国大陆 GB/T 7714-2025、西班牙 UNE-ISO 690:2024、德国 DIN ISO 690:2021 等地区 Profile 与 APA、IEEE、PRISMA 2020、ICMJE 等学科规范。目标投稿机构的具体要求优先于默认规则。详见[学术规范架构](docs/standards/README.md)与[自然学术术语指南](docs/terminology/README.md)。
 
 ## 安装与集成
 
@@ -67,7 +71,7 @@ hermes skills install xngg1021/academic-research-kernel/skills/academic-source-v
 
 本地执行验证（从仓库根目录）：
 ```bash
-# 运行全部 623 项单元测试与严苛回归套件
+# 运行全部 624 项单元测试与严苛回归套件
 pytest
 
 # 运行代码块静态语法与独立执行检查
@@ -76,7 +80,7 @@ python scripts/qa.py
 
 固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十三个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
 
-CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，全仓 623 项单元测试全部通过，并附带针对上游 main 最新分支的实时 Canary 加载检验。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
+CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，全仓 624 项单元测试全部通过，并附带针对上游 main 最新分支的实时 Canary 加载检验。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/audit-20260906.md)。
 
 tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
 

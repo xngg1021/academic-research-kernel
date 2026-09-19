@@ -23,16 +23,20 @@ SLL erlaubt weitgehend Nutzung, Studium, Änderung, kommerzielle Nutzung, Verbre
 | `skills/academic-writing` | 1.1.1 | Redigieren, Zitierhilfe (APA, MLA, Chicago, IEEE, AMA, GB/T), Zeitschriftenvorgaben, optionale Erkennungsdienste, Einreichungsmaterialien, chinesische akademische Anforderungen |
 | `skills/math-computation` | 1.2.1 | Bestehendes Domänen-/Aufgaben-Routing mit korrigierten numerischen und statistischen Beispielen; vier domänenspezifische Referenzdateien |
 | `skills/quantitative-paper-audit` | 1.1.0 | Berichtete Statistiken neu berechnen (Effektgröße, p-Werte, Konfidenzintervalle, OR/RR, erreichte Power) und numerische Abweichungen erkennen |
-| `skills/research-reproducibility` | 1.0.1 | Vierzehnstufige Reproduktionsaudit-Pipeline mit strukturierter Checklisten-Engine, fünf Faktenstufen und vierteiligem Beleg |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA-Suchprotokolle, Screening-Ledger, Effektgrößenkonversion, Heterogenität, gepoolte feste/zufällige Effekte, Sensitivitäts- und Publikationsbias-Diagnostik |
+| `skills/research-reproducibility` | 1.0.1 | Vierzehnstufige Reproduktionsaudit-Pipeline mit strukturierter Checkliste, fünf Faktenstufen und reproduzierbaren Audit-Nachweisen |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA-Suchprotokolle, Screening-Protokolle, Effektgrößenkonversion, Heterogenität, gepoolte feste/zufällige Effekte, Sensitivitäts- und Publikationsbias-Diagnostik |
 | `skills/literature-watch` | 1.1.0 | Wöchentlicher Blueprint: Themen, Autoren und DOI-zitierende Werke auf OpenAlex und Crossref überwachen; deduplizieren und nur Neues melden |
 | `skills/retraction-watch` | 1.1.0 | Wöchentlicher Blueprint: DOI-Beobachtungsliste gegen OpenAlex is_retracted und Crossref-Aktualisierungsdatensätze (update-to-Signale) erneut prüfen; nur Statusänderungen melden |
-| `skills/research-object-identity` | 1.1.0 | Deterministische Forschungsobjekt-Identität & Provenance Kernel v1: Identifikator-Normalisierung, 5-Zustände-Urteil, inhaltsadressierter Ableitungsgraph, kausale DAG-Validierung und Offline-Rückverfolgung im Millisekundenbereich |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministischer wissenschaftlicher Behauptungs- und Evidenzgrafen-Kern: Verknüpfung von Behauptungen, Evidenzankern und Herkunftsnachweisen |
-| `skills/decision-ledger` | 1.0.0 | Deterministisches Nur-Anhängen-Ledger für Forschungsentscheidungen, negative Ergebnisse, Beschneidungskausalität und Ergebniskorrekturen |
+| `skills/research-object-identity` | 1.1.0 | Deterministische Forschungsobjekt-Identifikation und Provenienz / Nachvollziehbarkeit: Identifikator-Normalisierung, 5-Zustände-Urteil, inhaltsadressierter Ableitungsgraph, kausale DAG-Validierung und Offline-Rückverfolgung |
+| `skills/claim-evidence-graph` | 1.0.0 | Verknüpfung von Aussagen und Belegen: wissenschaftliche Behauptungen, empirische Evidenznachweise und rechnerische Herkunft |
+| `skills/decision-ledger` | 1.0.0 | Protokoll zu Forschungsentscheidungen und Fehlversuchen: deterministisches Protokoll für Forschungsentscheidungen, Fehlversuche, Gründe für Routenbeendigungen und Ergebniskorrekturen |
 | `skills/cross-review-five` | 2.0.0 | Dynamisches Multi-Reviewer-Panel für heterogene Modelle und Subagenten (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini usw.): v2 4-Stufen Sparse-Deliberation-Pipeline mit Kuhn-Munkres-Ungarischer Zuordnung und P0-P3-Schweregraden |
 
-Die dreizehn Skills umfassen 21 Markdown-Referenzdateien, die nur bei Bedarf geladen werden. GB/T 7714-2025 ist in Kraft; die Schreibreferenz unterscheidet das verifizierte Inkrafttretensdatum von ausdrücklich gekennzeichneten Beispielen von 2015. Volle Konformität mit der Fassung 2025 erfordert die Vorlage oder den Standardtext der Zielinstitution.
+Die dreizehn Skills umfassen 21 Markdown-Referenzdateien, die nur bei Bedarf geladen werden.
+
+## Wissenschaftliche Standards & Multi-Profil-Architektur
+
+Zitierstile, Berichtsrichtlinien und Metadatenspezifikationen hängen von der jeweiligen Zeitschrift, Förderorganisation, Disziplin und Rechtsprechung ab. Das Repository etabliert **ISO 690:2021** (Referenzen und Zitate), **ISO 5127:2017** (Information und Dokumentation - Vokabular) und **W3C PROV** (Provenienz-Datenmodell) als internationale Baselines, ergänzt durch regionale Profile (z. B. DIN ISO 690:2021 in Deutschland, GB/T 7714-2025 in Festlandchina, UNE-ISO 690 in Spanien) sowie Fachstandards (APA, IEEE, PRISMA 2020, ICMJE). Die Vorgaben der Zielinstitution haben stets Vorrang. Details siehe [Scholarly Standards Architecture](docs/standards/README.md) und [Terminologie-Leitfaden](docs/terminology/README.md).
 
 ## Integration & Installation
 

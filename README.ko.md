@@ -23,16 +23,20 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 | `skills/academic-writing` | 1.1.1 | 편집, 인용 안내(APA, MLA, Chicago, IEEE, AMA, GB/T), 저널 지침, 선택적 탐지 서비스, 투고 자료, 중국어 학술 요건 |
 | `skills/math-computation` | 1.2.1 | 기존 영역·과제 라우팅과 수정된 수치·통계 예제, 분야별 참조 문서 4편 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 논문이 보고한 통계량(효과 크기, p값, 신뢰구간, OR/RR, 달성 검정력) 재계산과 수치 불일치 탐지 |
-| `skills/research-reproducibility` | 1.0.1 | 구조화된 점검표 엔진, 5단계 사실, 4상태 영수증을 갖춘 14단계 재현 감사 파이프라인 |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 검색 로그, 선별 원장, 효과 크기 환산, 이질성, 고정·무작위 효과 통합, 민감도와 출판 편향 진단 |
+| `skills/research-reproducibility` | 1.0.1 | 구조화된 점검표, 5단계 사실, 재현 가능한 감사 기록을 갖춘 14단계 재현 감사 파이프라인 |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 검색 로그, 문헌 선별 기록, 효과 크기 환산, 이질성, 고정·무작위 효과 통합, 민감도와 출판 편향 진단 |
 | `skills/literature-watch` | 1.1.0 | 주간 블루프린트: OpenAlex와 Crossref에서 주제·저자·DOI의 신규 저작을 감시하고 중복 제거 후 신규 항목만 보고 |
 | `skills/retraction-watch` | 1.1.0 | 주간 블루프린트: OpenAlex is_retracted와 Crossref 갱신 기록(update-to 신호)에 대해 DOI 감시 목록을 재점검하고 상태 변화만 보고 |
-| `skills/research-object-identity` | 1.1.0 | 결정론적 연구 객체 식별 및 생산 계보 커널 (Provenance Kernel v1): 식별자 정규화, 5가지 상태 판정, 콘텐츠 주소 지정 파생 그래프, 인과적 DAG 검증 및 밀리초 단위 오프라인 역방향 추적 |
-| `skills/claim-evidence-graph` | 1.0.0 | 결정론적 과학 주장-증거 그래프 커널: 주장, 증거 앵커, 검증 영수증 및 계산 계보 연결 |
-| `skills/decision-ledger` | 1.0.0 | 연구 결정, 부정적 결과, 프루닝 인과관계, 결과 정정을 기록하는 결정론적 추가 전용 원장 |
+| `skills/research-object-identity` | 1.1.0 | 결정론적 연구 자원 식별 및 이력·추적성: 식별자 정규화, 5가지 상태 판정, 콘텐츠 주소 지정 파생 그래프, 인과적 DAG 검증 및 밀리초 단위 오프라인 역방향 추적 |
+| `skills/claim-evidence-graph` | 1.0.0 | 결정론적 주장과 근거의 연결: 과학적 주장, 실증 근거 기록, 계산 이력 연결 |
+| `skills/decision-ledger` | 1.0.0 | 연구 의사결정 및 실패 시도 기록: 연구 선택, 실패 시도, 경로 중단 사유, 결과 수정 이력을 기록하는 결정론적 추가 전용 기록부 |
 | `skills/cross-review-five` | 2.0.0 | 임의의 모델 및 서브에이전트를 지원하는 동적 다중 검토 패널 (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini 등): v2 4단계 Sparse Deliberation 파이프라인 (헝가리안 알고리즘 기반 상호보완적 블라인드 질의, P0-P3 심각도 지원) |
 
-13개 스킬에는 21편의 Markdown 참조 파일이 있으며 필요할 때만 로드된다. GB/T 7714-2025가 시행 중이며, 집필 참조는 검증된 시행일과 명시적으로 2015년 예시로 표기된 것을 구분한다. 2025년판 완전 준수에는 대상 기관의 템플릿 또는 표준 원문이 필요하다.
+13개 스킬에는 21편의 Markdown 참조 파일이 있으며 필요할 때만 로드된다.
+
+## 학술 표준 및 다중 프로필 기준
+
+인용 양식, 보고 지침, 메타데이터 규약은 대상 학술지, 연구지원기관, 학문 분야, 관할권에 따라 달라집니다. 본 저장소는 **ISO 690:2021**(서지 참조 및 인용 지침), **ISO 5127:2017**(정보 및 문헌 용어), **W3C PROV**(이력 및 출처 데이터 모델)를 국제 기준으로 삼고, 한국 KS X ISO690 참조, 중국 대륙 GB/T 7714-2025, 스페인 UNE-ISO 690:2024 등 지역 프로필과 APA, IEEE, PRISMA 2020, ICMJE 등 학문 분야별 표준을 지원합니다. 투고 대상 기관이나 학술지의 공식 요건이 항상 최우선합니다. 자세한 내용은 [학술 표준 아키텍처](docs/standards/README.md) 및 [자연스러운 학술 용어 가이드](docs/terminology/README.md)를 참조하십시오.
 
 ## Hermes에 설치
 

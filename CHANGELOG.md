@@ -4,30 +4,33 @@
 
 ---
 
-## 2026-09-19（PR #11 / Decision & Negative Result Ledger v1，分支 work/decision-ledger-v1）
+## 2026-09-19（PR #11 / Research Decision Log v1，分支 work/decision-ledger-v1）
 
-### 决策与负结果台账内核 (Decision & Negative Result Ledger v1)
+### 研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)
 
-按 `docs/post-pr9-roadmap-reevaluation.md` 的立项裁定，填补十四原语中的状态台账 (Primitive 3)：
+按 `docs/post-pr9-roadmap-reevaluation.md` 的立项裁定，填补十四核心能力中的状态变更历史 (Primitive 3)：
 
 - **核心数据契约 (`schemas/decision-ledger-receipt.schema.json`)**：
   - JSON Schema draft 2020-12、`additionalProperties: false`、协议常量 `decision-ledger-1.0`；
-  - 六类记录：`decisions`（explore/commit/abandon/revise/negative_result）、`bases`（claim/negative_result 依据边）、`forks`（considered/explored/deferred/rejected 分支边，含 `receipt_ref`）、`state_events`（追加式状态转移事件，驱动生命周期状态）、`corrections`（128 位内容 ID 与 sequence 结果修正）、`uncertainties`（六类离散枚举，必填）；导出新增 `verification_manifest` 与 `verification_digest`，内容身份与本地验证态严格解耦；
+  - 核心记录模型：`decisions`（区分 entry_kind 与 decision_action，严禁将失败结果与决策行为混维）、`bases`（decision / negative_result 依据边，彻底移除 claim 别名）、`forks`（considered/explored/deferred/rejected 分支边，含 `receipt_ref`）、`state_events`（追加式状态转移事件，驱动生命周期状态）、`corrections`（128 位内容 ID 与单调 sequence 结果修正）、`uncertainties`（离散枚举）；导出包含 `verification_manifest` 与 `verification_digest`，内容身份与本地验证态严格解耦；
   - `receiptRef` 复用 CEG 的 `oneOf` 双契约（lineage / academic_evidence），与 `schemas/claim-evidence-graph.schema.json` 逐字段一致。
 - **确定性内核 (`skills/decision-ledger/scripts/ledger.py`)**：
-  - 只追加台账：所有记录为 frozen dataclass + `FrozenDict`（`MappingProxyType` 背板真不可变）；生命周期状态（active/pruned/reopened）由追加式 `DecisionStateEvent` 重放派生，严格状态迁移闭集自动机校验，重复同负载调用幂等 no-op，event_id 绑定内容与序号；结果修正以 128 位内容寻址新事件入账，幂等且从不原地改写历史；
-  - 负结果纪律：`negative_result` 必须携带依据边（E404），必须有 `claim` 类正证据基础（E405），依据类型与目标决策类型强校验（E103），自指或负结果互指判错（E406），负结果 claim 证据闭包成环硬失败（E407）；
-  - 剪枝因果：封闭词表剪枝原因 + `caused_by` 剪枝决策 + `alternative_ref` 备选路径；派生当前图剪枝链严格无环（E304，路径索引法只报真环成员）；`trace_prune_cause` 递归返回完整剪枝因果链，缺 claim 依据的剪枝给出确定性 `unsupported_reason`；
-  - 依据透明规则：claim 证据链必须终接在带收据锚点的终端，无锚终端与互指环以 `unevidenced_claim_basis` 浮出不确定性队列（needs_human=true），结构校验不受阻断；
-  - 收据物理校验与输入域失败关闭：学术收据负载 SHA256 物理重算断言（注册表键无法绕过哈希校验），谱系收据正向断言协议、收据 ID 与摘要；`_jsonable` 严格失败关闭（非有限浮点 NaN/Inf 注册即 fail-fast，非 str 键抛 TypeError，环形容器拒绝）；
-  - 顺序无关内容身份摘要：`ledger_digest` 只覆盖台账内容记录（决策、依据、分支、状态事件、修正），本地收据注册表（验证缓存）不进入内容身份，不同注册标签摘要恒等；`verification_digest` 与 `verification_manifest` 独立承载验证态；
-  - 严格回放加载器 `from_dict`：双门防篡改验证（输入 raw payload 直接重算 digest 比对 declared ledger_digest；构造器重放逐字段断言 identity 字段；`verification_manifest` 比对 `verification_digest`；不确定性队列严格校验；篡改 fail closed）；支持传入 `receipt_registry` 恢复完整验证态。
-- **跨内核字节兼容**：`canonical_academic_receipt_payload_sha256`、`canonical_evidence_claim_digest`、`validate_lineage_receipt_contract`、`validate_academic_receipt_contract`、`ReceiptRef`、`UncertaintyItem`（四字段含 needs_human 派生公式）与 CEG Kernel v1 逐字节一致，同一收据在两个内核给出相同哈希与相同校验结论，为 PR #12（Research Artifact Ingestion Bridge v1）打通消费路径。
-- **技能文档 (`skills/decision-ledger/SKILL.md`)**：frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
-- **测试 (`tests/test_decision_ledger.py`)**：81 项对抗性回归（词法规范化、类型强制、幂等与冲突拒绝、收据物理校验与篡改检测、悬空边、自指与剪枝环、负结果证据纪律、不确定性队列确定性、深冻结与导出隔离、摘要顺序无关性与敏感性、JSON Schema parity、跨内核字节兼容、StateEvent 全生命周期、递归剪枝链、严格双门 from_dict 回放、_jsonable 失败关闭）。
-- **登记同步**：技能计数 12→13（tests/test_authoring.py、tests/test_harness_neutral.py）、tap 发现清单补 `decision-ledger`（tests/test_tap_discovery.py）、8 个 README 技能表与正文计数更新（并修正 zh-CN/zh-TW 首段计数停留在 11 的历史欠账）、单测基线 526→623。
+  - 自然科研 API：正式暴露 `RouteStatus`、`record_route_status()`、`trace_stop_reason()`、`add_negative_result()` 等科研语义接口，兼容保留内部别名；
+  - 状态变更历史纯追加：所有记录为 frozen dataclass + `FrozenDict`（`MappingProxyType` 背板真不可变）；当前状态（active/pruned/reopened）由追加式 `DecisionStateEvent` 重放派生，严格状态迁移闭集自动机校验，`current_state()` 正确暴露 `reopened` 状态；
+  - 结果修正时序严格保护：`OutcomeCorrection` 引入单调 sequence 参与 ID 派生，幂等仅对当前最新事件生效，历史中再次发生的相同结果正确记录为新事件；
+  - 失败尝试存证纪律：`negative_result` 必须携带依据边（E404），必须有决策类正证据基础（E405），依据类型与目标决策类型强校验（E103），自指或负结果互指判错（E406），负结果依据闭包成环硬失败（E407）；
+  - 路线终止原因与可追溯性：封闭词表终止原因 + `closed_by` 主导决策 + `alternative_ref` 备选路径；派生当前图终止链严格无环（E304，路径索引法只报真环成员）；`trace_stop_reason` 递归返回完整因果链；
+  - 单遍图分析与全链路索引：单遍 Tarjan's SCC 算法提取强连通分量与环可达集；建立按决策索引的 `_bases_by_decision`、`_bases_by_target`、`_state_events_by_decision`、`_corrections_by_decision` 与 `_academic_hash_index`，检索均达 O(1)；`to_dict()` 单次流计算哈希与清单；
+  - 严格回放加载器 `from_dict`：四门严密防篡改（Gate 1 原始摘要核验、Gate 2 派生一致性断言、Gate 3 全量不确定性队列（含 missing_receipt）100% 验证、Gate 4 图结构强校验 `validate_ledger()` fail-closed）；严格拒绝额外顶层字段；
+  - 构造期严厉失败关闭：`_validate_json_metadata_value` 拦截非有限浮点（NaN/Inf）、非字符串键、非法对象与循环引用；收据冲突采用规范 JSON 字节流比对。
+- **全球学术标准基线 (`docs/standards/`) 与自然术语清单 (`docs/terminology/`)**：
+  - 确立 ISO 690:2021、ISO 5127:2017 与 W3C PROV 为全球基线，解耦语言与司法管辖区规范；
+  - 建立机器可读标准清单 `docs/standards/registry.json` 与术语清单 `docs/terminology/registry.json`；
+  - 重构 8 个语言版本 README，彻底剔除机器翻译生造黑话。
+- **技能文档 (`skills/decision-ledger/SKILL.md`)**：以自然科研语言重写，frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
+- **测试 (`tests/test_decision_ledger.py`)**：92 项对抗性回归，单测基线升至 **624 passed**。
 
-**验证**：`pytest` 623 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS。
+**验证**：`pytest` 624 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
 
 ### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
 
@@ -95,9 +98,9 @@
 - **[P2] `register_receipt()` 规范化字节比较**：收据冲突判断采用 canonical JSON bytes 对比，彻底避免 Python `1 == 1.0` 等宽松判等误判。
 - **[P3] 用户面命名与去黑话**：用户面统一命名为 **Research Decision Log（研究决策与失败记录）**（内部协议保持 `decision-ledger-1.0`）；彻底剥除“Truth Authority”“剪枝因果”“三态不确定性队列”“basis-transparency”等过度工程化用词。
 - **[P3] 全链路性能索引与摘要去重**：建立按决策索引的 `_bases_by_decision`、`_state_events_by_decision`、`_corrections_by_decision`，建立学术收据哈希索引 `_academic_hash_index` 实现 O(1) 检索；`to_dict()` 仅单次计算 digest 与 manifest，杜绝多重重复哈希。
-- **[P3] 测试基线提升**：单测由 615 项升至 **623 项**（91 项专属于 decision-ledger 严苛回归测试），全仓绿灯通过。
+- **[P3] 测试基线提升**：单测由 615 项升至 **624 项**（92 项专属于 decision-ledger 严苛回归测试），全仓绿灯通过。
 
-**验证（最终收口后）**：`pytest` 623 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
+**验证（最终收口后）**：`pytest` 624 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
 
 ---
 

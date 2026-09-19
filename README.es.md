@@ -23,16 +23,20 @@ SLL permite ampliamente el uso, el estudio, la modificación, el uso comercial, 
 | `skills/academic-writing` | 1.1.1 | Edición, orientación de citas (APA, MLA, Chicago, IEEE, AMA, GB/T), instrucciones de revistas, servicios de detección opcionales, materiales de envío, requisitos académicos chinos |
 | `skills/math-computation` | 1.2.1 | Enrutamiento de dominio y tarea existente con ejemplos numéricos y estadísticos corregidos; cuatro archivos de referencia por dominio |
 | `skills/quantitative-paper-audit` | 1.1.0 | Recalcular las estadísticas declaradas (tamaño del efecto, valores p, intervalos de confianza, OR/RR, potencia alcanzada) y detectar discrepancias numéricas |
-| `skills/research-reproducibility` | 1.0.1 | Cadena de auditoría de reproducción en catorce etapas con motor de lista de comprobación estructurado, cinco niveles de hechos y recibo de cuatro estados |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | Registros de búsqueda PRISMA, libros de cribado, conversión de tamaños del efecto, heterogeneidad, agrupación de efectos fijos y aleatorios, diagnósticos de sensibilidad y sesgo de publicación |
+| `skills/research-reproducibility` | 1.0.1 | Cadena de auditoría de reproducción en catorce etapas con listas de verificación estructuradas, cinco niveles de hechos y registros de auditoría reproducibles |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Registros de búsqueda PRISMA, registros de cribado de literatura, conversión de tamaños del efecto, heterogeneidad, agrupación de efectos fijos y aleatorios, diagnósticos de sensibilidad y sesgo de publicación |
 | `skills/literature-watch` | 1.1.0 | Plano semanal: vigilar temas, autores y obras que citan DOI en OpenAlex y Crossref; deduplicar y notificar solo novedades |
 | `skills/retraction-watch` | 1.1.0 | Plano semanal: reverificar una lista de DOI contra OpenAlex is_retracted y los registros de actualización de Crossref (señales update-to); notificar solo cambios de estado |
-| `skills/research-object-identity` | 1.1.0 | Capa determinista de identidad de objetos de investigación y núcleo de procedencia (Provenance Kernel v1): normalización de identificadores, veredicto de 5 estados, grafo de derivación direccionado por contenido, validación de DAG causal y rastreo fuera de línea en milisegundos |
-| `skills/claim-evidence-graph` | 1.0.0 | Núcleo determinista de grafo de afirmaciones y evidencias científicas: conexión de afirmaciones, anclajes de evidencia y procedencia |
-| `skills/decision-ledger` | 1.0.0 | Registro determinista de solo anexado de decisiones de investigación, resultados negativos, causalidad de poda y correcciones de resultados |
+| `skills/research-object-identity` | 1.1.0 | Identificación de recursos de investigación y trazabilidad determinista: normalización de identificadores, veredicto de 5 estados, grafo de derivación direccionado por contenido, validación de DAG causal y rastreo fuera de línea |
+| `skills/claim-evidence-graph` | 1.0.0 | Vínculos deterministas entre afirmaciones y evidencias: conexión de afirmaciones científicas, registros de evidencia empírica y procedencia |
+| `skills/decision-ledger` | 1.0.0 | Registro de decisiones de investigación y ensayos fallidos: registro determinista de solo anexado de decisiones, ensayos fallidos, motivos de abandono de vías y revisiones de conclusiones |
 | `skills/cross-review-five` | 2.0.0 | Panel dinámico de revisión multi-modelo y subagentes (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, etc.): canalización v2 Sparse Deliberation de 4 fases con asignación húngara de Kuhn-Munkres y severidades P0-P3 |
 
-Las trece competencias incluyen 21 archivos de referencia Markdown, cargados solo cuando se necesitan. GB/T 7714-2025 está en vigor; la referencia de redacción distingue su fecha de entrada en vigor verificada de los ejemplos explícitamente etiquetados de 2015. La conformidad plena con la edición de 2025 exige la plantilla o el texto estándar de la institución de destino.
+Las trece competencias incluyen 21 archivos de referencia Markdown, cargados solo cuando se necesitan.
+
+## Estándares académicos y marco multiperfil
+
+Los estilos de citación, las directrices de comunicación y los contratos de metadatos dependen de la revista de destino, el organismo de financiación, la disciplina y la jurisdicción. El repositorio establece **ISO 690:2021** (referencias bibliográficas y citas), **ISO 5127:2017** (vocabulario de información y documentación) y **W3C PROV** (modelo de datos de procedencia) como referencias base internacionales, complementadas con perfiles regionales (como UNE-ISO 690:2024 en España, GB/T 7714-2025 en China continental, DIN ISO 690 en Alemania) y normas disciplinarias (APA 7.ª ed., IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Las directrices de la entidad o revista de destino tienen siempre prioridad. Consulte la [Arquitectura de estándares académicos](docs/standards/README.md) y la [Guía de terminología natural](docs/terminology/README.md).
 
 ## Integración e Instalación
 

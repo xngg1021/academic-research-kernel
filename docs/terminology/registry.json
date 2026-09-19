@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "title": "Multilingual Scholarly Terminology Registry",
+  "description": "Natural, authentic scholarly expressions mapped across 8 languages to replace internal software jargon.",
+  "terms": {
+    "research_decision_log": {
+      "internal_identifier": "decision-ledger",
+      "en": "Research Decision Log",
+      "zh-CN": "研究决策与失败记录",
+      "zh-TW": "研究決策與失敗紀錄",
+      "ja": "研究上の意思決定と失敗記録",
+      "ko": "연구 의사결정 및 실패 시도 기록",
+      "de": "Protokoll zu Forschungsentscheidungen und Fehlversuchen",
+      "fr": "journal des décisions de recherche et essais infructueux",
+      "es": "registro de decisiones de investigación y ensayos fallidos"
+    },
+    "evidence_record": {
+      "internal_identifier": "evidence-receipt",
+      "en": "evidence / verification record",
+      "zh-CN": "证据记录 / 核验记录",
+      "zh-TW": "證據紀錄 / 查核紀錄",
+      "ja": "証拠記録 / 検証記録",
+      "ko": "근거 기록 / 검증 기록",
+      "de": "Evidenz-/Prüfnachweis",
+      "fr": "trace de vérification / éléments probants",
+      "es": "registro de evidencia / verificación"
+    },
+    "provenance": {
+      "internal_identifier": "provenance-kernel",
+      "en": "provenance / traceability",
+      "zh-CN": "来源与生成过程 / 可追溯性",
+      "zh-TW": "來源與產製歷程 / 可追溯性",
+      "ja": "来歴・トレーサビリティ",
+      "ko": "이력·추적성",
+      "de": "Provenienz / Nachvollziehbarkeit",
+      "fr": "provenance / traçabilité",
+      "es": "procedencia / trazabilidad"
+    },
+    "claim_evidence_links": {
+      "internal_identifier": "claim-evidence-graph",
+      "en": "claim–evidence links",
+      "zh-CN": "论断与证据关联",
+      "zh-TW": "主張與證據關聯",
+      "ja": "主張と根拠の対応関係",
+      "ko": "주장과 근거의 연결",
+      "de": "Verknüpfung von Aussagen und Belegen",
+      "fr": "liens entre affirmations et éléments de preuve",
+      "es": "vínculos entre afirmaciones y evidencias"
+    },
+    "screening_log": {
+      "internal_identifier": "screening-ledger",
+      "en": "screening log",
+      "zh-CN": "文献筛选记录",
+      "zh-TW": "文獻篩選紀錄",
+      "ja": "文献選定記録",
+      "ko": "문헌 선별 기록",
+      "de": "Screening-Protokoll",
+      "fr": "journal de sélection",
+      "es": "registro de cribado de literatura"
+    },
+    "items_needing_review": {
+      "internal_identifier": "uncertainty-queue",
+      "en": "items needing review",
+      "zh-CN": "待核实事项",
+      "zh-TW": "待確認事項",
+      "ja": "要確認事項",
+      "ko": "확인 필요 항목",
+      "de": "offene Prüfpunkte",
+      "fr": "points à vérifier",
+      "es": "elementos pendientes de verificación"
+    },
+    "route_status": {
+      "internal_identifier": "prune-state",
+      "en": "route status / why this route was stopped",
+      "zh-CN": "路线状态 / 为什么放弃该路线",
+      "zh-TW": "路線狀態 / 為什麼放棄該路線",
+      "ja": "研究ルートの状態 / なぜその路線を断念したか",
+      "ko": "연구 경로 상태 / 해당 경로를 중단한 이유",
+      "de": "Routenstatus / Warum diese Route beendet wurde",
+      "fr": "état de la piste / raison de l'abandon de cette piste",
+      "es": "estado de la ruta / por qué se detuvo esta vía"
+    }
+  },
+  "banned_user_facing_slurs": [
+    "レジャー",
+    "영수증",
+    "Beschneidungskausalität",
+    "causalité d’élagage",
+    "causalidad de poda",
+    "台账内核",
+    "Truth Authority"
+  ]
+}
