@@ -27,7 +27,7 @@
   - 确立 ISO 690:2021、ISO 704:2022、ISO 860:2007、ISO 5127:2017 与 W3C PROV 为全球基线，解耦语言与司法管辖区规范；标准注册表逐项完善 `authority_url`、`verified_at`、`evidence_status` 与 `supersedes` 证据链；
   - 建立机器可读标准清单 `docs/standards/registry.json` 与涵盖 18 组概念、覆盖全部 21 个目标语种自然学术表达的 `docs/terminology/registry.json` 及完整说明指南 `docs/terminology/README.md`；
   - 建立 AIDetox 公开文档写作契约 `docs/style/aidetox-contract.json` 与涵盖 21 个语种独立规则库的 `docs/style/profiles/`；
-  - 落地 21 语种 README 实体对齐与全内容等价（11 节完整结构），全语种顶栏导航互联；
+  - 落地 21 语种 README 核心能力与结构对齐（全 11 节结构、SLL/MIT 许可边界、13 技能、MCP/Hermes、数据源、longtail 与 scfabric 全覆盖），全语种顶栏导航互联；
   - 全仓 53 篇规范 Markdown 文档密码学级增量同步清册 `docs/i18n/manifest.json`（53 篇源文档 × 21 语种 = 1,113 理论实例；53 canonical_current、22 localized_current、1,038 queued_for_generation），内置代码块感知的章节哈希提取与陈旧度检测，杜绝重跑脚本静默洗白；
   - `scripts/qa.py` 静态门禁强制固化 21 语种 Profile、18×21 术语矩阵、53 篇清单源文件与本地文件双层哈希、以及 `README.zh-CN.md` / `README.zh-TW.md` 中文别名逐字节恒等不变量。
 - **技能文档 (`skills/decision-ledger/SKILL.md`)**：以自然科研语言重写，frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。

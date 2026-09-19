@@ -55,8 +55,10 @@ def extract_section_hashes(text: str) -> Dict[str, str]:
     current_title = "preamble"
     current_lines: List[str] = []
     in_code_block = False
+    seen_titles: Dict[str, int] = {}
     for line in text.splitlines():
-        if line.strip().startswith("```"):
+        stripped = line.strip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
             in_code_block = not in_code_block
             current_lines.append(line)
             continue
@@ -67,7 +69,12 @@ def extract_section_hashes(text: str) -> Dict[str, str]:
                     sec_content = "\n".join(current_lines).strip()
                     sections[current_title] = compute_sha256(sec_content)
                     current_lines = []
-                current_title = m.group(2).strip()
+                raw_title = m.group(2).strip()
+                seen_titles[raw_title] = seen_titles.get(raw_title, 0) + 1
+                if seen_titles[raw_title] > 1:
+                    current_title = f"{raw_title} (part {seen_titles[raw_title]})"
+                else:
+                    current_title = raw_title
                 continue
         current_lines.append(line)
     if current_lines:

@@ -705,10 +705,30 @@ def canonical_decision_export(item: Any) -> Dict[str, Any]:
 
 
 def canonical_raw_record(d: Mapping[str, Any]) -> Dict[str, Any]:
-    """Normalize raw export records so empty metadata {} does not perturb digests."""
-    res = dict(d)
-    if "metadata" in res and not res["metadata"]:
-        res.pop("metadata")
+    """Normalize raw export records so empty optional fields (metadata {}, empty locators, etc.)
+    do not perturb content identity between wire shapes and canonical runtime states.
+    """
+    res: Dict[str, Any] = {}
+    for k, v in d.items():
+        if v is None:
+            continue
+        if v == "" and k in (
+            "locator",
+            "context_work_id",
+            "caused_by",
+            "alternative_ref",
+            "stop_reason",
+            "closed_by",
+            "reason",
+        ):
+            continue
+        if isinstance(v, collections.abc.Mapping):
+            nested = canonical_raw_record(v)
+            if k == "metadata" and len(nested) == 0:
+                continue
+            res[k] = nested
+        else:
+            res[k] = v
     return res
 
 

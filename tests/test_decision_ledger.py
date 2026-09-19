@@ -1514,3 +1514,21 @@ def test_schema_reopened_forbids_caused_by_and_alternative_ref():
     reopened_ev["caused_by"] = "d2"
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.validate(instance=exp, schema=schema)
+
+
+def test_canonical_round_trip_empty_optional_fields():
+    """Wire payloads with empty optional fields (empty metadata, empty locators) must round-trip cleanly without digest drift."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Test Locator Invariant", locator="https://example.org/p1")
+    g.add_outcome_correction("d1", verdict="positive", rationale="sound", locator="sec-1")
+    exp = g.to_dict()
+    orig_digest = exp["ledger_digest"]
+
+    # Inject empty optional wire variants
+    exp["decisions"][0]["metadata"] = {}
+    exp["corrections"][0]["metadata"] = {}
+
+    # Replay in runtime
+    loaded = dl.DecisionLedger.from_dict(exp)
+    assert loaded.ledger_digest() == orig_digest
+    assert loaded.to_dict()["ledger_digest"] == orig_digest
