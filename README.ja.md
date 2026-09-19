@@ -1,8 +1,8 @@
 # academic-research-kernel
 
-English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · 日本語 · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
+[English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-ハーネス中立な学術研究コアおよびマルチエージェント協調クロスレビューツールスイート。12の学術スキルと検証ツールを提供し、ベンダー中立なAgent Plugins v1仕様およびstdio MCP（Model Context Protocol）サーバーに対応。Hermes Agent、Claude Code、Cursor、スタンドアロンCLIサブエージェントをネイティブにサポートします。
+ハーネス中立な学術研究コアおよびマルチエージェント協調クロスレビューツールスイート。13の学術スキルと検証ツールを提供し、ベンダー中立なAgent Plugins v1仕様およびstdio MCP（Model Context Protocol）サーバーに対応。Hermes Agent、Claude Code、Cursor、スタンドアロンCLIサブエージェントをネイティブにサポートします。
 
 著者:Junfu Shi(SJF,xngg1021)、Hermes Agent。現在の提供範囲:[Source Lineage License 1.0](LICENSE)。
 
@@ -20,18 +20,23 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.2.0 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証 |
 | `skills/literature-analysis` | 1.3.0 | 12 のワークフロー:トピック類似度、局所テキスト重複、反証、著者プロファイル、模擬査読、誤謬検査、レビューマトリクス、投稿先候補、BibTeX、バイリンガル読解、研究ギャップ探索、再現 |
-| `skills/academic-writing` | 1.1.1 | 編集、引用ガイダンス(APA、MLA、Chicago、IEEE、AMA、GB/T)、ジャーナル指示、任意の検出サービス、投稿資料、中国語学術要件 |
+| `skills/academic-writing` | 1.1.1 | 論文推敲、引用基準案内（ISO 690 国際基準および地域・機関別プロファイル）、投稿規程、検出サービス、投稿資料、審査要件 |
 | `skills/math-computation` | 1.2.1 | 既存の領域・タスク経路と修正済みの数値・統計例題、領域別リファレンス 4 編 |
 | `skills/quantitative-paper-audit` | 1.1.0 | 論文が報告する統計量(効果量、p 値、信頼区間、OR/RR、検出力)の再計算と数値不整合の検出 |
-| `skills/research-reproducibility` | 1.0.1 | 構造化チェックリストエンジン、5 段階の事実、4 状態のレシートを備えた 14 段階の再現監査パイプライン |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 検索ログ、スクリーニング台帳、効果量換算、異質性、固定・変量効果の統合、感度分析、出版バイアス診断 |
+| `skills/research-reproducibility` | 1.0.1 | 構造化チェックリスト、5段階の事実、再現可能な監査記録を備えた14段階の再現監査パイプライン |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 検索ログ、文献選定記録、効果量換算、異質性、固定・変量効果の統合、感度分析、出版バイアス診断 |
 | `skills/literature-watch` | 1.1.0 | 週次ブループリント:OpenAlex と Crossref でトピック、著者、DOI の新規作品を監視し、重複排除のうえ新規のみ報告 |
 | `skills/retraction-watch` | 1.1.0 | 週次ブループリント:OpenAlex の is_retracted と Crossref 更新レコード(update-to シグナル)に対して DOI 監視リストを再検査し、状態変化のみ報告 |
-| `skills/research-object-identity` | 1.1.0 | 決定論的研究対象識別および生産来歴カーネル (Provenance Kernel v1)：識別子正規化、5状態判定、コンテンツアドレス指定派生グラフ、因果DAG検証、ミリ秒単位のオフライン逆方向追跡 |
-| `skills/claim-evidence-graph` | 1.0.0 | 決定論的科学主張・証拠グラフカーネル：主張、証拠アンカー、検証レシート、計算来歴の接続 |
+| `skills/research-object-identity` | 1.1.0 | 決定論的研究資源の識別および来歴・トレーサビリティ：識別子正規化、5状態判定、コンテンツアドレス指定派生グラフ、因果DAG検証、ミリ秒単位のオフライン逆方向追跡 |
+| `skills/claim-evidence-graph` | 1.0.0 | 決定論的主張と根拠の対応関係：科学的主張、実証証拠記録、計算来歴の接続 |
+| `skills/decision-ledger` | 1.0.0 | 研究上の意思決定と失敗記録：研究上の選択、失敗試行の記録、路線の断念理由、結果の訂正履歴を追記記録 |
 | `skills/cross-review-five` | 2.0.0 | 動的マルチモデル／サブエージェント協調クロスレビュー（Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Geminiなど）：v2 4段階Sparse Deliberationパイプライン（ハンガリー法による最適マッチング、P0-P3重要度判定対応） |
 
-12 のスキルには 21 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれる。GB/T 7714-2025 が施行されており、執筆リファレンスは検証済みの発効日と明示的に 2015 年例とラベル付けされたものを区別する。2025 年版への完全準拠には対象機関のテンプレートまたは標準本文が必要である。
+13 のスキルには 21 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれる。
+
+## 学術標準とグローバル・プロファイル基準
+
+引用スタイル、報告ガイドライン、メタデータ規約は対象ジャーナル、助成機関、学問分野、司法管轄区に依存します。本リポジトリは **ISO 690:2021**（書誌参照および引用指針）、**ISO 5127:2017**（情報・ドキュメンテーション用語）、**W3C PROV**（来歴データモデル）を国際基準として確立し、各国の地域プロファイル（日本の学協会指針・JIS X 0807参考、中国大陸 GB/T 7714-2025、スペイン UNE-ISO 690 等）および分野別標準（APA、IEEE、PRISMA 2020、ICMJE 等）に対応しています。投稿先機関・学会の要求事項が常に優先されます。詳細は[学術標準アーキテクチャ](docs/standards/README.md)および[自然な学術用語ガイド](docs/terminology/README.md)を参照してください。
 
 ## 統合とポータブル利用
 
@@ -80,11 +85,15 @@ git diff --check
 
 QA はメタデータ、リファレンス、個人パス・既知シークレットパターン、Python 構文、マーク付き実行フェンスを検証する。各 smoke 例題は新しいサブプロセスで変更なしに実行される。プロット例題は `PLOT_DIR`(既定 `~/plots`、明示的に展開)を受け付け、テストは一時ディレクトリを使用する。未分類の Python フェンスは拒否される。`fragment:` ブロックは構文検査されるが名前付き入力を必要とし、単独では実行されない。`external-test:` ブロックは手動の外部コマンドでのみ実行される。合格した構成済みチェックでは 0、コード・スキーマ・同一性の失敗では 1、転送・認証・割当ての利用不能では 2 を返す。未構成の任意サービスは SKIP のままである。
 
-固定された Hermes オーサリングテストは、スキルごとの規則を変えずに再利用される。上流の全配布個体数チェックはこの tap には適用されず、本リポジトリのハーネスは 12 のスキルすべてを検査し、固定されたバンドル・任意カタログに対してリファレンスを解決する。これは完全な Hermes インストールテストではない。CI は依存のインストールにのみネットワークを使用し、通常の PR テストは学術 API を呼び出さない。
+固定された Hermes オーサリングテストは、スキルごとの規則を変えずに再利用される。上流の全配布個体数チェックはこの tap には適用されず、本リポジトリのハーネスは 13 のスキルすべてを検査し、固定されたバンドル・任意カタログに対してリファレンスを解決する。これは完全な Hermes インストールテストではない。CI は依存のインストールにのみネットワークを使用し、通常の PR テストは学術 API を呼び出さない。
 
-CI は GitHub Actions により Ubuntu(Python 3.12 と 3.13)、Windows、macOS で完全な QA スイートを実行する。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、このリポジトリに対して tap add、search、install、list を実行する。新規の Hermes セッションやすべての依存バージョン組合せの検証は主張しない。正確なバージョン、チェック項目、制約は[監査文書](docs/audit-20260906.md)にある。
+CI は GitHub Actions により Linux x86_64 (Python 3.10-3.14)、Linux ARM64 (ubuntu-24.04-arm)、Ubuntu 26.04 プレビュー Canary (ubuntu-26.04 および ubuntu-26.04-arm)、Windows x86_64、Windows ARM64 (windows-11-arm)、macOS ARM64 (macos-latest)、macOS Intel (macos-15-intel) の全プラットフォーム・全アーキテクチャを網羅し、632 件の単体テストがすべて合格、上流 main 最新ブランチに対するリアルタイム Canary 検証も含めて実行される。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、このリポジトリに対して tap add、search、install、list を実行する。正確なバージョン、チェック項目、制約は[監査文書](docs/audit-20260906.md)にある。
+
+tools/longtail/ は確定的な極端長尾シナリオ生成器を保持します: 解結合された因子軸上に 4096 個の SHA256 シード候補を生成し、貪欲法で網羅を選択し、generated-scenarios.json に網羅性レポートを出力します。これはスキルのストレステスト入力層であり、セマンティック展開は別段階です。
+
+scripts/scfabric/ は科学計算・統計分析実行層です: ハードウェアプローブ、dtype ゲート付きバックエンドカタログ、5 つの負荷プロファイル、等価性検証付きベンチマークおよび ComputeReceipt。実測は [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md) にあります。
 
 ## 研究・計画文書
 
 - [ペインポイント図鑑 v0(英語)](docs/pain-atlas-v0.en.md)、[中文版](docs/pain-atlas-v0.zh.md):学術知識作業のライフサイクル上の摩擦点。定量主張には出典検証状態を付す。
-- [研究計画 v0(英語)](docs/research-plan-v0.en.md)、[中文版](docs/research-plan-v0.zh.md):14 のアーキテクチャプリミティブ、Research Object モデル、4 平面、候補方向、第 1 段階の因子分解行列。
+- [研究計画 v0(英語)](docs/research-plan-v0.en.md)、[中文版](docs/research-plan-v0.zh.md):Research Object モデル、中核機能領域、候補方向、第 1 段階の因子分解行列。

@@ -26,7 +26,7 @@ $$\text{ResearchObject} + \text{AcademicEvidenceReceipt} + \text{LineageReceipt}
 
 | 候选方向 (Direction) | 单一原语覆盖 (Single) | 核心原语覆盖 (Core) | 基线综合覆盖 (Baseline) | 跨运行位次稳定性 |
 | :--- | :--- | :--- | :--- | :--- |
-| **Research Object Identity & Lineage** | 34 (14.5%) | 64 (27.2%) | 88 (37.4%) | [2, 1, 1] — **已落地闭环** |
+| **Research Object Identity & Lineage** | 34 (14.5%) | 64 (27.2%) | 88 (37.4%) | [2, 1, 1] — **已完整落地** |
 | **Claim-Evidence Graph** | 15 (6.4%) | 47 (20.0%) | 58 (24.7%) | [6, 3, 4] |
 | **Method / Supplement Miner** | 30 (12.8%) | 59 (25.1%) | 85 (36.2%) | [3, 2, 2] |
 | **Decision / Negative Result Ledger** | 36 (15.3%) | 36 (15.3%) | 63 (26.8%) | [1, 4, 3] |

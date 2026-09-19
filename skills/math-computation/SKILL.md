@@ -59,7 +59,7 @@ Python 3.11+；数值配方要求 NumPy、SciPy >=1.9（含 MILP）。其余按�
 
 出图必须无头运行：**先 `import matplotlib; matplotlib.use('Agg')` 再 import pyplot，最后 `fig.savefig(path)` 存文件**，不要 `plt.show()`（无 GUI 会卡住/报错）。中文标签需先设字体（见 Pitfalls）。
 
-## 科学计算执行层（Scientific Compute Fabric）
+## 科学计算执行层（Scientific Computation Engine）
 
 默认在 CPU 上用 NumPy/SciPy 计算；不要默认"上 GPU 更快"。本机与本仓库有一层实测证据：`../../scripts/scfabric/` 与 `../../docs/scientific-compute-fabric.md`。核心规则：
 

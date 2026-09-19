@@ -1,0 +1,22 @@
+{
+  "locale": "vi",
+  "language": "Vietnamese",
+  "banned_phrases": [
+    "đi sâu vào",
+    "minh chứng cho",
+    "cách mạng hóa",
+    "vai trò then chốt",
+    "bước ngoặt",
+    "thúc đẩy hợp tác"
+  ],
+  "step_broadcasting_markers": [
+    "Bước 1:",
+    "Bước 2:",
+    "Tóm lại,",
+    "Kết luận lại,"
+  ],
+  "redundant_hedges": [
+    "Điều quan trọng cần lưu ý là",
+    "Không cần phải nói rằng"
+  ]
+}

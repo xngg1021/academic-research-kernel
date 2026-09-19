@@ -1,8 +1,8 @@
 # academic-research-kernel
 
-English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · Français · [Español](README.es.md)
+[English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-Noyau de recherche académique neutre vis-à-vis des environnements et suite de délibération multi-agents. Il fournit 12 compétences académiques et outils de vérification avec des points d'entrée portables Agent Plugins v1 et MCP, ainsi qu'une intégration native pour Hermes Agent, Claude Code, Cursor et les sous-agents CLI personnalisés. Ils couvrent la vérification des sources, l'analyse documentaire, la rédaction académique, le calcul numérique, l'audit quantitatif d'articles, les audits de reproductibilité, les revues systématiques et méta-analyses, l'identité et le lignage des objets de recherche, l'orchestration de revues inter-modèles, plus deux automatisations de veille hebdomadaire. Le dépôt inclut des contrôles d'exemples exécutables ; le périmètre de validation et les limites des services externes sont consignés dans [l'audit](docs/audit-20260906.md).
+Noyau de recherche académique neutre vis-à-vis des environnements et suite de délibération multi-agents. Il fournit 13 compétences académiques et outils de vérification avec des points d'entrée portables Agent Plugins v1 et MCP, ainsi qu'une intégration native pour Hermes Agent, Claude Code, Cursor et les sous-agents CLI personnalisés. Ils couvrent la vérification des sources, l'analyse documentaire, la rédaction académique, le calcul numérique, l'audit quantitatif d'articles, les audits de reproductibilité, les revues systématiques et méta-analyses, l'identité et le lignage des objets de recherche, l'orchestration de revues inter-modèles, plus deux automatisations de veille hebdomadaire. Le dépôt inclut des contrôles d'exemples exécutables ; le périmètre de validation et les limites des services externes sont consignés dans [l'audit](docs/audit-20260906.md).
 
 Auteur : Junfu Shi (SJF, xngg1021), Hermes Agent. Offre actuelle : [Source Lineage License 1.0](LICENSE).
 
@@ -20,23 +20,33 @@ SLL autorise largement l'utilisation, l'étude, la modification, l'usage commerc
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.2.0 | Vérifier l'identité et les comptes de citations par source ; examiner les signaux de mise à jour et de rétractation ; localiser le texte en accès libre et vérifier l'identité des PDF |
 | `skills/literature-analysis` | 1.3.0 | Douze flux : similarité thématique, chevauchement local, contre-preuves, profils d'auteurs, revue simulée, vérification des sophismes, matrice de revue, revues candidates, BibTeX, lecture bilingue, dépistage des lacunes, reproduction |
-| `skills/academic-writing` | 1.1.1 | Édition, conseils de citation (APA, MLA, Chicago, IEEE, AMA, GB/T), instructions des revues, services de détection optionnels, matériaux de soumission, exigences académiques chinoises |
+| `skills/academic-writing` | 1.1.1 | Révision éditoriale, normes de citation (ISO 690, APA, MLA, Chicago, IEEE, AMA et profils régionaux), consignes aux auteurs, services d'évaluation, dossiers de soumission et exigences institutionnelles |
 | `skills/math-computation` | 1.2.1 | Routage domaine/tâche existant avec exemples numériques et statistiques corrigés ; quatre fichiers de référence par domaine |
 | `skills/quantitative-paper-audit` | 1.1.0 | Recalculer les statistiques rapportées (taille d'effet, valeurs p, intervalles de confiance, OR/RR, puissance atteinte) et détecter les incohérences numériques |
-| `skills/research-reproducibility` | 1.0.1 | Pipeline d'audit de reproduction en quatorze étapes avec moteur de liste de contrôle structuré, cinq niveaux de faits et reçu à quatre états |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | Journaux de recherche PRISMA, registres de sélection, conversion des tailles d'effet, hétérogénéité, regroupement à effets fixes/aléatoires, diagnostics de sensibilité et de biais de publication |
+| `skills/research-reproducibility` | 1.0.1 | Pipeline d'audit de reproduction en quatorze étapes avec listes de contrôle structurées, cinq niveaux de faits et enregistrements d'audit vérifiables |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Journaux de recherche PRISMA, journaux de sélection documentaire, conversion des tailles d'effet, hétérogénéité, regroupement à effets fixes/aléatoires, diagnostics de sensibilité et de biais de publication |
 | `skills/literature-watch` | 1.1.0 | Plan hebdomadaire : surveiller les thèmes, auteurs et œuvres citant des DOI sur OpenAlex et Crossref ; dédupliquer et ne signaler que les nouveautés |
 | `skills/retraction-watch` | 1.1.0 | Plan hebdomadaire : revérifier une liste de DOI contre OpenAlex is_retracted et les enregistrements de mise à jour Crossref (signaux update-to) ; ne signaler que les changements d'état |
-| `skills/research-object-identity` | 1.1.0 | Couche d'identité déterministe d'objets de recherche et noyau de traçabilité (Provenance Kernel v1) : normalisation des identifiants, verdict à 5 états, graphe de dérivation adressé par le contenu, validation DAG causale et traçage hors ligne en millisecondes |
-| `skills/claim-evidence-graph` | 1.0.0 | Noyau déterministe de graphe d'assertions et de preuves scientifiques : connexion des assertions, ancres de preuves et traçabilité |
+| `skills/research-object-identity` | 1.1.0 | Identification des ressources de recherche et traçabilité déterministe : normalisation des identifiants, verdict à 5 états, graphe de dérivation adressé par le contenu, validation DAG causale et traçage hors ligne |
+| `skills/claim-evidence-graph` | 1.0.0 | Liens déterministes entre affirmations et éléments de preuve : connexion des affirmations scientifiques, preuves empiriques et traçabilité |
+| `skills/decision-ledger` | 1.0.0 | Journal des décisions de recherche et essais infructueux : journal déterministe en ajout seul des décisions, résultats négatifs, raisons d'abandon de pistes et révisions de conclusions |
 | `skills/cross-review-five` | 2.0.0 | Panel de révision multi-modèles et sous-agents dynamique (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, etc.) : pipeline v2 Sparse Deliberation en 4 phases avec affectation hongroise de Kuhn-Munkres et niveaux de gravité P0-P3 |
 
-Les douze compétences comprennent 21 fichiers de référence Markdown, chargés uniquement à la demande. GB/T 7714-2025 est en vigueur ; la référence d'écriture distingue sa date d'entrée en vigueur vérifiée des exemples explicitement étiquetés de 2015. La conformité complète à l'édition 2025 exige le modèle ou le texte standard de l'institution cible.
+Les treize compétences comprennent 21 fichiers de référence Markdown, chargés uniquement à la demande.
+
+## Normes académiques et référentiel multi-profils
+
+Les styles de citation, les critères de rapport et les métadonnées dépendent de la revue cible, de l'organisme de financement, de la discipline et de la juridiction. Le dépôt établit **ISO 690:2021** (références et citations), **ISO 5127:2017** (vocabulaire de l'information et de la documentation) et **W3C PROV** (modèle de données de provenance) comme bases internationales, complétées par des profils régionaux (par ex. NF ISO 690 en France, GB/T 7714-2025 en Chine continentale, UNE-ISO 690 en Espagne) et des normes disciplinaires (APA 7e, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Les exigences de l'institution cible prévalent toujours. Voir [Architecture des normes académiques](docs/standards/README.md) et [Guide de terminologie naturelle](docs/terminology/README.md).
 
 ## Intégration & Installation
 
 ### 1. Agent Plugins v1 & Serveur MCP
-Supporte stdio MCP (`python scripts/mcp_server.py`) et Agent Plugins v1 portable (`plugin.json`).
+Ce dépôt est conforme à la spécification neutre **Agent Plugins v1** (`plugin.json`) et expose les outils essentiels de vérification académique et de recalcul statistique via un **serveur MCP** stdio (`mcp.json` / `python scripts/mcp_server.py`). Compatible avec Claude Code, Cursor, Gemini CLI et tout framework moderne d'agents.
+
+```bash
+# Ajouter en tant que serveur stdio MCP dans votre environnement
+python scripts/mcp_server.py
+```
 
 ### 2. Installation dans Hermes
 
@@ -77,11 +87,15 @@ git diff --check
 
 QA valide les métadonnées, les références, les motifs de chemins personnels et de secrets connus, la syntaxe Python et les clôtures exécutables marquées. Chaque exemple smoke s'exécute tel quel dans un sous-processus neuf. Les exemples de tracé acceptent `PLOT_DIR` (par défaut `~/plots`, étendu explicitement) ; les tests utilisent un répertoire temporaire. Les clôtures Python non classifiées sont refusées ; les blocs `fragment:` sont vérifiés syntaxiquement mais exigent des entrées nommées et ne s'exécutent pas seuls. Les blocs `external-test:` ne s'exécutent que via la commande externe manuelle. Retour : 0 pour les contrôles configurés réussis, 1 pour un échec de code/schéma/identité, 2 pour une indisponibilité de transport/authentification/quota ; les services optionnels non configurés restent SKIP.
 
-Les tests d'autorat Hermes épinglés sont réutilisés sans modifier leurs règles par compétence. Les contrôles de population sur la distribution complète amont ne s'appliquent pas à ce tap ; notre harnais vérifie douze compétences et résout les références contre le catalogue groupé/optionnel épinglé. Ce n'est pas un test d'installation Hermes complet. La CI n'utilise le réseau que pour installer les dépendances ; les tests PR ordinaires n'appellent pas d'API académiques.
+Les tests d'autorat Hermes épinglés sont réutilisés sans modifier leurs règles par compétence. Les contrôles de population sur la distribution complète amont ne s'appliquent pas à ce tap ; notre harnais vérifie treize compétences et résout les références contre le catalogue groupé/optionnel épinglé. Ce n'est pas un test d'installation Hermes complet. La CI n'utilise le réseau que pour installer les dépendances ; les tests PR ordinaires n'appellent pas d'API académiques.
 
-La CI exécute la suite QA complète via GitHub Actions sur Ubuntu (Python 3.12 et 3.13), Windows et macOS. Un flux d'intégration tap séparé s'exécute lors des poussées sur main : il installe l'extraction Hermes épinglée consignée dans tests/upstream/provenance.json et exerce tap add, search, install et list contre ce dépôt. Une session Hermes neuve et chaque combinaison de versions de dépendances ne sont pas revendiquées. Les versions, contrôles et limites exacts figurent dans [l'audit](docs/audit-20260906.md).
+La CI exécute la suite QA complète via GitHub Actions sur Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 Preview-Canary (ubuntu-26.04 et ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) et macOS Intel (macos-15-intel) sur toutes les plateformes et architectures, avec 632 tests unitaires réussis et une validation Canary continue de la branche principale amont. Un flux d'intégration tap séparé s'exécute lors des poussées sur main : il installe l'extraction Hermes épinglée consignée dans tests/upstream/provenance.json et exerce tap add, search, install et list contre ce dépôt. Les versions, contrôles et limites exacts figurent dans [l'audit](docs/audit-20260906.md).
+
+tools/longtail/ héberge le générateur déterministe de scénarios extrêmes: 4096 combinaisons candidates initialisées par SHA256 sur les axes de facteurs découplés, sélection gloutonne de couverture et rapport calculé par machine dans generated-scenarios.json. Il s'agit de la couche d'entrée pour tester la robustesse des compétences; l'expansion sémantique est une étape séparée.
+
+scripts/scfabric/ constitue la structure de calcul scientifique: sonde matérielle, catalogue de backends avec contrôles dtype, cinq profils de charge, banc d'essai apparié avec vérification de parité et ComputeReceipt. Les mesures figurent dans [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); la règle générale est le CPU par défaut, et l'accélérateur uniquement avec ComputeReceipt.
 
 ## Documents de recherche et de planification
 
 - [Atlas des points de friction v0 (anglais)](docs/pain-atlas-v0.en.md), [中文版](docs/pain-atlas-v0.zh.md) : points de friction du cycle de vie du travail académique, avec état de vérification des sources pour les affirmations quantitatives.
-- [Plan de recherche v0 (anglais)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md) : quatorze primitives architecturales, le modèle Research Object, quatre plans, directions candidates et la matrice de décomposition factorielle de la première phase.
+- [Plan de recherche v0 (anglais)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md) : modèle Research Object, domaines de compétences fondamentales, directions candidates et la matrice de décomposition factorielle de la première phase.

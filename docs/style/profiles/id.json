@@ -1,0 +1,23 @@
+{
+  "locale": "id",
+  "language": "Indonesian",
+  "banned_phrases": [
+    "menyelami",
+    "bukti nyata",
+    "merevolusi",
+    "peran penting",
+    "titik balik",
+    "mendorong kolaborasi"
+  ],
+  "step_broadcasting_markers": [
+    "Langkah 1:",
+    "Langkah 2:",
+    "Singkatnya,",
+    "Sebagai kesimpulan,"
+  ],
+  "redundant_hedges": [
+    "Penting untuk dicatat bahwa",
+    "Perlu digarisbawahi bahwa",
+    "Tak perlu dikatakan lagi"
+  ]
+}

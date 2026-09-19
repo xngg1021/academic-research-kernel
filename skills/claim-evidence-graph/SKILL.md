@@ -1,6 +1,6 @@
 ---
 name: claim-evidence-graph
-description: 确定性科学论断-证据图内核 (Claim-Evidence Graph v1)，打通论断、事实收据与计算谱系.
+description: 确定性科学论断-证据图 (Claim-Evidence Graph v1)，连接学术论断、证据记录与计算过程追溯.
 version: 1.0.0
 author: Junfu Shi (SJF, xngg1021), Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
@@ -36,7 +36,7 @@ Claim-Evidence Graph Kernel v1：科学论断与实证证据的**确定性公共
 
 1. **因果谱系严格有向无环 (DAG)，语义关系网络允许自然成环**：
    生产过程（`derived_from`）由 Provenance Kernel 强制无环；学术命题关系（如 A 论文反驳 B 论文，B 论文反驳 A 论文，`CONTRADICTS` 双向互斥）天然成环且完全合法。
-2. **拒绝真理裁判所 (Truth Authority)**：
+2. **拒绝绝对裁判**：
    确定性内核只负责节点唯一性、定位符坐标、引用完整性、收据绑定、图遍历与覆盖率检查；不合成分数（严禁 0.85 这种主观打分）。
 3. **不可决断分歧沉淀至不确定性账本 (UncertaintyQueue)**：
    机器不可观测（`unverifiable`）不等于必须人工介入（`needs_human=False`）；而直接矛盾（`contradicted`）则标记为需要审查员/人工介入（`needs_human=True`）。

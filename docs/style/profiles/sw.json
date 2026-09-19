@@ -1,0 +1,22 @@
+{
+  "locale": "sw",
+  "language": "Swahili",
+  "banned_phrases": [
+    "kuzama ndani ya",
+    "ushuhuda wa",
+    "kuleta mapinduzi",
+    "jukumu muhimu",
+    "mabadiliko makubwa",
+    "kukuza ushirikiano"
+  ],
+  "step_broadcasting_markers": [
+    "Hatua ya 1:",
+    "Hatua ya 2:",
+    "Kwa muhtasari,",
+    "Kwa kumalizia,"
+  ],
+  "redundant_hedges": [
+    "Ni muhimu kutambua kwamba",
+    "Bila shaka kwamba"
+  ]
+}

@@ -1,8 +1,8 @@
 # academic-research-kernel
 
-English · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
+[English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-Harness-neutral academic research core and multi-agent deliberation suite. It provides 12 academic skills and verification tools with portable Agent Plugins v1 and MCP (Model Context Protocol) entrypoints, as well as native integration for Hermes Agent, Claude Code, Cursor, and custom CLI subagents. They cover source verification, literature analysis, academic writing, numerical computation, quantitative paper audit, reproduction audits, systematic review and meta-analysis, research-object identity and lineage, dynamic cross-model review orchestration, plus two weekly monitoring automations. The repository includes executable example checks; validation scope and external-service limitations are recorded in [the audit](docs/audit-20260906.md).
+Harness-neutral academic research core and multi-agent deliberation suite. It provides 13 academic skills and verification tools with portable Agent Plugins v1 and MCP (Model Context Protocol) entrypoints, as well as native integration for Hermes Agent, Claude Code, Cursor, and custom CLI subagents. They cover source verification, literature analysis, academic writing, numerical computation, quantitative paper audit, reproduction audits, systematic review and meta-analysis, research-object identity and lineage, dynamic cross-model review orchestration, plus two weekly monitoring automations. The repository includes executable example checks; validation scope and external-service limitations are recorded in [the audit](docs/audit-20260906.md).
 
 Author: Junfu Shi (SJF, xngg1021), Hermes Agent. Current scoped offer: [Source Lineage License 1.0](LICENSE).
 
@@ -20,18 +20,23 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.2.0 | Cross-check identity and source-specific citation counts; inspect update/retraction signals; locate OA text and verify PDF identity |
 | `skills/literature-analysis` | 1.3.0 | Twelve workflows: topic similarity, local text overlap, counter-evidence, author profiles, mock review, fallacy checks, review matrix, journal candidates, BibTeX, bilingual reading, research-gap screening, reproduction |
-| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (APA, MLA, Chicago, IEEE, AMA, GB/T), journal instructions, optional detection services, submission materials, Chinese academic requirements |
+| `skills/academic-writing` | 1.1.1 | Editing, citation guidance (ISO 690, APA, MLA, Chicago, IEEE, AMA, and regional profiles), journal instructions, optional detection services, submission materials, and institutional requirements |
 | `skills/math-computation` | 1.2.1 | Existing domain/task routing with corrected numerical/statistical examples; four domain/advanced reference files |
 | `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported statistics (effect size, p values, CIs, OR/RR, achieved power) and detect numerical mismatches |
-| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with a structured checklist engine, five fact tiers and a four-state receipt |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, screening ledgers, effect-size conversion, heterogeneity, fixed/random pooling, sensitivity and publication-bias diagnostics |
+| `skills/research-reproducibility` | 1.0.1 | Fourteen-stage reproduction audit pipeline with structured verification checklists, five fact tiers, and reproducible audit records |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA search logs, literature screening logs, effect-size conversion, heterogeneity, fixed/random pooling, sensitivity and publication-bias diagnostics |
 | `skills/literature-watch` | 1.1.0 | Weekly blueprint: watch topics, authors and DOI citing works on OpenAlex and Crossref; deduplicate and report only new items |
 | `skills/retraction-watch` | 1.1.0 | Weekly blueprint: recheck a DOI watchlist against OpenAlex is_retracted and Crossref update records (update-to signals); report only status changes |
-| `skills/research-object-identity` | 1.1.0 | Deterministic research-object identity & Provenance Kernel v1: identifier normalization, 5-state verdict, content-addressed derivation graph, causal DAG validation, and sub-100ms lineage tracing |
-| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific assertion and evidence graph connecting claims, evidence receipts, and computational provenance |
+| `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking: identifier normalization, 5-state verification, content-addressed derivation graphs, causal DAG validation, and sub-100ms lineage tracing |
+| `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and computational provenance |
+| `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic, append-only log of research decisions, failed attempts (negative results), reasons for stopping routes, and outcome revisions |
 | `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting arbitrary models/subagents (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, etc.): v2 Sparse Deliberation pipeline with Kuhn-Munkres Hungarian assignment, assertion-level clustering, targeted anonymous challenge, and P0-P3 severity grading |
 
-There are 21 Markdown reference files across the twelve skills. References load only when needed. GB/T 7714-2025 is now in force; the writing reference distinguishes its verified effective date from explicitly labelled 2015 examples. Full 2025 compliance requires the target institution's template or standard text.
+There are 21 Markdown reference files across the thirteen skills. References load only when needed.
+
+## Scholarly Standards & Multi-Profile Baseline
+
+Citation styles, reporting criteria, and metadata contracts depend on the target journal, institution, funder, discipline, and jurisdiction. The repository establishes **ISO 690:2021** (Bibliographic references), **ISO 5127:2017** (Information and documentation vocabulary), and **W3C PROV** (Provenance data model) as international baselines, alongside regional profiles (e.g., GB/T 7714-2025 in Mainland China, UNE-ISO 690:2024 in Spain, DIN ISO 690:2021 in Germany) and disciplinary standards (APA 7th, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Target venue requirements take precedence over default profiles. See the [Scholarly Standards Architecture](docs/standards/README.md) and [Natural Terminology Guide](docs/terminology/README.md).
 
 ## Integration & Portable Usage
 
@@ -81,9 +86,9 @@ git diff --check
 
 QA validates metadata, references, personal-path/known-secret patterns, Python syntax and marked executable fences. Each smoke example runs unchanged in a fresh subprocess. Plot examples accept `PLOT_DIR` (default `~/plots`, explicitly expanded); tests use a temporary directory. Unclassified Python fences are rejected; `fragment:` blocks are syntax-checked but require named inputs and are not executed standalone. `external-test:` blocks run only via the manual external command. It returns 0 on passed configured checks, 1 on code/schema/identity failure, and 2 on transport/authentication/quota unavailability; optional unconfigured services remain SKIP.
 
-Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks twelve skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
+Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks thirteen skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
-CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with 526 passed unit tests and live upstream canary validation. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
+CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with 632 passed unit tests and live upstream canary validation. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
 
 tools/longtail/ holds the deterministic extreme long-tail scenario generator: 4096 SHA256-seeded candidate combinations over the decoupled factor axes, greedy coverage selection, and the machine-computed coverage report in generated-scenarios.json. It is the input layer for stress-testing the skills; semantic expansion (task chains, oracles, injected events) is a separate stage.
 
@@ -94,4 +99,4 @@ scripts/scfabric/ is the scientific compute fabric: hardware probe, backend cata
 These two documents are exploratory planning references, not a binding roadmap. Their direction numbers are recomputed from the stored grouping in docs/direction-primitive-mapping.json.
 
 - [Pain Atlas v0 (English)](docs/pain-atlas-v0.en.md), [中文版](docs/pain-atlas-v0.zh.md): friction points across the academic knowledge-work life cycle, with verification states attached to quantitative claims.
-- [Research Plan v0 (English)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): fourteen architectural primitives, the Research Object model, four planes, candidate directions and the phase-one factor decomposition matrix.
+- [Research Plan v0 (English)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): the Research Object model, core capability areas, candidate directions and the phase-one factor decomposition matrix.

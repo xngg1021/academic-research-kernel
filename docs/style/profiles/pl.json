@@ -1,0 +1,23 @@
+{
+  "locale": "pl",
+  "language": "Polish",
+  "banned_phrases": [
+    "zgłębiać się w",
+    "świadectwo czegoś",
+    "zrewolucjonizować",
+    "kluczowa rola",
+    "przełomowy moment",
+    "wspierać współpracę"
+  ],
+  "step_broadcasting_markers": [
+    "Krok 1:",
+    "Krok 2:",
+    "Podsumowując,",
+    "Podsumowanie,"
+  ],
+  "redundant_hedges": [
+    "Warto zauważyć, że",
+    "Należy podkreślić, że",
+    "Nie trzeba dodawać, że"
+  ]
+}

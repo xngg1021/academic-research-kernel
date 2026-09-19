@@ -1,0 +1,21 @@
+{
+  "locale": "es",
+  "language": "Spanish",
+  "banned_phrases": [
+    "Es importante señalar que",
+    "Ni que decir tiene",
+    "Revolucionar",
+    "Abrir nuevos horizontes",
+    "Cambio de paradigma"
+  ],
+  "step_broadcasting_markers": [
+    "Paso 1:",
+    "Paso 2:",
+    "En resumen,",
+    "Como sigue:"
+  ],
+  "redundant_hedges": [
+    "Es evidente que",
+    "Sin lugar a dudas"
+  ]
+}
