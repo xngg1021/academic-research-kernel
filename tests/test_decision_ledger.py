@@ -572,3 +572,132 @@ def test_dataclass_frozen_flags():
     assert dl.PruneState.__dataclass_params__.frozen is True
     assert dl.OutcomeCorrection.__dataclass_params__.frozen is True
     assert dl.UncertaintyItem.__dataclass_params__.frozen is True
+
+
+# ---------------------------------------------------------------------------
+# 15. Cross-review hardening (PR #11 review round 1)
+# ---------------------------------------------------------------------------
+
+def test_negative_result_self_reference_rejected():
+    g = dl.DecisionLedger()
+    g.add_decision(id="nr1", title="I failed because I say so", decision_type="negative_result")
+    g.add_basis("nr1", basis_kind="claim", basis_id="nr1")
+    ok, errs = g.validate_ledger()
+    assert not ok and any("E406" in e for e in errs) and any("E405" in e for e in errs)
+
+
+def test_negative_result_mutual_claim_cycle_rejected():
+    g = dl.DecisionLedger()
+    g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g.add_decision(id="nr2", title="B fails", decision_type="negative_result")
+    g.add_basis("nr1", basis_kind="claim", basis_id="nr2")
+    g.add_basis("nr2", basis_kind="claim", basis_id="nr1")
+    ok, errs = g.validate_ledger()
+    assert not ok
+    assert all("E405" in e for e in errs) and errs
+
+
+def test_negative_result_mixed_basis_still_requires_external_claim():
+    g = dl.DecisionLedger()
+    g.add_decision(id="nr1", title="A fails", decision_type="negative_result")
+    g.add_decision(id="nr2", title="B fails", decision_type="negative_result")
+    g.add_decision(id="pos", title="positive evidence")
+    g.add_basis("nr1", basis_kind="claim", basis_id="nr2")  # fake claim
+    g.add_basis("nr1", basis_kind="negative_result", basis_id="pos")  # noise
+    g.add_basis("nr2", basis_kind="claim", basis_id="pos")  # nr2 properly evidenced
+    ok, errs = g.validate_ledger()
+    assert not ok and any("E405" in e for e in errs)
+    g.add_basis("nr1", basis_kind="claim", basis_id="pos")  # real external claim
+    ok2, errs2 = g.validate_ledger()
+    assert ok2, errs2
+
+
+def test_outcome_of_reflects_true_insertion_order():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.add_outcome_correction("d1", verdict="inconclusive", rationale="first")
+    g.add_outcome_correction("d1", verdict="negative", rationale="second")
+    g.add_outcome_correction("d1", verdict="positive", rationale="third")
+    out = g.outcome_of("d1")
+    assert out["latest_verdict"] == "positive"
+    assert out["correction_count"] == 3
+    d = g.to_dict()
+    # export order is canonical-JSON (order invariant); sequences are a distinct 1..N set
+    seqs = sorted(c["sequence"] for c in d["corrections"])
+    assert seqs == [1, 2, 3]
+
+
+def test_correction_idempotent_replay_keeps_sequence():
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    c1 = g.add_outcome_correction("d1", verdict="negative", rationale="r")
+    c1b = g.add_outcome_correction("d1", verdict="negative", rationale="r")
+    assert c1b.correction_id == c1.correction_id and c1b.sequence == c1.sequence
+
+
+def test_ledger_digest_never_crashes_on_object_receipts():
+    class FakeReceipt:
+        def to_dict(self):
+            return {"protocol": "lineage-receipt-1.0", "receipt_id": "x", "receipt_digest": "a" * 64}
+
+    lineage, ref = _lineage_fixture()
+    g1 = dl.DecisionLedger(ledger_id="obj")
+    g1.add_decision(id="d1", title="x")
+    g1.add_decision(id="d2", title="y")
+    g1.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g1.register_receipt("x", FakeReceipt())
+    d1 = g1.ledger_digest()  # must not raise TypeError
+    g2 = dl.DecisionLedger(ledger_id="obj")
+    g2.add_decision(id="d1", title="x")
+    g2.add_decision(id="d2", title="y")
+    g2.add_basis("d2", basis_kind="claim", basis_id="d1", receipt_ref=ref)
+    g2.register_receipt("x", FakeReceipt().to_dict())
+    assert g2.ledger_digest() == d1  # same content, same digest
+
+
+def test_correction_sequence_breaks_digest_order_invariance_for_history():
+    # arrival order of DISTINCT corrections is append history and must matter
+    g1 = dl.DecisionLedger(ledger_id="h")
+    g1.add_decision(id="d1", title="x")
+    g1.add_outcome_correction("d1", verdict="inconclusive", rationale="a")
+    g1.add_outcome_correction("d1", verdict="negative", rationale="b")
+    g2 = dl.DecisionLedger(ledger_id="h")
+    g2.add_decision(id="d1", title="x")
+    g2.add_outcome_correction("d1", verdict="negative", rationale="b")
+    g2.add_outcome_correction("d1", verdict="inconclusive", rationale="a")
+    assert g1.ledger_digest() != g2.ledger_digest()
+
+
+def test_circular_pruning_reported_once_per_cycle():
+    g = dl.DecisionLedger()
+    for did in ["p1", "p2", "p3"]:
+        g.add_decision(id=did, title=did)
+    g.set_prune("p1", "pruned", prune_reason="superseded", pruned_by="p2")
+    g.set_prune("p2", "pruned", prune_reason="superseded", pruned_by="p3")
+    g.set_prune("p3", "pruned", prune_reason="superseded", pruned_by="p1")
+    ok, errs = g.validate_ledger()
+    e304 = [e for e in errs if "E304" in e]
+    assert len(e304) == 1 and "cycle members" in e304[0]
+
+
+def test_fork_edge_supports_and_validates_receipt_ref():
+    _, receipt, ref = _receipt_fixture()
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.add_decision(id="d2", title="y")
+    g.add_fork("d2", "d1", relation="considered", receipt_ref=ref)
+    g.register_receipt(ref.payload_sha256, receipt)
+    ok, errs = g.validate_ledger()
+    assert ok, errs
+    un = [u.kind for u in g.export_uncertainties()]
+    assert "missing_receipt" not in un
+
+
+def test_to_dict_exports_uncertainties_matching_schema():
+    schema = json.loads((ROOT / "schemas" / "decision-ledger-receipt.schema.json").read_text(encoding="utf-8"))
+    g = dl.DecisionLedger()
+    g.add_decision(id="nr-lonely", title="No evidence", decision_type="negative_result")
+    export = g.to_dict()
+    assert len(export["uncertainties"]) == 1
+    assert export["uncertainties"][0]["kind"] == "decision_without_basis"
+    jsonschema.validate(instance=export, schema=schema)

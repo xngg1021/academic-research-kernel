@@ -45,8 +45,12 @@ Core Invariants:
    content-addressed UncertaintyItem records; the queue never blocks
    deterministic validation of the structural graph.
 9. Order-invariant ledger digest:
-   Full canonical sorting across all records; insertion order never affects
-   ledger_digest. Registered receipts contribute canonical payload hashes.
+   Full canonical sorting across all records; container insertion order never
+   affects ledger_digest. Registered receipts contribute canonical payload
+   hashes. The one deliberate exception is the ledger-assigned `sequence`
+   counter on outcome corrections: it records true append history, so two
+   ledgers differing only in correction arrival order legitimately digest
+   differently, while idempotent replays digest identically.
 10. Lexical canonicalization only:
    NFC normalization and whitespace compaction; decision titles are never
    rewritten or paraphrased semantically.
@@ -180,6 +184,25 @@ def compute_outcome_digest(
 def canonical_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
     """Canonical SHA256 of an arbitrary JSON-able ledger payload (sorted keys)."""
     return hashlib.sha256(_canonical_json_bytes(payload_dict)).hexdigest().lower()
+
+
+def _jsonable(obj: Any) -> Any:
+    """Deterministically convert an arbitrary registered payload to JSON-able structures.
+
+    Mappings, lists, tuples, and JSON primitives pass through; objects exposing
+    to_dict() are unwrapped recursively; anything else degrades to repr().
+    This keeps ledger_digest total (never TypeError) while staying deterministic.
+    """
+    if isinstance(obj, collections.abc.Mapping):
+        return {str(k): _jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_jsonable(v) for v in obj]
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    to_dict = getattr(obj, "to_dict", None)
+    if callable(to_dict):
+        return _jsonable(to_dict())
+    return repr(obj)
 
 
 def canonical_academic_receipt_payload_sha256(receipt_dict: Mapping[str, Any]) -> str:
@@ -536,6 +559,7 @@ class DecisionForkEdge:
     decision_id: str
     alternative_id: str
     relation: str = "considered"
+    receipt_ref: Optional[ReceiptRef] = None
     metadata: FrozenDict = field(default_factory=FrozenDict)
 
     def __post_init__(self):
@@ -543,6 +567,8 @@ class DecisionForkEdge:
         _check_id(self.alternative_id, "alternative_id")
         if self.relation not in VALID_FORK_RELATIONS:
             raise ValueError(f"Invalid fork relation: {self.relation!r}. Must be one of {sorted(VALID_FORK_RELATIONS)}")
+        if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
+            raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
         object.__setattr__(self, "metadata", _frozen_meta(self.metadata))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -551,6 +577,8 @@ class DecisionForkEdge:
             "alternative_id": self.alternative_id,
             "relation": self.relation,
         }
+        if self.receipt_ref is not None:
+            d["receipt_ref"] = self.receipt_ref.to_dict()
         if len(self.metadata) > 0:
             d["metadata"] = self.metadata.to_dict()
         return d
@@ -561,8 +589,7 @@ def canonical_fork_tuple(edge: DecisionForkEdge) -> Tuple[str, ...]:
         edge.decision_id,
         edge.alternative_id,
         edge.relation,
-        _meta_canonical_json(edge.metadata),
-    )
+    ) + canonical_receipt_ref_tuple(edge.receipt_ref) + (_meta_canonical_json(edge.metadata),)
 
 
 @dataclass(frozen=True)
@@ -631,7 +658,12 @@ def canonical_prune_tuple(state: PruneState) -> Tuple[str, ...]:
 
 @dataclass(frozen=True)
 class OutcomeCorrection:
-    """An append-only outcome verdict for a decision (never an in-place update)."""
+    """An append-only outcome verdict for a decision (never an in-place update).
+
+    sequence is a ledger-assigned monotonic insertion counter (1-based) that
+    reflects true insertion order; content addressing remains purely
+    content-based so identical content stays idempotent.
+    """
 
     correction_id: str
     decision_id: str
@@ -640,6 +672,7 @@ class OutcomeCorrection:
     outcome_digest: str = field(init=False)
     receipt_ref: Optional[ReceiptRef] = None
     locator: Optional[str] = None
+    sequence: int = 0
     metadata: FrozenDict = field(default_factory=FrozenDict)
 
     def __post_init__(self):
@@ -649,6 +682,8 @@ class OutcomeCorrection:
             raise ValueError(f"Invalid verdict: {self.verdict!r}. Must be one of {sorted(VALID_VERDICTS)}")
         if not isinstance(self.rationale, str) or not self.rationale.strip():
             raise ValueError("Outcome correction requires a non-empty 'rationale'.")
+        if not isinstance(self.sequence, int) or self.sequence < 0:
+            raise ValueError("'sequence' must be a non-negative integer.")
         if self.receipt_ref is not None and not isinstance(self.receipt_ref, ReceiptRef):
             raise TypeError("receipt_ref must be a ReceiptRef instance or None.")
         digest = compute_outcome_digest(
@@ -667,6 +702,7 @@ class OutcomeCorrection:
             "verdict": self.verdict,
             "rationale": self.rationale,
             "outcome_digest": self.outcome_digest,
+            "sequence": self.sequence,
         }
         if self.receipt_ref is not None:
             d["receipt_ref"] = self.receipt_ref.to_dict()
@@ -741,6 +777,7 @@ class DecisionLedger:
         self._prune_states: Dict[str, PruneState] = {}
         self._corrections: Dict[str, OutcomeCorrection] = {}
         self._receipts: Dict[str, Any] = {}
+        self._next_correction_sequence = 1
 
     # -- registration -------------------------------------------------------
 
@@ -819,12 +856,14 @@ class DecisionLedger:
         decision_id: str,
         alternative_id: str,
         relation: str = "considered",
+        receipt_ref: Optional[ReceiptRef] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> DecisionForkEdge:
         edge = DecisionForkEdge(
             decision_id=decision_id,
             alternative_id=alternative_id,
             relation=relation,
+            receipt_ref=receipt_ref,
             metadata=metadata or {},
         )
         key = canonical_fork_tuple(edge)
@@ -881,20 +920,29 @@ class DecisionLedger:
         )
         content_key = canonical_correction_tuple(probe)[1:]  # everything except the provisional id
         content_id = "corr-" + hashlib.sha256(_canonical_json_bytes(list(content_key))).hexdigest()[:16]
-        probe = OutcomeCorrection(
+        existing = self._corrections.get(content_id)
+        if existing is not None:
+            return existing  # identical content is idempotent
+        # 64-bit truncated content id: defend against cross-payload collision
+        if any(
+            c.correction_id == content_id and canonical_correction_tuple(c)[1:] != content_key
+            for c in self._corrections.values()
+        ):
+            raise ValueError(f"Correction content-id collision for {content_id!r}: distinct payloads truncated to the same id.")
+        assigned = self._next_correction_sequence
+        self._next_correction_sequence += 1
+        corr = OutcomeCorrection(
             correction_id=content_id,
             decision_id=decision_id,
             verdict=verdict,
             rationale=rationale,
             receipt_ref=receipt_ref,
             locator=locator,
+            sequence=assigned,
             metadata=metadata or {},
         )
-        existing = self._corrections.get(content_id)
-        if existing is not None:
-            return existing
-        self._corrections[content_id] = probe
-        return probe
+        self._corrections[content_id] = corr
+        return corr
 
     # -- queries -------------------------------------------------------------
 
@@ -902,10 +950,10 @@ class DecisionLedger:
         return self._decisions.get(decision_id)
 
     def outcome_of(self, decision_id: str) -> Dict[str, Any]:
-        """Latest outcome verdict for a decision (corrections sorted by content id)."""
+        """Latest outcome verdict for a decision (true insertion order via sequence)."""
         related = sorted(
             (c for c in self._corrections.values() if c.decision_id == decision_id),
-            key=lambda c: c.correction_id,
+            key=lambda c: (c.sequence, c.correction_id),
         )
         return {
             "decision_id": decision_id,
@@ -1024,6 +1072,7 @@ class DecisionLedger:
                 errors.append(f"E202 dangling fork edge: decision '{edge.decision_id}' is not registered")
             if edge.alternative_id not in self._decisions:
                 errors.append(f"E203 dangling fork edge: alternative '{edge.alternative_id}' is not registered")
+            self._validate_receipt_ref(edge.receipt_ref, f"fork:{edge.decision_id}>{edge.alternative_id}", errors)
 
         # Prune states
         for state in sorted(self._prune_states.values(), key=canonical_prune_tuple):
@@ -1042,12 +1091,19 @@ class DecisionLedger:
             for s in self._prune_states.values()
             if s.status == "pruned" and s.pruned_by
         }
+        reported_cycle_nodes: set = set()
         for start in sorted(pruned_by):
+            if start in reported_cycle_nodes:
+                continue
             seen = {start}
             cur = pruned_by.get(start)
             while cur is not None:
                 if cur in seen:
-                    errors.append(f"E304 circular pruning chain detected at '{cur}' (starting from '{start}')")
+                    # canonical representative = smallest id in the cycle
+                    if cur not in reported_cycle_nodes:
+                        cycle_nodes = sorted(seen & (set(pruned_by) | {cur}))
+                        errors.append(f"E304 circular pruning chain detected at '{cur}' (cycle members: {', '.join(cycle_nodes)})")
+                        reported_cycle_nodes.update(cycle_nodes)
                     break
                 seen.add(cur)
                 cur = pruned_by.get(cur)
@@ -1059,6 +1115,11 @@ class DecisionLedger:
             self._validate_receipt_ref(corr.receipt_ref, f"correction:{corr.correction_id}", errors)
 
         # Negative results must be evidence-bearing (E404/E405)
+        # A negative result may only rest on claim-type bases that reference
+        # OTHER (non-negative-result) decisions: a self-reference or a
+        # mutual negative_result<->claim cycle would fabricate positive
+        # evidence out of the assertions of absence themselves.
+        neg_ids = {n.id for n in self._decisions.values() if n.decision_type == "negative_result"}
         for node in sorted(self._decisions.values(), key=lambda d: d.id):
             if node.decision_type != "negative_result":
                 continue
@@ -1066,9 +1127,18 @@ class DecisionLedger:
             if not bases:
                 errors.append(f"E404 negative result '{node.id}' carries no basis edge (assertion of absence needs evidence)")
                 continue
-            claim_bases = [e for e in bases if e.basis_kind == "claim"]
+            # self-referential basis is circular evidence fabrication
+            if any(e.basis_kind == "claim" and e.basis_id == node.id for e in bases):
+                errors.append(f"E406 negative result '{node.id}' cites itself as claim evidence (circular evidence fabrication)")
+            claim_bases = [
+                e for e in bases
+                if e.basis_kind == "claim" and e.basis_id != node.id and e.basis_id not in neg_ids
+            ]
             if not claim_bases:
-                errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
+                if any(e.basis_kind == "claim" and e.basis_id in neg_ids for e in bases):
+                    errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
+                elif not any(e.basis_kind == "claim" for e in bases):
+                    errors.append(f"E405 negative result '{node.id}' is supported only by other negative results (no positive evidence base)")
 
         unique = sorted(set(errors))
         return (len(unique) == 0, unique)
@@ -1096,6 +1166,8 @@ class DecisionLedger:
 
         for edge in self._bases.values():
             missing(edge.receipt_ref, f"basis:{edge.decision_id}>{edge.basis_id}")
+        for edge in self._forks.values():
+            missing(edge.receipt_ref, f"fork:{edge.decision_id}>{edge.alternative_id}")
         for state in self._prune_states.values():
             missing(state.receipt_ref, f"prune:{state.decision_id}")
         for corr in self._corrections.values():
@@ -1144,7 +1216,12 @@ class DecisionLedger:
     # -- export ------------------------------------------------------------
 
     def ledger_digest(self) -> str:
-        """Order-invariant digest over all records and registered receipt payloads."""
+        """Order-invariant digest over all records and registered receipt payloads.
+
+        Container insertion order never affects the digest; the ledger-assigned
+        correction `sequence` counters are the single intentional exception
+        (they encode true append history).
+        """
         payload = {
             "protocol": PROTOCOL,
             "ledger_id": self.ledger_id,
@@ -1166,7 +1243,7 @@ class DecisionLedger:
                 key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
             ),
             "receipts": {
-                rid: canonical_ledger_payload_sha256(r)
+                rid: canonical_ledger_payload_sha256(_jsonable(r))
                 for rid, r in sorted(self._receipts.items())
             },
         }
@@ -1183,5 +1260,6 @@ class DecisionLedger:
             "forks": [self._forks[k].to_dict() for k in sorted(self._forks)],
             "prune_states": [self._prune_states[k].to_dict() for k in sorted(self._prune_states)],
             "corrections": [self._corrections[k].to_dict() for k in sorted(self._corrections)],
+            "uncertainties": [u.to_dict() for u in self.export_uncertainties()],
         }
         return copy.deepcopy(d)

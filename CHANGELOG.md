@@ -28,6 +28,22 @@
 
 **验证**：`pytest` 571 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS。
 
+### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
+
+五模型 Sparse Deliberation 盲审（kimi-k3/dsv4pro/glm53/gemini38flash/gemini31pro）提出若干发现，主线程逐项实测复核后裁决并修复（假阳性驳回，真缺陷全部修复并补对抗回归）：
+
+- **[P0] 负结果循环证据伪造封死**：`negative_result` 自指（引自身为 claim）与互指（两个负结果互相引为 claim）原本可绕过 E405；新增 E406 自指判错，E405 改为要求依据引用**其他**非负结果决策；混合支撑（伪 claim + 负结果边）同样无法通过。
+- **[P1] 结果修正时序语义**：`outcome_of` 原按内容寻址 ID 字典序取"最新"，哈希随机分布导致时序失真；为 `OutcomeCorrection` 引入台账分配的 `sequence` 单调序号（幂等重放保持不变），`latest_verdict` 反映真实追加历史；schema 同步 `sequence` 必填字段；摘要不变量明确唯一例外：不同修正的到达顺序属于追加历史，合法影响 `ledger_digest`。
+- **[P1] 摘要对对象收据崩溃**：`register_receipt` 接受带 `to_dict()` 的对象但 `ledger_digest` 直接 JSON 序列化会 TypeError；新增 `_jsonable` 确定性降级（Mapping/list/JSON 原语直通、to_dict 递归解包、其余 repr），对象收据与等价 dict 给出相同摘要。
+- **[P2] 内容 ID 碰撞防御**：16 位截断（64 位熵）的内容 ID 在命中已注册键时校验完整负载指纹，不同负载碰撞直接抛错，同负载保持幂等。
+- **[P2] E304 环报错归一**：同一剪枝环不再按起点重复报多条，收敛为单条并列环成员。
+- **[P2] fork 边收据位补齐**：`DecisionForkEdge` 增加 `receipt_ref`（分支探索也可挂实验证据），`validate_ledger` 与不确定性队列同步校验 fork 收据解析。
+- **[P2] 导出补全**：`to_dict()` 补齐 `uncertainties` 字段序列化，与 schema 的可选属性对齐。
+- **误报驳回**：zh-TW "十二個"残留指控实测为 literature-analysis 的工作流数表述，非技能计数；任务书"8 个 README 计数"表述经复核仅在 en/zh-CN 硬编码数字，其余语言为泛化表述，无遗漏。
+- 新增 10 项对抗回归（test_decision_ledger.py 45→55 项），全仓 571→581。
+
+**验证（加固后）**：`pytest` 581 项全部通过；`scripts/qa.py` 40 fences PASS。
+
 ---
 
 ## 2026-09-18（PR #10 / CI & Locator Determinism Maintenance，HEAD / chore/ci-node24-and-locator-determinism）

@@ -193,7 +193,7 @@
     "outcomeCorrection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["correction_id", "decision_id", "verdict", "rationale", "outcome_digest"],
+      "required": ["correction_id", "decision_id", "verdict", "rationale", "outcome_digest", "sequence"],
       "properties": {
         "correction_id": {
           "type": "string",
@@ -214,6 +214,10 @@
         "outcome_digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
         },
         "receipt_ref": {
           "$ref": "#/$defs/receiptRef"
