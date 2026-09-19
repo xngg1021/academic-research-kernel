@@ -1,14 +1,18 @@
 # academic-research-kernel (bn)
 
-[English](../../README.md) · [简体中文](../../README.zh-CN.md) · [繁體中文](../../README.zh-TW.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
+[English](../../README.md) · [简体中文](../../README.zh-Hans.md) · [繁體中文](../../README.zh-Hant.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
 
-একাডেমিক গবেষণা এবং বহু-এজেন্ট পর্যালোচনার জন্য নিরপেক্ষ কার্নেল। এটি বহনযোগ্য Agent Plugins v1 এবং MCP (মডেল প্রসঙ্গ প্রোটোকল) সহ 13টি একাডেমিক দক্ষতা ও যাচাইকরণ সরঞ্জাম সরবরাহ করে, পাশাপাশি Hermes Agent, Claude Code, Cursor এবং CLI সাব-এজেন্টের সাথে কাজ করে।
+প্ল্যাটফর্ম-নিরপেক্ষ প্রাতিষ্ঠানিক গবেষণা কোর এবং বহু-এজেন্ট আলোচনা স্যুট। এটি পোর্টেবল Agent Plugins v1 এবং MCP (Model Context Protocol) প্রবেশদ্বারের মাধ্যমে ১৩টি প্রাতিষ্ঠানিক দক্ষতা ও যাচাইকরণ সরঞ্জাম সরবরাহ করে, সেইসাথে Hermes Agent, Claude Code, Cursor এবং কাস্টম CLI সাব-এজেন্টের জন্য নেটিভ ইন্টিগ্রেশন সমর্থন করে। উৎস যাচাইকরণ, সাহিত্য বিশ্লেষণ, প্রাতিষ্ঠানিক লেখালেখি, গাণিতিক হিসাব, গবেষণাপত্রের পরিমাণগত নিরীক্ষা, পুনরুৎপাদনযোগ্যতা নিরীক্ষা, পদ্ধতিগত পর্যালোচনা ও মেটা-বিশ্লেষণ, গবেষণার বিষয়বস্তুর পরিচয় ও বংশপরম্পরা, গতিশীল ক্রস-মডেল পর্যালোচনা এবং দুটি সাপ্তাহিক পর্যবেক্ষণ স্বয়ংক্রিয়তা এতে অন্তর্ভুক্ত। সংগ্রহস্থলে কার্যকর নমুনা পরীক্ষা অন্তর্ভুক্ত; যাচাইকরণের পরিধি এবং বহিরাগত পরিষেবার সীমাবদ্ধতা [নিরীক্ষা নথিতে](../../docs/audit-20260906.md) নথিবদ্ধ রয়েছে।
 
-লেখক: Junfu Shi (SJF, xngg1021), Hermes Agent. লাইসেন্স: [Source Lineage License 1.0](../../LICENSE).
+লেখক: Junfu Shi (SJF, xngg1021), Hermes Agent। বর্তমান লাইসেন্স প্রস্তাব: [Source Lineage License 1.0](../../LICENSE)।
 
 ## লাইসেন্স
 
-এই স্ন্যাপশটটি [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md)-এ চিহ্নিত উপাদানের জন্য **Source Lineage License 1.0** গ্রহণ করে। ঐতিহাসিক সংস্করণগুলি MIT লাইসেন্সের অধীনে বৈধ থাকে।
+এই বিজ্ঞপ্তি সম্বলিত স্ন্যাপশটটি [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md)-এ চিহ্নিত উপাদান ও অধিকারের জন্য **Source Lineage License 1.0** গ্রহণ করে। প্রথম SLL কমিট এবং পরবর্তী সীমানা-রেকর্ডিং কমিট [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) এবং [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md)-এ পৃথক করা হয়েছে।
+
+`439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` পর্যন্ত ঐতিহাসিক স্ন্যাপশটগুলো MIT লাইসেন্সযুক্ত ছিল। প্রাপকরা বৈধ MIT অনুমতি বজায় রাখেন এবং তাদের SLL-এ স্থানান্তরিত হতে হবে না। [পূর্ববর্তী প্রকল্পের MIT পাঠ্য](../../LICENSES/MIT-pre-SLL.txt) সংরক্ষিত আছে; [tests/upstream/LICENSE](../../tests/upstream/LICENSE) অপরিবর্তিত রয়েছে। নতুন মূল প্রস্তাব এই অধিকারগুলো বাতিল করে না।
+
+SLL প্রযোজ্য লাইসেন্স, নোটিশ এবং উৎসের বংশপরম্পরার শর্ত সাপেক্ষে ব্যবহার, অধ্যয়ন, পরিবর্তন, বাণিজ্যিক ব্যবহার, বিতরণ এবং মালিকানাধীন সংযোজনের ব্যাপক অনুমতি দেয়। এটি কপিলেফট নয় এবং সোর্স কোড প্রকাশের প্রয়োজন হয় না। [LICENSE](../../LICENSE)-এর সঠিক ইংরেজি পাঠ্য এই তথ্যমূলক সারাংশ নিয়ন্ত্রণ করে; `LicenseRef-Source-Lineage-1.0` একটি স্থানীয় রেফারেন্স, SPDX অ্যাসাইনমেন্ট নয়। [অবদান গ্রহণ](../../CONTRIBUTING.md) ডাউনস্ট্রিম লাইসেন্স অনুমতি থেকে পৃথক।
 
 ## দক্ষতা
 
@@ -28,21 +32,64 @@
 | `skills/decision-ledger` | 1.0.0 | গবেষণা সিদ্ধান্ত লগ: গবেষণা সিদ্ধান্ত, নেতিবাচক ফলাফল এবং অনুসন্ধান পথের স্থিতির একটি সুনির্দিষ্ট অপরিবর্তনীয় লগ |
 | `skills/cross-review-five` | 2.0.0 | কুহন-মাঙ্করেস অ্যাসাইনমেন্ট এবং স্পার্স ডেলিবারেশন v2 সহ ভিন্নধর্মী মডেলের জন্য গতিশীল বহু-পর্যালোচক প্যানেল সমন্বয় |
 
-## একাডেমিক মানদণ্ড এবং গ্লোবাল প্রোফাইল বেসলাইন
+তেরোটি দক্ষতা জুড়ে ২১টি মার্কডাউন রেফারেন্স ফাইল রয়েছে। রেফারেন্সগুলো শুধুমাত্র প্রয়োজন হলেই লোড হয়।
 
-সংগ্রহস্থলটি আন্তর্জাতিক বেসলাইন হিসাবে **ISO 690:2021** (গ্রন্থপঞ্জিগত রেফারেন্স), **ISO 5127:2017** (শব্দভাণ্ডার) এবং **W3C PROV** (উৎস মডেল) প্রতিষ্ঠা করে। বিস্তারিত জানার জন্য [মানক আর্কিটেকচার](../../docs/standards/README.md) এবং [পরিভাষা নির্দেশিকা](../../docs/terminology/README.md) দেখুন।
+## প্রাতিষ্ঠানিক মানদণ্ড এবং বহু-প্রোফাইল বেসলাইন
+
+উদ্ধৃতি শৈলী, প্রতিবেদনের মানদণ্ড এবং মেটাডেটা চুক্তি লক্ষ্য জার্নাল, প্রতিষ্ঠান, অর্থায়নকারী, শৃঙ্খলা এবং বিচারব্যবস্থার উপর নির্ভর করে। সংগ্রহস্থলটি আন্তর্জাতিক বেসলাইন হিসাবে **ISO 690:2021** (গ্রন্থপঞ্জি সংক্রান্ত রেফারেন্স), **ISO 5127:2017** (তথ্য ও ডকুমেন্টেশন পরিভাষা) এবং **W3C PROV** (উৎস ডেটা মডেল) স্থাপন করে। [মানদণ্ড আর্কিটেকচার](../../docs/standards/README.md) এবং [প্রাকৃতিক পরিভাষা নির্দেশিকা](../../docs/terminology/README.md) দেখুন।
 
 ## ইন্টিগ্রেশন এবং পোর্টেবল ব্যবহার
 
+### 1. Universal Agent Plugins v1 & Model Context Protocol (MCP)
+এই সংগ্রহস্থলটি বিক্রেতা-নিরপেক্ষ **Agent Plugins v1** স্পেসিফিকেশন (`../../plugin.json`) মেনে চলে এবং stdio **MCP সার্ভার** (`../../mcp.json` / `python scripts/mcp_server.py`)-এর মাধ্যমে মূল প্রাতিষ্ঠানিক যাচাইকরণ সরঞ্জাম উন্মুক্ত করে। Claude Code, Cursor, Gemini CLI এবং যেকোনো আধুনিক এজেন্ট ফ্রেমওয়ার্কের সাথে সামঞ্জস্যপূর্ণ।
+
 ```bash
+# Add as stdio MCP server in your agent harness
 python scripts/mcp_server.py
 ```
 
-## যাচাইকরণ এবং সিআই
+### 2. হার্মিস-এ নেটিভ ইনস্টলেশন (Hermes Installation)
+একটি Hermes ইনস্টলেশন পরিবেশ থেকে এটি চালান:
 
-সিআই (CI) Linux x86_64, Linux ARM64, Ubuntu 26.04 Preview-Canary, Windows এবং macOS জুড়ে 625টি সফল ইউনিট পরীক্ষা সহ সম্পূর্ণ QA স্যুট চালায়।
+```bash
+hermes skills tap add xngg1021/academic-research-kernel
+hermes skills search academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
+```
 
-## গবেষণা ও পরিকল্পনা নথিপত্র
+সম্পূর্ণ শনাক্তকারীতে ডিরেক্টরি নামটি প্রতিস্থাপন করে অন্যান্য দক্ষতাগুলো ইনস্টল করুন। সাধারণ ট্যাপ ডিফল্ট শাখা পড়ে। কমিট `245e48008fa814b3251f50755eb656bd9fb86cb1`-এ পরীক্ষিত বান্ডিল দক্ষতা: arxiv, grounded-citations, docx, pdf, manim-video।
 
-- [পেইন অ্যাটলাস v0 (ইংরেজি)](../../docs/pain-atlas-v0.en.md), [চীনা সংস্করণ](../../docs/pain-atlas-v0.zh.md): একাডেমিক জ্ঞান কাজের ঘর্ষণ বিন্দু।
-- [গবেষণা পরিকল্পনা v0 (ইংরেজি)](../../docs/research-plan-v0.en.md), [চীনা সংস্করণ](../../docs/research-plan-v0.zh.md): রিসার্চ অবজেক্ট মডেল, মূল সক্ষমতার ক্ষেত্র এবং উপাদান বিশ্লেষণ ম্যাট্রিক্স।
+## উপাত্ত উৎসে প্রবেশাধিকার
+
+- OpenAlex মৌলিক অনুসন্ধানগুলো একটি ছোট দৈনিক বাজেটের সাথে বেনামে চালানো যেতে পারে (বেনামে $0.10/দিন এবং বিনামূল্যের API কী সহ $1/দিন, প্রতি সেকেন্ডে 100টি অনুরোধের সীমা)। `OPENALEX_API_KEY`-তে ঐচ্ছিক কী সংরক্ষণ করুন।
+- Crossref হার নিয়ন্ত্রণের সাথে সর্বজনীন মেটাডেটা অ্যাক্সেস সরবরাহ করে। আপডেট এবং Retraction Watch সংকেতের জন্য DOI যাচাইকরণ প্রয়োজন।
+- Unpaywall-এর জন্য `UNPAYWALL_EMAIL`-এ একটি বাস্তব যোগাযোগ ইমেলের প্রয়োজন।
+- arXiv, Europe PMC, PubMed এবং DOAJ হল নিজস্ব নীতিমালা সহ পরিপূরক উৎস। Scite, Dimensions, Scopus এবং Web of Science ঐচ্ছিক বাহ্যিক পরিষেবা।
+
+## যাচাইকরণ এবং সিআই (CI)
+
+একটি ডেডিকেটেড পাইথন পরিবেশ ব্যবহার করুন। QA নির্ভরতা সমস্ত কার্যকর যাচাইকরণ অন্তর্ভুক্ত করে:
+
+```bash
+python -m pip install -r requirements-qa.txt
+python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu
+python scripts/qa.py
+python -m pytest -q tests
+python scripts/verify_external_apis.py
+git diff --check
+```
+
+QA মেটাডেটা, রেফারেন্স, ব্যক্তিগত পথ/গোপন কোড প্যাটার্ন, পাইথন সিনট্যাক্স এবং চিহ্নিত কোড ব্লক যাচাই করে। সফল হলে 0, কোড/স্কিমা ব্যর্থতায় 1 এবং পরিবহন/কোটা অনুপলব্ধতায় 2 প্রদান করে।
+
+CI Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 এবং macOS Intel জুড়ে সম্পূর্ণ টেস্ট স্যুট চালায়, যাতে ৬২৯টি ইউনিট টেস্ট উত্তীর্ণ এবং ৪০টি এক্সিকিউটেবল কোড ব্লক যাচাইকৃত।
+
+tools/longtail/ চরম দীর্ঘ-লেজ পরিস্থিতি জেনারেটর ধারণ করে: ৪MD৯৬টি SHA256-বীজ সমন্বয় এবং generated-scenarios.json-এ কভারেজ প্রতিবেদন।
+
+scripts/scfabric/ বৈজ্ঞানিক কম্পিউটিং ফ্যাব্রিক: হার্ডওয়্যার প্রোব, ডেটা টাইপ ব্যাকএন্ড ক্যাটালগ, পাঁচটি ওয়ার্কলোড প্রোফাইল এবং ComputeReceipt। পরিমাপ [docs/scientific-compute-fabric.md](../../docs/scientific-compute-fabric.md)-এ নথিবদ্ধ।
+
+## গবেষণা ও পরিকল্পনা নথি
+
+এই নথিগুলো অনুসন্ধানমূলক পরিকল্পনার রেফারেন্স, কোনো বাধ্যতামূলক রোডম্যাপ নয়।
+
+- [পেইন অ্যাটলাস v0 (ইংরেজি)](../../docs/pain-atlas-v0.en.md), [চীনা সংস্করণ](../../docs/pain-atlas-v0.zh.md): প্রাতিষ্ঠানিক জ্ঞান কাজের জীবনচক্রে ঘর্ষণ বিন্দু।
+- [গবেষণা পরিকল্পনা v0 (ইংরেজি)](../../docs/research-plan-v0.en.md), [চীনা সংস্করণ](../../docs/research-plan-v0.zh.md): Research Object মডেল, মূল সক্ষমতা ক্ষেত্র এবং ফ্যাক্টর পচন ম্যাট্রিক্স।

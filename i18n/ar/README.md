@@ -1,14 +1,18 @@
 # academic-research-kernel (ar)
 
-[English](../../README.md) · [简体中文](../../README.zh-CN.md) · [繁體中文](../../README.zh-TW.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
+[English](../../README.md) · [简体中文](../../README.zh-Hans.md) · [繁體中文](../../README.zh-Hant.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
 
-نواة محايدة للبحث الأكاديمي ومجموعة مداولات متعددة الوكلاء. توفر 13 مهارة أكاديمية وأدوات تحقق مع نقاط دخول Agent Plugins v1 و MCP (بروتوكول سياق النموذج)، بالإضافة إلى التكامل الأصلي لـ Hermes Agent و Claude Code و Cursor ووكلاء CLI المخصصين.
+نواة أبحاث أكاديمية محايدة للمنصات ومجموعة مداولة متعددة الوكلاء. توفر 13 مهارة أكاديمية وأدوات تحقق مع نقاط دخول محمولة وفق مواصفات Agent Plugins v1 وبروتوكول MCP (Model Context Protocol)، بالإضافة إلى التكامل الأصلي مع Hermes Agent و Claude Code و Cursor والوكلاء الفرعيين لسطر الأوامر CLI. تغطي التحقق من المصادر، تحليل الأدبيات، الكتابة والتحرير الأكاديمي، الحساب العددي، تدقيق الأوراق البحثية الكمية، تدقيق قابلية إعادة الإنتاج، المراجعة المنهجية والتحليل التلوي، تحديد هوية ونسب كائنات البحث، تنسيق المراجعة المتبادلة بين النماذج غير المتجانسة، وأتمتة المراقبة الأسبوعية. يحتوي المستودع على فحوصات أمثلة قابلة للتنفيذ؛ يتم تسجيل نطاق التحقق وقيود الخدمات الخارجية في [وثيقة التدقيق](../../docs/audit-20260906.md).
 
-المؤلف: Junfu Shi (SJF, xngg1021)، Hermes Agent. الترخيص: [Source Lineage License 1.0](../../LICENSE).
+المؤلف: Junfu Shi (SJF, xngg1021)، Hermes Agent. العرض المحدد الحالي: [Source Lineage License 1.0](../../LICENSE).
 
 ## الترخيص
 
-تعتمد هذه النسخة **Source Lineage License 1.0** للمواد المحددة في [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md). تحتفظ النسخ التاريخية السابقة بترخيص MIT الساري.
+تعتمد اللقطة التي تتضمن هذا الإشعار **Source Lineage License 1.0** للمواد المشمولة والحقوق المحددة في [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md). يتم التمييز بين أول إيداع وشجرة ترخيص SLL وإيداع تسجيل الحدود اللاحق في [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) و [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md). تحمل اللقطات اللاحقة لهذا التحول والتي تحتفظ بهذا الإشعار نفس العرض المحدد.
+
+كانت اللقطات التاريخية حتى `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` مرخصة بموجب MIT، وتخضع للشروط المطبقة على تلك النسخ. يحتفظ المتلقون بأذونات MIT صالحة ولا يحتاجون إلى الانتقال إلى SLL. تم الحفظ على [نص ترخيص MIT السابق للمشروع](../../LICENSES/MIT-pre-SLL.txt)؛ ويبقى [tests/upstream/LICENSE](../../tests/upstream/LICENSE) ومصدر الطرف الثالث دون تغيير. العرض الجذري الجديد لا يلغي تلك الحقوق.
+
+يسمح ترخيص SLL على نطاق واسع بالاستخدام والدراسة والتعديل والاستخدام التجاري والتوزيع والإضافات الاحتكارية، مع مراعاة شروط الترخيص والإشعار ونسب المصدر المعمول بها. إنه ليس ترخيصًا مفتوح المصدر مقيدًا (copyleft) ولا يتطلب الكشف عن الكود المصدري. لا تؤدي خدمة الشبكة البحتة دون تقديم نسخ في حد ذاتها إلى تفعيل شرط إشعار نسب خدمة Core. لا يوجد منح صريح لبراءات الاختراع. يتحكم النص الإنجليزي الدقيق لـ [LICENSE](../../LICENSE) في هذا الملخص الإعلامي؛ `LicenseRef-Source-Lineage-1.0` هو مرجع محلي وليس تعيين SPDX. [قبول المساهمات](../../CONTRIBUTING.md) منفصل عن أذونات الترخيص اللاحقة.
 
 ## المهارات
 
@@ -28,21 +32,64 @@
 | `skills/decision-ledger` | 1.0.0 | سجل قرارات البحث: سجل قطعي للإلحاق فقط لقرارات البحث، والنتائج السلبية، وحالة المسارات البحثية |
 | `skills/cross-review-five` | 2.0.0 | تنسيق ديناميكي للجنة مراجعة متعددة النماذج غير المتجانسة مع خوارزمية كوهن-مانكرس والمداولة المشتتة v2 |
 
-## المعايير الأكاديمية والخطوط الأساسية متعددة الأنماط
+يوجد 21 ملفًا مرجعيًا بتنسيق Markdown عبر المهارات الثلاث عشرة. يتم تحميل المراجع فقط عند الحاجة.
 
-يعتمد المستودع **ISO 690:2021** (المراجع الببليوغرافية) و **ISO 5127:2017** (المفاهيم والمصطلحات) و **W3C PROV** (نموذج بيانات التتبع) كخطوط أساسية دولية، إلى جانب المعايير التخصصية (APA 7th، IEEE، PRISMA 2020، ICMJE). انظر [بنية المعايير](../../docs/standards/README.md) و [دليل المصطلحات](../../docs/terminology/README.md).
+## المعايير الأكاديمية والخط الأساسي المتعدد
+
+تعتمد أنماط الاقتباس ومعايير إعداد التقارير وعقود البيانات الوصفية على المجلة المستهدفة والمؤسسة والممول والتخصص والاختصاص القضائي. يحدد المستودع معايير **ISO 690:2021** (المراجع البيبليوغرافية) و **ISO 5127:2017** (مصطلحات المعلومات والتوثيق) و **W3C PROV** (نموذج بيانات النسب) كخطوط أساس دولية، إلى جانب ملفات التعريف الإقليمية ومعايير التخصص (APA 7th, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). متطلبات مجلة النشر المستهدفة لها الأولوية على الملفات الافتراضية. راجع [بنية المعايير الأكاديمية](../../docs/standards/README.md) و [دليل المصطلحات الطبيعية](../../docs/terminology/README.md).
 
 ## التكامل والاستخدام المحمول
 
+### 1. Universal Agent Plugins v1 & Model Context Protocol (MCP)
+يتوافق هذا المستودع مع مواصفات **Agent Plugins v1** المحايدة للموردين (`../../plugin.json`) ويعرض أدوات التحقق الأكاديمي الأساسية وإعادة الحساب الإحصائي عبر **خادم MCP** عبر stdio (`../../mcp.json` / `python scripts/mcp_server.py`). متوافق مع Claude Code و Cursor و Gemini CLI وأي إطار عمل وكلاء حديث.
+
 ```bash
+# Add as stdio MCP server in your agent harness
 python scripts/mcp_server.py
 ```
 
-## التحقق والتكامل المستمر (CI)
+### 2. التثبيت الأصلي في هيرميس (Hermes)
+من بيئة تثبيت Hermes قم بتنفيذ ما يلي:
 
-يعمل التكامل المستمر عبر Linux x86_64 و Linux ARM64 و Ubuntu 26.04 Canary و Windows و macOS مع اجتياز 625 اختبار وحدة بنجاح والتحقق المستمر من canary.
+```bash
+hermes skills tap add xngg1021/academic-research-kernel
+hermes skills search academic-source-verification
+hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
+```
+
+قم بتثبيت المهارات الأخرى عن طريق استبدال اسم الدليل في المعرف الكامل. يقرأ الـ tap العادي الفرع الافتراضي. تم فحص المهارات المجمعة المرتبطة عند الإيداع `245e48008fa814b3251f50755eb656bd9fb86cb1`: arxiv, grounded-citations, docx, pdf, manim-video.
+
+## الوصول إلى مصادر البيانات
+
+- يمكن تشغيل استعلامات OpenAlex الأساسية بشكل مجهول بميزانية يومية صغيرة (0.10 دولار أمريكي/يوم للمجهول و 1 دولار أمريكي/يوم باستخدام مفتاح API مجاني، مع سقف 100 طلب/ثانية). قم بتخزين المفتاح الاختياري في `OPENALEX_API_KEY`.
+- يوفر Crossref وصولاً عامًا إلى البيانات الوصفية مع تقييد السرعة. تتطلب إشارات التحديث و Retraction Watch التحقق من معرف DOI والاتجاه.
+- يتطلب Unpaywall بريدًا إلكترونيًا حقيقيًا للتواصل في `UNPAYWALL_EMAIL`.
+- تعد arXiv و Europe PMC و PubMed و DOAJ مصادر تكميلية لها سياساتها الخاصة. تعد Scite و Dimensions و Scopus و Web of Science خدمات خارجية اختيارية.
+
+## التحقق واختبارات التكامل المستمر (CI)
+
+استخدم بيئة Python مخصصة. تغطي تبعيات QA جميع الفحوصات القابلة للتنفيذ:
+
+```bash
+python -m pip install -r requirements-qa.txt
+python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu
+python scripts/qa.py
+python -m pytest -q tests
+python scripts/verify_external_apis.py
+git diff --check
+```
+
+يتحقق ضمان الجودة QA من البيانات الوصفية والمراجع وأنماط المسارات الشخصية/الأسرار وبنية Python البرمجية وكتل الأكواد المميزة. يُرجع 0 عند النجاح، و 1 عند فشل الكود أو المخطط أو الهوية، و 2 عند عدم توفر النقل أو المصادقة أو الحصص.
+
+يقوم CI بتشغيل مجموعة الاختبارات الكاملة عبر Linux x86_64 (Python 3.10-3.14) و Linux ARM64 و Ubuntu 26.04 Preview و Windows x86_64 و Windows ARM64 و macOS ARM64 و macOS Intel، مع نجاح 629 اختبار وحدة والتحقق من 40 كتلة كود قابلة للتنفيذ.
+
+يحتوي tools/longtail/ على مولد سيناريوهات الذيل الطويل المتطرف القطعي: 4096 تركيبة مرشحة مع بذرة SHA256 على محاور عوامل مفككة، واختيار تغطية شَرِه، وتقرير التغطية في generated-scenarios.json.
+
+يعد scripts/scfabric/ بنية الحوسبة العلمية: مسبار العتاد، وكتالوج الواجهات الخلفية مع بوابات نوع البيانات dtype، وخمسة ملفات تعريف لأحمال العمل، و ComputeReceipt. القياسات مسجلة في [docs/scientific-compute-fabric.md](../../docs/scientific-compute-fabric.md).
 
 ## وثائق البحث والتخطيط
 
-- [أطلس التحديات الأكاديمية v0 (الإنجليزية)](../../docs/pain-atlas-v0.en.md)، [النسخة الصينية](../../docs/pain-atlas-v0.zh.md): نقاط الاحتكاك في دورة حياة العمل الأكاديمي.
-- [خطة البحث v0 (الإنجليزية)](../../docs/research-plan-v0.en.md)، [النسخة الصينية](../../docs/research-plan-v0.zh.md): نموذج كائن البحث، مجالات القدرات الأساسية ومصفوفة تحليل العوامل.
+هذه الوثائق هي مراجع تخطيط استكشافية وليست خارطة طريق ملزمة.
+
+- [أطلس نقاط الألم v0 (الإنجليزية)](../../docs/pain-atlas-v0.en.md)، [النسخة الصينية](../../docs/pain-atlas-v0.zh.md): نقاط الاحتكاك عبر دورة حياة المعرفة الأكاديمية مع حالات التحقق.
+- [خطة البحث v0 (الإنجليزية)](../../docs/research-plan-v0.en.md)، [النسخة الصينية](../../docs/research-plan-v0.zh.md): نموذج كائن البحث Research Object، ومجالات القدرة الأساسية، ومصفوفة تفكيك العوامل.

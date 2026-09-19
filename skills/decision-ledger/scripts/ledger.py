@@ -589,6 +589,7 @@ class DecisionNode:
     metadata: FrozenDict = field(default_factory=FrozenDict)
     normalized_title: str = field(init=False)
     decision_digest: str = field(init=False)
+    include_legacy_decision_type: bool = True
 
     @property
     def is_negative_result(self) -> bool:
@@ -637,9 +638,10 @@ class DecisionNode:
             "normalized_title": self.normalized_title,
             "entry_kind": self.entry_kind,
             "decision_action": self.decision_action,
-            "decision_type": self.decision_type,
             "decision_digest": self.decision_digest,
         }
+        if self.include_legacy_decision_type and self.decision_type is not None:
+            d["decision_type"] = self.decision_type
         if self.context_work_id:
             d["context_work_id"] = self.context_work_id
         if self.locator:
@@ -1127,6 +1129,7 @@ class DecisionLedger:
         context_work_id: Optional[str] = None,
         locator: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        include_legacy_decision_type: bool = True,
     ) -> DecisionNode:
         node = DecisionNode(
             id=id,
@@ -1137,6 +1140,7 @@ class DecisionLedger:
             context_work_id=context_work_id,
             locator=locator,
             metadata=metadata or {},
+            include_legacy_decision_type=include_legacy_decision_type,
         )
         return self._register_node(self._decisions, node, id, "decision")
 
@@ -1392,7 +1396,6 @@ class DecisionLedger:
             return latest  # idempotent: latest correction is already identical
 
         assigned = self._next_correction_sequence
-        self._next_correction_sequence += 1
         content_tuple = (
             decision_id,
             verdict,
@@ -1413,6 +1416,18 @@ class DecisionLedger:
             sequence=assigned,
             metadata=metadata or {},
         )
+        # Collision defense: verify identical payload or fail-closed
+        if correction_id in self._corrections:
+            existing = self._corrections[correction_id]
+            if existing.to_dict() != corr.to_dict():
+                raise ValueError(
+                    f"Hash collision detected for outcome correction '{correction_id}': "
+                    "different payload with identical truncated ID. Rejecting modification (fail-closed)."
+                )
+            return existing
+
+        # Only commit state and increment sequence after construction and collision check succeed
+        self._next_correction_sequence += 1
         self._corrections[correction_id] = corr
         self._corrections_by_decision[decision_id].append(corr)
         return corr
@@ -1597,9 +1612,9 @@ class DecisionLedger:
         for u, neighbors in succ.items():
             for v in neighbors:
                 rev_succ[v].add(u)
-        bfs = list(cycle_nodes)
+        bfs = collections.deque(cycle_nodes)
         while bfs:
-            curr = bfs.pop(0)
+            curr = bfs.popleft()
             for prev in rev_succ.get(curr, ()):
                 if prev not in cycle_reachable:
                     cycle_reachable.add(prev)
@@ -2037,13 +2052,17 @@ class DecisionLedger:
 
         # Replay decisions and assert identity fields match
         for d in data["decisions"]:
+            has_dt = "decision_type" in d
             node = ledger.add_decision(
                 id=d["id"],
                 title=d["title"],
-                decision_type=d["decision_type"],
+                decision_type=d.get("decision_type") or d.get("decision_action") or ("negative_result" if d.get("entry_kind") == "negative_result" else "explore"),
+                entry_kind=d.get("entry_kind", "decision"),
+                decision_action=d.get("decision_action"),
                 context_work_id=d.get("context_work_id"),
                 locator=d.get("locator"),
                 metadata=d.get("metadata") or {},
+                include_legacy_decision_type=has_dt,
             )
             if node.normalized_title != d.get("normalized_title"):
                 raise ValueError(

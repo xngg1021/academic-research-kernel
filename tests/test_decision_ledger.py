@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import hashlib
 import json
 import os
 import sys
@@ -1434,3 +1435,111 @@ def test_sequence_minimum_and_schema_entry_kind_contract():
     assert evt.sequence == 1
     corr = dl.OutcomeCorrection(correction_id="corr-" + "1" * 32, decision_id="d1", verdict="positive", rationale="works", sequence=1)
     assert corr.sequence == 1
+
+
+def test_from_dict_without_legacy_decision_type():
+    """Schema allows omitting decision_type in favor of entry_kind/decision_action; from_dict must not KeyError."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Try estimator A", decision_action="explore")
+    g.add_negative_result("nr1", "Estimator B fails on long context")
+    g.add_basis("nr1", "decision", "d1")
+    exp = g.to_dict()
+
+    # Omit legacy decision_type entirely
+    for d in exp["decisions"]:
+        d.pop("decision_type", None)
+
+    # Recompute raw digest over the modified payload so Gate 1 passes
+    raw_payload = {
+        "protocol": exp["protocol"],
+        "ledger_id": exp["ledger_id"],
+        "decisions": sorted(exp["decisions"], key=lambda x: x["id"]),
+        "bases": sorted(exp["bases"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+        "forks": sorted(exp["forks"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+        "state_events": sorted(exp["state_events"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+        "corrections": sorted(exp["corrections"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False)),
+    }
+    exp["ledger_digest"] = hashlib.sha256(dl._canonical_json_bytes(raw_payload)).hexdigest().lower()
+    vd_payload = {"ledger_digest": exp["ledger_digest"], "receipts": exp["verification_manifest"]}
+    exp["verification_digest"] = hashlib.sha256(dl._canonical_json_bytes(vd_payload)).hexdigest().lower()
+
+    # Validate against schema
+    schema = json.loads((ROOT / "schemas" / "decision-ledger-receipt.schema.json").read_text(encoding="utf-8"))
+    jsonschema.validate(instance=exp, schema=schema)
+
+    # Replay in runtime
+    loaded = dl.DecisionLedger.from_dict(exp)
+    d1 = loaded.get_decision("d1")
+    assert d1.entry_kind == "decision"
+    assert d1.decision_action == "explore"
+    nr1 = loaded.get_decision("nr1")
+    assert nr1.is_negative_result is True
+    assert nr1.entry_kind == "negative_result"
+
+
+def test_add_outcome_correction_failure_atomicity():
+    """Failed outcome correction must not increment sequence counter."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Test Decision")
+    assert g._next_correction_sequence == 1
+
+    with pytest.raises(ValueError, match="Invalid verdict"):
+        g.add_outcome_correction("d1", verdict="bogus_verdict", rationale="reason")
+
+    # Counter remains at 1
+    assert g._next_correction_sequence == 1
+
+    # Next successful call starts strictly at sequence 1
+    corr = g.add_outcome_correction("d1", verdict="positive", rationale="sound result")
+    assert corr.sequence == 1
+    assert g._next_correction_sequence == 2
+
+
+def test_add_outcome_correction_collision_defense_fail_closed():
+    """Conflicting payload with identical truncated ID must raise ValueError (fail-closed)."""
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Decision 1")
+
+    # Precompute the ID for sequence 1
+    content_tuple = (
+        "d1",
+        "positive",
+        "sound rationale",
+        dl.canonical_receipt_ref_tuple(None),
+        "",
+        1,
+        dl._meta_canonical_json(dl._frozen_meta(None)),
+    )
+    target_id = "corr-" + hashlib.sha256(dl._canonical_json_bytes(list(content_tuple))).hexdigest()[:32]
+
+    # Plant colliding fake correction with same ID but different verdict/rationale
+    fake_corr = dl.OutcomeCorrection(
+        correction_id=target_id,
+        decision_id="d1",
+        verdict="negative",
+        rationale="colliding different payload",
+        sequence=1,
+    )
+    g._corrections[target_id] = fake_corr
+
+    with pytest.raises(ValueError, match="Hash collision detected for outcome correction"):
+        g.add_outcome_correction("d1", verdict="positive", rationale="sound rationale")
+
+
+def test_schema_reopened_forbids_caused_by_and_alternative_ref():
+    """Schema must reject reopened state events carrying caused_by or alternative_ref."""
+    schema = json.loads((ROOT / "schemas" / "decision-ledger-receipt.schema.json").read_text(encoding="utf-8"))
+    g = dl.DecisionLedger()
+    g.add_decision("d1", "Test")
+    g.record_route_status("d1", status="pruned", stop_reason="resource_exhausted")
+    g.record_route_status("d1", status="reopened")
+    exp = g.to_dict()
+
+    # Valid export passes schema
+    jsonschema.validate(instance=exp, schema=schema)
+
+    # Illegally adding caused_by to reopened event must fail schema validation
+    reopened_ev = [ev for ev in exp["state_events"] if ev["to_state"] == "reopened"][0]
+    reopened_ev["caused_by"] = "d2"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance=exp, schema=schema)

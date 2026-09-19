@@ -1,6 +1,6 @@
 # academic-research-kernel
 
-English · [简体中文](README.zh-CN.md) · 繁體中文 · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md)
+[English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
 跨宿主中立的學術能力內核與多智能體交叉審議工具套件。倉庫提供 13 個學術技能與核驗工具，支援便攜式 Agent Plugins v1 規範與 MCP (Model Context Protocol) 服務入口，原生相容 Hermes Agent、Claude Code、Cursor 與終端獨立子代理。涵蓋來源核驗、文獻分析、學術寫作、數值計算、定量論文審計、復現審計、系統綜述與統合分析、研究物件身份與譜系、動態多模型交叉審議，以及兩套週更監控自動化。倉庫附帶可執行的示例檢查；驗證範圍與外部服務限制記錄於[審計文檔](docs/audit-20260906.md)。
 
@@ -88,7 +88,11 @@ QA 校驗元數據、參考文件、個人路徑與已知密鑰模式、Python �
 
 固定版本的技能編寫規範測試（authoring tests）被複用，其逐技能規則不改動。完整 Hermes 上游發行包的全局測試不適用於本 tap；本倉庫測試覆蓋全部十三個技能，並按固定的捆綁與可選目錄解析參考文件。這不是完整的 Hermes 安裝測試。CI 僅在安裝依賴時使用網絡；常規 PR 測試不調用學術 API。
 
-CI 經 GitHub Actions 覆蓋 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 預遷移 Canary（ubuntu-26.04 與 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）與 macOS Intel（macos-15-intel）全平台全架構，全倉 625 項單元測試全部通過，並附帶針對上游 main 最新分支的即時 Canary 載入檢驗。另有一個 tap 集成工作流在 main 推送時運行：安裝 tests/upstream/provenance.json 所記錄的固定 Hermes 檢出，並針對本倉庫執行 tap add、search、install 與 list。確切版本、檢查項與限制見[審計文檔](docs/audit-20260906.md)。
+CI 經 GitHub Actions 覆蓋 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 預遷移 Canary（ubuntu-26.04 與 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）與 macOS Intel（macos-15-intel）全平台全架構，全倉 629 項單元測試全部通過，並附帶針對上游 main 最新分支的即時 Canary 載入檢驗。另有一個 tap 集成工作流在 main 推送時運行：安裝 tests/upstream/provenance.json 所記錄的固定 Hermes 檢出，並針對本倉庫執行 tap add、search、install 與 list。確切版本、檢查項與限制見[審計文檔](docs/audit-20260906.md)。
+
+tools/longtail/ 存放確定性極端長尾場景生成器：4096 個 SHA256 種子候選組合鋪滿解耦因子軸，貪心覆蓋選擇，generated-scenarios.json 內附機器計算的覆蓋報告。它是壓測技能的輸入層；語義展開（任務鏈、判據、注入事件）是獨立階段。
+
+scripts/scfabric/ 是科學計算執行層：硬件探針、帶 dtype 門禁的後端目錄、五個工作負載畫像、帶數值等價檢查的配對基準與 ComputeReceipt。本機首輪實測見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；經驗規則是預設 CPU，加速器只憑 receipt 啟用。
 
 ## 研究與規劃文檔
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "2.0.0",
   "title": "Multilingual Scholarly Terminology Harmonization Registry",
-  "description": "Standardized scholarly terminology registry aligning research terms across 8 languages and eliminating engineering jargon in user-facing contexts, compliant with ISO 704:2022 and ISO 860:2007.",
+  "description": "Cross-lingual scholarly terminology registry aligning research terms across 21 languages to authoritative ISO and W3C standards.",
   "governing_standards": [
     "ISO 704:2022 (Terminology work — Principles and methods)",
     "ISO 860:2007 (Terminology work — Harmonization of concepts and terms)",

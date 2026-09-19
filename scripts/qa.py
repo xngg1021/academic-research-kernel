@@ -163,13 +163,39 @@ def static_checks(root=ROOT):
             except Exception as e:
                 errors.append(f"failed loading profile {prof_file.name}: {e}")
 
+    EXPECTED_LOCALES = {
+        "en", "zh-Hans", "zh-Hant", "es", "pt", "fr", "de", "ru", "ja", "ko",
+        "id", "it", "hi", "ar", "bn", "ur", "vi", "tr", "fa", "sw", "pl"
+    }
+    if set(locale_profiles.keys()) != EXPECTED_LOCALES:
+        errors.append(f"AIDetox profile invariant failed: expected exactly 21 profiles {sorted(EXPECTED_LOCALES)}, got {sorted(locale_profiles.keys())}")
+
+    # Legacy Chinese aliases byte-parity gate
+    zh_cn = root / "README.zh-CN.md"
+    zh_hans = root / "README.zh-Hans.md"
+    zh_tw = root / "README.zh-TW.md"
+    zh_hant = root / "README.zh-Hant.md"
+    if zh_cn.is_file() and zh_hans.is_file():
+        if zh_cn.read_bytes() != zh_hans.read_bytes():
+            errors.append("Legacy alias parity failed: README.zh-CN.md is not byte-identical to README.zh-Hans.md")
+    if zh_tw.is_file() and zh_hant.is_file():
+        if zh_tw.read_bytes() != zh_hant.read_bytes():
+            errors.append("Legacy alias parity failed: README.zh-TW.md is not byte-identical to README.zh-Hant.md")
+
     # 1. Terminology registry gate
     term_reg_path = root / "docs" / "terminology" / "registry.json"
     if term_reg_path.is_file():
         try:
             term_reg = json.loads(term_reg_path.read_text(encoding="utf-8"))
+            concepts = term_reg.get("concepts", {})
+            if len(concepts) != 18:
+                errors.append(f"Terminology registry invariant failed: expected 18 concepts, got {len(concepts)}")
+            for c_id, c_info in concepts.items():
+                labels = c_info.get("preferred_label", {})
+                if set(labels.keys()) != EXPECTED_LOCALES:
+                    errors.append(f"Terminology registry invariant failed for concept '{c_id}': missing locales {sorted(EXPECTED_LOCALES - set(labels.keys()))}")
             banned_jargon = set()
-            for c_info in term_reg.get("concepts", {}).values():
+            for c_info in concepts.values():
                 if c_info.get("forbidden_in_user_docs"):
                     for loc_list in c_info.get("deprecated_labels", {}).values():
                         banned_jargon.update(loc_list)
@@ -242,7 +268,12 @@ def static_checks(root=ROOT):
             canonical_docs = manifest.get("documents", [])
             if len(canonical_docs) != 53:
                 errors.append(f"i18n manifest incomplete: expected 53 canonical documents, got {len(canonical_docs)}")
+            if manifest.get("total_theoretical_instances") != 1113:
+                errors.append(f"i18n manifest invariant failed: expected 1113 theoretical instances, got {manifest.get('total_theoretical_instances')}")
             for doc_entry in canonical_docs:
+                instances = doc_entry.get("localized_instances", {})
+                if set(instances.keys()) != EXPECTED_LOCALES:
+                    errors.append(f"i18n manifest instance parity failed for {doc_entry['source_path']}: expected 21 locales, got {sorted(instances.keys())}")
                 src_file = root / doc_entry["source_path"]
                 if not src_file.is_file():
                     errors.append(f"i18n manifest source file missing: {doc_entry['source_path']}")

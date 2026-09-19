@@ -372,6 +372,20 @@
                   "other"
                 ]
               }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "caused_by"
+                  ]
+                },
+                {
+                  "required": [
+                    "alternative_ref"
+                  ]
+                }
+              ]
             }
           }
         },

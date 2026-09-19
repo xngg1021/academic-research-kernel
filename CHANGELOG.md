@@ -25,14 +25,15 @@
   - 构造期严厉失败关闭：`_validate_json_metadata_value` 拦截非有限浮点（NaN/Inf）、非字符串键、非法对象与循环引用；收据冲突采用规范 JSON 字节流比对。
 - **全球学术标准基线 (`docs/standards/`) 与自然术语清单 (`docs/terminology/`)**：
   - 确立 ISO 690:2021、ISO 704:2022、ISO 860:2007、ISO 5127:2017 与 W3C PROV 为全球基线，解耦语言与司法管辖区规范；标准注册表逐项完善 `authority_url`、`verified_at`、`evidence_status` 与 `supersedes` 证据链；
-  - 建立机器可读标准清单 `docs/standards/registry.json` 与涵盖 18 组概念、202 个跨语言术语的 `docs/terminology/registry.json`；
-  - 建立 AIDetox 公开文档写作契约 `docs/style/aidetox-contract.json` 与多语言同步清册 `docs/i18n/manifest.json`；
-  - 重构 8 个语言版本 README，彻底剔除机器翻译生造黑话，统一跨平台 CI 矩阵描述与底部能力领域概括；
-  - `scripts/qa.py` 静态门禁全仓扫描用户端 Markdown 拦截 202 个生造词与内部黑话。
+  - 建立机器可读标准清单 `docs/standards/registry.json` 与涵盖 18 组概念、覆盖全部 21 个目标语种自然学术表达的 `docs/terminology/registry.json` 及完整说明指南 `docs/terminology/README.md`；
+  - 建立 AIDetox 公开文档写作契约 `docs/style/aidetox-contract.json` 与涵盖 21 个语种独立规则库的 `docs/style/profiles/`；
+  - 落地 21 语种 README 实体对齐与全内容等价（11 节完整结构），全语种顶栏导航互联；
+  - 全仓 53 篇规范 Markdown 文档密码学级增量同步清册 `docs/i18n/manifest.json`（53 篇源文档 × 21 语种 = 1,113 理论实例；53 canonical_current、22 localized_current、1,038 queued_for_generation），内置代码块感知的章节哈希提取与陈旧度检测，杜绝重跑脚本静默洗白；
+  - `scripts/qa.py` 静态门禁强制固化 21 语种 Profile、18×21 术语矩阵、53 篇清单源文件与本地文件双层哈希、以及 `README.zh-CN.md` / `README.zh-TW.md` 中文别名逐字节恒等不变量。
 - **技能文档 (`skills/decision-ledger/SKILL.md`)**：以自然科研语言重写，frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
-- **测试 (`tests/test_decision_ledger.py`)**：93 项对抗性回归，单测基线升至 **625 passed**。
+- **测试 (`tests/test_decision_ledger.py`)**：97 项对抗性回归，单测基线升至 **629 passed**。
 
-**验证**：`pytest` 625 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
+**验证**：`pytest` 629 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
 
 ### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
 
