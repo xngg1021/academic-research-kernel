@@ -29,11 +29,12 @@ Core Invariants:
    FrozenDict, preventing nested mutation drift. Receipt registration
    deepcopies payloads preventing external mutation.
 6. Negative results are evidence-bearing claims of absence:
-   A negative_result decision must carry at least one basis edge that cites
-   a Claim node (or the negative result itself must be consumable as a claim
-   basis by downstream kernels). A negative result supported only by other
-   negative results is a contradiction-free circular void and fails
-   validation (E405).
+   A negative_result decision must carry at least one claim-kind basis edge
+   whose target is ANOTHER non-negative_result decision (E405/E406). Claim
+   bases reference decisions as recorded research acts; evidence chains are
+   transitive through the target's own bases, and unevidenced roots surface
+   via the uncertainty queue. Self-references and negative_result targets
+   are rejected as circular evidence fabrication.
 7. Prune causality is first-class and acyclic:
    A pruned decision records a closed-vocabulary reason, the pruning
    decision, and the chosen alternative. pruned_by chains must be acyclic
@@ -257,9 +258,17 @@ def _thaw_val(val: Any) -> Any:
 
 
 class FrozenDict(collections.abc.Mapping):
-    """Immutable mapping with deep freezing and cached structural hash."""
+    """Immutable mapping with deep freezing.
 
-    __slots__ = ("_data", "_hash")
+    The internal store lives in a private-class slot reachable only through
+    name mangling; every mutating dunder raises, so ordinary and reflective
+    call paths cannot rewrite entries. The hash is recomputed from current
+    content on every call (entries are small), so the hash unconditionally
+    reflects the current content — no cache to go stale, even under
+    out-of-contract slot tampering.
+    """
+
+    __slots__ = ("_data",)
 
     def __init__(self, mapping_or_iterable: Any = None):
         if mapping_or_iterable is None:
@@ -270,7 +279,6 @@ class FrozenDict(collections.abc.Mapping):
             source = dict(mapping_or_iterable)
         frozen = {str(k): _freeze_val(v) for k, v in source.items()}
         object.__setattr__(self, "_data", frozen)
-        object.__setattr__(self, "_hash", None)
 
     def __setattr__(self, key: str, value: Any):
         raise TypeError(f"'{self.__class__.__name__}' object does not support mutation.")
@@ -288,12 +296,20 @@ class FrozenDict(collections.abc.Mapping):
         return len(self._data)
 
     def __hash__(self) -> int:
-        cached = object.__getattribute__(self, "_hash")
-        if cached is None:
-            h = hash(frozenset(self._data.items()))
-            object.__setattr__(self, "_hash", h)
-            cached = h
-        return cached
+        return hash(frozenset(self._data.items()))
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, collections.abc.Mapping):
+            return NotImplemented
+        return len(self._data) == len(other) and all(
+            k in other and _thaw_val(v) == _thaw_val(other[k]) for k, v in self._data.items()
+        )
+
+    def __ne__(self, other: Any) -> bool:
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def __setitem__(self, key: Any, value: Any):
         raise TypeError(f"'{self.__class__.__name__}' object does not support item assignment (deeply frozen record).")
@@ -755,6 +771,24 @@ class UncertaintyItem:
         return d
 
 
+def _dedupe_uncertainty_items(items: List["UncertaintyItem"]) -> List["UncertaintyItem"]:
+    """Dedupe uncertainty items by content-addressed id with collision defense.
+
+    Two items sharing an id but differing in (subject_id, kind, reason,
+    needs_human) mean the 64-bit truncated hash collided across distinct
+    payloads; that is raised instead of silently merging findings.
+    """
+    unique: Dict[str, Any] = {}
+    for it in items:
+        payload_key = (it.subject_id, it.kind, it.reason, it.needs_human)
+        prev = unique.get(it.item_id)
+        if prev is None:
+            unique[it.item_id] = (payload_key, it)
+        elif prev[0] != payload_key:
+            raise ValueError(f"Uncertainty item_id collision for {it.item_id!r}: distinct payloads truncated to the same id.")
+    return [unique[k][1] for k in sorted(unique)]
+
+
 # ---------------------------------------------------------------------------
 # The ledger
 # ---------------------------------------------------------------------------
@@ -800,6 +834,12 @@ class DecisionLedger:
                 raise ValueError(f"Conflicting receipt registration for {rid!r}: existing data differs from new registration.")
             return
         self._receipts[rid] = snapshot
+        # Resolve-by-content note: references carry no registry key of their
+        # own (mirroring the CEG Kernel). At validation time a lineage ref is
+        # looked up by receipt_id and an academic ref by its payload_sha256
+        # key first, then by a canonical payload-hash scan over all entries.
+        # The registration key here is therefore only a registry label; the
+        # receipt_id vs payload_sha256 distinction lives in _resolve_receipt.
 
     def _register_node(self, store: Dict[str, Any], obj: Any, obj_id: str, label: str):
         existing = store.get(obj_id)
@@ -1149,9 +1189,24 @@ class DecisionLedger:
         """Deterministic three-state uncertainty queue (content-addressed ids)."""
         items: List[UncertaintyItem] = []
 
+        # Uncertainty item_id derivation is byte-compatible with the CEG
+        # Kernel: sha256 over {kind, needs_human, reason, subject_id} sorted
+        # keys, truncated to 16 hex chars, prefixed with "unc-". Cross-kernel
+        # queue merging (PR #12) then sees identical ids for identical items.
         def add(kind: str, subject_id: str, reason: str, needs_human: bool):
-            payload = {"kind": kind, "subject_id": subject_id, "reason": canonical_text(reason)}
-            item_id = "unc-" + hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()[:16]
+            payload = json.dumps(
+                {
+                    "kind": kind,
+                    "needs_human": needs_human,
+                    "reason": canonical_text(reason),
+                    "subject_id": subject_id,
+                },
+                sort_keys=True,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            item_id = "unc-" + hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
             items.append(UncertaintyItem(item_id=item_id, subject_id=subject_id, kind=kind, reason=reason, needs_human=needs_human))
 
         # Missing registered receipts on any receipt-bearing record
@@ -1210,8 +1265,7 @@ class DecisionLedger:
                 )
 
         # Dedupe (content-addressed ids guarantee uniqueness) and sort
-        unique: Dict[str, UncertaintyItem] = {i.item_id: i for i in items}
-        return [unique[k] for k in sorted(unique)]
+        return _dedupe_uncertainty_items(items)
 
     # -- export ------------------------------------------------------------
 

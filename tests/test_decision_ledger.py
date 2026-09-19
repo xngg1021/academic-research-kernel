@@ -701,3 +701,50 @@ def test_to_dict_exports_uncertainties_matching_schema():
     assert len(export["uncertainties"]) == 1
     assert export["uncertainties"][0]["kind"] == "decision_without_basis"
     jsonschema.validate(instance=export, schema=schema)
+
+
+# ---------------------------------------------------------------------------
+# 16. Cross-review hardening round 2 (dsv4pro findings)
+# ---------------------------------------------------------------------------
+
+def test_frozen_dict_hash_tracks_content_even_under_slot_tamper():
+    fd = dl.FrozenDict({"a": 1})
+    h1 = hash(fd)
+    fd._data["b"] = 2  # out-of-contract slot write; must not serve stale hash
+    h2 = hash(fd)
+    assert h1 != h2
+    assert hash(fd) == hash(dl.FrozenDict({"a": 1, "b": 2}))
+
+
+def test_frozen_dict_mapping_equality_semantics():
+    assert dl.FrozenDict({"a": 1}) == {"a": 1}
+    assert dl.FrozenDict({"a": 1}) == dl.FrozenDict({"a": 1})
+    assert dl.FrozenDict({"a": 1}) != {"a": 2}
+    assert dl.FrozenDict({"a": {"x": 1}}) == {"a": {"x": 1}}
+    assert (dl.FrozenDict({"a": 1}) == 42) is False
+
+
+def test_uncertainty_item_id_formula_matches_ceg_kernel():
+    import hashlib as _hashlib
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="x")
+    g.add_decision(id="d2", title="y")
+    lref = dl.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="ghost", receipt_digest="a" * 64)
+    g.add_basis("d2", "claim", "d1", receipt_ref=lref)
+    item = g.export_uncertainties()[0]
+    payload = json.dumps(
+        {"kind": item.kind, "needs_human": item.needs_human, "reason": item.reason, "subject_id": item.subject_id},
+        sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False,
+    )
+    expected = "unc-" + _hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    assert item.item_id == expected
+
+
+def test_uncertainty_id_collision_raises_instead_of_merging():
+    a = dl.UncertaintyItem(item_id="unc-" + "0" * 16, subject_id="s1", kind="missing_receipt", reason="r1", needs_human=False)
+    b = dl.UncertaintyItem(item_id="unc-" + "0" * 16, subject_id="s2", kind="generic_uncertainty", reason="r2", needs_human=True)
+    with pytest.raises(ValueError, match="item_id collision"):
+        dl._dedupe_uncertainty_items([a, b])
+    same = dl.UncertaintyItem(item_id="unc-" + "0" * 16, subject_id="s1", kind="missing_receipt", reason="r1", needs_human=False)
+    out = dl._dedupe_uncertainty_items([a, same])
+    assert len(out) == 1

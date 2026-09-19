@@ -44,6 +44,18 @@
 
 **验证（加固后）**：`pytest` 581 项全部通过；`scripts/qa.py` 40 fences PASS。
 
+### 交叉评审加固第二轮（dsv4pro 深度盲审 + 主线程复核，同 PR 内实施）
+
+- **[P1] FrozenDict 哈希缓存失配封死**：惰性缓存的 `_hash` 在越权 slot 写入后不失效，同一对象哈希与内容失配；取消缓存、哈希每次按当前内容现算（条目规模小，开销可忽略），越权写入后哈希立即跟随内容，陈旧哈希无处发生；补 `__eq__`/`__ne__` 规范 Mapping 语义（递归 thaw 比较）。
+- **[P1] 不确定性 item_id 派生与 CEG 对齐**：台账原哈希 `{kind, subject_id, reason}` 三字段，CEG 哈希 `{kind, needs_human, reason, subject_id}` 四字段，同一逻辑项跨内核 ID 不同，PR #12 队列合并将错配；改为与 CEG 逐字节一致的派生公式，并对去重引入负载指纹碰撞防御（不同负载碰撞直接抛错，同内容幂等合并）。
+- **[P2] 不变量 6 措辞精确化**：原文"至少一条依据边引用 Claim 节点"的"Claim 节点"易被误读为外部证据实体；改为"claim-kind 依据边指向**另一个**非负结果决策"，并说明证据链经目标自身依据传递、无据根经不确定性队列浮出。
+- **[P2] 注册表 docstring 精确化**：`register_receipt` 注册键只是登记标签，"lineage 按 receipt_id / academic 按 payload_sha256 键优先 + 全表扫描"的解析约定在 `_resolve_receipt`，以注释显式声明，消除"注册键即解析键"的误读。
+- **[P2] CHANGELOG 测试计数归因修正**：526→571 的增量实为 test_decision_ledger 39 项 + test_authoring 参数化随第 13 技能增长 6 项（73→79），归因更正。
+- dsv4pro 其余发现（E405 标签洗白、截断碰撞、对象收据崩溃、无时序、fork 收据位、E304 归一、导出缺队列）已在第一轮修复或与第一轮收敛。
+- 新增 4 项对抗回归（55→59 项专项），全仓 581 项保持全绿。
+
+**验证（第二轮加固后）**：`pytest` 581 项全部通过；`scripts/qa.py` 40 fences PASS。
+
 ---
 
 ## 2026-09-18（PR #10 / CI & Locator Determinism Maintenance，HEAD / chore/ci-node24-and-locator-determinism）
