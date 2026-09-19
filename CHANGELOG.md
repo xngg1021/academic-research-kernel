@@ -25,9 +25,9 @@
 - **跨内核字节兼容**：`canonical_academic_receipt_payload_sha256`、`canonical_evidence_claim_digest`、`validate_lineage_receipt_contract`、`validate_academic_receipt_contract`、`ReceiptRef`、`UncertaintyItem`（四字段含 needs_human 派生公式）与 CEG Kernel v1 逐字节一致，同一收据在两个内核给出相同哈希与相同校验结论，为 PR #12（Research Artifact Ingestion Bridge v1）打通消费路径。
 - **技能文档 (`skills/decision-ledger/SKILL.md`)**：frontmatter 齐全、Verification 段提供可执行离线冒烟 fence。
 - **测试 (`tests/test_decision_ledger.py`)**：81 项对抗性回归（词法规范化、类型强制、幂等与冲突拒绝、收据物理校验与篡改检测、悬空边、自指与剪枝环、负结果证据纪律、不确定性队列确定性、深冻结与导出隔离、摘要顺序无关性与敏感性、JSON Schema parity、跨内核字节兼容、StateEvent 全生命周期、递归剪枝链、严格双门 from_dict 回放、_jsonable 失败关闭）。
-- **登记同步**：技能计数 12→13（tests/test_authoring.py、tests/test_harness_neutral.py）、tap 发现清单补 `decision-ledger`（tests/test_tap_discovery.py）、8 个 README 技能表与正文计数更新（并修正 zh-CN/zh-TW 首段计数停留在 11 的历史欠账）、单测基线 526→613。
+- **登记同步**：技能计数 12→13（tests/test_authoring.py、tests/test_harness_neutral.py）、tap 发现清单补 `decision-ledger`（tests/test_tap_discovery.py）、8 个 README 技能表与正文计数更新（并修正 zh-CN/zh-TW 首段计数停留在 11 的历史欠账）、单测基线 526→615。
 
-**验证**：`pytest` 613 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS。
+**验证**：`pytest` 615 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS。
 
 ### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
 
@@ -84,13 +84,13 @@
 针对合并前终审提出的双门防篡改、不确定性队列验证、非有限浮点与映射键严格化要求，主线程实施最终加固，彻底消除全部遗留 P1/P2：
 
 - **[P1-01] `from_dict()` 双门防篡改验证**：Gate 1 先直接对输入原始记录重算 raw canonical ledger digest，与 declared `ledger_digest` 必须完全一致，任何字段篡改（包含 event_id、sequence、decision_digest、normalized_title、correction_id、outcome_digest）在构造器执行前即被拒；Gate 2 经构造器重放，逐字段断言 identity 字段与 replayed 结果一致，杜绝伪造派生字段通过构造器重算洗白。
-- **[P1-02] `from_dict()` 强制验证不确定性队列**：`uncertainties` 与 `verification_manifest` 纳入必填键校验；重放重算不确定性队列与 declared 队列严格比对，未知与 needs_human 无法被静默抹除或篡改。
-- **[P1/P2] `_jsonable` 规范输入域失败关闭**：非有限浮点（NaN/Inf）直接抛 `ValueError`（注册即 fail-fast，杜绝 export 时才崩溃）；Mapping key 强制必须为 `str`（非 str 键抛 `TypeError`，杜绝数字键与字符串键静默折叠）；cyclic containers 拒绝。
+- **[P1-02] `from_dict()` 强制验证完整不确定性队列（含 missing_receipt）**：`uncertainties` 与 `verification_manifest` 纳入必填键校验；基于 manifest 构建虚拟可解析集合，重放重算全部不确定性队列（包括 missing_receipt）与 declared 队列 100% 严格比对，不再跳过缺失收据类未知项，未知与 needs_human 无法被静默抹除或篡改。
+- **[P1/P2] 统一 metadata 与 receipt 严格 JSON-domain 失败关闭**：`_validate_json_metadata_value` 在所有记录（DecisionNode、basis、fork、state event、correction）构造入口统一执行严苛 JSON 域校验，非有限浮点（NaN/Inf）直接抛 `ValueError`（拒绝在内存中生成不可导出/摘要的非法状态）；Mapping key 强制必须为 `str`（非 str 键抛 `TypeError`，杜绝数字键与字符串键静默折叠）；拒绝 set、custom object 与 cyclic containers。
 - **[P2] `verification_manifest` 自包含导出与验证**：`to_dict()` 导出 `verification_manifest`（rid→payload_sha256 映射），使 `verification_digest` 可被第三方独立验算；`from_dict()` 校验 manifest 与 digest 一致性，并支持传入 `receipt_registry` 恢复完整验证态。
 - **[P2] JSON Schema 严格编码状态迁移闭集**：在 `stateEvent.allOf` 中完整实现四状态迁移自动机（genesis→active|pruned、active→pruned、pruned→reopened、reopened→pruned，非法组合 schema 直接报错）。
-- **[P2] 顶层契约与测试基线统一**：README、PR 正文、CHANGELOG 顶层摘要更新为最终六类记录模型与 **613 passed** 新基线；新增 5 项专项对抗测试（76→81 项专项）。
+- **[P2] 顶层契约与测试基线统一**：README、PR 正文、CHANGELOG 顶层摘要更新为最终六类记录模型与 **615 passed** 新基线；新增 7 项专项对抗测试（76→83 项专项）。
 
-**验证（最终收口后）**：`pytest` 613 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
+**验证（最终收口后）**：`pytest` 615 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 40 fences PASS。
 
 ---
 

@@ -1165,3 +1165,99 @@ def test_correction_id_width_and_collision_defense():
     # idempotent replay identical content
     c2 = g.add_outcome_correction("d1", verdict="negative", rationale="r")
     assert c2.correction_id == c.correction_id and c2.sequence == c.sequence
+
+
+def test_metadata_json_domain_fail_closed_at_constructor_time():
+    """Metadata must fail closed on non-JSON domain values at construction time."""
+    g = dl.DecisionLedger()
+    # NaN and Inf in metadata
+    with pytest.raises(ValueError, match="Non-finite float"):
+        g.add_decision("d_nan", "Title", metadata={"bad": float("nan")})
+    with pytest.raises(ValueError, match="Non-finite float"):
+        g.add_decision("d_inf", "Title", metadata={"bad": float("inf")})
+
+    # Non-string key in metadata
+    with pytest.raises(TypeError, match="Metadata mapping key must be str|FrozenDict key must be str"):
+        g.add_decision("d_int_key", "Title", metadata={1: "val"})
+
+    # Foreign custom object
+    class CustomObj:
+        pass
+    with pytest.raises(TypeError, match="Unsupported metadata value type"):
+        g.add_decision("d_custom", "Title", metadata={"obj": CustomObj()})
+
+    # Sets / frozensets (non-JSON)
+    with pytest.raises(TypeError, match="Unsupported metadata value type"):
+        g.add_decision("d_set", "Title", metadata={"tags": {"a", "b"}})
+
+    # Cyclic container in metadata
+    cyc: dict = {}
+    cyc["inner"] = cyc
+    with pytest.raises(ValueError, match="Cyclic container"):
+        g.add_decision("d_cyc", "Title", metadata=cyc)
+
+    # Valid metadata works and is deeply frozen
+    d = g.add_decision("d_valid", "Title", metadata={"key": "val", "num": 42, "ratio": 3.14, "flag": True, "nest": {"a": [1, 2]}})
+    assert isinstance(d.metadata, dl.FrozenDict)
+    with pytest.raises(TypeError):
+        d.metadata["key"] = "tamper"
+
+    # Edge and event metadata constructors also fail-closed
+    with pytest.raises(ValueError, match="Non-finite float"):
+        g.add_basis("d_valid", "claim", "d_valid", metadata={"f": float("nan")})
+    with pytest.raises(TypeError, match="Metadata mapping key must be str|FrozenDict key must be str"):
+        g.add_fork("d_valid", "d_valid", metadata={99: "err"})
+    with pytest.raises(TypeError, match="Unsupported metadata value type"):
+        g.add_state_event("d_valid", "pruned", metadata={"set": {1, 2}})
+    with pytest.raises(ValueError, match="Non-finite float"):
+        g.add_outcome_correction("d_valid", verdict="negative", rationale="r", metadata={"bad": float("nan")})
+
+
+def test_from_dict_verifies_missing_receipt_uncertainty_against_manifest():
+    """from_dict without receipt_registry strictly verifies missing_receipt uncertainties using verification_manifest."""
+    lin = {"protocol": "lineage-receipt-1.0", "receipt_id": "lin-present", "receipt_digest": "a" * 64}
+    ref_present = dl.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="lin-present", receipt_digest="a" * 64)
+    ref_missing = dl.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="lin-missing", receipt_digest="b" * 64)
+
+    g = dl.DecisionLedger()
+    g.add_decision(id="d1", title="D1")
+    g.add_decision(id="d2", title="D2")
+    g.add_decision(id="d3", title="D3")
+    g.add_basis("d2", "claim", "d1", receipt_ref=ref_present)
+    g.add_basis("d3", "claim", "d1", receipt_ref=ref_missing)
+    g.register_receipt("lin-present", lin)
+
+    export = g.to_dict()
+    assert "lin-present" in export["verification_manifest"]
+    assert "lin-missing" not in export["verification_manifest"]
+
+    # Export uncertainties has exactly one missing_receipt (basis:d3>d1)
+    missing_items = [u for u in export["uncertainties"] if u["kind"] == "missing_receipt"]
+    assert len(missing_items) == 1
+    assert missing_items[0]["subject_id"] == "basis:d3>d1"
+
+    # Replay without receipt_registry succeeds and strictly validates the missing_receipt uncertainty
+    replayed = dl.DecisionLedger.from_dict(export)
+    assert replayed.ledger_digest() == g.ledger_digest()
+
+    # Tampering 1: Delete the missing_receipt uncertainty from export
+    tampered1 = copy.deepcopy(export)
+    tampered1["uncertainties"] = [u for u in tampered1["uncertainties"] if u["kind"] != "missing_receipt"]
+    with pytest.raises(ValueError, match="Export uncertainty queue mismatch"):
+        dl.DecisionLedger.from_dict(tampered1)
+
+    # Tampering 2: Alter subject_id on missing_receipt
+    tampered2 = copy.deepcopy(export)
+    for u in tampered2["uncertainties"]:
+        if u["kind"] == "missing_receipt":
+            u["subject_id"] = "basis:d2>d1"
+    with pytest.raises(ValueError, match="Export uncertainty queue mismatch"):
+        dl.DecisionLedger.from_dict(tampered2)
+
+    # Tampering 3: Change needs_human on missing_receipt
+    tampered3 = copy.deepcopy(export)
+    for u in tampered3["uncertainties"]:
+        if u["kind"] == "missing_receipt":
+            u["needs_human"] = True
+    with pytest.raises(ValueError, match="Export uncertainty queue mismatch"):
+        dl.DecisionLedger.from_dict(tampered3)

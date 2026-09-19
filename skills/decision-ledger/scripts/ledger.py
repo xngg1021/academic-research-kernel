@@ -283,19 +283,57 @@ def canonical_evidence_claim_digest(claim_item: Mapping[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Deeply frozen mapping
+# Deeply frozen mapping with strict JSON-domain validation
 # ---------------------------------------------------------------------------
 
-def _freeze_val(val: Any) -> Any:
+def _validate_json_metadata_value(val: Any, _seen: Optional[set] = None) -> Any:
+    """Validate that val is strictly in the canonical JSON domain, freezing recursively.
+
+    Allowed:
+    - str, int, bool, None
+    - finite float (math.isfinite)
+    - Mapping with strictly str keys (frozen into FrozenDict)
+    - list or tuple of valid JSON values (frozen into tuple)
+    Rejected (TypeError / ValueError):
+    - Non-finite float (NaN, Inf, -Inf) -> ValueError
+    - Non-string mapping keys -> TypeError
+    - Sets, frozensets, custom objects, functions, generators -> TypeError
+    - Cyclic containers -> ValueError
+    """
+    if _seen is None:
+        _seen = set()
+    if isinstance(val, (str, int, bool)) or val is None:
+        return val
+    if isinstance(val, float):
+        if not math.isfinite(val):
+            raise ValueError(f"Non-finite float {val!r} is not permitted in metadata.")
+        return val
+    oid = id(val)
+    if oid in _seen:
+        raise ValueError("Cyclic container detected in metadata.")
     if isinstance(val, FrozenDict):
         return val
     if isinstance(val, collections.abc.Mapping):
-        return FrozenDict(val)
+        _seen.add(oid)
+        try:
+            frozen_map: Dict[str, Any] = {}
+            for k, v in val.items():
+                if not isinstance(k, str):
+                    raise TypeError(f"Metadata mapping key must be str, got {type(k).__name__!r}: {k!r}")
+                frozen_map[k] = _validate_json_metadata_value(v, _seen)
+            return FrozenDict(frozen_map)
+        finally:
+            _seen.discard(oid)
     if isinstance(val, (list, tuple)):
-        return tuple(_freeze_val(item) for item in val)
-    if isinstance(val, (set, frozenset)):
-        return frozenset(_freeze_val(item) for item in val)
-    return val
+        _seen.add(oid)
+        try:
+            return tuple(_validate_json_metadata_value(item, _seen) for item in val)
+        finally:
+            _seen.discard(oid)
+    raise TypeError(
+        f"Unsupported metadata value type {type(val).__name__!r}: "
+        "only JSON primitives (str, int, finite float, bool, null), sequences, and string-keyed mappings are allowed."
+    )
 
 
 def _thaw_val(val: Any) -> Any:
@@ -303,8 +341,6 @@ def _thaw_val(val: Any) -> Any:
         return val.to_dict()
     if isinstance(val, tuple):
         return [_thaw_val(item) for item in val]
-    if isinstance(val, frozenset):
-        return sorted(_thaw_val(item) for item in val)  # type: ignore[arg-type]
     return val
 
 
@@ -327,7 +363,11 @@ class FrozenDict(collections.abc.Mapping):
             source = mapping_or_iterable
         else:
             source = dict(mapping_or_iterable)
-        frozen = {str(k): _freeze_val(v) for k, v in source.items()}
+        frozen: Dict[str, Any] = {}
+        for k, v in source.items():
+            if not isinstance(k, str):
+                raise TypeError(f"FrozenDict key must be str, got {type(k).__name__!r}: {k!r}")
+            frozen[k] = _validate_json_metadata_value(v)
         object.__setattr__(self, "_data", MappingProxyType(frozen))
 
     def __setattr__(self, key: str, value: Any):
@@ -381,6 +421,17 @@ class FrozenDict(collections.abc.Mapping):
 
     def __repr__(self) -> str:
         return f"FrozenDict({self.to_dict()!r})"
+
+
+def _frozen_meta(metadata: Optional[Mapping[str, Any]]) -> FrozenDict:
+    """Validate and deeply freeze record metadata. Fails closed on non-JSON domain."""
+    if metadata is None:
+        return FrozenDict()
+    if not isinstance(metadata, collections.abc.Mapping):
+        raise TypeError(f"metadata must be a mapping or None, got {type(metadata).__name__!r}.")
+    if isinstance(metadata, FrozenDict):
+        return metadata
+    return FrozenDict(metadata)
 
 
 # ---------------------------------------------------------------------------
@@ -517,10 +568,6 @@ def _check_id(value: str, field_name: str) -> str:
     if not ID_REGEX.match(value):
         raise ValueError(f"Invalid {field_name}: {value!r}. Must match {ID_REGEX.pattern} (max 64 chars).")
     return value
-
-
-def _frozen_meta(metadata: Optional[Mapping[str, Any]]) -> FrozenDict:
-    return FrozenDict(metadata) if metadata else FrozenDict()
 
 
 def _meta_canonical_json(metadata: FrozenDict) -> str:
@@ -1559,8 +1606,13 @@ class DecisionLedger:
 
     # -- uncertainty queue -------------------------------------------------
 
-    def export_uncertainties(self) -> List[UncertaintyItem]:
-        """Deterministic three-state uncertainty queue (content-addressed ids)."""
+    def export_uncertainties(self, manifest_override: Optional[Mapping[str, str]] = None) -> List[UncertaintyItem]:
+        """Deterministic three-state uncertainty queue (content-addressed ids).
+
+        When manifest_override is provided, receipt resolvability is evaluated
+        against the declared verification manifest (used during replay when raw
+        receipt payloads are not loaded locally).
+        """
         items: List[UncertaintyItem] = []
 
         # Uncertainty item_id derivation is byte-compatible with the CEG
@@ -1585,7 +1637,19 @@ class DecisionLedger:
 
         # Missing registered receipts on any receipt-bearing record
         def missing(ref: Optional[ReceiptRef], subject_id: str):
-            if ref is not None and self._resolve_receipt(ref) is None:
+            if ref is None:
+                return
+            resolvable = self._resolve_receipt(ref) is not None
+            if not resolvable and manifest_override is not None:
+                if ref.kind == "lineage":
+                    resolvable = bool(ref.receipt_id and ref.receipt_id in manifest_override)
+                elif ref.kind == "academic_evidence":
+                    if ref.payload_sha256:
+                        resolvable = (
+                            ref.payload_sha256 in manifest_override
+                            or ref.payload_sha256 in manifest_override.values()
+                        )
+            if not resolvable:
                 add(
                     "missing_receipt",
                     subject_id,
@@ -1985,27 +2049,21 @@ class DecisionLedger:
                     f"does not match declared verification_digest {data['verification_digest']!r}."
                 )
 
-        # Gate 3: Uncertainty queue verification
+        # Gate 3: Full uncertainty queue verification (no uncertainties skipped)
         declared_unc = sorted(data["uncertainties"], key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False))
         recomputed_unc = sorted(
-            (u.to_dict() for u in ledger.export_uncertainties()),
+            (
+                u.to_dict()
+                for u in ledger.export_uncertainties(
+                    manifest_override=v_manifest if receipt_registry is None else None
+                )
+            ),
             key=lambda d: json.dumps(d, sort_keys=True, ensure_ascii=False),
         )
-        if receipt_registry is not None or not v_manifest:
-            if declared_unc != recomputed_unc:
-                raise ValueError(
-                    f"Export uncertainty queue mismatch: declared {len(declared_unc)} items, "
-                    f"recomputed {len(recomputed_unc)} items. Uncertainty records cannot be modified or suppressed."
-                )
-        else:
-            # When receipt_registry is omitted but verification_manifest is non-empty,
-            # content-derived uncertainties must match 100% exactly.
-            dec_content = [u for u in declared_unc if u.get("kind") != "missing_receipt"]
-            rec_content = [u for u in recomputed_unc if u.get("kind") != "missing_receipt"]
-            if dec_content != rec_content:
-                raise ValueError(
-                    f"Export content uncertainty queue mismatch: declared {len(dec_content)} items, "
-                    f"recomputed {len(rec_content)} items. Uncertainty records cannot be modified or suppressed."
-                )
+        if declared_unc != recomputed_unc:
+            raise ValueError(
+                f"Export uncertainty queue mismatch: declared {len(declared_unc)} items, "
+                f"recomputed {len(recomputed_unc)} items. Uncertainty records cannot be modified or suppressed."
+            )
 
         return ledger
