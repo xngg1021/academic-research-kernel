@@ -9,12 +9,15 @@ on:
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci')) }}
 permissions:
   contents: read
 jobs:
   checks:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')
+    # full-ci requests the complete matrix while Draft, including every later
+    # synchronize event. Promotion of that same candidate only triggers review;
+    # retain its existing CI evidence instead of paying for a duplicate matrix.
+    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
     strategy:
       fail-fast: false
       matrix:
@@ -124,7 +127,7 @@ jobs:
   upstream-canary:
     # Canary integration against Hermes upstream main branch for forward compatibility
     # Runs on main, manual dispatch, and PRs touching plugins/skills/adapters
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

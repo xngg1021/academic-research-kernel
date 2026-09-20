@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple, Set
 
 from shared_contracts.evidence import (
     ReceiptRef,
+    LineageVerificationContext,
     _thaw_val,
     canonical_academic_receipt_payload_sha256,
     canonical_evidence_claim_digest,
@@ -21,6 +22,7 @@ from shared_contracts.evidence import (
     validate_lineage_receipt_contract,
     validate_lineage_receipt_integrity,
 )
+from .commitments import bind_mutations, mutation_inventory
 from .models import (
     ArtifactEnvelope,
     IngestionKernelState,
@@ -406,6 +408,7 @@ class BaseArtifactAdapter(ABC):
                 "refusing an accepted no-op"
             )
 
+        mutations_before = mutation_inventory(state)
         uncertainty_ids_before = {value["item_id"] for value in state.uncertainties}
         derived_before = _domain_derived_uncertainties(state)
         managed_derived_ids = {item["item_id"] for item in derived_before}
@@ -662,11 +665,8 @@ class BaseArtifactAdapter(ABC):
                 receipt_uncertainties.append(raw)
                 receipt_uncertainty_ids.add(item_id)
 
-        valid, invariant_errors = state.validate_invariants()
-        if not valid:
-            raise ValueError(
-                "Post-apply kernel invariant failure: " + "; ".join(invariant_errors)
-            )
+        # The engine validates atomically after inserting this receipt, so a
+        # placeholder upgrade can point to its new canonical commitment.
 
         return IngestionReceipt.create(
             envelope=plan.envelope,
@@ -680,6 +680,7 @@ class BaseArtifactAdapter(ABC):
             created_or_reused_objects=list(plan.created_objects.keys()),
             ceg_nodes=created_ceg_nodes,
             ceg_edges=created_ceg_edges,
+            mutation_bindings=bind_mutations(mutations_before, state, plan),
             ledger_bindings=applied_ledger_bindings,
             uncertainties=receipt_uncertainties,
             ignored_fields=plan.ignored_fields,
@@ -909,13 +910,13 @@ class ResearchObjectIdentityAdapter(BaseArtifactAdapter):
             or envelope.payload_schema in self.accepted_schemas
         )
 
-    def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
+    def validate(self, envelope: ArtifactEnvelope, *, verification_context: Optional[LineageVerificationContext] = None) -> Tuple[bool, List[str]]:
         errors = []
         p = envelope.payload
         if envelope.payload_schema == "lineage-receipt-1.0" or p.get("protocol") == "lineage-receipt-1.0":
             if not p.get("receipt_id") or not p.get("receipt_digest"):
                 errors.append("Lineage receipt requires receipt_id and receipt_digest")
-            integrity_ok, integrity_error = validate_lineage_receipt_integrity(p)
+            integrity_ok, integrity_error = validate_lineage_receipt_integrity(p, verification_context=verification_context)
             if not integrity_ok and integrity_error:
                 errors.append(integrity_error)
         else:
@@ -931,7 +932,7 @@ class ResearchObjectIdentityAdapter(BaseArtifactAdapter):
         state: IngestionKernelState,
         bindings: Optional[Mapping[str, Any]] = None,
     ) -> IngestionPlan:
-        valid, errors = self.validate(envelope)
+        valid, errors = self.validate(envelope, verification_context=state.verification_context)
         plan = IngestionPlan(envelope, self.adapter_id, self.adapter_version, valid, errors)
         if not valid:
             return plan
@@ -1008,6 +1009,7 @@ class ClaimEvidenceGraphSnapshotAdapter(BaseArtifactAdapter):
             replayed = state.ceg.__class__.from_dict(
                 p,
                 receipt_registry=_ceg_declared_receipt_registry(p, state),
+                verification_context=state.verification_context,
             )
         except Exception as exc:
             plan.valid = False
@@ -1093,6 +1095,7 @@ class DecisionLedgerSnapshotAdapter(BaseArtifactAdapter):
             replayed = state.ledger.__class__.from_dict(
                 p,
                 receipt_registry=declared_receipts,
+                verification_context=state.verification_context,
             )
         except Exception as exc:
             plan.valid = False

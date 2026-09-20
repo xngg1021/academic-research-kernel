@@ -53,6 +53,8 @@ def test_valid_ingestion_receipt():
         "adapter_id": "adapter-academic-source-verification",
         "adapter_version": "1.0.0",
         "status": "accepted",
+        "ingestion_context_digest": "d" * 64,
+        "mutation_bindings": [{"kind": "artifact", "identity": "art-" + "1" * 32, "canonical_digest": "b" * 64}],
         "validation_state": {
             "valid": True,
             "errors": [],

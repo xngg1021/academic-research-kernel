@@ -71,6 +71,14 @@ Bundled related skills checked at upstream `245e48008fa814b3251f50755eb656bd9fb8
 
 See [OpenAlex authentication](https://help.openalex.org/api/authentication/), [budgets/query costs](https://help.openalex.org/api/llm-quick-reference/), and [Crossref update filters](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/).
 
+## Deterministic ingestion and public kernel
+
+PR #12 provides `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 14 adapters (the 13 skills plus opaque fallback), and 12 stateless stdio MCP tools. Accepted ingestion receipts bind each retained semantic mutation by kind, identity and canonical SHA-256: objects, CEG records, ledger records, uncertainties, physical receipts and artifact registrations. Cache replay checks those commitments independently of transport snapshot hashes. Empty ledgers are valid; failed atomic batches leave no partial state.
+
+Lineage content authority is explicit and out of band. Trusted Python callers pass `LineageVerificationContext` when replaying serialized receipts or snapshots; MCP callers may supply bounded content bytes, never a host filesystem root. The default content budget is 10 MiB; a trusted host may explicitly authorize larger artifacts under the same producer/verifier policy. Without content authority, a `fully_verified` claim cannot be independently reproduced and returns a structured invalid verification result. Opaque prose stays opaque, dissent stays visible, and researchers retain control of commits, pruning, reopening, routing and truth judgments.
+
+See [the architecture](docs/kernel-architecture.md) for contracts and compatibility. PyPI, `uvx`, console packaging and official MCP Registry publication remain PR #13 scope. English and Simplified Chinese README are current; other translation states remain explicit in [the manifest](docs/i18n/manifest.json). Final candidate identity, exact-head CI, cumulative review and merge evidence are recorded in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151).
+
 ## Validation
 
 Use a dedicated Python environment. Runtime libraries are task-specific, not guaranteed installed in Hermes. QA dependencies are broader so all marked examples can run:
@@ -88,7 +96,7 @@ QA validates metadata, references, personal-path/known-secret patterns, Python s
 
 Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks thirteen skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
-CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with 765 passed unit tests and live upstream canary validation. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/project-lineage-audit-20260920.md).
+CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with live upstream canary validation. The final candidate passed 819 local tests with zero skips; exact-head remote results are recorded separately in the closeout ledger. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/project-lineage-audit-20260920.md).
 
 tools/longtail/ holds the deterministic extreme long-tail scenario generator: 4096 SHA256-seeded candidate combinations over the decoupled factor axes, greedy coverage selection, and the machine-computed coverage report in generated-scenarios.json. It is the input layer for stress-testing the skills; semantic expansion (task chains, oracles, injected events) is a separate stage.
 

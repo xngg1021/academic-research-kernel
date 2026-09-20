@@ -2,7 +2,7 @@
 
 ## Scope and evidence boundary
 
-This audit covers the canonical repository `xngg1021/academic-research-kernel` from PR #1 through the open PR #12. It cross-checks GitHub PR metadata, each PR head SHA, the `Skill correctness QA` workflow run attached to that exact head, job conclusions, open standalone issues, PR #12 review threads, the project-planning records, and the repository's executable tests and QA gates.
+This audit covers the canonical repository `xngg1021/academic-research-kernel` from PR #1 through the PR #12 final candidate. PR #1–#11 evidence below is historical and unchanged. The containing commit is the source candidate; its exact SHA/tree and subsequent remote/merge results are bound by the [closeout evidence annex](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151). This avoids embedding a commit hash in the very commit it identifies. It cross-checks GitHub PR metadata, each PR head SHA, the `Skill correctness QA` workflow run attached to that exact head, job conclusions, open standalone issues, PR #12 review threads, the project-planning records, and the repository's executable tests and QA gates.
 
 The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means the workflow run attached to the listed head concluded `success`; an intentionally condition-false job is reported separately as `skipped` and is never counted as a pass. Local verification after the remediation work is recorded in the final section.
 
@@ -11,11 +11,11 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 - PR history: **12 total; 11 merged; PR #12 open**.
 - Exact-head CI history at audit start: **12/12 workflow runs successful; 0 failed or cancelled runs**.
 - Standalone GitHub issues: **0 open, 0 closed**. Review findings are therefore accounted for from PR threads and repository audit records rather than an issue tracker.
-- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. Reviews of heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, `21fa30065f92`, `659fa48466fe`, `6b4265036dd9`, `2f322d96a8e4`, `6228fb5ad48c`, and `1a8ad3ac3094` then opened **7 P1**, **6 P1 + 1 P2**, **5 P1 + 3 P2**, **5 P1**, **8 P1 + 1 P2**, **5 P1 + 3 P2**, **4 P1 + 4 P2**, **2 P1 + 2 P2**, **4 P1 + 1 P2**, **4 P1**, **6 P1**, and **4 P1 + 3 P2** findings respectively. All twelve follow-up sets are implemented with regression coverage; 109 threads have been observed in total (31 resolved, 78 currently unresolved), and the newest local remediation remains gated on its own exact-head matrix and review.
+- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. Reviews of heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, `21fa30065f92`, `659fa48466fe`, `6b4265036dd9`, `2f322d96a8e4`, `6228fb5ad48c`, and `1a8ad3ac3094` then opened **7 P1**, **6 P1 + 1 P2**, **5 P1 + 3 P2**, **5 P1**, **8 P1 + 1 P2**, **5 P1 + 3 P2**, **4 P1 + 4 P2**, **2 P1 + 2 P2**, **4 P1 + 1 P2**, **4 P1**, **6 P1**, and **4 P1 + 3 P2** findings respectively. Those twelve historical follow-up sets were implemented with regression coverage. The next exact-head review of `f4709c9d597e` reopened **6 P1 + 2 P2**. At final-wave intake, **117 threads** were observed (**31 resolved, 86 unresolved**); this is an intake snapshot, not the final live-thread count. The eight latest findings and sibling defects are addressed by the candidate below. Final thread dispositions and review census are recorded in the evidence annex after exact-head validation.
 - Verified remediation checkpoints: heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, `21fa30065f92`, `659fa48466fe`, `6b4265036dd9`, `2f322d96a8e4`, and `1a8ad3ac3094` passed runs [35494388854](https://github.com/xngg1021/academic-research-kernel/actions/runs/35494388854), [35495732974](https://github.com/xngg1021/academic-research-kernel/actions/runs/35495732974), [35496991058](https://github.com/xngg1021/academic-research-kernel/actions/runs/35496991058), [35497895958](https://github.com/xngg1021/academic-research-kernel/actions/runs/35497895958), [35498961191](https://github.com/xngg1021/academic-research-kernel/actions/runs/35498961191), [35500414450](https://github.com/xngg1021/academic-research-kernel/actions/runs/35500414450), [35501417685](https://github.com/xngg1021/academic-research-kernel/actions/runs/35501417685), [35503474068](https://github.com/xngg1021/academic-research-kernel/actions/runs/35503474068), [35503922950](https://github.com/xngg1021/academic-research-kernel/actions/runs/35503922950), [35504757502](https://github.com/xngg1021/academic-research-kernel/actions/runs/35504757502), and [35507956889](https://github.com/xngg1021/academic-research-kernel/actions/runs/35507956889). Each had upstream canary plus all 12 platform jobs successful; `tap-lifecycle` was condition-false and skipped as designed.
 - Historical 2026-09-06 correctness audit: **34/34 grouped findings resolved** (`P0=0`, `P1=22`, `P2=12`), with resolution evidence retained in `docs/findings.json` and executable regression suites.
-- Current implementation gate after remediation: **765 passed, 3 intentionally skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
-- Open code defects found at P0/P1: **0 locally reproduced after the latest follow-up remediation**, subject to the new PR-head remote matrix and review gate. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
+- Current implementation gate after remediation: **819 passed, zero skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
+- Candidate code defects at P0/P1/P2: **none reproduced after the consolidated local repair and full suite**. This is local evidence; it does not assert a clean final review before that review occurs. Exact-head CI and the final cumulative review remain mandatory merge gates in the evidence annex. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
 
 ## Complete PR and exact-head CI ledger
 
@@ -34,7 +34,7 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 | [#11](https://github.com/xngg1021/academic-research-kernel/pull/11) | Research Decision Log v1 | merged | `4a7e8738d23c` | 16 | [35448287394](https://github.com/xngg1021/academic-research-kernel/actions/runs/35448287394): success | upstream canary + 12 platform checks success; tap skipped |
 | [#12](https://github.com/xngg1021/academic-research-kernel/pull/12) | Artifact Ingestion Bridge v1 | open | `51c288144298` (pre-remediation snapshot) | 2 | [35488732107](https://github.com/xngg1021/academic-research-kernel/actions/runs/35488732107): success | upstream canary + 12 platform checks success; tap skipped |
 
-Remediation checkpoints through `1a8ad3ac3094` are exact-head verified by the eleven runs listed above (13 successful jobs each, `tap-lifecycle` skipped). Head `2f322d96a8e4` is a same-tree PR-reference synchronization child of remediation commit `14770943253d`; its exact-head run passed before review surfaced four further P1 findings. Same-tree head `6228fb5ad48c` received an exact-head review with six P1 findings but did not enqueue Actions. Its remediation commit `078bdb27ba20` was synchronized to same-tree head `1a8ad3ac3094`, whose exact-head run passed before the latest review surfaced four P1 and three P2 findings. Those seven findings are closed locally; the new commit must pass its own matrix before merge.
+Remediation checkpoints through `1a8ad3ac3094` are exact-head verified by the eleven runs listed above (13 successful jobs each, `tap-lifecycle` skipped). Head `2f322d96a8e4` is a same-tree PR-reference synchronization child of remediation commit `14770943253d`; its exact-head run passed before review surfaced four further P1 findings. Same-tree head `6228fb5ad48c` received an exact-head review with six P1 findings but did not enqueue Actions. Its remediation commit `078bdb27ba20` was synchronized to same-tree head `1a8ad3ac3094`, whose exact-head run passed before the latest review surfaced four P1 and three P2 findings. Those seven historical findings were fixed in `f4709c9d597e4e1a61215530af7bcb85e1dd1d06`. Its run [35510083160](https://github.com/xngg1021/academic-research-kernel/actions/runs/35510083160) completed with 13 successful jobs and the expected tap skip; its actual pytest result was 768 passed. That historical success preceded the latest 6 P1 + 2 P2 review. Run 35510061300 was cancelled and is retained as history, not counted as passing evidence. The new candidate must pass its own matrix and review.
 
 ### CI interpretation
 
@@ -82,6 +82,27 @@ The twelfth review produced six P1 findings, all now closed locally with focused
 
 The thirteenth review produced four P1 findings and three P2 findings, all now closed locally with focused regressions: serialized receipt locators cannot trigger ambient host reads and may consume only caller-authorized, root-contained, size-bounded bytes; in-process relative locators retain their trusted graph-root anchor out of band; producer and verifier use the same canonical structural-failure order; cached CEG support edges and every Ledger mutation record bind their complete canonical digest; duplicate lineage generators return a structured invalid-graph MCP result; and physical lineage entity, activity, and edge records independently enforce the producer's closed type and field contracts.
 
+## Consolidated final-candidate ledger
+
+Parent: `f4709c9d597e4e1a61215530af7bcb85e1dd1d06`; base at intake: `ad807295a42ba132a669152dde145f3f530c8fc1`. Same PR #12 and branch `work/research-artifact-ingestion-bridge-v1`; forward-only publication. Final candidate SHA/tree are the containing Git commit and its tree, recorded explicitly in the evidence annex once published.
+
+| Latest finding | Severity | Candidate repair and regression |
+| --- | --- | --- |
+| CEG node/relation content binding | P1 | Full Claim, EvidenceAnchor, SupportEdge and ClaimRelation commitments; same-ID semantic tampering and removals fail replay |
+| ResearchObject replacement | P1 | Full object digest; only independently attested minimal-placeholder to canonical-work upgrade is legal |
+| Serialized lineage content authority | P1 | Explicit out-of-band context propagates through producer, adapter, CEG, Ledger and kernel replay; wire roots rejected |
+| Producer/verifier byte budget mismatch | P1 | Shared bounded algorithm; trusted larger datasets work under an explicit matching policy; untrusted requests stay bounded |
+| Uncertainty replacement/removal | P1 | Full adapter record commitments and independently recomputed domain projections; deleted active warning rejected |
+| Physical receipt registration omission | P1 | Registry key/payload digest, including zero-claim registration-only ingestion |
+| Empty ledger cache rejection | P2 | Container identity binding plus individual records when present; empty/reload/cache/first-append lifecycle passes |
+| Malformed MCP registry preflight | P2 | All normalization inside structured validation; scalar/array/null/nested malformed inputs return ordinary invalid results |
+
+`tests/test_ingestion_closeout.py` covers these root-cause families, all ledger record classes, context traversal and wire-budget rejection. Proactive sibling fixes cover producer diagnostics omitted from hashed output, bool/int-coercing uncertainty collision equality, the historical compact academic physical-receipt schema, preflight/apply disagreement, preservation of positional kernel constructor compatibility, and adoption of previously existing records. Existing adversarial, atomic rollback, context-idempotency, lifecycle and schema tests remain enabled.
+
+The complete commitment/authority rules and narrow compatibility exceptions are specified in [kernel architecture](kernel-architecture.md). Snapshot integrity and semantic cache integrity are separate checks. No prose-to-claim inference, automatic truth adjudication, synthetic quality score, or automatic researcher decision was added. All 14 adapters and 12 MCP tools remain. LICENSE/SLL boundary files and PR #1–#11 evidence remain unchanged.
+
+For cost control the final candidate runs the full matrix while Draft via the existing `full-ci` label. Promotion of that already-tested candidate to Ready triggers the single cumulative Codex review without repeating its CI matrix. Normal synchronize events with `full-ci` still run all platform jobs and the upstream canary. The exact successful run, not a skipped promotion workflow, is the required merge evidence. A maximum of one batched repair and closure round is allowed; no third automatic review.
+
 ## Project-planning audit
 
 The 2026-09-17 agenda audit's principal factual defect is closed: the invalid, unreproducible `146/138/136` direction counts were voided; `direction-primitive-mapping.json` now records the grouping; and `../scripts/recompute_direction_coverage.py` reproduces all 235 rows under single/core/baseline sensitivity runs. The leverage table was downgraded from a gate to a documented judgment, and the README labels the planning documents exploratory rather than binding.
@@ -99,17 +120,20 @@ This audit reran the calculation and reproduced:
 
 The remaining planning limitations are recorded below; they are not silently represented as completed work.
 
-## Open P0–P3 and historical-residual register
+## Code census and accepted historical/operational residuals
+
+Severity labels on external, governance and operational rows describe retained limitations; they are not unresolved reproducible PR #12 code defects. Final code P0/P1/P2 and release-blocking P3 census is recorded after cumulative review in the evidence annex.
 
 | ID | Severity | Type | Status | Residual / next gate |
 | --- | --- | --- | --- | --- |
 | OPEN-P0 | P0 | Code/security/data loss | none open | No P0 was found in the current audit. |
 | OPEN-P1 | P1 | Code correctness | none locally reproduced after latest follow-up remediation | Closure still depends on the updated PR-head remote matrix and review gate; a regression reopens this row. |
+| OPEN-P2 | P2 | Code/data contract | none locally reproduced after consolidated repair | Final exact-head review is required; empty ledger and malformed preflight have regression coverage. |
 | OPS-01 | P2 | CI coverage | accepted operational limitation | `tap-lifecycle` cannot test an unmerged PR head through the pinned remote tap. It runs on `main`; local discovery, upstream canary, and stdio MCP tests cover the PR path. |
 | EXT-01 | P2 | External verification | open/credential-bound | Live OpenAlex/Crossref/Unpaywall and hardware-specific accelerator claims were not re-executed in this offline correctness pass. No absence or success is inferred from an unavailable credential/service. |
 | GOV-01 | P2 | Historical provenance | grandfathered, cannot be reconstructed honestly | The original 235 pain-atlas entries lack per-item source-model and cross-confirmation provenance. New entries must record both; old entries remain explicitly marked as missing rather than backfilled speculatively. |
 | DIST-01 | P3 | Distribution | planned | PyPI/`uvx`, console packaging, and official MCP Registry publication remain the explicitly scoped PR #13 deliverable. |
-| I18N-01 | P3 | Localization | queued | With this audit added, 55 canonical documents are tracked; 2 localized instances are current, 20 README instances are explicitly stale after the current source update, and 1,078 are queued. No stale or queued item is reported as current. |
+| I18N-01 | P3 | Localization | queued | With this audit added, 55 canonical documents are tracked; 3 localized instances are current, 19 README instances are explicitly stale after the current source update, and 1,078 are queued. No stale or queued item is reported as current. |
 | GOV-02 | P3 | Independent agenda validation | open | The requested re-run under an independently defined alternative primitive framework has not been completed. Current rankings are sensitivity-tested only inside the stored fourteen-primitive model. |
 | GOV-03 | P3 | Portfolio maintenance | open | `systematic-review-meta-analysis` and `research-reproducibility` have not yet undergone the requested usage-based retain/retire review. |
 | SCF-01 | P3 | Experimental compute scope | open | Scientific Compute Fabric remains a standalone measured layer: GPU is absent from CI, five workloads/three scales are covered, and it is not yet wired into `math-computation` routing. |
@@ -117,10 +141,10 @@ The remaining planning limitations are recorded below; they are not silently rep
 
 ## Verification performed for this remediation
 
-- `python3 -m pytest -q`: **765 passed, 3 skipped**.
+- `python -m pytest -q tests`: **819 passed, zero skipped** (CPU PyTorch installed).
 - `python3 ../scripts/recompute_direction_coverage.py` (from `docs/`): all 235 pain items reproduced with the documented rankings.
-- `python3 scripts/qa.py`: repository static and executable-fence gate.
+- `python scripts/qa.py`: repository static QA and **40 independent executable fences PASS**.
 - `python3 scripts/i18n_sync.py --check`: manifest/hash/status consistency gate.
 - `git diff --check`: whitespace and patch-integrity gate.
 
-The final three results are rerun after documentation and manifest updates; the pull request's updated remote matrix remains the authoritative cross-platform merge gate.
+All local gates are rerun after documentation and manifest updates before publication. The evidence annex records the final candidate SHA, tree, parent, changed-file count and actual gate results, followed by the exact-head remote matrix, review and merge result. No remote success is inferred from this source ledger alone.

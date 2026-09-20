@@ -463,6 +463,7 @@ try:
         canonical_receipt_ref_tuple,
         canonical_academic_receipt_payload_sha256,
         canonical_evidence_claim_digest,
+        LineageVerificationContext,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -478,6 +479,7 @@ except ImportError:
         canonical_receipt_ref_tuple,
         canonical_academic_receipt_payload_sha256,
         canonical_evidence_claim_digest,
+        LineageVerificationContext,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -1094,7 +1096,8 @@ class DecisionLedger:
     order-invariant.
     """
 
-    def __init__(self, ledger_id: str = "default-ledger"):
+    def __init__(self, ledger_id: str = "default-ledger", *, verification_context: Optional[LineageVerificationContext] = None):
+        self.verification_context = verification_context
         if not isinstance(ledger_id, str) or not ledger_id.strip():
             raise ValueError("ledger_id must be a non-empty string.")
         self.ledger_id = ledger_id
@@ -1711,7 +1714,7 @@ class DecisionLedger:
         if receipt_obj is None:
             return  # not resolvable here; surfaces as missing_receipt uncertainty
         if ref.kind == "lineage":
-            ok, err = validate_lineage_receipt_contract(ref, receipt_obj)
+            ok, err = validate_lineage_receipt_contract(ref, receipt_obj, verification_context=self.verification_context)
         else:
             ok, err = validate_academic_receipt_contract(ref, receipt_obj)
         if not ok:
@@ -2018,6 +2021,7 @@ class DecisionLedger:
         cls,
         data: Mapping[str, Any],
         receipt_registry: Optional[Mapping[str, Any]] = None,
+        *, verification_context: Optional[LineageVerificationContext] = None,
     ) -> "DecisionLedger":
         """Strict replay loader: rebuild a ledger from a to_dict() export.
 
@@ -2086,7 +2090,7 @@ class DecisionLedger:
                 f"does not match declared verification_digest {data['verification_digest']!r}."
             )
 
-        ledger = cls(ledger_id=data["ledger_id"])
+        ledger = cls(ledger_id=data["ledger_id"], verification_context=verification_context)
 
         def _ref(d: Any) -> Optional[ReceiptRef]:
             if d is None:
@@ -2264,6 +2268,7 @@ class DecisionLedger:
                                     validate_lineage_receipt_contract(
                                         lineage_ref,
                                         payload,
+                                        verification_context=verification_context,
                                     )
                                 )
                             except (KeyError, TypeError, ValueError):

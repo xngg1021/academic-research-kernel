@@ -2,6 +2,7 @@
 
 from .evidence import (
     ReceiptRef,
+    LineageVerificationContext,
     canonical_receipt_ref_tuple,
     canonical_academic_receipt_payload_sha256,
     canonical_evidence_claim_digest,
@@ -17,6 +18,7 @@ from .evidence import (
 
 __all__ = [
     "ReceiptRef",
+    "LineageVerificationContext",
     "canonical_receipt_ref_tuple",
     "canonical_academic_receipt_payload_sha256",
     "canonical_evidence_claim_digest",

@@ -32,6 +32,8 @@ sys.path.insert(0, str(ROOT / "scripts" / "scfabric"))
 
 from shared_contracts.evidence import (
     ReceiptRef,
+    LineageVerificationContext,
+    physical_receipt_schema_errors,
     validate_lineage_receipt_contract,
     verify_receipt_reference,
 )
@@ -335,6 +337,19 @@ TOOLS = [
 
 # Snapshot verification accepts the physical receipt registry required to
 # validate cryptographic references inside graphs and ledgers.
+_CONTENT_TOOLS = {
+    "research_artifact_validate", "research_artifact_ingest", "research_receipt_verify",
+    "claim_evidence_validate", "claim_evidence_trace", "decision_ledger_validate", "decision_trace",
+}
+for _tool in TOOLS:
+    if _tool["name"] in _CONTENT_TOOLS:
+        _tool["inputSchema"]["properties"]["content_payloads"] = {
+            "type": "object", "additionalProperties": {"type": "string"},
+            "description": "Authorized base64 content by lineage entity ID; maximum total 10 MiB.",
+        }
+    if _tool["name"] == "research_artifact_validate":
+        _tool["inputSchema"]["properties"].update({"state": {"type": "object"}, "bindings": {"type": "object"}})
+
 for _tool in TOOLS:
     if _tool["name"] in {
         "claim_evidence_validate",
@@ -371,8 +386,57 @@ def _tool_argument_errors(name: str, arguments: Any) -> List[str]:
     ]
 
 
-def handle_tool_call(name: str, arguments: dict) -> dict:
+def _wire_verification_context(arguments: dict, trusted: Optional[LineageVerificationContext]) -> Optional[LineageVerificationContext]:
+    encoded_content = arguments.get("content_payloads")
+    if encoded_content is None:
+        return trusted
+    if not isinstance(encoded_content, dict):
+        raise ValueError("content_payloads must be a dictionary of base64 strings")
+    budget = trusted.max_content_bytes if trusted is not None else 10 * 1024 * 1024
+    supplied = dict(trusted.content_by_entity_id or {}) if trusted else {}
+    total = 0
+    for entity_id, encoded in encoded_content.items():
+        if not isinstance(entity_id, str) or not isinstance(encoded, str):
+            raise ValueError("content_payloads must map string entity IDs to base64 strings")
+        if len(encoded) > 4 * ((budget + 2) // 3):
+            raise ValueError("content_payloads exceeds the verification byte budget")
+        try:
+            decoded = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError(f"content_payloads[{entity_id!r}] is not valid base64") from exc
+        total += len(decoded)
+        if total > budget:
+            raise ValueError("content_payloads exceeds the verification byte budget")
+        if entity_id in supplied and supplied[entity_id] != decoded:
+            raise ValueError("content_payloads conflicts with trusted content")
+        supplied[entity_id] = decoded
+    return LineageVerificationContext(
+        content_root=trusted.content_root if trusted else None,
+        authorized_paths=trusted.authorized_paths if trusted else (),
+        content_by_entity_id=supplied, max_content_bytes=budget,
+    )
+
+
+def _validate_public_receipts(receipts: Any) -> dict:
+    if not isinstance(receipts, dict):
+        raise ValueError("receipts must be a dictionary")
+    for key, payload in receipts.items():
+        if not isinstance(key, str) or not key or not isinstance(payload, dict):
+            raise ValueError("receipts must map nonempty string keys to physical receipt objects")
+        if payload.get("protocol") != "lineage-receipt-1.0" and payload.get("schema_version") != "1.0":
+            raise ValueError(f"Physical receipt {key!r} has invalid protocol")
+        errors = physical_receipt_schema_errors(payload, lineage=payload.get("protocol") == "lineage-receipt-1.0")
+        if errors:
+            raise ValueError(f"Malformed receipt registry entry {key!r}: " + "; ".join(errors))
+    return receipts
+
+
+def handle_tool_call(name: str, arguments: dict, *, verification_context: Optional[LineageVerificationContext] = None) -> dict:
     try:
+        if name in _CONTENT_TOOLS:
+            verification_context = _wire_verification_context(arguments, verification_context)
+        if "receipts" in arguments:
+            _validate_public_receipts(arguments["receipts"])
         # 1. research_artifact_validate
         if name == "research_artifact_validate":
             env_data = arguments.get("envelope")
@@ -385,39 +449,28 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             adapter = _DEFAULT_ENGINE.registry.resolve(env)
             errors = validate_adapter_contract(env, adapter)
             if not errors:
-                receipts = arguments.get("receipts") or {}
-                if not isinstance(receipts, dict):
-                    return {"valid": False, "errors": ["'receipts' must be a dictionary"]}
-                temp_state = IngestionKernelState(
-                    ceg=ceg_mod.ClaimEvidenceGraph(),
-                    ledger=ledger_mod.DecisionLedger(),
-                    receipts=receipts,
-                )
                 try:
-                    plan = adapter.plan(env, temp_state)
-                except Exception as exc:
-                    plan = None
-                    errors.append(f"Adapter planning failed: {exc}")
-                if plan is not None:
-                    errors.extend(plan.errors)
-                if not errors and plan is not None and env.lineage_ref is not None:
-                    receipt_id = env.lineage_ref.receipt_id
-                    if receipt_id in plan.registered_receipts:
-                        physical = plan.registered_receipts[receipt_id]
-                    elif receipt_id in temp_state.receipts:
-                        physical = temp_state.receipts[receipt_id]
-                    else:
-                        physical = None
-                    if physical is not None:
-                        lineage_ok, lineage_error = validate_lineage_receipt_contract(
-                            env.lineage_ref,
-                            physical,
+                    if arguments.get("state") is not None:
+                        temp_state = IngestionKernelState.from_dict(
+                            arguments["state"], ceg_cls=ceg_mod.ClaimEvidenceGraph,
+                            ledger_cls=ledger_mod.DecisionLedger,
+                            verification_context=verification_context,
                         )
-                        if not lineage_ok:
-                            errors.append(
-                                "Envelope lineage_ref verification failed: "
-                                f"{lineage_error}"
-                            )
+                    else:
+                        temp_state = IngestionKernelState(
+                            ceg=ceg_mod.ClaimEvidenceGraph(), ledger=ledger_mod.DecisionLedger(),
+                            verification_context=verification_context,
+                        )
+                    for key, value in arguments.get("receipts", {}).items():
+                        temp_state.register_receipt(key, value)
+                    # The same dry-run admission path checks constructor,
+                    # plan, apply and cache invariants without publishing state.
+                    receipt = _DEFAULT_ENGINE.ingest(
+                        env, state=temp_state, bindings=arguments.get("bindings"), dry_run=True,
+                    )
+                    errors.extend(receipt.validation_state["errors"])
+                except (TypeError, ValueError, KeyError, AttributeError) as exc:
+                    errors.append(f"Artifact validation failed: {exc}")
             valid = not errors
             return {
                 "valid": valid,
@@ -443,12 +496,14 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 state = IngestionKernelState(
                     ceg=ceg_mod.ClaimEvidenceGraph(),
                     ledger=ledger_mod.DecisionLedger(),
+                    verification_context=verification_context,
                 )
             elif isinstance(state_data, dict):
                 state = IngestionKernelState.from_dict(
                     state_data,
                     ceg_cls=ceg_mod.ClaimEvidenceGraph,
                     ledger_cls=ledger_mod.DecisionLedger,
+                    verification_context=verification_context,
                 )
             else:
                 return {"success": False, "error": "'state' must be a complete kernel snapshot"}
@@ -475,69 +530,18 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             if not isinstance(ref_dict, dict) or not isinstance(receipt_payload, dict):
                 return {"valid": False, "error": "receipt_ref and receipt_payload must be dictionaries"}
             try:
-                ref = ReceiptRef(
-                    kind=ref_dict["kind"],
-                    schema_version=ref_dict["schema_version"],
-                    receipt_id=ref_dict.get("receipt_id"),
-                    receipt_digest=ref_dict.get("receipt_digest"),
-                    claim_digest=ref_dict.get("claim_digest"),
-                    payload_sha256=ref_dict.get("payload_sha256"),
-                    locator=ref_dict.get("locator"),
-                )
+                ref = ReceiptRef(**ref_dict)
             except Exception as exc:
                 return {"valid": False, "error": f"Invalid ReceiptRef format: {exc}"}
 
-            schema_file = (
-                "lineage-receipt.schema.json"
-                if ref.kind == "lineage"
-                else "evidence-receipt.schema.json"
-            )
-            schema_errors = validate_schema(receipt_payload, schema_file)
+            schema_errors = physical_receipt_schema_errors(receipt_payload, lineage=ref.kind == "lineage")
             if schema_errors:
                 return {"valid": False, "error": "; ".join(schema_errors)}
-            encoded_content = arguments.get("content_payloads")
-            content_by_entity_id = None
-            max_content_bytes = 10 * 1024 * 1024
-            if encoded_content is not None:
-                if not isinstance(encoded_content, dict):
-                    return {
-                        "valid": False,
-                        "error": "content_payloads must be a dictionary of base64 strings",
-                    }
-                content_by_entity_id = {}
-                total_content_bytes = 0
-                max_encoded_length = 4 * ((max_content_bytes + 2) // 3)
-                for entity_id, encoded in encoded_content.items():
-                    if not isinstance(entity_id, str) or not isinstance(encoded, str):
-                        return {
-                            "valid": False,
-                            "error": "content_payloads must map string entity IDs to base64 strings",
-                        }
-                    if len(encoded) > max_encoded_length:
-                        return {
-                            "valid": False,
-                            "error": "content_payloads exceeds the 10 MiB verification budget",
-                        }
-                    try:
-                        decoded = base64.b64decode(encoded, validate=True)
-                    except (binascii.Error, ValueError):
-                        return {
-                            "valid": False,
-                            "error": f"content_payloads[{entity_id!r}] is not valid base64",
-                        }
-                    total_content_bytes += len(decoded)
-                    if total_content_bytes > max_content_bytes:
-                        return {
-                            "valid": False,
-                            "error": "content_payloads exceeds the 10 MiB verification budget",
-                        }
-                    content_by_entity_id[entity_id] = decoded
             try:
                 ok, err = verify_receipt_reference(
                     ref,
                     receipt_payload,
-                    content_by_entity_id=content_by_entity_id,
-                    max_content_bytes=max_content_bytes,
+                    verification_context=verification_context,
                 )
             except Exception as exc:
                 return {"valid": False, "error": f"Receipt verification failed: {exc}"}
@@ -626,6 +630,7 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 cg = ceg_mod.ClaimEvidenceGraph.from_dict(
                     graph_data,
                     receipt_registry=receipts,
+                    verification_context=verification_context,
                 )
                 valid, errors = cg.validate_graph()
                 return {
@@ -651,6 +656,7 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 cg = ceg_mod.ClaimEvidenceGraph.from_dict(
                     graph_data,
                     receipt_registry=receipts,
+                    verification_context=verification_context,
                 )
                 trace_info = cg.trace_claim_provenance(claim_id)
                 return {
@@ -675,7 +681,7 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                     return {"valid": False, "errors": schema_errors}
                 receipts = arguments.get("receipts") or {}
                 ledger_obj = ledger_mod.DecisionLedger.from_dict(
-                    ledger_data, receipt_registry=receipts
+                    ledger_data, receipt_registry=receipts, verification_context=verification_context
                 )
                 return {
                     "valid": True,
@@ -700,7 +706,7 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                     return {"error": "Invalid DecisionLedger", "details": schema_errors}
                 receipts = arguments.get("receipts") or {}
                 ledger_obj = ledger_mod.DecisionLedger.from_dict(
-                    ledger_data, receipt_registry=receipts
+                    ledger_data, receipt_registry=receipts, verification_context=verification_context
                 )
                 node = ledger_obj.get_decision(decision_id)
                 if node is None:
@@ -776,6 +782,12 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
 
         return {"error": f"Unknown tool: {name}"}
 
+    except (TypeError, ValueError, KeyError, AttributeError) as exc:
+        if name in {"research_artifact_validate", "claim_evidence_validate", "decision_ledger_validate"}:
+            return {"valid": False, "errors": [str(exc)]}
+        if name == "research_receipt_verify":
+            return {"valid": False, "error": str(exc)}
+        return {"error": "Invalid tool input", "details": [str(exc)]}
     except Exception as exc:
         return {"error": f"Internal execution failure in tool '{name}': {str(exc)}"}
 

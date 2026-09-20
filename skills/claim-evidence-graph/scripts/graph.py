@@ -280,6 +280,7 @@ try:
         ReceiptRef,
         canonical_receipt_ref_tuple,
         canonical_academic_receipt_payload_sha256,
+        LineageVerificationContext,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -294,6 +295,7 @@ except ImportError:
         ReceiptRef,
         canonical_receipt_ref_tuple,
         canonical_academic_receipt_payload_sha256,
+        LineageVerificationContext,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -503,7 +505,8 @@ class UncertaintyItem:
 class ClaimEvidenceGraph:
     """Deterministic scientific assertion and evidence graph container."""
 
-    def __init__(self, graph_id: str = "ceg-default"):
+    def __init__(self, graph_id: str = "ceg-default", *, verification_context: Optional[LineageVerificationContext] = None):
+        self.verification_context = verification_context
         self.graph_id: str = str(graph_id).strip()
         self.claims: Dict[str, Claim] = {}
         self.evidence_anchors: Dict[str, EvidenceAnchor] = {}
@@ -702,7 +705,7 @@ class ClaimEvidenceGraph:
             if ref.kind == "lineage":
                 if ref.receipt_id in self._receipt_registry:
                     registered = self._receipt_registry[ref.receipt_id]
-                    ok, err_msg = validate_lineage_receipt_contract(ref, registered)
+                    ok, err_msg = validate_lineage_receipt_contract(ref, registered, verification_context=self.verification_context)
                     if not ok:
                         errors.append(f"{err_msg} on {owner_desc}")
             elif ref.kind == "academic_evidence":
@@ -839,7 +842,7 @@ class ClaimEvidenceGraph:
                     continue
 
                 receipt_obj = reg[rid]
-                ok, err_msg = validate_lineage_receipt_contract(ref, receipt_obj)
+                ok, err_msg = validate_lineage_receipt_contract(ref, receipt_obj, verification_context=self.verification_context)
                 if not ok:
                     lineage_traces.append({
                         "evidence_id": edge.evidence_id,
@@ -1044,6 +1047,7 @@ class ClaimEvidenceGraph:
         cls,
         data: Mapping[str, Any],
         receipt_registry: Optional[Mapping[str, Any]] = None,
+        *, verification_context: Optional[LineageVerificationContext] = None,
     ) -> "ClaimEvidenceGraph":
         """Strictly reconstruct and verify a canonical ``to_dict()`` export.
 
@@ -1064,7 +1068,7 @@ class ClaimEvidenceGraph:
                 f"CEG protocol mismatch: expected 'claim-evidence-graph-1.0', got {data.get('protocol')!r}"
             )
 
-        g = cls(graph_id=data["graph_id"])
+        g = cls(graph_id=data["graph_id"], verification_context=verification_context)
         if receipt_registry:
             for k, v in receipt_registry.items():
                 g.register_receipt(k, v)

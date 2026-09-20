@@ -90,7 +90,8 @@ class IngestionEngine:
             raise ValueError("bindings_list length must exactly match envelopes length")
 
         target_state = state if state is not None else IngestionKernelState()
-        valid, state_errors = target_state.validate_invariants()
+        staged = target_state.clone()
+        valid, state_errors = staged.validate_invariants()
         if not valid:
             raise ValueError(
                 "Cannot ingest into an invalid kernel state: " + "; ".join(state_errors)
@@ -102,7 +103,6 @@ class IngestionEngine:
             env.assert_integrity()
             parsed.append(env)
 
-        staged = target_state.clone()
         results: Dict[int, IngestionReceipt] = {}
         adapters: Dict[int, Any] = {}
         cache_keys: Dict[int, str] = {}
@@ -177,6 +177,7 @@ class IngestionEngine:
                         lineage_ok, lineage_error = validate_lineage_receipt_contract(
                             env.lineage_ref,
                             physical,
+                            verification_context=staged.verification_context,
                         )
                         if not lineage_ok:
                             raise ValueError(

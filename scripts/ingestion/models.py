@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, Union
 
 from shared_contracts.evidence import (
     FrozenJSONMap,
+    LineageVerificationContext,
     ReceiptRef,
     _thaw_val,
     canonical_json_bytes,
@@ -18,6 +19,7 @@ from shared_contracts.evidence import (
     freeze_json,
     validate_lineage_receipt_contract,
 )
+from .commitments import commitment_errors, mutation_inventory
 from .contracts import (
     validate_envelope_dict,
     validate_kernel_state_dict,
@@ -272,6 +274,8 @@ class IngestionReceipt:
     failure_reason: Optional[str] = None
     caller_metadata: Optional[Mapping[str, Any]] = None
 
+    mutation_bindings: Tuple[Mapping[str, str], ...] = field(default_factory=tuple)
+
     def __post_init__(self) -> None:
         if self.protocol != "ingestion-receipt-1.0":
             raise ValueError("protocol must be 'ingestion-receipt-1.0'")
@@ -296,6 +300,9 @@ class IngestionReceipt:
 
         validation = FrozenJSONMap(self.validation_state)
         output = FrozenJSONMap(self.output_digests)
+        mutations = tuple(FrozenJSONMap(value) for value in self.mutation_bindings)
+        if len({(b["kind"], b["identity"]) for b in mutations}) != len(mutations):
+            raise ValueError("Mutation binding identities must be unique")
         bindings = tuple(FrozenJSONMap(value) for value in self.ledger_bindings)
         uncertainties = tuple(FrozenJSONMap(value) for value in self.uncertainties)
         caller = FrozenJSONMap(self.caller_metadata) if self.caller_metadata is not None else None
@@ -304,6 +311,7 @@ class IngestionReceipt:
         object.__setattr__(self, "created_or_reused_objects", tuple(self.created_or_reused_objects))
         object.__setattr__(self, "ceg_nodes", tuple(self.ceg_nodes))
         object.__setattr__(self, "ceg_edges", tuple(self.ceg_edges))
+        object.__setattr__(self, "mutation_bindings", mutations)
         object.__setattr__(self, "ledger_bindings", bindings)
         object.__setattr__(self, "uncertainties", uncertainties)
         object.__setattr__(self, "ignored_fields", tuple(self.ignored_fields))
@@ -322,6 +330,7 @@ class IngestionReceipt:
             created_or_reused_objects=self.created_or_reused_objects,
             ceg_nodes=self.ceg_nodes,
             ceg_edges=self.ceg_edges,
+            mutation_bindings=mutations,
             ledger_bindings=bindings,
             uncertainties=uncertainties,
             ignored_fields=self.ignored_fields,
@@ -349,6 +358,7 @@ class IngestionReceipt:
         created_or_reused_objects: Tuple[str, ...],
         ceg_nodes: Tuple[str, ...],
         ceg_edges: Tuple[str, ...],
+        mutation_bindings: Tuple[Mapping[str, Any], ...],
         ledger_bindings: Tuple[Mapping[str, Any], ...],
         uncertainties: Tuple[Mapping[str, Any], ...],
         ignored_fields: Tuple[str, ...],
@@ -370,6 +380,10 @@ class IngestionReceipt:
             "created_or_reused_objects": sorted(created_or_reused_objects),
             "ceg_nodes": sorted(ceg_nodes),
             "ceg_edges": sorted(ceg_edges),
+            "mutation_bindings": sorted(
+                (_thaw_val(value) for value in mutation_bindings),
+                key=canonical_json_bytes,
+            ),
             "ledger_bindings": sorted(
                 (_thaw_val(value) for value in ledger_bindings),
                 key=lambda value: canonical_json_bytes(value),
@@ -404,6 +418,7 @@ class IngestionReceipt:
         created_or_reused_objects: Optional[List[str]] = None,
         ceg_nodes: Optional[List[str]] = None,
         ceg_edges: Optional[List[str]] = None,
+        mutation_bindings: Optional[List[Mapping[str, str]]] = None,
         ledger_bindings: Optional[List[Mapping[str, str]]] = None,
         uncertainties: Optional[List[Mapping[str, Any]]] = None,
         ignored_fields: Optional[List[str]] = None,
@@ -424,6 +439,7 @@ class IngestionReceipt:
             "created_or_reused_objects": tuple(created_or_reused_objects or ()),
             "ceg_nodes": tuple(ceg_nodes or ()),
             "ceg_edges": tuple(ceg_edges or ()),
+            "mutation_bindings": tuple(mutation_bindings or ()),
             "ledger_bindings": tuple(ledger_bindings or ()),
             "uncertainties": tuple(uncertainties or ()),
             "ignored_fields": tuple(ignored_fields or ()),
@@ -450,6 +466,7 @@ class IngestionReceipt:
             "created_or_reused_objects": list(self.created_or_reused_objects),
             "ceg_nodes": list(self.ceg_nodes),
             "ceg_edges": list(self.ceg_edges),
+            "mutation_bindings": [_thaw_val(value) for value in self.mutation_bindings],
             "ledger_bindings": [_thaw_val(value) for value in self.ledger_bindings],
             "uncertainties": [_thaw_val(value) for value in self.uncertainties],
             "ignored_fields": list(self.ignored_fields),
@@ -489,6 +506,7 @@ class IngestionReceipt:
             created_or_reused_objects=tuple(data.get("created_or_reused_objects") or ()),
             ceg_nodes=tuple(data.get("ceg_nodes") or ()),
             ceg_edges=tuple(data.get("ceg_edges") or ()),
+            mutation_bindings=tuple(data.get("mutation_bindings") or ()),
             ledger_bindings=tuple(data.get("ledger_bindings") or ()),
             uncertainties=tuple(data.get("uncertainties") or ()),
             ignored_fields=tuple(data.get("ignored_fields") or ()),
@@ -559,6 +577,7 @@ class IngestionKernelState:
     uncertainties: List[Mapping[str, Any]] = field(default_factory=list)
     ingested_artifacts: Dict[str, str] = field(default_factory=dict)
     ingestion_receipts: Dict[str, IngestionReceipt] = field(default_factory=dict)
+    verification_context: Optional[LineageVerificationContext] = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         self.objects = {
@@ -582,6 +601,9 @@ class IngestionKernelState:
         self._synchronise_receipts()
 
     def _synchronise_receipts(self) -> None:
+        for domain in (self.ceg, self.ledger):
+            if domain is not None and self.verification_context is not None:
+                domain.verification_context = self.verification_context
         for key, value in self.receipts.items():
             if self.ceg is not None:
                 self.ceg.register_receipt(key, value)
@@ -638,7 +660,7 @@ class IngestionKernelState:
         item_id = frozen["item_id"]
         for existing in self.uncertainties:
             if existing["item_id"] == item_id:
-                if _thaw_val(existing) != _thaw_val(frozen):
+                if canonical_json_bytes(_thaw_val(existing)) != canonical_json_bytes(_thaw_val(frozen)):
                     raise ValueError(f"Uncertainty ID collision for {item_id!r}")
                 return
         self.uncertainties.append(frozen)
@@ -647,6 +669,7 @@ class IngestionKernelState:
     def clone(self) -> "IngestionKernelState":
         """Detached transactional clone without replaying the complete ledger."""
         return IngestionKernelState(
+            verification_context=self.verification_context,
             ceg=copy.deepcopy(self.ceg),
             ledger=copy.deepcopy(self.ledger),
             objects=copy.deepcopy(self.objects),
@@ -776,7 +799,7 @@ class IngestionKernelState:
                     )
             if (
                 receipt.adapter_id == "adapter-decision-ledger"
-                and not receipt.ledger_bindings
+                and not any(b["kind"] == "ledger_container" for b in receipt.mutation_bindings)
             ):
                 errors.append(
                     f"Ingestion receipt cache {cache_key!r} lacks Decision Ledger "
@@ -838,12 +861,14 @@ class IngestionKernelState:
                     ok, error = validate_lineage_receipt_contract(
                         lineage_ref,
                         physical,
+                        verification_context=self.verification_context,
                     )
                     if not ok:
                         errors.append(
                             f"Ingestion receipt cache {cache_key!r} lineage_ref is invalid: "
                             f"{error}"
                         )
+        errors.extend(commitment_errors(self, mutation_inventory(self)))
         return not errors, errors
 
     def compute_digests(self) -> Dict[str, str]:
@@ -911,6 +936,7 @@ class IngestionKernelState:
         *,
         ceg_cls: Type[Any],
         ledger_cls: Type[Any],
+        verification_context: Optional[LineageVerificationContext] = None,
     ) -> "IngestionKernelState":
         if not isinstance(data, collections.abc.Mapping):
             raise TypeError("IngestionKernelState.from_dict expects a mapping")
@@ -923,13 +949,14 @@ class IngestionKernelState:
                 f"Kernel snapshot tampering detected: declared {declared}, recomputed {actual}"
             )
         receipts = copy.deepcopy(raw["receipts"])
-        ceg = ceg_cls.from_dict(raw["ceg"], receipt_registry=receipts) if raw["ceg"] else None
+        ceg = ceg_cls.from_dict(raw["ceg"], receipt_registry=receipts, verification_context=verification_context) if raw["ceg"] else None
         ledger = (
-            ledger_cls.from_dict(raw["ledger"], receipt_registry=receipts)
+            ledger_cls.from_dict(raw["ledger"], receipt_registry=receipts, verification_context=verification_context)
             if raw["ledger"]
             else None
         )
         state = cls(
+            verification_context=verification_context,
             ceg=ceg,
             ledger=ledger,
             objects=raw["objects"],

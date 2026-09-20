@@ -121,3 +121,9 @@ PR #11 于 2026-09-19 14:30 UTC 顺利合入 `main`（merge commit `ad80729`）�
 3. 严格遵循“非结构化保持不透明（Opaque stays opaque）、绝不替研究者代做决策”的安全红线；
 4. 将内核全量能力通过 12 个确定性工具正式暴露为无状态 stdio MCP 接口，彻底消除界面债务；
 5. PyPI / `uvx` 打包分发与官方 MCP Registry 提交明确收敛至 PR #13 执行，确保 PR #12 专注冻结公共内核 API 与数据契约。
+
+## 7. PR #12 最终候选事实对账（2026-09-20）
+
+本次候选完成上述五项目标中的 PR #12 实现范围：13 项技能加 opaque fallback 共 14 个适配器、两类 v1 产物契约、12 个无状态 MCP 工具。缓存新增完整语义变异承诺；谱系验证使用带外可信上下文和一致字节预算；空 Ledger 与错误输入预检均有回归覆盖。本地全量结果为 819 passed、零跳过。最终 SHA、精确 HEAD CI 与累计评审以[收尾账本](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151)为准，不能以历史绿色运行替代。
+
+第 1–5 节的早期规模与方案保持历史语境；第 6 节执行备忘中的 13 技能范围为 PR #12 合同。此实现事实不证明痛点覆盖即产品优先级，也不证明十四原语完备。旧痛点图集的逐条来源不能诚实重建；独立替代原语框架验证仍开放。Method/Supplement Miner 与 Constraint Compiler 的方向选择仍待 PR #13 后决定。PyPI、uvx、控制台打包与 MCP Registry 继续留在 PR #13。

@@ -10,6 +10,7 @@ from __future__ import annotations
 import collections.abc
 from collections import deque
 from dataclasses import dataclass
+from functools import lru_cache
 import hashlib
 import heapq
 import json
@@ -39,6 +40,43 @@ VALID_LINEAGE_ACTIVITY_TYPES = frozenset({
 })
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 REMOTE_LOCATOR_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
+
+
+@dataclass(frozen=True)
+class LineageVerificationContext:
+    """Invocation-scoped authority; never serialized into evidence or snapshots.
+
+    Trusted hosts may authorize a root and a larger cumulative byte budget.
+    Wire clients can supply bounded bytes, but cannot authorize host paths.
+    """
+
+    content_root: Optional[Union[str, Path]] = None
+    content_by_entity_id: Optional[Mapping[str, bytes]] = None
+    authorized_paths: Tuple[Path, ...] = ()
+    max_content_bytes: int = 10 * 1024 * 1024
+
+    def __post_init__(self) -> None:
+        if type(self.max_content_bytes) is not int or self.max_content_bytes < 0:
+            raise ValueError("max_content_bytes must be a non-negative integer")
+        if self.content_root is not None:
+            object.__setattr__(self, "content_root", Path(self.content_root).resolve())
+        object.__setattr__(self, "authorized_paths", tuple(sorted({Path(p).resolve() for p in self.authorized_paths})))
+        if self.content_by_entity_id is not None:
+            values = dict(self.content_by_entity_id)
+            if any(not isinstance(k, str) or not isinstance(v, bytes) for k, v in values.items()):
+                raise TypeError("content_by_entity_id must map string entity IDs to bytes")
+            if sum(map(len, values.values())) > self.max_content_bytes:
+                raise ValueError("Authorized lineage content exceeds the read-size budget")
+            object.__setattr__(self, "content_by_entity_id", MappingProxyType(values))
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "LineageVerificationContext":
+        return self
+
+    def content_options(self) -> Dict[str, Any]:
+        return {"content_root": self.content_root,
+                "content_by_entity_id": self.content_by_entity_id,
+                "max_content_bytes": self.max_content_bytes,
+                "authorized_paths": self.authorized_paths}
 
 
 class FrozenJSONMap(collections.abc.Mapping):
@@ -274,6 +312,7 @@ def _replay_lineage_content_verification(
     content_root: Optional[Union[str, Path]] = None,
     content_by_entity_id: Optional[Mapping[str, bytes]] = None,
     max_content_bytes: int = 10 * 1024 * 1024,
+    authorized_paths: Tuple[Path, ...] = (),
 ) -> Tuple[str, str, Optional[str]]:
     """Reproduce content checks through an explicit, size-bounded authority.
 
@@ -284,7 +323,7 @@ def _replay_lineage_content_verification(
     """
     if not check_on_disk_hashes:
         return "unchecked", "unchecked", None
-    if not isinstance(max_content_bytes, int) or max_content_bytes < 0:
+    if type(max_content_bytes) is not int or max_content_bytes < 0:
         raise ValueError("max_content_bytes must be a non-negative integer")
 
     authorized_root: Optional[Path] = None
@@ -334,7 +373,9 @@ def _replay_lineage_content_verification(
             or locator_text.startswith(("urn:", "doi:"))
         ):
             continue
-        if authorized_root is None:
+        candidate_path = Path(locator_text.split("#", 1)[0].split("?", 1)[0])
+        exact_path_authorized = candidate_path.is_absolute() and candidate_path.resolve() in authorized_paths
+        if authorized_root is None and not exact_path_authorized:
             if Path(locator_text.split("#", 1)[0].split("?", 1)[0]).is_absolute():
                 unauthorized_locals += 1
             else:
@@ -347,11 +388,12 @@ def _replay_lineage_content_verification(
             if path.is_absolute()
             else (authorized_root / path).resolve()
         )
-        try:
-            resolved.relative_to(authorized_root)
-        except ValueError:
-            unauthorized_locals += 1
-            continue
+        if not exact_path_authorized:
+            try:
+                resolved.relative_to(authorized_root)
+            except ValueError:
+                unauthorized_locals += 1
+                continue
         if not resolved.is_file():
             return (
                 "missing_artifact",
@@ -796,12 +838,36 @@ def _replay_lineage_receipt_structure(
     return "unchecked", "valid_dag", roots, steps, None
 
 
+@lru_cache(maxsize=None)
+def _physical_receipt_validator(filename: str):
+    from jsonschema import Draft202012Validator, FormatChecker
+    path = Path(__file__).resolve().parents[2] / "schemas" / filename
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+def physical_receipt_schema_errors(value: Any, *, lineage: bool) -> List[str]:
+    """Current wire contract with an explicit, closed historical v1 read form."""
+    filenames = ["lineage-receipt.schema.json"] if lineage else [
+        "evidence-receipt.schema.json", "legacy-academic-evidence.schema.json",
+    ]
+    results = []
+    for filename in filenames:
+        errors = sorted(_physical_receipt_validator(filename).iter_errors(_thaw_val(value)),
+                        key=lambda error: (tuple(str(p) for p in error.absolute_path), error.message))
+        if not errors:
+            return []
+        results.append([f"{filename}: {error.message}" for error in errors])
+    return results[-1]
+
+
 def validate_lineage_receipt_integrity(
     receipt_obj: Any,
     *,
+    verification_context: Optional[LineageVerificationContext] = None,
     content_root: Optional[Union[str, Path]] = None,
     content_by_entity_id: Optional[Mapping[str, bytes]] = None,
-    max_content_bytes: int = 10 * 1024 * 1024,
+    max_content_bytes: Optional[int] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Recompute both identities of a serialized LineageReceipt.
 
@@ -809,12 +875,22 @@ def validate_lineage_receipt_integrity(
     though it participates in ``receipt_digest``.  Verification therefore
     tries both legitimate boolean modes and still rejects every other digest.
     """
-    if content_root is None:
-        # In-process receipts produced by the provenance kernel retain their
-        # trusted graph root out of band.  It is deliberately absent from the
-        # serialized wire contract, so untrusted MCP payloads cannot nominate
-        # a host directory for the verifier to read.
+    # Explicit invocation context wins. In-process producer context is a
+    # compatibility convenience; portable callers must pass authority again.
+    if verification_context is None and content_root is None and content_by_entity_id is None and max_content_bytes is None:
+        verification_context = getattr(receipt_obj, "_verification_context", None)
+    if verification_context is not None:
+        if not isinstance(verification_context, LineageVerificationContext):
+            return False, "verification_context must be a trusted LineageVerificationContext"
+        if content_root is not None or content_by_entity_id is not None or max_content_bytes is not None:
+            return False, "verification_context cannot be combined with legacy content options"
+        content_root = verification_context.content_root
+        content_by_entity_id = verification_context.content_by_entity_id
+        max_content_bytes = verification_context.max_content_bytes
+    elif content_root is None and content_by_entity_id is None:
         content_root = getattr(receipt_obj, "_content_root", None)
+    if max_content_bytes is None:
+        max_content_bytes = 10 * 1024 * 1024
     value = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
     if not isinstance(value, collections.abc.Mapping):
         return False, "Lineage receipt must be an object/mapping"
@@ -936,6 +1012,7 @@ def validate_lineage_receipt_integrity(
                     content_root=content_root,
                     content_by_entity_id=content_by_entity_id,
                     max_content_bytes=max_content_bytes,
+                    authorized_paths=(verification_context.authorized_paths if verification_context else ()),
                 )
                 for mode in matching_modes
             ]
@@ -970,6 +1047,10 @@ def validate_lineage_receipt_integrity(
             )
         if data.get("trace_steps", []) != expected_steps:
             return False, "Lineage trace steps do not match the replayed causal graph"
+    schema_errors = physical_receipt_schema_errors(data, lineage=True)
+    if schema_errors:
+        return False, "Lineage receipt schema validation failed: " + "; ".join(schema_errors)
+
     return True, None
 
 
@@ -977,9 +1058,10 @@ def validate_lineage_receipt_contract(
     ref: ReceiptRef,
     receipt_obj: Any,
     *,
+    verification_context: Optional[LineageVerificationContext] = None,
     content_root: Optional[Union[str, Path]] = None,
     content_by_entity_id: Optional[Mapping[str, bytes]] = None,
-    max_content_bytes: int = 10 * 1024 * 1024,
+    max_content_bytes: Optional[int] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Strictly assert lineage-receipt-1.0 protocol, exact receipt_id, and exact receipt_digest."""
     r_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
@@ -991,6 +1073,7 @@ def validate_lineage_receipt_contract(
         return False, f"Lineage receipt digest mismatch: expected {ref.receipt_digest!r}, got {r_dict.get('receipt_digest')!r}"
     return validate_lineage_receipt_integrity(
         receipt_obj,
+        verification_context=verification_context,
         content_root=content_root,
         content_by_entity_id=content_by_entity_id,
         max_content_bytes=max_content_bytes,
@@ -1008,6 +1091,13 @@ def validate_academic_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tup
         return False, f"AcademicEvidence payload SHA256 mismatch: expected {ref.payload_sha256}, got actual hash {actual_sha}"
     if thawed.get("schema_version") != "1.0" or not isinstance(thawed.get("claims"), (list, tuple)):
         return False, "AcademicEvidence receipt structural violation: missing schema_version=1.0 or claims list"
+
+    schema_errors = physical_receipt_schema_errors(thawed, lineage=False)
+    if schema_errors:
+        return False, "AcademicEvidence receipt schema validation failed: " + "; ".join(schema_errors)
+    for claim in thawed["claims"]:
+        if "claim_digest" in claim and claim["claim_digest"] != canonical_evidence_claim_digest(claim):
+            return False, "AcademicEvidence legacy claim_digest does not match canonical claim content"
 
     matched_claim = False
     for claim in thawed["claims"]:
@@ -1029,15 +1119,17 @@ def verify_receipt_reference(
     ref: ReceiptRef,
     receipt_obj: Any,
     *,
+    verification_context: Optional[LineageVerificationContext] = None,
     content_root: Optional[Union[str, Path]] = None,
     content_by_entity_id: Optional[Mapping[str, bytes]] = None,
-    max_content_bytes: int = 10 * 1024 * 1024,
+    max_content_bytes: Optional[int] = None,
 ) -> Tuple[bool, Optional[str]]:
     """Verify any ReceiptRef against a physical receipt instance based on kind."""
     if ref.kind == "lineage":
         return validate_lineage_receipt_contract(
             ref,
             receipt_obj,
+            verification_context=verification_context,
             content_root=content_root,
             content_by_entity_id=content_by_entity_id,
             max_content_bytes=max_content_bytes,

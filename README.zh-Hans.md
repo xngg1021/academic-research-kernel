@@ -63,24 +63,40 @@ hermes skills install xngg1021/academic-research-kernel/skills/academic-source-v
 
 ## 数据源访问
 
-技能通过公开学术 API 工作：OpenAlex、Crossref、Semantic Scholar、Unpaywall 与 arXiv。OpenAlex 匿名查询有每日预算；在 `~/.hermes/.env` 配置 `OPENALEX_API_KEY` 可放宽限制。任何技能都不要求付费账号；密钥只发给它所属的域名，绝不写入技能文件或聊天记录。
+- OpenAlex 基础查询可匿名执行，但每日预算较小。2026-09-06 核对的文档列出匿名每日 $0.10、免费 API key 每日 $1，以及每秒 100 请求上限；各查询类型成本不同，并非无限访问。可选密钥存于 `OPENALEX_API_KEY`，使用 `per_page`（最大 100）与游标分页。
+- Crossref 提供受限流的公开元数据。更新关系及 Retraction Watch 信号须核对 DOI 与方向；没有记录不等于论文未受影响。
+- Unpaywall 要求在 `UNPAYWALL_EMAIL` 配置真实联系邮箱。未返回位置不等于不存在开放获取副本。
+- arXiv、Europe PMC、PubMed E-utilities 与 DOAJ 为补充来源，各自有访问政策；默认测试未全部覆盖。Semantic Scholar 的匿名共享限额与密钥额度分别管理；可访问 API 不保证可取得引文上下文。
+- Scite、Dimensions、Scopus、Web of Science 与 AI 检测产品为可选外部服务。使用前须核对当前账号权限、API 权利和配额，不承诺通用免费层或固定价格。
+
+参见 [OpenAlex 认证](https://help.openalex.org/api/authentication/)、[预算与查询成本](https://help.openalex.org/api/llm-quick-reference/)及 [Crossref 更新过滤](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/)。
+
+## 确定性入库与内核公开界面
+
+PR #12 提供 `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、14 个适配器（13 项技能加 opaque fallback）与 12 个无状态 stdio MCP 工具。接受入库的凭证以类型、身份和规范 SHA-256 绑定每项保留的语义变异：对象、CEG 记录、Ledger 记录、不确定项、物理凭证与产物注册。缓存重放独立于传输快照摘要核验这些承诺。空 Ledger 合法；失败的原子批次不留下部分状态。
+
+谱系内容读取权限通过带外方式显式授予。可信 Python 调用方重放序列化凭证或快照时传入 `LineageVerificationContext`；MCP 调用方只能提供受限内容字节，不能指定宿主文件系统根目录。默认内容预算为 10 MiB；可信宿主可在生产者与验证者采用同一策略的前提下显式授权更大产物。缺少内容权限时，`fully_verified` 声明无法独立重现，返回结构化无效验证结果。非结构化文本保持不透明，异议保留可见；提交、剪枝、重开、路由选择与真值判断由研究者掌控。
+
+契约与兼容规则见[架构文档](docs/kernel-architecture.md)。PyPI、`uvx`、控制台打包与官方 MCP Registry 发布仍属 PR #13。英文及简体中文 README 已同步；其他译文状态由[清单](docs/i18n/manifest.json)如实记录。最终候选身份、精确 HEAD CI、累计评审与合并证据统一记录于[收尾账本](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151)。
 
 ## QA 与测试
 
-仓库 QA 校验元数据、参考文件、个人路径与已知密钥模式、Python 语法与标记为可执行的代码块。每个 smoke 示例在全新子进程中原样运行；绘图示例接受 `PLOT_DIR`（默认 `~/plots`，显式展开），测试使用临时目录。未分类的 Python 代码块被拒绝；`fragment:` 块做语法检查但需显式输入，不单独执行。`external-test:` 块仅经手动外部命令运行。QA 在通过的检查上返回 0，代码、schema 或身份失败返回 1，传输、认证或配额不可用返回 2；未配置的可选服务保持 SKIP。
+请使用独立 Python 环境。运行依赖因任务而异，并非 Hermes 保证预装；QA 安装更广泛的依赖，以执行全部标记示例：
 
-本地执行验证（从仓库根目录）：
 ```bash
-# 运行全部 736 项单元测试与严苛回归套件
-pytest
-
-# 运行代码块静态语法与独立执行检查
+python -m pip install -r requirements-qa.txt
+python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu
 python scripts/qa.py
+python -m pytest -q tests
+python scripts/verify_external_apis.py
+git diff --check
 ```
+
+QA 校验元数据、参考文件、个人路径与已知密钥模式、Python 语法与标记为可执行的代码块。每个 smoke 示例在全新子进程中原样运行；绘图示例接受 `PLOT_DIR`（默认 `~/plots`，显式展开），测试使用临时目录。未分类的 Python 代码块被拒绝；`fragment:` 块做语法检查但需显式输入，不单独执行。`external-test:` 块仅经手动外部命令运行。该外部命令在配置检查通过时返回 0，代码、schema 或身份失败返回 1，传输、认证或配额不可用返回 2；未配置的可选服务保持 SKIP。
 
 固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十三个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
 
-CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，全仓 736 项单元测试全部通过，并附带针对上游 main 最新分支的实时 Canary 加载检验。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。最终候选本地测试为 819 passed、零跳过；精确 HEAD 的远端结果单独记录于收尾账本。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
 tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
 

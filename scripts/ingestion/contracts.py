@@ -30,7 +30,7 @@ MAX_COLLECTION_ITEMS = 100_000
 
 PAYLOAD_SCHEMA_FILES: Dict[str, str] = {
     "evidence-receipt-1.0": "evidence-receipt.schema.json",
-    "academic-evidence-1.0": "evidence-receipt.schema.json",
+    "academic-evidence-1.0": "legacy-academic-evidence.schema.json",
     "research-object-1.0": "research-object.schema.json",
     "lineage-receipt-1.0": "lineage-receipt.schema.json",
     "ceg-snapshot-1.0": "claim-evidence-graph.schema.json",

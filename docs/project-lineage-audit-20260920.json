@@ -17,9 +17,9 @@
       "P2": 1,
       "P3": 0
     },
-    "pr12_review_threads_observed_total": 109,
+    "pr12_review_threads_observed_total": 117,
     "pr12_review_threads_resolved_current": 31,
-    "pr12_review_threads_unresolved_current": 78,
+    "pr12_review_threads_unresolved_current": 86,
     "pr12_followup_review_findings_by_severity": {
       "P0": 0,
       "P1": 7,
@@ -113,9 +113,10 @@
       "P3": 0
     },
     "pr12_twelfth_followup_findings_remediated_locally": 7,
+    "review_counts_scope": "final_wave_intake; final dispositions in closeout_evidence",
     "local_tests_after_remediation": {
-      "passed": 765,
-      "skipped": 3,
+      "passed": 819,
+      "skipped": 0,
       "failed": 0
     }
   },
@@ -144,17 +145,19 @@
     {"pull_request": 12, "head_sha": "659fa48466fe866ce577b90ab3fef9d73b62ca5e", "workflow_run_id": 35503474068, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 2, "P2": 2}},
     {"pull_request": 12, "head_sha": "6b4265036dd9883ecf6d1a6865760bdbf39a3e94", "same_tree_parent_sha": "685f7cbb36bf8a46ca032a3815455aed5c814d0c", "workflow_run_id": 35503922950, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 1}},
     {"pull_request": 12, "head_sha": "2f322d96a8e4eef8fa053bb02ae06389fa8aaa36", "same_tree_parent_sha": "14770943253d6caf5415ef297e25abf00abe1e77", "workflow_run_id": 35504757502, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4}},
-    {"pull_request": 12, "head_sha": "1a8ad3ac30941336c23c455238fe9979ea15bea2", "same_tree_parent_sha": "078bdb27ba203f3565671dd63e43e5af0bf9eef6", "workflow_run_id": 35507956889, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 3}}
+    {"pull_request": 12, "head_sha": "1a8ad3ac30941336c23c455238fe9979ea15bea2", "same_tree_parent_sha": "078bdb27ba203f3565671dd63e43e5af0bf9eef6", "workflow_run_id": 35507956889, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 3}},
+    {"pull_request": 12, "head_sha": "f4709c9d597e4e1a61215530af7bcb85e1dd1d06", "workflow_run_id": 35510083160, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "pytest_passed": 768, "review_findings_after_run": {"P1": 6, "P2": 2}}
   ],
   "open_register": [
     {"id": "OPS-01", "severity": "P2", "category": "ci_coverage", "status": "accepted_operational_limitation"},
     {"id": "EXT-01", "severity": "P2", "category": "external_verification", "status": "open_credential_bound"},
     {"id": "GOV-01", "severity": "P2", "category": "historical_provenance", "status": "grandfathered_missing"},
     {"id": "DIST-01", "severity": "P3", "category": "distribution", "status": "planned_pr13"},
-    {"id": "I18N-01", "severity": "P3", "category": "localization", "status": "queued", "canonical_current": 55, "localized_current": 2, "localized_stale": 20, "queued_for_generation": 1078},
+    {"id": "I18N-01", "severity": "P3", "category": "localization", "status": "queued", "canonical_current": 55, "localized_current": 3, "localized_stale": 19, "queued_for_generation": 1078},
     {"id": "GOV-02", "severity": "P3", "category": "independent_agenda_validation", "status": "open"},
     {"id": "GOV-03", "severity": "P3", "category": "portfolio_review", "status": "open"},
     {"id": "SCF-01", "severity": "P3", "category": "experimental_compute_scope", "status": "open"},
     {"id": "ROADMAP-01", "severity": "P3", "category": "product_direction", "status": "deferred"}
-  ]
+  ],
+  "closeout_evidence": {"url": "https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151", "candidate_identity": "containing_commit_and_tree", "parent_sha": "f4709c9d597e4e1a61215530af7bcb85e1dd1d06", "branch": "work/research-artifact-ingestion-bridge-v1", "latest_findings_repaired_locally": {"P1": 6, "P2": 2}, "remote_gates": "recorded_in_linked_annex_after_publication", "max_final_review_rounds": 2, "executable_fences": 40, "historical_cancelled_run_preserved": 35510061300}
 }

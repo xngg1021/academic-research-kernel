@@ -33,6 +33,13 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
+try:
+    from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+    from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
+
 __all__ = [
     "Entity",
     "Activity",
@@ -434,6 +441,7 @@ class LineageReceipt:
     edges: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
     trace_steps: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
     _content_root: Optional[str] = field(default=None, repr=False, compare=False)
+    _verification_context: Optional[LineageVerificationContext] = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "root_ancestors", tuple(self.root_ancestors))
@@ -505,10 +513,23 @@ def _resolve_locator_path(locator: str, root_dir: Optional[Path] = None) -> Tupl
     return p.resolve(), False
 
 
+def _graph_verification_context(graph: LineageGraph) -> LineageVerificationContext:
+    """Preserve trusted Python absolute-file API without ambient wire authority."""
+    paths = []
+    if graph.root_dir is None:
+        for entity in graph.entities.values():
+            if entity.locator:
+                path, _ = _resolve_locator_path(entity.locator)
+                if path is not None:
+                    paths.append(path)
+    return LineageVerificationContext(content_root=graph.root_dir, authorized_paths=tuple(paths))
+
+
 def validate_lineage(
     graph: LineageGraph,
     check_on_disk_hashes: bool = True,
     target_scope: Optional[Set[str]] = None,
+    *, verification_context: Optional[LineageVerificationContext] = None,
 ) -> Tuple[str, str, str, Optional[str]]:
     """Strict deterministic topological DAG validation, referential integrity, and content hash checks.
 
@@ -609,66 +630,14 @@ def validate_lineage(
     if visited_count < len(nodes):
         return "cycle_detected", "cycle_detected", "unchecked", "Causal dependency cycle detected in graph"
 
-    # 3. Content verification on disk
-    if not check_on_disk_hashes:
-        return "unchecked", "valid_dag", "unchecked", None
-
-    total_hashed = 0
-    verified_hashed = 0
-    unanchored_relatives = 0
-    for eid in sorted(scoped_entities):
-        ent = scoped_entities[eid]
-        if ent.sha256 and ent.locator:
-            total_hashed += 1
-            loc_path, is_unanchored = _resolve_locator_path(ent.locator, graph.root_dir)
-            if is_unanchored:
-                unanchored_relatives += 1
-                continue
-            if loc_path is None:
-                continue
-            if not loc_path.is_file():
-                return (
-                    "missing_artifact",
-                    "valid_dag",
-                    "missing_artifact",
-                    f"Entity {eid!r} declared SHA256 and local locator {ent.locator!r}, but file does not exist on disk.",
-                )
-            computed = compute_file_sha256(loc_path)
-            if computed.lower() != ent.sha256.lower():
-                return (
-                    "hash_mismatch",
-                    "valid_dag",
-                    "hash_mismatch",
-                    f"Content hash mismatch on entity {eid!r}: expected {ent.sha256}, got {computed}",
-                )
-            verified_hashed += 1
-
-    if total_hashed == 0:
-        content_status = "unchecked"
-        overall_status = "unchecked"
-        error_detail = None
-    elif verified_hashed == total_hashed and total_hashed > 0:
-        content_status = "fully_verified"
-        overall_status = "intact"
-        error_detail = None
-    elif verified_hashed > 0:
-        content_status = "partially_verified"
-        overall_status = "partial"
-        error_detail = (
-            "Relative local locator requires explicit root_dir for on-disk verification"
-            if unanchored_relatives > 0
-            else None
-        )
-    else:
-        content_status = "unverified"
-        overall_status = "unchecked"
-        error_detail = (
-            "Relative local locator requires explicit root_dir for on-disk verification"
-            if unanchored_relatives > 0
-            else None
-        )
-
-    return overall_status, "valid_dag", content_status, error_detail
+    # Producer and verifier share authority, containment and cumulative budget.
+    context = verification_context or _graph_verification_context(graph)
+    overall, content, detail = _replay_lineage_content_verification(
+        [scoped_entities[eid].to_dict() for eid in sorted(scoped_entities)],
+        check_on_disk_hashes=check_on_disk_hashes,
+        **context.content_options(),
+    )
+    return overall, "valid_dag", content, detail
 
 
 def _canonical_lineage_digest(
@@ -732,8 +701,10 @@ def trace_origin(
     graph: LineageGraph,
     target_id: str,
     check_on_disk_hashes: bool = True,
+    *, verification_context: Optional[LineageVerificationContext] = None,
 ) -> LineageReceipt:
     """Deterministically trace the provenance lineage of target_id back to root inputs."""
+    verification_context = verification_context or _graph_verification_context(graph)
     now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     tid = str(target_id).strip()
 
@@ -758,6 +729,7 @@ def trace_origin(
             content_verification="unchecked",
             error_detail=f"Target {tid!r} not found in provenance graph",
             _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
+            _verification_context=verification_context,
         )
 
     # 1. Reverse graph traversal to isolate target's causal dependency closure
@@ -800,6 +772,7 @@ def trace_origin(
         graph,
         check_on_disk_hashes=check_on_disk_hashes,
         target_scope=visited_nodes,
+        verification_context=verification_context,
     )
 
     relevant_entities = sorted(
@@ -850,6 +823,7 @@ def trace_origin(
             activities=tuple(relevant_activities),
             edges=tuple(canonical_edges),
             _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
+            _verification_context=verification_context,
         )
 
     # 3. Identify root ancestor entities in causal subgraph
@@ -950,10 +924,12 @@ def trace_origin(
         verification_status=v_stat,
         topology_status=topo_stat,
         content_verification=cont_stat,
+        error_detail=err_msg,
         root_ancestors=tuple(root_ancestors),
         entities=tuple(relevant_entities),
         activities=tuple(relevant_activities),
         edges=tuple(canonical_edges),
         trace_steps=tuple(trace_steps),
         _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
+        _verification_context=verification_context,
     )
