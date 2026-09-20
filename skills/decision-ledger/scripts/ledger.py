@@ -200,8 +200,17 @@ def compute_outcome_digest(
 
 
 def canonical_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
-    """Canonical SHA256 of an arbitrary JSON-able ledger payload (sorted keys)."""
-    return hashlib.sha256(_canonical_json_bytes(payload_dict)).hexdigest().lower()
+    """Canonical SHA256 of a receipt payload used by the verification manifest.
+
+    Lineage receipt timestamps are emission metadata and participate in neither
+    ``receipt_id`` nor ``receipt_digest``. Excluding them here gives the ledger
+    the same timestamp-equivalence rule as the ingestion receipt registry.
+    """
+    payload = _jsonable(payload_dict)
+    if isinstance(payload, dict) and payload.get("protocol") == "lineage-receipt-1.0":
+        payload = dict(payload)
+        payload.pop("timestamp", None)
+    return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest().lower()
 
 
 def _jsonable(obj: Any, _seen: Optional[set] = None) -> Any:
@@ -1116,7 +1125,15 @@ class DecisionLedger:
             existing = self._receipts[rid]
             ex_dict = existing.to_dict() if hasattr(existing, "to_dict") else existing
             new_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
-            if _canonical_json_bytes(_jsonable(ex_dict)) != _canonical_json_bytes(_jsonable(new_dict)):
+            ex_payload = _jsonable(ex_dict)
+            new_payload = _jsonable(new_dict)
+            if isinstance(ex_payload, dict) and ex_payload.get("protocol") == "lineage-receipt-1.0":
+                ex_payload = dict(ex_payload)
+                ex_payload.pop("timestamp", None)
+            if isinstance(new_payload, dict) and new_payload.get("protocol") == "lineage-receipt-1.0":
+                new_payload = dict(new_payload)
+                new_payload.pop("timestamp", None)
+            if _canonical_json_bytes(ex_payload) != _canonical_json_bytes(new_payload):
                 raise ValueError(f"Conflicting receipt registration for {rid!r}: existing data differs from new registration.")
             return
         self._receipts[rid] = snapshot

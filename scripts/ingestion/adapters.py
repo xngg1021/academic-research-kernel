@@ -72,6 +72,74 @@ def _canonical_reason(value: Any) -> str:
     return canonical_json_bytes(raw).decode("utf-8")
 
 
+def _canonical_work_id_from_identifiers(
+    identifiers: Any,
+    subject_refs: Tuple[str, ...],
+) -> Optional[str]:
+    """Resolve stable scholarly identifiers before using retrieval text."""
+    values = _thaw_val(identifiers)
+    if not isinstance(values, dict):
+        values = {}
+
+    # An explicit canonical work reference remains authoritative. Canonicalize
+    # DOI work references so case and resolver prefixes cannot split identity.
+    for raw_ref in subject_refs:
+        ref = canonical_text(raw_ref)
+        if ref.lower().startswith("work:doi:"):
+            doi = ref[len("work:doi:"):].strip().lower()
+            return f"work:doi:{doi}"
+        if ref.lower().startswith("work:"):
+            return ref
+
+    def strip_prefix(raw: Any, prefixes: Tuple[str, ...]) -> str:
+        text = canonical_text(raw) if raw is not None else ""
+        lowered = text.lower()
+        for prefix in prefixes:
+            if lowered.startswith(prefix):
+                return text[len(prefix):].strip().strip("/")
+        return text.strip().strip("/")
+
+    doi_candidates: List[str] = []
+    if values.get("doi"):
+        doi_candidates.append(str(values["doi"]))
+    doi_candidates.extend(
+        ref for ref in subject_refs
+        if canonical_text(ref).lower().startswith((
+            "doi:",
+            "http://doi.org/",
+            "https://doi.org/",
+            "http://dx.doi.org/",
+            "https://dx.doi.org/",
+            "10.",
+        ))
+    )
+    if doi_candidates:
+        doi = strip_prefix(doi_candidates[0], (
+            "https://dx.doi.org/",
+            "http://dx.doi.org/",
+            "https://doi.org/",
+            "http://doi.org/",
+            "doi:",
+        )).lower().rstrip(".")
+        if doi:
+            return f"work:doi:{doi}"
+
+    identifier_specs = (
+        ("arxiv_id", "arxiv", ("https://arxiv.org/abs/", "http://arxiv.org/abs/", "arxiv:"), str.lower),
+        ("pmid", "pmid", ("https://pubmed.ncbi.nlm.nih.gov/", "http://pubmed.ncbi.nlm.nih.gov/", "pmid:"), str),
+        ("openalex_id", "openalex", ("https://openalex.org/", "http://openalex.org/", "openalex:"), str.upper),
+    )
+    for field, namespace, prefixes, normalise in identifier_specs:
+        if not values.get(field):
+            continue
+        value = strip_prefix(values[field], prefixes)
+        if namespace == "arxiv":
+            value = re.sub(r"\.pdf$", "", value, flags=re.IGNORECASE)
+        if value:
+            return f"work:{namespace}:{normalise(value)}"
+    return None
+
+
 def _domain_derived_uncertainties(
     state: IngestionKernelState,
 ) -> List[Dict[str, Any]]:
@@ -623,11 +691,10 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
         plan.registered_receipts[envelope.payload_sha256] = p
 
         # 1. Register Subject Research Object if work reference exists
-        target_work = None
-        for s_ref in envelope.subject_refs:
-            if s_ref.startswith("work:"):
-                target_work = s_ref
-                break
+        target_work = _canonical_work_id_from_identifiers(
+            p.get("identifiers", {}),
+            envelope.subject_refs,
+        )
         if not target_work and p.get("query"):
             target_work = f"work:{canonical_text(p['query'])}"
 

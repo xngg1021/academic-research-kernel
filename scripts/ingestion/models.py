@@ -591,7 +591,11 @@ class IngestionKernelState:
     def register_object(self, object_id: str, value: Mapping[str, Any]) -> None:
         frozen = FrozenJSONMap(_thaw_val(value))
         existing = self.objects.get(object_id)
-        if existing is not None and _thaw_val(existing) != _thaw_val(frozen):
+        if (
+            existing is not None
+            and canonical_json_bytes(_thaw_val(existing))
+            != canonical_json_bytes(_thaw_val(frozen))
+        ):
             existing_raw = _thaw_val(existing)
             incoming_raw = _thaw_val(frozen)
             is_work_placeholder = existing_raw == {
@@ -676,6 +680,33 @@ class IngestionKernelState:
         for artifact_id, payload_sha in self.ingested_artifacts.items():
             if not ARTIFACT_ID_RE.fullmatch(artifact_id) or not SHA256_RE.fullmatch(payload_sha):
                 errors.append(f"Invalid ingested artifact identity {artifact_id!r}")
+
+        ceg_node_ids = set()
+        ceg_edge_ids = set()
+        if self.ceg is not None:
+            ceg_data = self.ceg.to_dict()
+            ceg_node_ids.update(item["id"] for item in ceg_data.get("claims", []))
+            ceg_node_ids.update(
+                item["id"] for item in ceg_data.get("evidence_anchors", [])
+            )
+            ceg_edge_ids.update(
+                f"{item['evidence_id']}->{item['claim_id']}"
+                for item in ceg_data.get("support_edges", [])
+            )
+
+        ledger_bases = set()
+        ledger_corrections = set()
+        if self.ledger is not None:
+            ledger_data = self.ledger.to_dict()
+            ledger_bases.update(
+                (item["decision_id"], item["basis_kind"], item["basis_id"])
+                for item in ledger_data.get("bases", [])
+            )
+            ledger_corrections.update(
+                (item["decision_id"], item["correction_id"])
+                for item in ledger_data.get("corrections", [])
+            )
+
         for cache_key, receipt in self.ingestion_receipts.items():
             expected_sha = self.ingested_artifacts.get(receipt.source_artifact_id)
             if expected_sha is None:
@@ -704,6 +735,43 @@ class IngestionKernelState:
                     errors.append(
                         f"Ingestion receipt cache key {cache_key!r} does not match "
                         f"the receipt context {expected_cache_key!r}"
+                    )
+
+            for object_id in receipt.created_or_reused_objects:
+                if object_id not in self.objects:
+                    errors.append(
+                        f"Ingestion receipt cache {cache_key!r} references missing "
+                        f"ResearchObject {object_id!r}"
+                    )
+            for node_id in receipt.ceg_nodes:
+                if node_id not in ceg_node_ids:
+                    errors.append(
+                        f"Ingestion receipt cache {cache_key!r} references missing "
+                        f"CEG node {node_id!r}"
+                    )
+            for edge_id in receipt.ceg_edges:
+                if edge_id not in ceg_edge_ids:
+                    errors.append(
+                        f"Ingestion receipt cache {cache_key!r} references missing "
+                        f"CEG edge {edge_id!r}"
+                    )
+            for raw_binding in receipt.ledger_bindings:
+                binding = _thaw_val(raw_binding)
+                decision_id = binding.get("decision_id")
+                binding_kind = binding.get("binding_kind")
+                basis_id = binding.get("basis_id")
+                if binding_kind == "outcome_correction":
+                    retained = (decision_id, basis_id) in ledger_corrections
+                else:
+                    retained = (
+                        decision_id,
+                        binding_kind,
+                        basis_id,
+                    ) in ledger_bases
+                if not retained:
+                    errors.append(
+                        f"Ingestion receipt cache {cache_key!r} references missing "
+                        f"Ledger binding {binding!r}"
                     )
 
             lineage_ref = receipt.source_lineage_ref

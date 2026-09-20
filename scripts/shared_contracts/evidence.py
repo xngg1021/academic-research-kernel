@@ -354,19 +354,6 @@ def validate_academic_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tup
         if canonical_evidence_claim_digest(c_dict) == ref.claim_digest:
             matched_claim = True
             break
-        # Check decision claim digest (text + locator)
-        d_payload = {
-            "text": canonical_text(c_dict.get("text", c_dict.get("claim", ""))),
-            "decision_type": "claim",
-        }
-        if c_dict.get("context_work_id"):
-            d_payload["context_work_id"] = c_dict["context_work_id"]
-        if c_dict.get("locator"):
-            d_payload["locator"] = c_dict["locator"]
-        if hashlib.sha256(canonical_json_bytes(d_payload)).hexdigest().lower() == ref.claim_digest:
-            matched_claim = True
-            break
-
     if not matched_claim:
         return False, f"AcademicEvidence claim digest mismatch: claim_digest {ref.claim_digest} not found in legitimate receipt claims"
     return True, None

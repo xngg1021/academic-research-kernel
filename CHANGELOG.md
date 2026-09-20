@@ -27,7 +27,7 @@
 - **端到端完整生命周期与对抗性用例**：
   - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
   - 新增 `tests/test_ingestion_hardening.py`，覆盖深不可变、运行时 schema、真实生产者契约、原子回滚、语义幂等、完整状态回放、防篡改摘要、三态证据语义与真实 stdio MCP 握手；
-  - 单测基线由 632 项扩充至 **740 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
+  - 单测基线由 632 项扩充至 **749 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
 
 ### PR #12 合并前完整性加固与历史对账
 
@@ -45,7 +45,8 @@
 - **[P1/P2] 七次复审闭环**：修复后续 5 个 P1 与 3 个 P2：CEG 快照按每个引用精确投影回执缺失状态、预检与实际入库统一核验 `lineage_ref`、retained-prior 的既有撤稿告警不再丢失、手稿对象按信封上下文隔离、计算证据保留并绑定有效 locator、一次显式 binding 只追加一次 correction、多 work 产物拒绝冲突身份、MCP lineage 的畸形实体与边归入参数错误。
 - **[P1/P2] 八次复审闭环**：修复后续 4 个 P1 与 4 个 P2：计划内 ResearchObject 身份冲突统一 fail closed、cross-review 证据按完整入库上下文隔离并保留 locator、lineage 实体/活动类型在 MCP dispatch 前按闭集拒绝、无标题评审意见使用规范 JSON 原因、残缺 lineage receipt 返回普通 invalid、falsy 物理回执不再伪装成缺失、canonical work 可确定性升级临时占位对象、opaque fallback 对象按完整信封上下文隔离。
 - **[P1/P2] 九次复审闭环**：修复后续 2 个 P1 与 2 个 P2：异议意见的非字符串原因统一为规范 JSON、预检将适配器计划碰撞返回为普通 invalid、手稿对象始终绑定完整生产者上下文、DOI-only 撤稿目标统一到规范 work 身份。
-- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 87 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
+- **[P1/P2] 十次复审闭环**：修复后续 4 个 P1 与 1 个 P2：跨产物对象碰撞使用规范 JSON 字节比较、缓存收据强制核验其记录的对象/CEG/Ledger 变异仍被保留、Ledger 验证清单统一 lineage 时间戳等价、学术证据优先解析 DOI/arXiv/PMID/OpenAlex 稳定身份、学术凭证仅接受完整 canonical evidence-claim digest。
+- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 92 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
 
 ---
 

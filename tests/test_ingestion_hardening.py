@@ -2137,3 +2137,149 @@ def test_doi_retraction_targets_the_canonical_work_identity():
     assert {item["subject_id"] for item in retraction_receipt.uncertainties} == {
         "work:doi:10.1000/example"
     }
+
+
+def test_cross_artifact_object_collisions_distinguish_json_boolean_and_number():
+    first = envelope(
+        {"new_papers": [{"id": "same-paper", "value": 1}]},
+        "literature-watch",
+        "literature-delta-1.0",
+    )
+    second = envelope(
+        {"new_papers": [{"id": "same-paper", "value": True}]},
+        "literature-watch",
+        "literature-delta-1.0",
+    )
+    state = kernel()
+    engine = IngestionEngine()
+
+    accepted = engine.ingest(first, state=state)
+    rejected = engine.ingest(second, state=state)
+
+    assert accepted.status == "accepted"
+    assert rejected.status == "rejected"
+    assert "ResearchObject ID collision" in rejected.failure_reason
+    assert state.objects["same-paper"]["value"] == 1
+    assert type(state.objects["same-paper"]["value"]) is int
+
+
+def test_cached_receipt_rejects_missing_recorded_mutations_on_replay():
+    state = kernel()
+    state.ledger.add_decision("decision-1", "Decision", decision_action="commit")
+    env = envelope(
+        evidence_payload(),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+    )
+    receipt = IngestionEngine().ingest(
+        env,
+        state=state,
+        bindings={
+            "action": "add_outcome_correction",
+            "decision_id": "decision-1",
+            "verdict": "positive",
+            "rationale": "verified",
+        },
+    )
+    assert receipt.status == "accepted"
+
+    object_missing = state.clone()
+    object_missing.objects.pop(receipt.created_or_reused_objects[0])
+    with pytest.raises(ValueError, match="missing ResearchObject"):
+        IngestionKernelState.from_dict(
+            object_missing.to_dict(),
+            ceg_cls=ceg_mod.ClaimEvidenceGraph,
+            ledger_cls=ledger_mod.DecisionLedger,
+        )
+
+    ceg_missing = state.clone()
+    ceg_missing.ceg.claims.clear()
+    ceg_missing.ceg.evidence_anchors.clear()
+    ceg_missing.ceg.support_edges.clear()
+    ceg_missing.ceg._all_node_ids.clear()
+    ceg_missing.ceg._support_edge_keys.clear()
+    with pytest.raises(ValueError, match="missing CEG node"):
+        IngestionKernelState.from_dict(
+            ceg_missing.to_dict(),
+            ceg_cls=ceg_mod.ClaimEvidenceGraph,
+            ledger_cls=ledger_mod.DecisionLedger,
+        )
+
+    ledger_missing = state.clone()
+    ledger_missing.ledger._corrections.clear()
+    ledger_missing.ledger._corrections_by_decision.clear()
+    with pytest.raises(ValueError, match="missing Ledger binding"):
+        IngestionKernelState.from_dict(
+            ledger_missing.to_dict(),
+            ceg_cls=ceg_mod.ClaimEvidenceGraph,
+            ledger_cls=ledger_mod.DecisionLedger,
+        )
+
+
+def test_ledger_snapshot_replay_normalizes_lineage_timestamp_variants():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    earlier = mcp_server.prov_mod.trace_origin(
+        graph,
+        "entity-1",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    earlier["timestamp"] = "2026-09-20T00:00:00Z"
+    later = copy.deepcopy(earlier)
+    later["timestamp"] = "2026-09-20T00:00:01Z"
+
+    source = ledger_mod.DecisionLedger()
+    source.add_decision("decision-1", "Snapshot decision", decision_action="commit")
+    source.register_receipt(later["receipt_id"], later)
+    state = kernel()
+    state.register_receipt(earlier["receipt_id"], earlier)
+
+    result = IngestionEngine().ingest(
+        envelope(
+            source.to_dict(),
+            "decision-ledger",
+            "decision-ledger-1.0",
+            artifact_kind="decision_ledger_snapshot",
+        ),
+        state=state,
+    )
+
+    assert result.status == "accepted"
+    assert state.ledger.to_dict()["verification_manifest"] == source.to_dict()["verification_manifest"]
+    assert state.receipts[earlier["receipt_id"]]["timestamp"] == earlier["timestamp"]
+
+
+@pytest.mark.parametrize(
+    ("identifiers", "subject_refs", "expected_work_id"),
+    [
+        ({"doi": " HTTPS://DOI.ORG/10.1000/EXAMPLE "}, [], "work:doi:10.1000/example"),
+        ({}, ["doi:10.1000/EXAMPLE"], "work:doi:10.1000/example"),
+        ({"arxiv_id": "arXiv:2106.09624"}, [], "work:arxiv:2106.09624"),
+        ({"pmid": "PMID:123456"}, [], "work:pmid:123456"),
+        ({"openalex_id": "https://openalex.org/w123"}, [], "work:openalex:W123"),
+    ],
+)
+def test_academic_evidence_resolves_canonical_identifier_work_ids(
+    identifiers,
+    subject_refs,
+    expected_work_id,
+):
+    payload = evidence_payload()
+    payload["identifiers"] = identifiers
+    state = kernel()
+
+    receipt = IngestionEngine().ingest(
+        envelope(
+            payload,
+            "academic-source-verification",
+            "evidence-receipt-1.0",
+            subject_refs=subject_refs,
+        ),
+        state=state,
+    )
+
+    assert receipt.status == "accepted"
+    assert expected_work_id in state.objects
+    assert {claim.target_work_id for claim in state.ceg.claims.values()} == {
+        expected_work_id
+    }

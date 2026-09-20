@@ -161,6 +161,33 @@ def test_validate_academic_receipt_contract():
     assert "payload SHA256 mismatch" in err
 
 
+def test_academic_receipt_rejects_weaker_decision_claim_digest():
+    claim = {
+        "claim": "A fully qualified finding",
+        "evidence_type": "computed",
+        "locator": "table 2",
+        "source": "doi:10.1000/example",
+        "support_status": "contradicted",
+    }
+    payload = {"schema_version": "1.0", "claims": [claim]}
+    weak_digest = compute_sha256(canonical_json_bytes({
+        "text": claim["claim"],
+        "decision_type": "claim",
+        "locator": claim["locator"],
+    }))
+    ref = ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest=weak_digest,
+        payload_sha256=compute_sha256(canonical_json_bytes(payload)),
+    )
+
+    ok, error = validate_academic_receipt_contract(ref, payload)
+
+    assert ok is False
+    assert "claim digest mismatch" in error
+
+
 def test_verify_receipt_reference_dispatcher():
     lineage_receipt, lineage_ref = _lineage_fixture()
     ok, _ = verify_receipt_reference(lineage_ref, lineage_receipt)
