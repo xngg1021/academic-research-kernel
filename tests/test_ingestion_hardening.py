@@ -887,3 +887,220 @@ def test_ledger_snapshot_replay_ignores_unrelated_kernel_receipts():
     assert state.ledger.ledger_id == "snapshot-ledger"
     assert state.ledger.to_dict()["decisions"][0]["id"] == "decision-1"
     assert "unrelated" in state.ledger.to_dict()["verification_manifest"]
+
+
+def test_lineage_evidence_identity_includes_envelope_locator():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    payload = mcp_server.prov_mod.trace_origin(
+        graph,
+        "entity-1",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    first = envelope(
+        payload,
+        "research-object-identity",
+        "lineage-receipt-1.0",
+        artifact_kind="lineage_receipt",
+        locator="store:a",
+    )
+    second = envelope(
+        payload,
+        "research-object-identity",
+        "lineage-receipt-1.0",
+        artifact_kind="lineage_receipt",
+        locator="store:b",
+    )
+    state = kernel()
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(state.ceg.evidence_anchors) == 2
+    assert {item.locator for item in state.ceg.evidence_anchors.values()} == {
+        "store:a",
+        "store:b",
+    }
+
+
+def test_retraction_event_identity_includes_resolved_target_work():
+    payload = {"is_retracted": None, "signals": []}
+    first = envelope(
+        payload,
+        "retraction-watch",
+        "retraction-delta-1.0",
+        subject_refs=["work:A"],
+    )
+    second = envelope(
+        payload,
+        "retraction-watch",
+        "retraction-delta-1.0",
+        subject_refs=["work:B"],
+    )
+    state = kernel()
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(state.objects) == 2
+    assert {item["target_work_id"] for item in state.objects.values()} == {
+        "work:A",
+        "work:B",
+    }
+    assert {item["subject_id"] for item in state.uncertainties} == {"work:A", "work:B"}
+
+
+def test_claim_evidence_validate_reports_integrity_failure_as_validation_result():
+    graph = ceg_mod.ClaimEvidenceGraph("tampered")
+    graph.add_claim("claim-1", "Claim")
+    exported = graph.to_dict()
+    exported["graph_digest"] = "f" * 64
+
+    response, body = call_tool("claim_evidence_validate", {"graph": exported})
+
+    assert response["result"]["isError"] is False
+    assert body["valid"] is False
+    assert any("tamper" in error.lower() or "digest" in error.lower() for error in body["errors"])
+
+
+def test_claim_evidence_trace_returns_supporting_and_refuting_anchors():
+    graph = ceg_mod.ClaimEvidenceGraph("complete-trace")
+    graph.add_claim("claim-1", "Claim")
+    graph.add_evidence("support-1", "direct_observation", locator="table:1")
+    graph.add_evidence("refute-1", "direct_observation", locator="table:2")
+    graph.add_support_edge("support-1", "claim-1", "supported")
+    graph.add_support_edge("refute-1", "claim-1", "contradicted")
+
+    _, body = call_tool(
+        "claim_evidence_trace",
+        {"graph": graph.to_dict(), "claim_id": "claim-1"},
+    )
+
+    assert [item["evidence_id"] for item in body["support"]] == ["support-1"]
+    assert [item["evidence_id"] for item in body["contradictions"]] == ["refute-1"]
+
+
+def test_truncated_retraction_check_creates_coverage_uncertainty():
+    env = envelope(
+        {
+            "is_retracted": False,
+            "signals": [],
+            "current_observation": False,
+            "verification_status": "verified_current",
+            "truncated": True,
+        },
+        "retraction-watch",
+        "retraction-delta-1.0",
+        subject_refs=["doi:10.1000/example"],
+    )
+    receipt = IngestionEngine().ingest(env, state=kernel())
+
+    assert receipt.status == "accepted"
+    assert len(receipt.uncertainties) == 1
+    assert "truncated" in receipt.uncertainties[0]["reason"]
+
+
+def test_unknown_screening_decision_is_rejected_fail_closed():
+    env = envelope(
+        {"screening_results": [{"record_id": "record-1", "decision": "incldue"}]},
+        "systematic-review-meta-analysis",
+        "screening-matrix-1.0",
+    )
+    receipt = IngestionEngine().ingest(env, state=kernel())
+
+    assert receipt.status == "rejected"
+    assert "include, exclude, or maybe" in receipt.failure_reason
+
+
+def test_incremental_ceg_mutation_persists_derived_uncertainty():
+    payload = evidence_payload()
+    payload["claims"][0]["support_status"] = "unverifiable"
+    env = envelope(
+        payload,
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=["work:uncertain"],
+    )
+    state = kernel()
+    receipt = IngestionEngine().ingest(env, state=state)
+
+    assert receipt.status == "accepted"
+    assert [item["kind"] for item in state.uncertainties] == ["unverifiable_claim"]
+    assert [item["kind"] for item in receipt.uncertainties] == ["unverifiable_claim"]
+    assert receipt.output_digests == state.compute_digests()
+
+
+def test_quantitative_evidence_uses_contextual_128_bit_identity():
+    payload = {
+        "reported": 1.0,
+        "recomputed": 1.0,
+        "formula": "x",
+        "library": "reference",
+    }
+    first = envelope(
+        payload,
+        "quantitative-paper-audit",
+        "quantitative-audit-1.0",
+        locator="table:1",
+    )
+    second = envelope(
+        payload,
+        "quantitative-paper-audit",
+        "quantitative-audit-1.0",
+        locator="table:2",
+    )
+    state = kernel()
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(state.ceg.evidence_anchors) == 2
+    for evidence_id in state.ceg.evidence_anchors:
+        assert evidence_id.startswith("ev-quant-")
+        assert len(evidence_id.removeprefix("ev-quant-")) == 32
+
+
+def test_academic_evidence_reuses_richer_existing_work_object():
+    state = kernel()
+    original = {"id": "work:stable", "kind": "work", "title": "Canonical title"}
+    state.register_object("work:stable", original)
+    env = envelope(
+        evidence_payload(),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=["work:stable"],
+    )
+    receipt = IngestionEngine().ingest(env, state=state)
+
+    assert receipt.status == "accepted"
+    assert dict(state.objects["work:stable"]) == original
+
+
+def test_reproduction_evidence_identity_includes_envelope_locator():
+    payload = {
+        "kind": "ReproductionReceipt",
+        "schema_version": "1.0",
+        "status": "blocked",
+        "tier": "runs",
+        "paper": {"title": "Example"},
+        "repository": None,
+        "stages": [],
+        "contradictions": [],
+        "blocking": ["data"],
+        "gaps": [],
+        "generated_at": "2026-09-20T00:00:00Z",
+    }
+    first = envelope(
+        payload,
+        "research-reproducibility",
+        "reproduction-receipt-1.0",
+        locator="run:a",
+    )
+    second = envelope(
+        payload,
+        "research-reproducibility",
+        "reproduction-receipt-1.0",
+        locator="run:b",
+    )
+    state = kernel()
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(state.ceg.evidence_anchors) == 2

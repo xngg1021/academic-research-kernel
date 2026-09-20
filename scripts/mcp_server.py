@@ -477,18 +477,24 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             graph_data = arguments.get("graph")
             if not isinstance(graph_data, dict):
                 return {"valid": False, "errors": ["'graph' must be a dictionary"]}
-            schema_errors = validate_schema(graph_data, "claim-evidence-graph.schema.json")
-            if schema_errors:
-                return {"valid": False, "errors": schema_errors}
-            receipts = arguments.get("receipts") or {}
-            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data, receipt_registry=receipts)
-            valid, errors = cg.validate_graph()
-            return {
-                "valid": valid,
-                "errors": errors,
-                "graph_digest": cg.graph_digest(),
-                "node_count": len(cg.claims) + len(cg.evidence_anchors),
-            }
+            try:
+                schema_errors = validate_schema(graph_data, "claim-evidence-graph.schema.json")
+                if schema_errors:
+                    return {"valid": False, "errors": schema_errors}
+                receipts = arguments.get("receipts") or {}
+                cg = ceg_mod.ClaimEvidenceGraph.from_dict(
+                    graph_data,
+                    receipt_registry=receipts,
+                )
+                valid, errors = cg.validate_graph()
+                return {
+                    "valid": valid,
+                    "errors": errors,
+                    "graph_digest": cg.graph_digest(),
+                    "node_count": len(cg.claims) + len(cg.evidence_anchors),
+                }
+            except Exception as exc:
+                return {"valid": False, "errors": [str(exc)]}
 
         # 7. claim_evidence_trace
         elif name == "claim_evidence_trace":
@@ -500,9 +506,20 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             if schema_errors:
                 return {"error": "Invalid ClaimEvidenceGraph", "details": schema_errors}
             receipts = arguments.get("receipts") or {}
-            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data, receipt_registry=receipts)
-            trace_info = cg.trace_claim_provenance(claim_id)
-            return {"claim_id": claim_id, "provenance_trace": trace_info}
+            try:
+                cg = ceg_mod.ClaimEvidenceGraph.from_dict(
+                    graph_data,
+                    receipt_registry=receipts,
+                )
+                trace_info = cg.trace_claim_provenance(claim_id)
+                return {
+                    "claim_id": claim_id,
+                    "support": cg.find_support(claim_id),
+                    "contradictions": cg.find_contradictions(claim_id),
+                    "provenance_trace": trace_info,
+                }
+            except Exception as exc:
+                return {"error": "Invalid ClaimEvidenceGraph", "details": [str(exc)]}
 
         # 8. decision_ledger_validate
         elif name == "decision_ledger_validate":

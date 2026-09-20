@@ -147,6 +147,10 @@ class BaseArtifactAdapter(ABC):
                 "refusing an accepted no-op"
             )
 
+        uncertainty_ids_before = {
+            value["item_id"] for value in state.uncertainties
+        }
+
         # 1. Apply Research Objects with fail-closed collision defense
         for obj_id, obj_data in plan.created_objects.items():
             state.register_object(obj_id, obj_data)
@@ -291,9 +295,33 @@ class BaseArtifactAdapter(ABC):
                     "basis_id": corr_res.correction_id,
                 })
 
-        # 5. Persist uncertainties into kernel state
+        # 5. Persist both adapter-declared and domain-derived uncertainties.
+        # Snapshot loaders already carry these queues; incremental mutations
+        # must converge to the same kernel uncertainty state.
+        receipt_uncertainties: List[Dict[str, Any]] = []
+        receipt_uncertainty_ids: Set[str] = set()
         for u in plan.uncertainties:
-            state.add_uncertainty(u)
+            raw = _thaw_val(u)
+            state.add_uncertainty(raw)
+            if raw["item_id"] not in receipt_uncertainty_ids:
+                receipt_uncertainties.append(raw)
+                receipt_uncertainty_ids.add(raw["item_id"])
+
+        derived_uncertainties: List[Any] = []
+        if state.ceg is not None:
+            derived_uncertainties.extend(state.ceg.extract_uncertainties())
+        if state.ledger is not None:
+            derived_uncertainties.extend(state.ledger.export_uncertainties())
+        for item in derived_uncertainties:
+            raw = item.to_dict() if hasattr(item, "to_dict") else _thaw_val(item)
+            state.add_uncertainty(raw)
+            item_id = raw["item_id"]
+            if (
+                item_id not in uncertainty_ids_before
+                and item_id not in receipt_uncertainty_ids
+            ):
+                receipt_uncertainties.append(raw)
+                receipt_uncertainty_ids.add(item_id)
 
         valid, invariant_errors = state.validate_invariants()
         if not valid:
@@ -313,7 +341,7 @@ class BaseArtifactAdapter(ABC):
             ceg_nodes=created_ceg_nodes,
             ceg_edges=created_ceg_edges,
             ledger_bindings=applied_ledger_bindings,
-            uncertainties=plan.uncertainties,
+            uncertainties=receipt_uncertainties,
             ignored_fields=plan.ignored_fields,
             caller_metadata=plan.envelope.caller_metadata,
         )
@@ -376,10 +404,13 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             target_work = f"work:{canonical_text(p['query'])}"
 
         if target_work:
-            plan.created_objects[target_work] = {
-                "id": target_work,
-                "kind": "work",
-            }
+            if target_work in state.objects:
+                plan.created_objects[target_work] = _thaw_val(state.objects[target_work])
+            else:
+                plan.created_objects[target_work] = {
+                    "id": target_work,
+                    "kind": "work",
+                }
 
         # 2. Ingest claims and evidences into CEG
         for idx, c_item in enumerate(p.get("claims", [])):
@@ -403,8 +434,8 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
                 "claim_node_digest": claim_node_dig,
                 "payload_sha256": envelope.payload_sha256,
             }))
-            c_id = f"clm-{claim_node_dig[:16]}"
-            ev_id = f"ev-{evidence_node_dig[:16]}"
+            c_id = f"clm-{claim_node_dig[:32]}"
+            ev_id = f"ev-{evidence_node_dig[:32]}"
 
             plan.ceg_claims.append({
                 "id": c_id,
@@ -514,7 +545,11 @@ class ResearchObjectIdentityAdapter(BaseArtifactAdapter):
                 receipt_digest=p["receipt_digest"],
                 locator=envelope.locator,
             )
-            ev_id = f"ev-lineage-{p['receipt_id']}"
+            evidence_digest = compute_sha256(canonical_json_bytes({
+                "receipt_id": p["receipt_id"],
+                "locator": envelope.locator,
+            }))
+            ev_id = f"ev-lineage-{evidence_digest[:32]}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "lineage_receipt",
@@ -742,11 +777,17 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
                 support_status = "unverifiable"
                 discrepancy = None
 
-            ev_id = f"ev-quant-{envelope.artifact_id[4:12]}-{idx}"
+            effective_locator = ass.get("locator") or envelope.locator
+            evidence_digest = compute_sha256(canonical_json_bytes({
+                "artifact_id": envelope.artifact_id,
+                "assertion_index": idx,
+                "locator": effective_locator,
+            }))
+            ev_id = f"ev-quant-{evidence_digest[:32]}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "direct_observation",
-                "locator": ass.get("locator") or envelope.locator,
+                "locator": effective_locator,
                 "metadata": {
                     "sub_type": "computed_evidence",
                     "statistic": stat_name,
@@ -759,7 +800,7 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
 
             if support_status == "unverifiable":
                 plan.uncertainties.append({
-                    "item_id": f"unc-quant-{envelope.artifact_id[4:12]}-{idx}",
+                    "item_id": f"unc-quant-{evidence_digest[:32]}",
                     "subject_id": ev_id,
                     "kind": "quantitative_verification_gap",
                     "reason": "Quantitative artifact did not provide an explicit consistency verdict",
@@ -811,7 +852,11 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         raw_status = p["status"]
-        ev_id = f"ev-repro-{envelope.artifact_id[4:16]}"
+        evidence_digest = compute_sha256(canonical_json_bytes({
+            "artifact_id": envelope.artifact_id,
+            "locator": envelope.locator,
+        }))
+        ev_id = f"ev-repro-{evidence_digest[:32]}"
 
         if raw_status == "reproducible":
             support_status = "supported"
@@ -820,7 +865,7 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
         else:
             support_status = "unverifiable"
             plan.uncertainties.append({
-                "item_id": f"unc-repro-{envelope.artifact_id[4:16]}",
+                "item_id": f"unc-repro-{evidence_digest[:32]}",
                 "subject_id": ev_id,
                 "kind": "reproducibility_gap",
                 "reason": f"Reproduction audit status: {raw_status}",
@@ -884,7 +929,8 @@ class CrossReviewAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        registry_id = f"review-registry-{envelope.artifact_id[4:20]}"
+        artifact_identity = envelope.artifact_id[4:]
+        registry_id = f"review-registry-{artifact_identity}"
         plan.created_objects[registry_id] = {
             "id": registry_id,
             "kind": "cross_review_registry",
@@ -893,7 +939,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
 
         # 1. Consensus issues
         for idx, item in enumerate(p.get("consensus", [])):
-            ev_id = f"ev-rev-cons-{envelope.artifact_id[4:12]}-{idx}"
+            ev_id = f"ev-rev-cons-{artifact_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "direct_observation",
@@ -905,7 +951,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
 
         # 2. Contradictions -> evidence + uncertainties
         for idx, item in enumerate(p.get("contradictions", [])):
-            ev_id = f"ev-rev-contra-{envelope.artifact_id[4:12]}-{idx}"
+            ev_id = f"ev-rev-contra-{artifact_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "direct_observation",
@@ -915,7 +961,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                 },
             })
             plan.uncertainties.append({
-                "item_id": f"unc-contra-{envelope.artifact_id[4:12]}-{idx}",
+                "item_id": f"unc-contra-{artifact_identity}-{idx}",
                 "subject_id": ev_id,
                 "kind": "expert_disagreement",
                 "reason": str(item.get("summary") or item.get("title") or item),
@@ -924,7 +970,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
 
         # 3. Singletons -> evidence + uncertainties
         for idx, item in enumerate(p.get("singletons", [])):
-            ev_id = f"ev-rev-single-{envelope.artifact_id[4:12]}-{idx}"
+            ev_id = f"ev-rev-single-{artifact_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "direct_observation",
@@ -934,7 +980,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                 },
             })
             plan.uncertainties.append({
-                "item_id": f"unc-single-{envelope.artifact_id[4:12]}-{idx}",
+                "item_id": f"unc-single-{artifact_identity}-{idx}",
                 "subject_id": ev_id,
                 "kind": "expert_disagreement",
                 "reason": str(item.get("summary") or item.get("title") or item),
@@ -943,7 +989,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
 
         # 4. Findings (if present)
         for idx, f in enumerate(p.get("findings", [])):
-            f_id = f"ev-review-{envelope.artifact_id[4:12]}-{idx}"
+            f_id = f"ev-review-{artifact_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": f_id,
                 "anchor_type": "direct_observation",
@@ -958,7 +1004,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
         # 5. Dissenting opinions -> uncertainties
         for idx, d in enumerate(p.get("dissenting_opinions", [])):
             plan.uncertainties.append({
-                "item_id": f"unc-dissent-{envelope.artifact_id[4:12]}-{idx}",
+                "item_id": f"unc-dissent-{artifact_identity}-{idx}",
                 "subject_id": envelope.artifact_id,
                 "kind": "expert_disagreement",
                 "reason": str(d),
@@ -991,7 +1037,14 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
                 "Systematic review payload requires 'included_studies', "
                 "'screening_results', or 'meta_analysis'"
             ]
-        return True, []
+        errors = []
+        for idx, result in enumerate(p.get("screening_results", [])):
+            decision = result.get("decision")
+            if decision is not None and decision not in {"include", "exclude", "maybe"}:
+                errors.append(
+                    f"screening_results[{idx}].decision must be include, exclude, or maybe"
+                )
+        return not errors, errors
 
     def plan(
         self,
@@ -1015,23 +1068,23 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
             # older producer payloads that do not expose record_id.
             source_id = result.get("record_id") or result.get("study_id")
             if not source_id:
-                source_id = compute_sha256(canonical_json_bytes(result))[:16]
+                source_id = compute_sha256(canonical_json_bytes(result))[:32]
             # A screening decision and an extracted included-study record are
             # distinct objects even when they share the same study identifier.
             result_id = f"screening:{source_id}"
             plan.created_objects[result_id] = dict(
                 copy.deepcopy(result), id=result_id, kind="screening_result"
             )
-            if result.get("decision") in {None, "unclear", "maybe"}:
+            if result.get("decision") in {None, "maybe"}:
                 plan.uncertainties.append({
-                    "item_id": f"unc-screen-{envelope.artifact_id[4:12]}-{idx}",
+                    "item_id": f"unc-screen-{envelope.artifact_id[4:]}-{idx}",
                     "subject_id": result_id,
                     "kind": "screening_ambiguity",
                     "reason": "Screening result has no determinate include/exclude decision",
                     "needs_human": True,
                 })
         if "meta_analysis" in p:
-            analysis_id = f"meta-{envelope.artifact_id[4:20]}"
+            analysis_id = f"meta-{envelope.artifact_id[4:]}"
             plan.created_objects[analysis_id] = {
                 "id": analysis_id,
                 "kind": "meta_analysis",
@@ -1088,7 +1141,7 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
                 w.get("work_id")
                 or (f"work:doi:{doi}" if doi else None)
                 or (f"work:{title}" if title else None)
-                or f"work:{compute_sha256(canonical_json_bytes(w))[:16]}"
+                or f"work:{compute_sha256(canonical_json_bytes(w))[:32]}"
             )
             plan.created_objects[w_id] = copy.deepcopy(w)
         return plan
@@ -1126,14 +1179,14 @@ class LiteratureWatchAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         for p_item in p.get("new_papers", []):
-            pid = p_item.get("id") or f"paper-{compute_sha256(canonical_json_bytes(p_item))[:16]}"
+            pid = p_item.get("id") or f"paper-{compute_sha256(canonical_json_bytes(p_item))[:32]}"
             plan.created_objects[pid] = copy.deepcopy(p_item)
         for citation in p.get("new_citations", []):
-            cid = citation.get("id") or f"citation-{compute_sha256(canonical_json_bytes(citation))[:16]}"
+            cid = citation.get("id") or f"citation-{compute_sha256(canonical_json_bytes(citation))[:32]}"
             plan.created_objects[cid] = dict(copy.deepcopy(citation), id=cid, kind="citation_delta")
         if p.get("truncations"):
             plan.uncertainties.append({
-                "item_id": f"unc-literature-{envelope.artifact_id[4:16]}",
+                "item_id": f"unc-literature-{envelope.artifact_id[4:]}",
                 "subject_id": envelope.artifact_id,
                 "kind": "literature_coverage_gap",
                 "reason": "Literature delta reports truncated result coverage",
@@ -1181,7 +1234,11 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             target = f"doi:{p['doi']}"
         if not target:
             target = envelope.subject_refs[0]
-        event_id = f"publication-status-{envelope.artifact_id[4:20]}"
+        event_digest = compute_sha256(canonical_json_bytes({
+            "artifact_id": envelope.artifact_id,
+            "target_work_id": target,
+        }))
+        event_id = f"publication-status-{event_digest[:32]}"
         plan.created_objects[event_id] = {
             "id": event_id,
             "kind": "publication_status_observation",
@@ -1192,21 +1249,26 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             p.get("verification_status") in {"retained_prior", "unverified"}
             or ("current_observation" in p and p.get("current_observation") is None)
             or p["is_retracted"] is None
+            or p.get("truncated") is True
         )
         current_observation = p.get("current_observation", p["is_retracted"])
         retraction_signal = bool(current_observation or p.get("signals"))
         if current_unknown:
             plan.uncertainties.append({
-                "item_id": f"unc-retract-{envelope.artifact_id[4:16]}",
+                "item_id": f"unc-retract-{event_digest[:32]}",
                 "subject_id": target,
                 "kind": "publication_status_change",
-                "reason": "Current publication status could not be verified",
+                "reason": (
+                    "Publication-status check was truncated and may omit updates"
+                    if p.get("truncated") is True
+                    else "Current publication status could not be verified"
+                ),
                 "needs_human": True,
             })
         elif retraction_signal:
             reason = p.get("retraction_reason") or "Retraction/correction signal requires revalidation"
             plan.uncertainties.append({
-                "item_id": f"unc-retract-{envelope.artifact_id[4:16]}",
+                "item_id": f"unc-retract-{event_digest[:32]}",
                 "subject_id": target,
                 "kind": "retraction_alert" if current_observation else "publication_status_change",
                 "reason": reason,
@@ -1246,7 +1308,8 @@ class MathComputationAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        ev_id = f"ev-math-{envelope.artifact_id[4:16]}"
+        artifact_identity = envelope.artifact_id[4:]
+        ev_id = f"ev-math-{artifact_identity}"
         is_verified = p.get("verified")
         plan.ceg_evidences.append({
             "id": ev_id,
@@ -1262,7 +1325,7 @@ class MathComputationAdapter(BaseArtifactAdapter):
         if is_verified is None:
             support_status = "unverifiable"
             plan.uncertainties.append({
-                "item_id": f"unc-math-{envelope.artifact_id[4:16]}",
+                "item_id": f"unc-math-{artifact_identity}",
                 "subject_id": ev_id,
                 "kind": "computation_unverified",
                 "reason": p.get("verification_error") or "Computation artifact omitted a verification result",

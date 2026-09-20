@@ -8,7 +8,7 @@
     "pull_requests_open": 1,
     "exact_head_workflow_runs_successful": 12,
     "exact_head_workflow_runs_failed": 0,
-    "verified_remediation_workflow_runs_successful": 2,
+    "verified_remediation_workflow_runs_successful": 3,
     "standalone_issues": 0,
     "pr12_review_threads_unresolved_at_start": 31,
     "pr12_review_findings_by_severity": {
@@ -17,7 +17,7 @@
       "P2": 1,
       "P3": 0
     },
-    "pr12_review_threads_observed_total": 45,
+    "pr12_review_threads_observed_total": 53,
     "pr12_followup_review_findings_by_severity": {
       "P0": 0,
       "P1": 7,
@@ -32,8 +32,15 @@
       "P3": 0
     },
     "pr12_second_followup_findings_remediated_locally": 7,
+    "pr12_third_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 5,
+      "P2": 3,
+      "P3": 0
+    },
+    "pr12_third_followup_findings_remediated_locally": 8,
     "local_tests_after_remediation": {
-      "passed": 703,
+      "passed": 713,
       "skipped": 3,
       "failed": 0
     }
@@ -54,7 +61,8 @@
   ],
   "remediation_checkpoints": [
     {"pull_request": 12, "head_sha": "24469778b15bd8cba136d4494d8da9c69c7fc1d9", "workflow_run_id": 35494388854, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 7}},
-    {"pull_request": 12, "head_sha": "5e9a802c1bbd21a697cb6859eefc5ed54112dc39", "workflow_run_id": 35495732974, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 6, "P2": 1}}
+    {"pull_request": 12, "head_sha": "5e9a802c1bbd21a697cb6859eefc5ed54112dc39", "workflow_run_id": 35495732974, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 6, "P2": 1}},
+    {"pull_request": 12, "head_sha": "9bb8726b5b0ef4b3df02083a5e4c24b52b317fd9", "workflow_run_id": 35496991058, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5, "P2": 3}}
   ],
   "open_register": [
     {"id": "OPS-01", "severity": "P2", "category": "ci_coverage", "status": "accepted_operational_limitation"},

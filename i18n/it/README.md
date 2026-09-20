@@ -81,7 +81,7 @@ git diff --check
 
 Il QA convalida metadati, riferimenti, percorsi personali/segreti noti, sintassi Python e blocchi di codice contrassegnati. Restituisce 0 in caso di successo, 1 per errori di codice/schema/identità e 2 per indisponibilità di trasporto/autenticazione/quota.
 
-La CI esegue la suite completa di test su Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 e macOS Intel, con 703 test unitari superati e 40 blocchi di codice eseguibili validati.
+La CI esegue la suite completa di test su Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 e macOS Intel, con 713 test unitari superati e 40 blocchi di codice eseguibili validati.
 
 tools/longtail/ contiene il generatore deterministico di scenari estremi di coda lunga: 4096 combinazioni candidate con seed SHA256 su assi di fattori disaccoppiati, selezione vorace della copertura e report in generated-scenarios.json.
 
