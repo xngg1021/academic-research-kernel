@@ -690,40 +690,41 @@ class IngestionKernelState:
                 item["id"] for item in ceg_data.get("evidence_anchors", [])
             )
             ceg_edge_ids.update(
-                f"{item['evidence_id']}->{item['claim_id']}"
+                compute_sha256(canonical_json_bytes(item))
                 for item in ceg_data.get("support_edges", [])
             )
 
         ledger_decisions: Dict[str, str] = {}
-        ledger_bases = set()
-        ledger_forks = set()
-        ledger_state_events = set()
-        ledger_corrections = set()
+        ledger_bases: set[Tuple[str, str, str, str]] = set()
+        ledger_forks: Dict[Tuple[str, str], str] = {}
+        ledger_state_events: Dict[Tuple[str, str], str] = {}
+        ledger_corrections: Dict[Tuple[str, str], str] = {}
         if self.ledger is not None:
             ledger_data = self.ledger.to_dict()
             ledger_decisions.update({
                 item["id"]: compute_sha256(canonical_json_bytes(item))
                 for item in ledger_data.get("decisions", [])
             })
-            ledger_bases.update(
-                (item["decision_id"], item["basis_kind"], item["basis_id"])
-                for item in ledger_data.get("bases", [])
-            )
-            ledger_forks.update(
-                (
+            for item in ledger_data.get("bases", []):
+                ledger_bases.add((
                     item["decision_id"],
+                    item["basis_kind"],
+                    item["basis_id"],
                     compute_sha256(canonical_json_bytes(item)),
-                )
-                for item in ledger_data.get("forks", [])
-            )
-            ledger_state_events.update(
-                (item["decision_id"], item["event_id"])
-                for item in ledger_data.get("state_events", [])
-            )
-            ledger_corrections.update(
-                (item["decision_id"], item["correction_id"])
-                for item in ledger_data.get("corrections", [])
-            )
+                ))
+            for item in ledger_data.get("forks", []):
+                record_digest = compute_sha256(canonical_json_bytes(item))
+                ledger_forks[(item["decision_id"], record_digest)] = record_digest
+            for item in ledger_data.get("state_events", []):
+                ledger_state_events[(
+                    item["decision_id"],
+                    item["event_id"],
+                )] = compute_sha256(canonical_json_bytes(item))
+            for item in ledger_data.get("corrections", []):
+                ledger_corrections[(
+                    item["decision_id"],
+                    item["correction_id"],
+                )] = compute_sha256(canonical_json_bytes(item))
 
         for cache_key, receipt in self.ingestion_receipts.items():
             expected_sha = self.ingested_artifacts.get(receipt.source_artifact_id)
@@ -786,23 +787,31 @@ class IngestionKernelState:
                 decision_id = binding.get("decision_id")
                 binding_kind = binding.get("binding_kind")
                 basis_id = binding.get("basis_id")
+                record_digest = binding.get("record_digest")
                 if binding_kind == "ledger_decision":
                     retained = (
                         decision_id == basis_id
                         and ledger_decisions.get(decision_id)
-                        == binding.get("record_digest")
+                        == record_digest
                     )
                 elif binding_kind == "ledger_fork":
-                    retained = (decision_id, basis_id) in ledger_forks
+                    retained = ledger_forks.get((decision_id, basis_id)) == record_digest
                 elif binding_kind == "ledger_state_event":
-                    retained = (decision_id, basis_id) in ledger_state_events
+                    retained = (
+                        ledger_state_events.get((decision_id, basis_id))
+                        == record_digest
+                    )
                 elif binding_kind == "outcome_correction":
-                    retained = (decision_id, basis_id) in ledger_corrections
+                    retained = (
+                        ledger_corrections.get((decision_id, basis_id))
+                        == record_digest
+                    )
                 else:
                     retained = (
                         decision_id,
                         binding_kind,
                         basis_id,
+                        record_digest,
                     ) in ledger_bases
                 if not retained:
                     errors.append(

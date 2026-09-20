@@ -64,6 +64,7 @@ def test_valid_ingestion_receipt():
             "decision_id": "d1",
             "binding_kind": "evidence_receipt",
             "basis_id": "ev1",
+            "record_digest": "1" * 64,
         }],
         "uncertainties": [],
         "ignored_fields": [],

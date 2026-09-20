@@ -242,7 +242,10 @@ def test_lineage_replay_rejects_resigned_disconnected_cycle():
     assert "target-scoped causal closure" in error
 
 
-def test_lineage_replay_requires_observable_content_verification(tmp_path):
+def test_lineage_replay_requires_observable_content_verification(
+    tmp_path,
+    monkeypatch,
+):
     receipt, _ = _lineage_fixture()
     receipt["entities"][0].update({
         "sha256": "a" * 64,
@@ -257,27 +260,152 @@ def test_lineage_replay_requires_observable_content_verification(tmp_path):
     assert ok is False
     assert "cannot be independently established" in error
 
+    # An untrusted serialized locator must never cause an ambient host read.
+    receipt["entities"][0]["locator"] = str(tmp_path / "host-secret.bin")
+    ref = _resign_lineage_receipt(receipt, check_on_disk_hashes=True)
+
+    def forbidden_open(*_args, **_kwargs):
+        raise AssertionError("untrusted lineage locator attempted a host read")
+
+    monkeypatch.setattr(Path, "open", forbidden_open)
+    ok, error = validate_lineage_receipt_contract(ref, receipt)
+    assert ok is False
+    assert "explicitly authorized content root or provider" in error
+    authorized_root = tmp_path / "authorized"
+    authorized_root.mkdir()
+    ok, error = validate_lineage_receipt_contract(
+        ref,
+        receipt,
+        content_root=authorized_root,
+    )
+    assert ok is False
+    assert "outside the explicitly authorized content root" in error
+    monkeypatch.undo()
+
     artifact = tmp_path / "observable.bin"
     artifact.write_bytes(b"observable lineage bytes")
-    graph = provenance.LineageGraph()
+    graph = provenance.LineageGraph(root_dir=tmp_path)
     graph.add_entity(
         "observable",
         "data_snapshot",
-        locator=str(artifact),
+        locator="observable.bin",
         sha256=compute_sha256(artifact.read_bytes()),
     )
-    observed = provenance.trace_origin(
+    observed_obj = provenance.trace_origin(
         graph,
         "observable",
         check_on_disk_hashes=True,
-    ).to_dict()
+    )
+    observed = observed_obj.to_dict()
     observed_ref = ReceiptRef(
         kind="lineage",
         schema_version="lineage-receipt-1.0",
         receipt_id=observed["receipt_id"],
         receipt_digest=observed["receipt_digest"],
     )
-    assert validate_lineage_receipt_contract(observed_ref, observed) == (True, None)
+    # The in-process receipt retains its trusted graph root out of band.
+    assert validate_lineage_receipt_contract(observed_ref, observed_obj) == (True, None)
+    # A serialized payload cannot nominate an ambient root by itself.
+    ok, error = validate_lineage_receipt_contract(observed_ref, observed)
+    assert ok is False
+    assert "explicit root_dir" in error
+    # Callers can explicitly authorize either a contained root or exact bytes.
+    assert validate_lineage_receipt_contract(
+        observed_ref,
+        observed,
+        content_root=tmp_path,
+    ) == (True, None)
+    assert validate_lineage_receipt_contract(
+        observed_ref,
+        observed,
+        content_by_entity_id={"observable": artifact.read_bytes()},
+    ) == (True, None)
+    ok, error = validate_lineage_receipt_contract(
+        observed_ref,
+        observed,
+        content_by_entity_id={"observable": artifact.read_bytes()},
+        max_content_bytes=len(artifact.read_bytes()) - 1,
+    )
+    assert ok is False
+    assert "read-size budget" in error
+
+
+def test_lineage_replay_matches_producer_failure_precedence(tmp_path):
+    graph = provenance.LineageGraph()
+    graph.add_entity("target", "generic_entity")
+    graph.add_entity("z", "generic_entity")
+    # In insertion order the self-cycle comes first. Canonical order puts the
+    # target's missing source first; producer and verifier must choose alike.
+    graph.record_derivation("z", "z")
+    graph.record_derivation("target", "missing-a")
+    graph.record_derivation("target", "z")
+
+    produced = provenance.trace_origin(
+        graph,
+        "target",
+        check_on_disk_hashes=False,
+    )
+    physical = produced.to_dict()
+    ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=physical["receipt_id"],
+        receipt_digest=physical["receipt_digest"],
+    )
+
+    assert produced.verification_status == "broken_chain"
+    assert "missing-a" in (produced.error_detail or "")
+    assert validate_lineage_receipt_contract(ref, physical) == (True, None)
+
+    physical["error_detail"] = "self-consistent but false diagnostic"
+    forged_ref = _resign_lineage_receipt(physical)
+    ok, error = validate_lineage_receipt_contract(forged_ref, physical)
+    assert ok is False
+    assert "structural error detail mismatch" in error
+
+    content_graph = provenance.LineageGraph(root_dir=tmp_path)
+    content_graph.add_entity("target", "generic_entity")
+    content_graph.add_entity(
+        "z",
+        "data_snapshot",
+        sha256="0" * 64,
+        locator="z-missing.bin",
+    )
+    content_graph.add_entity(
+        "a",
+        "data_snapshot",
+        sha256="0" * 64,
+        locator="a-missing.bin",
+    )
+    content_graph.record_derivation("target", "z")
+    content_graph.record_derivation("target", "a")
+    content_receipt = provenance.trace_origin(
+        content_graph,
+        "target",
+        check_on_disk_hashes=True,
+    )
+    content_ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=content_receipt.receipt_id,
+        receipt_digest=content_receipt.receipt_digest,
+    )
+    assert "a-missing.bin" in (content_receipt.error_detail or "")
+    assert validate_lineage_receipt_contract(
+        content_ref,
+        content_receipt,
+    ) == (True, None)
+
+
+def test_lineage_replay_rejects_forged_node_record_contract():
+    receipt, _ = _lineage_fixture()
+    receipt["entities"][0]["type"] = "bogus"
+    ref = _resign_lineage_receipt(receipt)
+
+    ok, error = validate_lineage_receipt_contract(ref, receipt)
+
+    assert ok is False
+    assert "unsupported type" in error
 
 
 def test_lineage_activity_memberships_are_preindexed():

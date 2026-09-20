@@ -20,6 +20,23 @@ from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple, Uni
 
 VALID_RECEIPT_KINDS = frozenset({"lineage", "academic_evidence"})
 VALID_EVIDENCE_TYPES = frozenset({"metadata", "citation_count", "update_signal", "full_text", "computed"})
+VALID_LINEAGE_ENTITY_TYPES = frozenset({
+    "data_snapshot",
+    "code_file",
+    "environment_spec",
+    "statistic_artifact",
+    "table_cell",
+    "figure_artifact",
+    "generic_entity",
+})
+VALID_LINEAGE_ACTIVITY_TYPES = frozenset({
+    "data_cleaning",
+    "computation_run",
+    "statistical_analysis",
+    "table_extraction",
+    "render_run",
+    "generic_activity",
+})
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 REMOTE_LOCATOR_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
 
@@ -254,37 +271,87 @@ def _replay_lineage_content_verification(
     entities: List[Mapping[str, Any]],
     *,
     check_on_disk_hashes: bool,
+    content_root: Optional[Union[str, Path]] = None,
+    content_by_entity_id: Optional[Mapping[str, bytes]] = None,
+    max_content_bytes: int = 10 * 1024 * 1024,
 ) -> Tuple[str, str, Optional[str]]:
-    """Reproduce the provenance kernel's independently observable file checks.
+    """Reproduce content checks through an explicit, size-bounded authority.
 
-    A serialized receipt does not carry its producer's ``root_dir``.  Relative
-    locators are therefore deliberately unanchored here, while absolute local
-    paths can be re-hashed and remote identifiers remain unverified.
+    Receipt locators are untrusted data.  They are never opened unless the
+    caller explicitly supplies ``content_root``; even then, resolved paths must
+    remain inside that root and the cumulative read budget is enforced.
+    Callers may instead provide already-authorized bytes by entity ID.
     """
     if not check_on_disk_hashes:
         return "unchecked", "unchecked", None
+    if not isinstance(max_content_bytes, int) or max_content_bytes < 0:
+        raise ValueError("max_content_bytes must be a non-negative integer")
+
+    authorized_root: Optional[Path] = None
+    if content_root is not None:
+        authorized_root = Path(content_root).resolve(strict=True)
+        if not authorized_root.is_dir():
+            raise ValueError("content_root must resolve to an existing directory")
+    supplied_content = content_by_entity_id or {}
+    if not isinstance(supplied_content, collections.abc.Mapping):
+        raise TypeError("content_by_entity_id must be a mapping of entity IDs to bytes")
 
     total_hashed = 0
     verified_hashed = 0
     unanchored_relatives = 0
+    unauthorized_locals = 0
+    consumed_bytes = 0
     for entity in entities:
         declared_sha = entity.get("sha256")
         locator = entity.get("locator")
         if not declared_sha or not locator:
             continue
         total_hashed += 1
+        entity_id = entity.get("id")
+        supplied = supplied_content.get(entity_id)
+        if supplied is not None:
+            if not isinstance(supplied, bytes):
+                raise TypeError(
+                    f"Authorized content for entity {entity_id!r} must be bytes"
+                )
+            consumed_bytes += len(supplied)
+            if consumed_bytes > max_content_bytes:
+                raise ValueError("Authorized lineage content exceeds the read-size budget")
+            computed = hashlib.sha256(supplied).hexdigest().lower()
+            if computed != str(declared_sha).lower():
+                return (
+                    "hash_mismatch",
+                    "hash_mismatch",
+                    f"Content hash mismatch on entity {entity_id!r}: "
+                    f"expected {declared_sha}, got {computed}",
+                )
+            verified_hashed += 1
+            continue
+
         locator_text = str(locator).strip()
         if (
             REMOTE_LOCATOR_REGEX.match(locator_text)
             or locator_text.startswith(("urn:", "doi:"))
         ):
             continue
+        if authorized_root is None:
+            if Path(locator_text.split("#", 1)[0].split("?", 1)[0]).is_absolute():
+                unauthorized_locals += 1
+            else:
+                unanchored_relatives += 1
+            continue
         clean_path = locator_text.split("#", 1)[0].split("?", 1)[0]
         path = Path(clean_path)
-        if not path.is_absolute():
-            unanchored_relatives += 1
+        resolved = (
+            path.resolve()
+            if path.is_absolute()
+            else (authorized_root / path).resolve()
+        )
+        try:
+            resolved.relative_to(authorized_root)
+        except ValueError:
+            unauthorized_locals += 1
             continue
-        resolved = path.resolve()
         if not resolved.is_file():
             return (
                 "missing_artifact",
@@ -292,9 +359,17 @@ def _replay_lineage_content_verification(
                 f"Entity {entity.get('id')!r} declared SHA256 and local locator "
                 f"{locator!r}, but file does not exist on disk.",
             )
+        size = resolved.stat().st_size
+        if consumed_bytes + size > max_content_bytes:
+            raise ValueError("Authorized lineage content exceeds the read-size budget")
         digest = hashlib.sha256()
         with resolved.open("rb") as handle:
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                consumed_bytes += len(chunk)
+                if consumed_bytes > max_content_bytes:
+                    raise ValueError(
+                        "Authorized lineage content exceeds the read-size budget"
+                    )
                 digest.update(chunk)
         computed = digest.hexdigest().lower()
         if computed != str(declared_sha).lower():
@@ -311,17 +386,21 @@ def _replay_lineage_content_verification(
     if verified_hashed == total_hashed:
         return "intact", "fully_verified", None
     if verified_hashed > 0:
-        detail = (
-            "Relative local locator requires explicit root_dir for on-disk verification"
-            if unanchored_relatives > 0
-            else None
-        )
+        detail = None
+        if unanchored_relatives > 0:
+            detail = "Relative local locator requires explicit root_dir for on-disk verification"
+        elif unauthorized_locals > 0:
+            detail = "Local locator is outside the explicitly authorized content root"
         return "partial", "partially_verified", detail
-    detail = (
-        "Relative local locator requires explicit root_dir for on-disk verification"
-        if unanchored_relatives > 0
-        else None
-    )
+    detail = None
+    if unanchored_relatives > 0:
+        detail = "Relative local locator requires explicit root_dir for on-disk verification"
+    elif unauthorized_locals > 0:
+        detail = (
+            "Local locator is outside the explicitly authorized content root"
+            if authorized_root is not None
+            else "Local locator requires an explicitly authorized content root or provider"
+        )
     return "unchecked", "unverified", detail
 
 
@@ -348,11 +427,66 @@ def _replay_lineage_receipt_structure(
 
     entity_by_id = unique_index(entities, "entity")
     activity_by_id = unique_index(activities, "activity")
+
+    entity_fields = {"id", "type", "sha256", "locator", "metadata"}
+    for entity_id, entity in entity_by_id.items():
+        unexpected = set(entity) - entity_fields
+        if unexpected:
+            raise ValueError(
+                f"Entity {entity_id!r} has unexpected fields {sorted(unexpected)!r}"
+            )
+        if entity.get("type") not in VALID_LINEAGE_ENTITY_TYPES:
+            raise ValueError(
+                f"Entity {entity_id!r} has unsupported type {entity.get('type')!r}"
+            )
+        if "sha256" in entity and (
+            not isinstance(entity["sha256"], str)
+            or not SHA256_REGEX.fullmatch(entity["sha256"])
+        ):
+            raise ValueError(f"Entity {entity_id!r} has an invalid sha256")
+        if "locator" in entity and not isinstance(entity["locator"], str):
+            raise ValueError(f"Entity {entity_id!r} locator must be a string")
+        if "metadata" in entity and not isinstance(entity["metadata"], dict):
+            raise ValueError(f"Entity {entity_id!r} metadata must be an object")
+
+    activity_fields = {
+        "id",
+        "type",
+        "command",
+        "script_id",
+        "commit_sha",
+        "parameters",
+        "environment",
+        "timestamp",
+    }
+    for activity_id, activity in activity_by_id.items():
+        unexpected = set(activity) - activity_fields
+        if unexpected:
+            raise ValueError(
+                f"Activity {activity_id!r} has unexpected fields {sorted(unexpected)!r}"
+            )
+        if activity.get("type") not in VALID_LINEAGE_ACTIVITY_TYPES:
+            raise ValueError(
+                f"Activity {activity_id!r} has unsupported type {activity.get('type')!r}"
+            )
+        for field_name in ("command", "script_id", "commit_sha", "timestamp"):
+            if field_name in activity and not isinstance(activity[field_name], str):
+                raise ValueError(
+                    f"Activity {activity_id!r} {field_name} must be a string"
+                )
+        for field_name in ("parameters", "environment"):
+            if field_name in activity and not isinstance(activity[field_name], dict):
+                raise ValueError(
+                    f"Activity {activity_id!r} {field_name} must be an object"
+                )
+
     overlap = set(entity_by_id) & set(activity_by_id)
     if overlap:
         raise ValueError(f"Entity/activity namespace collision: {sorted(overlap)!r}")
 
     target_id = data.get("target_id")
+    if not isinstance(target_id, str):
+        raise ValueError("Lineage target_id must be a string")
     all_ids = set(entity_by_id) | set(activity_by_id)
     if target_id not in all_ids:
         if not entities and not activities and not edges:
@@ -381,6 +515,21 @@ def _replay_lineage_receipt_structure(
     for edge in sorted_edges:
         if not isinstance(edge, dict):
             raise ValueError("Every lineage edge must be an object")
+        unexpected = set(edge) - {
+            "type", "source_id", "target_id", "activity_id", "metadata"
+        }
+        if unexpected:
+            raise ValueError(
+                f"Lineage edge has unexpected fields {sorted(unexpected)!r}"
+            )
+        if not isinstance(edge.get("source_id"), str) or not isinstance(
+            edge.get("target_id"), str
+        ):
+            raise ValueError("Every lineage edge requires string source_id and target_id")
+        if "activity_id" in edge and not isinstance(edge["activity_id"], str):
+            raise ValueError("Lineage edge activity_id must be a string")
+        if "metadata" in edge and not isinstance(edge["metadata"], dict):
+            raise ValueError("Lineage edge metadata must be an object")
         edge_identity = canonical_json_bytes(edge)
         if edge_identity in edge_identities:
             raise ValueError("Duplicate lineage edge in serialized closure")
@@ -477,7 +626,8 @@ def _replay_lineage_receipt_structure(
                     record_failure(
                         "broken_chain",
                         "broken_chain",
-                        f"Derivation activity {activity_id!r} is detached from its derivation",
+                        f"Derivation activity {activity_id!r} is detached: it neither "
+                        f"consumed source {target!r} nor generated derived {source_id!r}",
                     )
 
     for activity_id, activity in sorted(activity_by_id.items()):
@@ -646,13 +796,25 @@ def _replay_lineage_receipt_structure(
     return "unchecked", "valid_dag", roots, steps, None
 
 
-def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional[str]]:
+def validate_lineage_receipt_integrity(
+    receipt_obj: Any,
+    *,
+    content_root: Optional[Union[str, Path]] = None,
+    content_by_entity_id: Optional[Mapping[str, bytes]] = None,
+    max_content_bytes: int = 10 * 1024 * 1024,
+) -> Tuple[bool, Optional[str]]:
     """Recompute both identities of a serialized LineageReceipt.
 
     Historical v1 receipts did not serialize ``check_on_disk_hashes`` even
     though it participates in ``receipt_digest``.  Verification therefore
     tries both legitimate boolean modes and still rejects every other digest.
     """
+    if content_root is None:
+        # In-process receipts produced by the provenance kernel retain their
+        # trusted graph root out of band.  It is deliberately absent from the
+        # serialized wire contract, so untrusted MCP payloads cannot nominate
+        # a host directory for the verifier to read.
+        content_root = getattr(receipt_obj, "_content_root", None)
     value = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
     if not isinstance(value, collections.abc.Mapping):
         return False, "Lineage receipt must be an object/mapping"
@@ -749,8 +911,12 @@ def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional
             return False, "Invalid lineage topology must have unchecked content verification"
         if data.get("root_ancestors") or data.get("trace_steps"):
             return False, "Invalid lineage topology must not declare roots or trace steps"
-        if not data.get("error_detail") and structural_error:
-            return False, "Invalid lineage topology requires an error_detail"
+        if (data.get("error_detail") or None) != structural_error:
+            return False, (
+                "Lineage structural error detail mismatch: "
+                f"declared {(data.get('error_detail') or None)!r}, "
+                f"replayed {structural_error!r}"
+            )
     else:
         content_status = data.get("content_verification")
         if content_status not in {
@@ -767,10 +933,13 @@ def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional
                 _replay_lineage_content_verification(
                     data["entities"],
                     check_on_disk_hashes=mode,
+                    content_root=content_root,
+                    content_by_entity_id=content_by_entity_id,
+                    max_content_bytes=max_content_bytes,
                 )
                 for mode in matching_modes
             ]
-        except OSError as exc:
+        except (OSError, TypeError, ValueError) as exc:
             return False, (
                 "Lineage content verification cannot be independently established: "
                 f"local locator check failed: {exc}"
@@ -804,7 +973,14 @@ def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional
     return True, None
 
 
-def validate_lineage_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tuple[bool, Optional[str]]:
+def validate_lineage_receipt_contract(
+    ref: ReceiptRef,
+    receipt_obj: Any,
+    *,
+    content_root: Optional[Union[str, Path]] = None,
+    content_by_entity_id: Optional[Mapping[str, bytes]] = None,
+    max_content_bytes: int = 10 * 1024 * 1024,
+) -> Tuple[bool, Optional[str]]:
     """Strictly assert lineage-receipt-1.0 protocol, exact receipt_id, and exact receipt_digest."""
     r_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
     if not isinstance(r_dict, (dict, collections.abc.Mapping)) or r_dict.get("protocol") != "lineage-receipt-1.0":
@@ -813,7 +989,12 @@ def validate_lineage_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tupl
         return False, f"Lineage receipt ID mismatch: expected {ref.receipt_id!r}, got {r_dict.get('receipt_id')!r}"
     if str(r_dict.get("receipt_digest", "")).lower() != str(ref.receipt_digest).lower():
         return False, f"Lineage receipt digest mismatch: expected {ref.receipt_digest!r}, got {r_dict.get('receipt_digest')!r}"
-    return validate_lineage_receipt_integrity(r_dict)
+    return validate_lineage_receipt_integrity(
+        receipt_obj,
+        content_root=content_root,
+        content_by_entity_id=content_by_entity_id,
+        max_content_bytes=max_content_bytes,
+    )
 
 
 def validate_academic_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tuple[bool, Optional[str]]:
@@ -844,10 +1025,23 @@ def validate_academic_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tup
     return True, None
 
 
-def verify_receipt_reference(ref: ReceiptRef, receipt_obj: Any) -> Tuple[bool, Optional[str]]:
+def verify_receipt_reference(
+    ref: ReceiptRef,
+    receipt_obj: Any,
+    *,
+    content_root: Optional[Union[str, Path]] = None,
+    content_by_entity_id: Optional[Mapping[str, bytes]] = None,
+    max_content_bytes: int = 10 * 1024 * 1024,
+) -> Tuple[bool, Optional[str]]:
     """Verify any ReceiptRef against a physical receipt instance based on kind."""
     if ref.kind == "lineage":
-        return validate_lineage_receipt_contract(ref, receipt_obj)
+        return validate_lineage_receipt_contract(
+            ref,
+            receipt_obj,
+            content_root=content_root,
+            content_by_entity_id=content_by_entity_id,
+            max_content_bytes=max_content_bytes,
+        )
     if ref.kind == "academic_evidence":
         return validate_academic_receipt_contract(ref, receipt_obj)
     return False, f"Unsupported receipt kind: {ref.kind!r}"

@@ -433,6 +433,7 @@ class LineageReceipt:
     activities: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
     edges: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
     trace_steps: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
+    _content_root: Optional[str] = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "root_ancestors", tuple(self.root_ancestors))
@@ -517,15 +518,23 @@ def validate_lineage(
     """
     scoped_entities = graph.entities
     scoped_activities = graph.activities
-    scoped_edges = graph.edges
+    scoped_edges = sorted(graph.edges, key=canonical_edge_tuple)
 
     if target_scope is not None:
         scoped_entities = {k: v for k, v in graph.entities.items() if k in target_scope}
         scoped_activities = {k: v for k, v in graph.activities.items() if k in target_scope}
-        scoped_edges = [
+        scoped_edges = sorted((
             e for e in graph.edges
             if e.source_id in target_scope and e.target_id in target_scope
-        ]
+        ), key=canonical_edge_tuple)
+
+    activity_inputs: Dict[str, Set[str]] = collections.defaultdict(set)
+    activity_outputs: Dict[str, Set[str]] = collections.defaultdict(set)
+    for edge in scoped_edges:
+        if edge.type == "used":
+            activity_inputs[edge.source_id].add(edge.target_id)
+        elif edge.type == "generated":
+            activity_outputs[edge.source_id].add(edge.target_id)
 
     # 1. Referential integrity on edges
     for edge in scoped_edges:
@@ -550,8 +559,8 @@ def validate_lineage(
             if edge.activity_id:
                 if edge.activity_id not in graph.activities:
                     return "broken_chain", "broken_chain", "unchecked", f"Derivation activity {edge.activity_id!r} does not exist in activities"
-                act_inputs = {e.target_id for e in scoped_edges if e.source_id == edge.activity_id and e.type == "used"}
-                act_outputs = {e.target_id for e in scoped_edges if e.source_id == edge.activity_id and e.type == "generated"}
+                act_inputs = activity_inputs.get(edge.activity_id, set())
+                act_outputs = activity_outputs.get(edge.activity_id, set())
                 if edge.target_id not in act_inputs and edge.source_id not in act_outputs:
                     return (
                         "broken_chain",
@@ -561,7 +570,8 @@ def validate_lineage(
                     )
 
     # 1b. Activity script_id referential integrity
-    for aid, act in scoped_activities.items():
+    for aid in sorted(scoped_activities):
+        act = scoped_activities[aid]
         if act.script_id:
             if act.script_id not in graph.entities:
                 return "missing_input", "missing_input", "unchecked", f"Activity {aid!r} references missing script entity {act.script_id!r}"
@@ -606,7 +616,8 @@ def validate_lineage(
     total_hashed = 0
     verified_hashed = 0
     unanchored_relatives = 0
-    for eid, ent in scoped_entities.items():
+    for eid in sorted(scoped_entities):
+        ent = scoped_entities[eid]
         if ent.sha256 and ent.locator:
             total_hashed += 1
             loc_path, is_unanchored = _resolve_locator_path(ent.locator, graph.root_dir)
@@ -746,6 +757,7 @@ def trace_origin(
             topology_status="missing_input",
             content_verification="unchecked",
             error_detail=f"Target {tid!r} not found in provenance graph",
+            _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
         )
 
     # 1. Reverse graph traversal to isolate target's causal dependency closure
@@ -837,6 +849,7 @@ def trace_origin(
             entities=tuple(relevant_entities),
             activities=tuple(relevant_activities),
             edges=tuple(canonical_edges),
+            _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
         )
 
     # 3. Identify root ancestor entities in causal subgraph
@@ -942,4 +955,5 @@ def trace_origin(
         activities=tuple(relevant_activities),
         edges=tuple(canonical_edges),
         trace_steps=tuple(trace_steps),
+        _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
     )

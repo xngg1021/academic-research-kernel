@@ -9,6 +9,8 @@ Compatible with Claude Code, Cursor, Codex, Gemini CLI, and Hermes.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import sys
@@ -111,6 +113,11 @@ TOOLS = [
                 "receipt_payload": {
                     "type": "object",
                     "description": "The full physical receipt payload dictionary to verify."
+                },
+                "content_payloads": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "description": "Optional base64 content bytes keyed by lineage entity ID; total decoded content is capped at 10 MiB."
                 }
             }
         }
@@ -488,8 +495,50 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             schema_errors = validate_schema(receipt_payload, schema_file)
             if schema_errors:
                 return {"valid": False, "error": "; ".join(schema_errors)}
+            encoded_content = arguments.get("content_payloads")
+            content_by_entity_id = None
+            max_content_bytes = 10 * 1024 * 1024
+            if encoded_content is not None:
+                if not isinstance(encoded_content, dict):
+                    return {
+                        "valid": False,
+                        "error": "content_payloads must be a dictionary of base64 strings",
+                    }
+                content_by_entity_id = {}
+                total_content_bytes = 0
+                max_encoded_length = 4 * ((max_content_bytes + 2) // 3)
+                for entity_id, encoded in encoded_content.items():
+                    if not isinstance(entity_id, str) or not isinstance(encoded, str):
+                        return {
+                            "valid": False,
+                            "error": "content_payloads must map string entity IDs to base64 strings",
+                        }
+                    if len(encoded) > max_encoded_length:
+                        return {
+                            "valid": False,
+                            "error": "content_payloads exceeds the 10 MiB verification budget",
+                        }
+                    try:
+                        decoded = base64.b64decode(encoded, validate=True)
+                    except (binascii.Error, ValueError):
+                        return {
+                            "valid": False,
+                            "error": f"content_payloads[{entity_id!r}] is not valid base64",
+                        }
+                    total_content_bytes += len(decoded)
+                    if total_content_bytes > max_content_bytes:
+                        return {
+                            "valid": False,
+                            "error": "content_payloads exceeds the 10 MiB verification budget",
+                        }
+                    content_by_entity_id[entity_id] = decoded
             try:
-                ok, err = verify_receipt_reference(ref, receipt_payload)
+                ok, err = verify_receipt_reference(
+                    ref,
+                    receipt_payload,
+                    content_by_entity_id=content_by_entity_id,
+                    max_content_bytes=max_content_bytes,
+                )
             except Exception as exc:
                 return {"valid": False, "error": f"Receipt verification failed: {exc}"}
             if ok:
@@ -510,47 +559,57 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             target_id = arguments.get("target_entity_id")
             if not isinstance(graph_data, dict) or not target_id:
                 return {"error": "'lineage_graph' must be a dict and 'target_entity_id' non-empty"}
-            lg = prov_mod.LineageGraph()
-            for ent in graph_data.get("entities", []):
-                lg.add_entity(
-                    ent["id"],
-                    type=ent.get("type", "generic_entity"),
-                    sha256=ent.get("sha256"),
-                    locator=ent.get("locator"),
-                    metadata=ent.get("metadata"),
-                )
-            for act in graph_data.get("activities", []):
-                timestamp = act.get("timestamp")
-                if not isinstance(timestamp, str) or not timestamp.strip():
-                    raise ValueError(
-                        f"Lineage activity {act.get('id')!r} requires an explicit timestamp"
+            try:
+                lg = prov_mod.LineageGraph()
+                for ent in graph_data.get("entities", []):
+                    lg.add_entity(
+                        ent["id"],
+                        type=ent.get("type", "generic_entity"),
+                        sha256=ent.get("sha256"),
+                        locator=ent.get("locator"),
+                        metadata=ent.get("metadata"),
                     )
-                lg.add_activity(
-                    act["id"],
-                    type=act.get("type", "generic_activity"),
-                    command=act.get("command"),
-                    script_id=act.get("script_id"),
-                    commit_sha=act.get("commit_sha"),
-                    parameters=act.get("parameters"),
-                    environment=act.get("environment"),
-                    timestamp=timestamp,
-                )
-            for edge in graph_data.get("edges", []):
-                edge_type = edge["type"]
-                metadata = edge.get("metadata")
-                if edge_type == "derived_from":
-                    lg.record_derivation(
-                        edge["source_id"],
-                        edge["target_id"],
-                        activity_id=edge.get("activity_id"),
-                        metadata=metadata,
+                for act in graph_data.get("activities", []):
+                    timestamp = act.get("timestamp")
+                    if not isinstance(timestamp, str) or not timestamp.strip():
+                        raise ValueError(
+                            f"Lineage activity {act.get('id')!r} requires an explicit timestamp"
+                        )
+                    lg.add_activity(
+                        act["id"],
+                        type=act.get("type", "generic_activity"),
+                        command=act.get("command"),
+                        script_id=act.get("script_id"),
+                        commit_sha=act.get("commit_sha"),
+                        parameters=act.get("parameters"),
+                        environment=act.get("environment"),
+                        timestamp=timestamp,
                     )
-                elif edge_type == "used":
-                    lg.record_used(edge["source_id"], edge["target_id"], metadata=metadata)
-                elif edge_type == "generated":
-                    lg.record_generated(edge["source_id"], edge["target_id"], metadata=metadata)
-                else:
-                    raise ValueError(f"Unsupported lineage edge type: {edge_type!r}")
+                for edge in graph_data.get("edges", []):
+                    edge_type = edge["type"]
+                    metadata = edge.get("metadata")
+                    if edge_type == "derived_from":
+                        lg.record_derivation(
+                            edge["source_id"],
+                            edge["target_id"],
+                            activity_id=edge.get("activity_id"),
+                            metadata=metadata,
+                        )
+                    elif edge_type == "used":
+                        lg.record_used(
+                            edge["source_id"], edge["target_id"], metadata=metadata
+                        )
+                    elif edge_type == "generated":
+                        lg.record_generated(
+                            edge["source_id"], edge["target_id"], metadata=metadata
+                        )
+                    else:
+                        raise ValueError(f"Unsupported lineage edge type: {edge_type!r}")
+            except (KeyError, TypeError, ValueError) as exc:
+                return {
+                    "error": "Invalid lineage graph",
+                    "details": [str(exc)],
+                }
             receipt = prov_mod.trace_origin(lg, target_id, check_on_disk_hashes=False)
             return {"target_entity_id": target_id, "receipt": receipt.to_dict()}
 

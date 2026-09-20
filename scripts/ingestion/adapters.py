@@ -433,7 +433,8 @@ class BaseArtifactAdapter(ABC):
             created_ceg_nodes.extend(sorted(state.ceg.claims))
             created_ceg_nodes.extend(sorted(state.ceg.evidence_anchors))
             created_ceg_edges.extend(
-                f"{edge.evidence_id}->{edge.claim_id}" for edge in state.ceg.support_edges
+                compute_sha256(canonical_json_bytes(edge.to_dict()))
+                for edge in state.ceg.support_edges
             )
         if state.ceg is not None:
             for c in plan.ceg_claims:
@@ -470,7 +471,9 @@ class BaseArtifactAdapter(ABC):
                     receipt_ref=edge.get("receipt_ref"),
                     metadata=meta,
                 )
-                created_ceg_edges.append(f"{edge['evidence_id']}->{edge['claim_id']}")
+                created_ceg_edges.append(
+                    compute_sha256(canonical_json_bytes(edge_obj.to_dict()))
+                )
 
             for r in getattr(plan, "ceg_relations", []):
                 state.ceg.add_claim_relation(
@@ -499,24 +502,31 @@ class BaseArtifactAdapter(ABC):
                     "decision_id": basis["decision_id"],
                     "binding_kind": basis["basis_kind"],
                     "basis_id": basis["basis_id"],
+                    "record_digest": compute_sha256(canonical_json_bytes(basis)),
                 })
             for fork in ledger_export.get("forks", []):
+                fork_digest = compute_sha256(canonical_json_bytes(fork))
                 applied_ledger_bindings.append({
                     "decision_id": fork["decision_id"],
                     "binding_kind": "ledger_fork",
-                    "basis_id": compute_sha256(canonical_json_bytes(fork)),
+                    "basis_id": fork_digest,
+                    "record_digest": fork_digest,
                 })
             for event in ledger_export.get("state_events", []):
                 applied_ledger_bindings.append({
                     "decision_id": event["decision_id"],
                     "binding_kind": "ledger_state_event",
                     "basis_id": event["event_id"],
+                    "record_digest": compute_sha256(canonical_json_bytes(event)),
                 })
             for correction in ledger_export.get("corrections", []):
                 applied_ledger_bindings.append({
                     "decision_id": correction["decision_id"],
                     "binding_kind": "outcome_correction",
                     "basis_id": correction["correction_id"],
+                    "record_digest": compute_sha256(
+                        canonical_json_bytes(correction)
+                    ),
                 })
         if state.ledger is not None:
             for dec in plan.ledger_decisions:
@@ -540,7 +550,7 @@ class BaseArtifactAdapter(ABC):
                 })
 
             for b in plan.ledger_bases:
-                state.ledger.add_basis(
+                basis = state.ledger.add_basis(
                     decision_id=b["decision_id"],
                     basis_kind=b["basis_kind"],
                     basis_id=b["basis_id"],
@@ -551,6 +561,9 @@ class BaseArtifactAdapter(ABC):
                     "decision_id": b["decision_id"],
                     "binding_kind": b["basis_kind"],
                     "basis_id": b["basis_id"],
+                    "record_digest": compute_sha256(
+                        canonical_json_bytes(basis.to_dict())
+                    ),
                 })
 
             for f in getattr(plan, "ledger_forks", []):
@@ -567,6 +580,9 @@ class BaseArtifactAdapter(ABC):
                     "decision_id": fork.decision_id,
                     "binding_kind": "ledger_fork",
                     "basis_id": compute_sha256(canonical_json_bytes(fork.to_dict())),
+                    "record_digest": compute_sha256(
+                        canonical_json_bytes(fork.to_dict())
+                    ),
                 })
 
             for ev in getattr(plan, "ledger_state_events", []):
@@ -585,6 +601,9 @@ class BaseArtifactAdapter(ABC):
                     "decision_id": event.decision_id,
                     "binding_kind": "ledger_state_event",
                     "basis_id": event.event_id,
+                    "record_digest": compute_sha256(
+                        canonical_json_bytes(event.to_dict())
+                    ),
                 })
 
             for corr in getattr(plan, "ledger_outcome_corrections", []):
@@ -602,6 +621,9 @@ class BaseArtifactAdapter(ABC):
                     "decision_id": corr["decision_id"],
                     "binding_kind": "outcome_correction",
                     "basis_id": corr_res.correction_id,
+                    "record_digest": compute_sha256(
+                        canonical_json_bytes(corr_res.to_dict())
+                    ),
                 })
 
         # 5. Synchronise the domain-derived projection while retaining

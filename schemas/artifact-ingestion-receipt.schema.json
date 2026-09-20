@@ -102,7 +102,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["decision_id", "binding_kind", "basis_id"],
+        "required": ["decision_id", "binding_kind", "basis_id", "record_digest"],
         "properties": {
           "decision_id": {
             "type": "string"
@@ -118,20 +118,7 @@
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
           }
-        },
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "binding_kind": {"const": "ledger_decision"}
-              },
-              "required": ["binding_kind"]
-            },
-            "then": {
-              "required": ["record_digest"]
-            }
-          }
-        ]
+        }
       }
     },
     "uncertainties": {

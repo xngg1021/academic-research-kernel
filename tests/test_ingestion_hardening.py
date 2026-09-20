@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import copy
+from dataclasses import replace
 import json
 from pathlib import Path
 import subprocess
@@ -799,6 +801,81 @@ def test_mcp_lineage_trace_preserves_canonical_fields_and_direction():
     assert raw["metadata"] == {"version": 1}
     assert run["script_id"] == "analysis.py"
     assert run["environment"] == {"python": "3.12"}
+
+
+def test_mcp_lineage_trace_returns_structured_duplicate_generator_error():
+    graph = {
+        "entities": [{"id": "result", "type": "statistic_artifact"}],
+        "activities": [
+            {
+                "id": "run-a",
+                "type": "statistical_analysis",
+                "timestamp": "2026-09-20T00:00:00Z",
+            },
+            {
+                "id": "run-b",
+                "type": "statistical_analysis",
+                "timestamp": "2026-09-20T00:00:01Z",
+            },
+        ],
+        "edges": [
+            {"type": "generated", "source_id": "run-a", "target_id": "result"},
+            {"type": "generated", "source_id": "run-b", "target_id": "result"},
+        ],
+    }
+
+    response, body = call_tool(
+        "research_lineage_trace",
+        {"lineage_graph": graph, "target_entity_id": "result"},
+    )
+
+    assert response["result"]["isError"] is True
+    assert body["error"] == "Invalid lineage graph"
+    assert any("already generated" in detail for detail in body["details"])
+
+
+def test_mcp_receipt_verify_uses_only_authorized_content_bytes(tmp_path):
+    content = b"authorized lineage content"
+    artifact = tmp_path / "observable.bin"
+    artifact.write_bytes(content)
+    graph = mcp_server.prov_mod.LineageGraph(root_dir=tmp_path)
+    graph.add_entity(
+        "observable",
+        "data_snapshot",
+        sha256=compute_sha256(content),
+        locator="observable.bin",
+    )
+    physical = mcp_server.prov_mod.trace_origin(
+        graph,
+        "observable",
+        check_on_disk_hashes=True,
+    ).to_dict()
+    ref = {
+        "kind": "lineage",
+        "schema_version": "lineage-receipt-1.0",
+        "receipt_id": physical["receipt_id"],
+        "receipt_digest": physical["receipt_digest"],
+    }
+
+    without_response, without_content = call_tool(
+        "research_receipt_verify",
+        {"receipt_ref": ref, "receipt_payload": physical},
+    )
+    with_response, with_content = call_tool(
+        "research_receipt_verify",
+        {
+            "receipt_ref": ref,
+            "receipt_payload": physical,
+            "content_payloads": {
+                "observable": base64.b64encode(content).decode("ascii")
+            },
+        },
+    )
+
+    assert without_response["result"]["isError"] is True
+    assert without_content["valid"] is False
+    assert with_response["result"]["isError"] is False
+    assert with_content == {"valid": True}
 
 
 def test_real_stdio_transport_handles_tools_list_and_tools_call():
@@ -2264,6 +2341,16 @@ def test_cached_receipt_rejects_missing_recorded_mutations_on_replay():
             ledger_cls=ledger_mod.DecisionLedger,
         )
 
+    ceg_edge_changed = state.clone()
+    original_edge = ceg_edge_changed.ceg.support_edges[0]
+    ceg_edge_changed.ceg.support_edges[0] = replace(
+        original_edge,
+        support_status="contradicted",
+    )
+    valid, errors = ceg_edge_changed.validate_invariants()
+    assert valid is False
+    assert any("missing CEG edge" in error for error in errors)
+
     ledger_missing = state.clone()
     ledger_missing.ledger._corrections.clear()
     ledger_missing.ledger._corrections_by_decision.clear()
@@ -2279,6 +2366,18 @@ def test_cached_ledger_snapshot_tracks_every_mutation_family():
     source = ledger_mod.DecisionLedger("snapshot-ledger")
     source.add_decision("decision-1", "Primary", decision_action="commit")
     source.add_decision("decision-2", "Alternative", decision_action="explore")
+    source.add_basis(
+        "decision-2",
+        "decision",
+        "decision-1",
+        metadata={"source": "original"},
+    )
+    source.add_basis(
+        "decision-2",
+        "decision",
+        "decision-1",
+        metadata={"source": "second-record-with-the-same-endpoints"},
+    )
     source.add_fork("decision-1", "decision-2", "considered")
     source.add_state_event("decision-1", "active")
     source.add_outcome_correction("decision-1", "positive", "verified")
@@ -2297,6 +2396,7 @@ def test_cached_ledger_snapshot_tracks_every_mutation_family():
     assert receipt.status == "accepted"
     assert {binding["binding_kind"] for binding in receipt.ledger_bindings} == {
         "ledger_decision",
+        "decision",
         "ledger_fork",
         "ledger_state_event",
         "outcome_correction",
@@ -2305,6 +2405,30 @@ def test_cached_ledger_snapshot_tracks_every_mutation_family():
     fork_missing = state.clone()
     fork_missing.ledger._forks.clear()
     valid, errors = fork_missing.validate_invariants()
+    assert valid is False
+    assert any("missing Ledger binding" in error for error in errors)
+
+    basis_changed = state.clone()
+    replacement = ledger_mod.DecisionLedger("snapshot-ledger")
+    replacement.add_decision("decision-1", "Primary", decision_action="commit")
+    replacement.add_decision("decision-2", "Alternative", decision_action="explore")
+    replacement.add_basis(
+        "decision-2",
+        "decision",
+        "decision-1",
+        metadata={"source": "tampered"},
+    )
+    replacement.add_basis(
+        "decision-2",
+        "decision",
+        "decision-1",
+        metadata={"source": "second-record-with-the-same-endpoints"},
+    )
+    replacement.add_fork("decision-1", "decision-2", "considered")
+    replacement.add_state_event("decision-1", "active")
+    replacement.add_outcome_correction("decision-1", "positive", "verified")
+    basis_changed.ledger = replacement
+    valid, errors = basis_changed.validate_invariants()
     assert valid is False
     assert any("missing Ledger binding" in error for error in errors)
 

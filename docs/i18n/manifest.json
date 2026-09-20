@@ -131,7 +131,7 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "85ffc45dfbb33596cc06024ad36127f74615c0fc281f08f027126031b526d0d3",
+      "source_sha256": "683399cb50decc3059750281c975016509f29e8e357cb9a41edb635f14ded0a2",
       "section_hashes": {
         "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
         "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -141,7 +141,7 @@
         "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
         "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
         "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-        "Validation": "b34eb7ca3c03531dde775d70ef743e275a51e1a07c00a4cf42984f434824b8a3",
+        "Validation": "91fbee38d44742769880b684245210385f79b56cb366480c6c88390f5f0b1734",
         "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
       },
       "genre": "user_facing_documentation",
@@ -150,8 +150,8 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "85ffc45dfbb33596cc06024ad36127f74615c0fc281f08f027126031b526d0d3",
-          "translated_from_source_sha256": "85ffc45dfbb33596cc06024ad36127f74615c0fc281f08f027126031b526d0d3",
+          "localized_file_sha256": "683399cb50decc3059750281c975016509f29e8e357cb9a41edb635f14ded0a2",
+          "translated_from_source_sha256": "683399cb50decc3059750281c975016509f29e8e357cb9a41edb635f14ded0a2",
           "translated_from_section_hashes": {
             "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
@@ -161,7 +161,7 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Validation": "b34eb7ca3c03531dde775d70ef743e275a51e1a07c00a4cf42984f434824b8a3",
+            "Validation": "91fbee38d44742769880b684245210385f79b56cb366480c6c88390f5f0b1734",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -825,12 +825,12 @@
       "canonical_title": "Changelog and Release Manifest",
       "source_path": "CHANGELOG.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "3156a8c80edf051f8425e530a95d4e3dc522baaafa5eef6ff00318899e748877",
+      "source_sha256": "5521d66c5a6412934ed324fdfb4165afcb97999f8eb60ebaed7b09e911a12a42",
       "section_hashes": {
         "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
         "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "统一科研产物入库桥接与确定性内核公开界面 (Research Artifact Ingestion Bridge v1 / 协议：ingestion-receipt-1.0)": "858713192fdf711ddff469874287a4d61611bf9b103cc5906ac6eca60ddd1b1f",
-        "PR #12 合并前完整性加固与历史对账": "1b04675d6e6ff4fa122b187727aa0ab8ca914d20275d566cf6049389644d18fe",
+        "统一科研产物入库桥接与确定性内核公开界面 (Research Artifact Ingestion Bridge v1 / 协议：ingestion-receipt-1.0)": "e4726de9f209329664ca8fdaa1d9cd5b7b34ac03bbc9d1d2b5b95bf8debb261e",
+        "PR #12 合并前完整性加固与历史对账": "1a786e1d12b0928b31fb3bb60f22e69ba4cd0e5c12dd9d2f00146bfa1bc689c2",
         "2026-09-19（PR #11 / Research Decision Log v1，分支 work/decision-ledger-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)": "77af315a0c675b845a732384815b0df552c59b5ab74c7578957b4193eedcd5d0",
         "交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）": "aac4cee4591a3b46860f8b3e8a06c3e1e24657dcaf64d6ee4ee5a9e933357a26",
@@ -863,13 +863,13 @@
         "zh-Hans": {
           "path": "CHANGELOG.md",
           "status": "canonical_current",
-          "localized_file_sha256": "3156a8c80edf051f8425e530a95d4e3dc522baaafa5eef6ff00318899e748877",
-          "translated_from_source_sha256": "3156a8c80edf051f8425e530a95d4e3dc522baaafa5eef6ff00318899e748877",
+          "localized_file_sha256": "5521d66c5a6412934ed324fdfb4165afcb97999f8eb60ebaed7b09e911a12a42",
+          "translated_from_source_sha256": "5521d66c5a6412934ed324fdfb4165afcb97999f8eb60ebaed7b09e911a12a42",
           "translated_from_section_hashes": {
             "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
             "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "统一科研产物入库桥接与确定性内核公开界面 (Research Artifact Ingestion Bridge v1 / 协议：ingestion-receipt-1.0)": "858713192fdf711ddff469874287a4d61611bf9b103cc5906ac6eca60ddd1b1f",
-            "PR #12 合并前完整性加固与历史对账": "1b04675d6e6ff4fa122b187727aa0ab8ca914d20275d566cf6049389644d18fe",
+            "统一科研产物入库桥接与确定性内核公开界面 (Research Artifact Ingestion Bridge v1 / 协议：ingestion-receipt-1.0)": "e4726de9f209329664ca8fdaa1d9cd5b7b34ac03bbc9d1d2b5b95bf8debb261e",
+            "PR #12 合并前完整性加固与历史对账": "1a786e1d12b0928b31fb3bb60f22e69ba4cd0e5c12dd9d2f00146bfa1bc689c2",
             "2026-09-19（PR #11 / Research Decision Log v1，分支 work/decision-ledger-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)": "77af315a0c675b845a732384815b0df552c59b5ab74c7578957b4193eedcd5d0",
             "交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）": "aac4cee4591a3b46860f8b3e8a06c3e1e24657dcaf64d6ee4ee5a9e933357a26",
@@ -11481,17 +11481,17 @@
       "canonical_title": "Documentation: project-lineage-audit-20260920",
       "source_path": "docs/project-lineage-audit-20260920.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "2f08fa5ed7138e6ce52f7155cb739ecdce91d3a4627918def7c45f9b2dc01561",
+      "source_sha256": "e5bd575bf95fe08d41300a4ac8fd2fc2533475ccdc6ed190af393f88bc7d4dd2",
       "section_hashes": {
         "Project Lineage, PR/CI, and Residual-Risk Audit — 2026-09-20": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Scope and evidence boundary": "4ad371e42986d1e35f72105eb07f170223136af0085d631f0f515c219309ea09",
-        "Executive result": "e94d179cf3875c70316d25069b78cac4a56c2023ae328723cc39592d44d871e9",
-        "Complete PR and exact-head CI ledger": "0cfeccbb296fb34a55fe87eaf61f61fe7ccd6540907cf768e2fca3a7f940eff5",
+        "Executive result": "a5fc8729470c96fcd1f699e25b7178b486c5e271967c6cd44880563b5e52121d",
+        "Complete PR and exact-head CI ledger": "b84f16d75f8a1e53b5a1ef06d43266fa8ae6d7fab447eae21d1cb0d240d286a0",
         "CI interpretation": "1b60a98269ca4a239d85807f94159a6d957fbe7c013fa61fd78132308054e7a7",
-        "PR #12 remediation ledger": "3c3c7ef20b252445cf687186fce823017919f93de7b9901a49a092c632438694",
+        "PR #12 remediation ledger": "07b544a13ac7c6559ea341425e5e1f5c3c9c1e02f4d3567f95c05df994462cf9",
         "Project-planning audit": "da79c8873d72faa52987fb70013f284044944736e46daa25aff5b50c5baa722e",
         "Open P0–P3 and historical-residual register": "284198f0e09bd7276e13b8e6b4de8002caf02afd312932c695be1e2a5c50e576",
-        "Verification performed for this remediation": "be56a4392647bdbb862ac7d5cf74cc3a83dcc53c98a06206669e69271dbefa5e"
+        "Verification performed for this remediation": "ca57f56a6bac14b118f17287cdbf8b5a586e276e0b3d0b96c4b293bf0afe371d"
       },
       "genre": "technical_and_schema_specifications",
       "aidetox_intensity": "medium",
@@ -11508,18 +11508,18 @@
         "zh-Hans": {
           "path": "docs/project-lineage-audit-20260920.md",
           "status": "canonical_current",
-          "localized_file_sha256": "2f08fa5ed7138e6ce52f7155cb739ecdce91d3a4627918def7c45f9b2dc01561",
-          "translated_from_source_sha256": "2f08fa5ed7138e6ce52f7155cb739ecdce91d3a4627918def7c45f9b2dc01561",
+          "localized_file_sha256": "e5bd575bf95fe08d41300a4ac8fd2fc2533475ccdc6ed190af393f88bc7d4dd2",
+          "translated_from_source_sha256": "e5bd575bf95fe08d41300a4ac8fd2fc2533475ccdc6ed190af393f88bc7d4dd2",
           "translated_from_section_hashes": {
             "Project Lineage, PR/CI, and Residual-Risk Audit — 2026-09-20": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "Scope and evidence boundary": "4ad371e42986d1e35f72105eb07f170223136af0085d631f0f515c219309ea09",
-            "Executive result": "e94d179cf3875c70316d25069b78cac4a56c2023ae328723cc39592d44d871e9",
-            "Complete PR and exact-head CI ledger": "0cfeccbb296fb34a55fe87eaf61f61fe7ccd6540907cf768e2fca3a7f940eff5",
+            "Executive result": "a5fc8729470c96fcd1f699e25b7178b486c5e271967c6cd44880563b5e52121d",
+            "Complete PR and exact-head CI ledger": "b84f16d75f8a1e53b5a1ef06d43266fa8ae6d7fab447eae21d1cb0d240d286a0",
             "CI interpretation": "1b60a98269ca4a239d85807f94159a6d957fbe7c013fa61fd78132308054e7a7",
-            "PR #12 remediation ledger": "3c3c7ef20b252445cf687186fce823017919f93de7b9901a49a092c632438694",
+            "PR #12 remediation ledger": "07b544a13ac7c6559ea341425e5e1f5c3c9c1e02f4d3567f95c05df994462cf9",
             "Project-planning audit": "da79c8873d72faa52987fb70013f284044944736e46daa25aff5b50c5baa722e",
             "Open P0–P3 and historical-residual register": "284198f0e09bd7276e13b8e6b4de8002caf02afd312932c695be1e2a5c50e576",
-            "Verification performed for this remediation": "be56a4392647bdbb862ac7d5cf74cc3a83dcc53c98a06206669e69271dbefa5e"
+            "Verification performed for this remediation": "ca57f56a6bac14b118f17287cdbf8b5a586e276e0b3d0b96c4b293bf0afe371d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
