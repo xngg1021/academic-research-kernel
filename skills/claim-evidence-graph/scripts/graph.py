@@ -551,12 +551,13 @@ class ClaimEvidenceGraph:
         if eid in self._all_node_ids and self._all_node_ids[eid] != "evidence":
             raise ValueError(f"Namespace collision: ID {eid!r} is already registered as a claim.")
 
+        ref_obj = ReceiptRef(**receipt_ref) if isinstance(receipt_ref, collections.abc.Mapping) else receipt_ref
         new_ev = EvidenceAnchor(
             id=eid,
             anchor_type=anchor_type,
             source_work_id=source_work_id,
             locator=locator,
-            receipt_ref=receipt_ref,
+            receipt_ref=ref_obj,
             content_sha256=content_sha256,
             excerpt=excerpt,
             metadata=FrozenDict(metadata or {}),
@@ -595,11 +596,12 @@ class ClaimEvidenceGraph:
     ) -> EvidenceSupportEdge:
         eid = str(evidence_id).strip()
         cid = str(claim_id).strip()
+        ref_obj = ReceiptRef(**receipt_ref) if isinstance(receipt_ref, collections.abc.Mapping) else receipt_ref
         edge = EvidenceSupportEdge(
             evidence_id=eid,
             claim_id=cid,
             support_status=support_status,
-            receipt_ref=receipt_ref,
+            receipt_ref=ref_obj,
             metadata=FrozenDict(metadata or {}),
         )
         k = canonical_support_edge_tuple(edge)
@@ -1001,3 +1003,55 @@ class ClaimEvidenceGraph:
             "claim_relations": [copy.deepcopy(r) for r in canon_relations],
             "uncertainties": [copy.deepcopy(u) for u in canon_uncertainties],
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        receipt_registry: Optional[Mapping[str, Any]] = None,
+    ) -> "ClaimEvidenceGraph":
+        """Reconstruct a ClaimEvidenceGraph from an exported dictionary."""
+        g = cls(graph_id=data.get("graph_id", "default-graph"))
+        if receipt_registry:
+            for k, v in receipt_registry.items():
+                g.register_receipt(k, v)
+        for c in data.get("claims", []):
+            g.add_claim(
+                id=c["id"],
+                text=c["text"],
+                target_work_id=c.get("target_work_id"),
+                locator=c.get("locator"),
+                claim_type=c.get("claim_type", "empirical_finding"),
+                entities=tuple(c.get("entities", ())),
+            )
+        ev_list = data.get("evidence_anchors") or data.get("evidences") or []
+        for ev in ev_list:
+            ref = ReceiptRef(**ev["receipt_ref"]) if ev.get("receipt_ref") else None
+            g.add_evidence(
+                id=ev["id"],
+                anchor_type=ev["anchor_type"],
+                source_work_id=ev.get("source_work_id") or ev.get("target_work_id"),
+                locator=ev.get("locator"),
+                receipt_ref=ref,
+                content_sha256=ev.get("content_sha256"),
+                excerpt=ev.get("excerpt"),
+                metadata=ev.get("metadata"),
+            )
+        for s in data.get("support_edges", []):
+            s_ref = ReceiptRef(**s["receipt_ref"]) if s.get("receipt_ref") else None
+            g.add_support_edge(
+                evidence_id=s["evidence_id"],
+                claim_id=s["claim_id"],
+                support_status=s["support_status"],
+                receipt_ref=s_ref,
+                metadata=s.get("metadata"),
+            )
+        for r in data.get("claim_relations", []):
+            g.add_claim_relation(
+                source_claim_id=r["source_claim_id"],
+                target_claim_id=r["target_claim_id"],
+                relation_type=r.get("relation_type") or r.get("relation_kind", "corroborates"),
+                evidence_refs=tuple(r.get("evidence_refs", ())),
+                metadata=r.get("metadata"),
+            )
+        return g

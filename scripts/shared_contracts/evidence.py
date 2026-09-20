@@ -15,7 +15,7 @@ import re
 from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 VALID_RECEIPT_KINDS = frozenset({"lineage", "academic_evidence"})
-VALID_EVIDENCE_TYPES = frozenset({"direct_quote", "data_point", "method_reference", "statistical_assertion"})
+VALID_EVIDENCE_TYPES = frozenset({"metadata", "citation_count", "update_signal", "full_text", "computed"})
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -202,6 +202,8 @@ def validate_academic_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tup
         if not isinstance(claim, (dict, collections.abc.Mapping)):
             continue
         c_dict = claim if isinstance(claim, dict) else dict(claim)
+        if c_dict.get("evidence_type") not in VALID_EVIDENCE_TYPES:
+            continue
         # Check standard CEG claim digest
         if canonical_evidence_claim_digest(c_dict) == ref.claim_digest:
             matched_claim = True

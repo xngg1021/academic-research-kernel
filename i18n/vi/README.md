@@ -81,7 +81,7 @@ git diff --check
 
 QA xác thực siêu dữ liệu, tài liệu tham khảo, đường dẫn cá nhân/mô hình bí mật, cú pháp Python và các khối mã được đánh dấu. Trả về 0 khi thành công, 1 khi lỗi mã/lược đồ/danh tính và 2 khi không thể truy cập truyền tải/xác thực/hạn ngạch.
 
-CI chạy bộ thử nghiệm đầy đủ trên Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 và macOS Intel, với 654 bài kiểm tra đơn vị đã qua và 40 khối mã thực thi được xác thực.
+CI chạy bộ thử nghiệm đầy đủ trên Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 và macOS Intel, với 666 bài kiểm tra đơn vị đã qua và 40 khối mã thực thi được xác thực.
 
 tools/longtail/ chứa bộ tạo kịch bản đuôi dài cực đoan tất định: 4096 kết hợp ứng viên hạt giống SHA256 trên các trục nhân tố tách rời, lựa chọn độ bao phủ tham lam và báo cáo độ bao phủ trong generated-scenarios.json.
 

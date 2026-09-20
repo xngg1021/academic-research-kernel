@@ -110,7 +110,7 @@ def test_validate_lineage_receipt_contract():
 def test_validate_academic_receipt_contract():
     claim = {
         "claim": "Interleaving enhances retention",
-        "evidence_type": "data_point",
+        "evidence_type": "computed",
         "locator": "p. 1042",
         "source": "DOI:10.1037/bul0000209",
         "support_status": "supported",

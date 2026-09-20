@@ -26,7 +26,7 @@
   - 由原有的 3 个外围统计与硬件探测工具，全面扩展为 12 个确定性无状态科研内核工具（新增 `research_artifact_validate`、`research_artifact_ingest`、`research_receipt_verify`、`research_object_resolve`、`research_lineage_trace`、`claim_evidence_validate`、`claim_evidence_trace`、`decision_ledger_validate`、`decision_trace`）；
 - **端到端完整生命周期与对抗性用例**：
   - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
-  - 单测基线由 632 项扩充至 **654 passed**（40 independent executable smoke fences PASS）。
+  - 单测基线由 632 项扩充至 **666 passed**（40 independent executable smoke fences PASS）。
 
 ---
 

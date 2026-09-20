@@ -290,22 +290,18 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
 
             env = ArtifactEnvelope.from_dict(env_data)
 
-            # Rehydrate state if provided
-            state = IngestionKernelState()
+            # Rehydrate state if provided, or initialize default state
+            state = IngestionKernelState(
+                ceg=ceg_mod.ClaimEvidenceGraph(),
+                ledger=ledger_mod.DecisionLedger(),
+            )
             if state_data and isinstance(state_data, dict):
+                if "receipts" in state_data and isinstance(state_data["receipts"], dict):
+                    state.receipts = copy.deepcopy(state_data["receipts"])
                 if "ceg" in state_data and state_data["ceg"]:
-                    ceg_inst = ceg_mod.ClaimEvidenceGraph()
-                    # Populate claims and evidences
-                    for c in state_data["ceg"].get("claims", []):
-                        ceg_inst.add_claim(c["id"], c["text"], target_work_id=c.get("target_work_id"), locator=c.get("locator"))
-                    for ev in state_data["ceg"].get("evidences", []):
-                        ref_obj = None
-                        if ev.get("receipt_ref"):
-                            ref_obj = ReceiptRef(**ev["receipt_ref"])
-                        ceg_inst.add_evidence(ev["id"], ev["anchor_type"], locator=ev.get("locator"), receipt_ref=ref_obj)
-                    state.ceg = ceg_inst
+                    state.ceg = ceg_mod.ClaimEvidenceGraph.from_dict(state_data["ceg"], receipt_registry=state.receipts)
                 if "ledger" in state_data and state_data["ledger"]:
-                    state.ledger = ledger_mod.DecisionLedger.from_dict(state_data["ledger"])
+                    state.ledger = ledger_mod.DecisionLedger.from_dict(state_data["ledger"], receipt_registry=state.receipts)
                 if "objects" in state_data and isinstance(state_data["objects"], dict):
                     state.objects = copy.deepcopy(state_data["objects"])
 
@@ -360,35 +356,37 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 return {"error": "'lineage_graph' must be a dict and 'target_entity_id' non-empty"}
             lg = prov_mod.LineageGraph()
             for ent in graph_data.get("entities", []):
-                lg.add_entity(ent["id"], kind=ent.get("kind", "entity"), meta=ent.get("meta"))
+                lg.add_entity(ent["id"], type=ent.get("type", "entity"), locator=ent.get("locator"), metadata=ent.get("metadata"))
             for act in graph_data.get("activities", []):
-                lg.add_activity(act["id"], kind=act.get("kind", "activity"), meta=act.get("meta"))
+                lg.add_activity(
+                    act["id"],
+                    type=act.get("type", "generic_activity"),
+                    command=act.get("command"),
+                    parameters=act.get("parameters") or act.get("metadata"),
+                )
             for edge in graph_data.get("edges", []):
-                lg.add_edge(edge["source_id"], edge["target_id"], edge.get("relation", "wasDerivedFrom"))
-            ancestors = lg.upstream_lineage(target_id)
-            return {"target_entity_id": target_id, "upstream_lineage": ancestors}
+                rel = edge.get("relation", "wasDerivedFrom")
+                if rel == "wasDerivedFrom":
+                    lg.record_derivation(edge["source_id"], edge["target_id"])
+                elif rel == "used":
+                    lg.record_used(edge["source_id"], edge["target_id"])
+                elif rel == "wasGeneratedBy":
+                    lg.record_generated(edge["source_id"], edge["target_id"])
+            receipt = prov_mod.trace_origin(lg, target_id, check_on_disk_hashes=False)
+            return {"target_entity_id": target_id, "receipt": receipt.to_dict()}
 
         # 6. claim_evidence_validate
         elif name == "claim_evidence_validate":
             graph_data = arguments.get("graph")
             if not isinstance(graph_data, dict):
                 return {"valid": False, "errors": ["'graph' must be a dictionary"]}
-            cg = ceg_mod.ClaimEvidenceGraph()
-            for c in graph_data.get("claims", []):
-                cg.add_claim(c["id"], c["text"], target_work_id=c.get("target_work_id"), locator=c.get("locator"))
-            for ev in graph_data.get("evidences", []):
-                ref_obj = None
-                if ev.get("receipt_ref"):
-                    ref_obj = ReceiptRef(**ev["receipt_ref"])
-                cg.add_evidence(ev["id"], ev["anchor_type"], locator=ev.get("locator"), receipt_ref=ref_obj)
-            for edge in graph_data.get("support_edges", []):
-                cg.add_support_edge(edge["evidence_id"], edge["claim_id"], edge["support_status"])
+            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data)
             valid, errors = cg.validate_graph()
             return {
                 "valid": valid,
                 "errors": errors,
                 "graph_digest": cg.graph_digest(),
-                "node_count": len(graph_data.get("claims", [])) + len(graph_data.get("evidences", [])),
+                "node_count": len(cg.claims) + len(cg.evidence_anchors),
             }
 
         # 7. claim_evidence_trace
@@ -397,17 +395,8 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             claim_id = arguments.get("claim_id")
             if not isinstance(graph_data, dict) or not claim_id:
                 return {"error": "'graph' must be a dict and 'claim_id' non-empty"}
-            cg = ceg_mod.ClaimEvidenceGraph()
-            for c in graph_data.get("claims", []):
-                cg.add_claim(c["id"], c["text"], target_work_id=c.get("target_work_id"), locator=c.get("locator"))
-            for ev in graph_data.get("evidences", []):
-                ref_obj = None
-                if ev.get("receipt_ref"):
-                    ref_obj = ReceiptRef(**ev["receipt_ref"])
-                cg.add_evidence(ev["id"], ev["anchor_type"], locator=ev.get("locator"), receipt_ref=ref_obj)
-            for edge in graph_data.get("support_edges", []):
-                cg.add_support_edge(edge["evidence_id"], edge["claim_id"], edge["support_status"])
-            trace_info = cg.trace_provenance(claim_id)
+            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data)
+            trace_info = cg.trace_claim_provenance(claim_id)
             return {"claim_id": claim_id, "provenance_trace": trace_info}
 
         # 8. decision_ledger_validate
@@ -435,15 +424,17 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             try:
                 ledger_obj = ledger_mod.DecisionLedger.from_dict(ledger_data)
                 node = ledger_obj.get_decision(decision_id)
+                if node is None:
+                    return {"error": f"Decision '{decision_id}' not found in ledger"}
                 events = ledger_obj.get_state_history(decision_id)
                 corrections = ledger_obj.get_corrections(decision_id)
                 bases = ledger_obj.find_decisions_for(decision_id)
                 return {
                     "decision_id": decision_id,
                     "decision": node.to_dict(),
-                    "state_history": [e.to_dict() for e in events],
+                    "state_history": events,
                     "corrections": [c.to_dict() for c in corrections],
-                    "bases": [b.to_dict() for b in bases],
+                    "bases": bases,
                 }
             except Exception as exc:
                 return {"error": f"Failed to trace decision: {exc}"}

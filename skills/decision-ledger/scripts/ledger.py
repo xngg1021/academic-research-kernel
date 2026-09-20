@@ -1457,6 +1457,14 @@ class DecisionLedger:
             "latest_verdict": related[-1].verdict if related else None,
         }
 
+    def get_corrections(self, decision_id: str) -> List[OutcomeCorrection]:
+        """All outcome corrections recorded for a decision, in sequence order."""
+        return list(self._corrections_by_decision.get(decision_id, []))
+
+    def get_state_history(self, decision_id: str) -> List[Dict[str, Any]]:
+        """All state events for a decision, matching state_history()."""
+        return self.state_history(decision_id)
+
     def find_negative_results(self) -> List[Dict[str, Any]]:
         """All negative_result decisions with their outcome summaries, sorted by id."""
         out = []

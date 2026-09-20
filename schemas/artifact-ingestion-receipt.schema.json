@@ -92,7 +92,7 @@
           },
           "binding_kind": {
             "type": "string",
-            "enum": ["evidence_receipt", "reproduction_receipt", "computed_evidence", "review_finding", "uncertainty"]
+            "enum": ["decision", "negative_result", "outcome_correction", "evidence_receipt", "reproduction_receipt", "computed_evidence", "review_finding", "uncertainty"]
           },
           "basis_id": {
             "type": "string"

@@ -54,7 +54,7 @@ def test_tier1_academic_source_verification_ingest():
 
     claim_payload = {
         "claim": "Interleaving practice boosts test retention by 42%",
-        "evidence_type": "data_point",
+        "evidence_type": "computed",
         "locator": "table-2",
         "source": "DOI:10.1037/bul0000209",
         "support_status": "supported",
@@ -74,7 +74,16 @@ def test_tier1_academic_source_verification_ingest():
         subject_refs=["work:doi:10.1037/bul0000209"],
     )
 
-    receipt = engine.ingest(envelope, state=state, bindings={"decision_id": "dec-1"})
+    receipt = engine.ingest(
+        envelope,
+        state=state,
+        bindings={
+            "action": "add_outcome_correction",
+            "decision_id": "dec-1",
+            "verdict": "positive",
+            "rationale": "Verified via academic evidence",
+        },
+    )
     assert receipt.status == "accepted"
     assert receipt.validation_state["valid"] is True
     assert len(receipt.ceg_nodes) == 2  # 1 claim + 1 evidence
@@ -87,8 +96,17 @@ def test_tier1_academic_source_verification_ingest():
     ceg_valid, _ = state.ceg.validate_graph()
     assert ceg_valid is True
 
-    # Idempotent re-ingestion
-    receipt2 = engine.ingest(envelope, state=state, bindings={"decision_id": "dec-1"})
+    # Idempotent re-ingestion with same bindings
+    receipt2 = engine.ingest(
+        envelope,
+        state=state,
+        bindings={
+            "action": "add_outcome_correction",
+            "decision_id": "dec-1",
+            "verdict": "positive",
+            "rationale": "Verified via academic evidence",
+        },
+    )
     assert receipt2.receipt_id == receipt.receipt_id
     assert receipt2.output_digests == receipt.output_digests
 
@@ -170,15 +188,13 @@ def test_transactional_batch_atomicity_on_failure():
         payload_schema="evidence-receipt-1.0",
     )
 
-    # Corrupted envelope with invalid payload SHA
-    bad_env = ArtifactEnvelope(
-        protocol="artifact-envelope-1.0",
-        artifact_id="art-" + "f" * 32,
+    # Invalid payload that fails adapter validation
+    bad_env = ArtifactEnvelope.create(
+        payload={"query": "test"},  # Missing claims
+        producer_skill="academic-source-verification",
+        producer_version="1.0.0",
         artifact_kind="evidence_receipt",
-        producer={"skill": "academic-source-verification", "version": "1.0.0"},
         payload_schema="evidence-receipt-1.0",
-        payload_sha256="0" * 64,  # forged SHA
-        payload={"schema_version": "1.0", "claims": []},
     )
 
     receipts, final_state = engine.batch_ingest(

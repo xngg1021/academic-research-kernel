@@ -41,8 +41,11 @@ class IngestionPlan:
         self.ceg_claims: List[Dict[str, Any]] = []
         self.ceg_evidences: List[Dict[str, Any]] = []
         self.ceg_edges: List[Dict[str, Any]] = []
+        self.ceg_relations: List[Dict[str, Any]] = []
         self.ledger_decisions: List[Dict[str, Any]] = []
         self.ledger_bases: List[Dict[str, Any]] = []
+        self.ledger_forks: List[Dict[str, Any]] = []
+        self.ledger_state_events: List[Dict[str, Any]] = []
         self.ledger_outcome_corrections: List[Dict[str, Any]] = []
         self.uncertainties: List[Dict[str, Any]] = []
         self.ignored_fields: List[str] = []
@@ -93,9 +96,16 @@ class BaseArtifactAdapter(ABC):
                 failure_reason="; ".join(plan.errors),
             )
 
-        # 1. Apply Research Objects
+        # 1. Apply Research Objects with fail-closed collision defense
         for obj_id, obj_data in plan.created_objects.items():
-            state.objects[obj_id] = obj_data
+            if obj_id in state.objects:
+                if state.objects[obj_id] != obj_data:
+                    raise ValueError(
+                        f"ResearchObject ID collision for '{obj_id}': "
+                        f"existing object differs from incoming payload (fail-closed)."
+                    )
+            else:
+                state.objects[obj_id] = copy.deepcopy(obj_data)
 
         # 2. Apply registered receipts
         for r_key, r_obj in plan.registered_receipts.items():
@@ -105,7 +115,7 @@ class BaseArtifactAdapter(ABC):
             if state.ledger is not None:
                 state.ledger.register_receipt(r_key, r_obj)
 
-        # 3. Apply CEG nodes and edges
+        # 3. Apply CEG nodes, edges, and relations
         created_ceg_nodes = []
         created_ceg_edges = []
         if state.ceg is not None:
@@ -142,16 +152,28 @@ class BaseArtifactAdapter(ABC):
                 )
                 created_ceg_edges.append(f"{edge['evidence_id']}->{edge['claim_id']}")
 
-        # 4. Apply Ledger decisions and corrections
+            for r in getattr(plan, "ceg_relations", []):
+                state.ceg.add_claim_relation(
+                    source_claim_id=r["source_claim_id"],
+                    target_claim_id=r["target_claim_id"],
+                    relation_type=r.get("relation_type") or r.get("relation_kind", "corroborates"),
+                    evidence_refs=tuple(r.get("evidence_refs", ())),
+                    metadata=r.get("metadata"),
+                )
+
+        # 4. Apply Ledger decisions, bases, forks, state events, and corrections
         applied_ledger_bindings = []
         if state.ledger is not None:
             for dec in plan.ledger_decisions:
                 state.ledger.add_decision(
                     id=dec["id"],
                     title=dec["title"],
-                    decision_action=dec.get("decision_action", "explore"),
+                    decision_type=dec.get("decision_type") or dec.get("decision_action") or ("negative_result" if dec.get("entry_kind") == "negative_result" else "explore"),
+                    entry_kind=dec.get("entry_kind", "decision"),
+                    decision_action=dec.get("decision_action"),
                     context_work_id=dec.get("context_work_id"),
                     locator=dec.get("locator"),
+                    metadata=dec.get("metadata") or {},
                 )
 
             for b in plan.ledger_bases:
@@ -167,19 +189,51 @@ class BaseArtifactAdapter(ABC):
                     "basis_id": b["basis_id"],
                 })
 
+            for f in getattr(plan, "ledger_forks", []):
+                ref = f.get("receipt_ref")
+                f_ref = ReceiptRef(**ref) if isinstance(ref, dict) else ref
+                state.ledger.add_fork(
+                    decision_id=f["decision_id"],
+                    alternative_id=f["alternative_id"],
+                    relation=f.get("relation", "considered"),
+                    receipt_ref=f_ref,
+                    metadata=f.get("metadata") or {},
+                )
+
+            for ev in getattr(plan, "ledger_state_events", []):
+                ref = ev.get("receipt_ref")
+                ev_ref = ReceiptRef(**ref) if isinstance(ref, dict) else ref
+                state.ledger.add_state_event(
+                    decision_id=ev["decision_id"],
+                    to_state=ev["to_state"],
+                    reason=ev.get("reason"),
+                    caused_by=ev.get("caused_by"),
+                    alternative_ref=ev.get("alternative_ref"),
+                    receipt_ref=ev_ref,
+                    metadata=ev.get("metadata") or {},
+                )
+
             for corr in getattr(plan, "ledger_outcome_corrections", []):
-                state.ledger.add_outcome_correction(
+                ref = corr.get("receipt_ref")
+                c_ref = ReceiptRef(**ref) if isinstance(ref, dict) else ref
+                corr_res = state.ledger.add_outcome_correction(
                     decision_id=corr["decision_id"],
                     verdict=corr["verdict"],
                     rationale=corr["rationale"],
-                    receipt_ref=corr.get("receipt_ref"),
+                    receipt_ref=c_ref,
                     locator=corr.get("locator"),
+                    metadata=corr.get("metadata") or {},
                 )
+                corr_seq = getattr(corr_res, "sequence", 0)
                 applied_ledger_bindings.append({
                     "decision_id": corr["decision_id"],
-                    "binding_kind": "evidence_receipt",
-                    "basis_id": corr.get("locator") or corr["decision_id"],
+                    "binding_kind": "outcome_correction",
+                    "basis_id": f"corr-{corr['decision_id']}-{corr_seq}",
                 })
+
+        # 5. Persist uncertainties into kernel state
+        for u in plan.uncertainties:
+            state.uncertainties.append(copy.deepcopy(u))
 
         return IngestionReceipt.create(
             envelope=plan.envelope,
@@ -306,12 +360,17 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
                 "rationale": f"Extracted from {envelope.producer['skill']} receipt",
             })
 
-            # Optional Ledger outcome correction binding if explicitly provided by caller
-            if bindings and "decision_id" in bindings:
+            # Explicit Ledger outcome correction binding: only when caller explicitly requests action='add_outcome_correction' with explicit verdict
+            if (
+                bindings
+                and bindings.get("action") == "add_outcome_correction"
+                and "decision_id" in bindings
+                and "verdict" in bindings
+            ):
                 plan.ledger_outcome_corrections.append({
                     "decision_id": bindings["decision_id"],
-                    "verdict": "positive" if c_stat == "supported" else "negative",
-                    "rationale": f"Verified via academic evidence {c_id}",
+                    "verdict": bindings["verdict"],
+                    "rationale": bindings.get("rationale") or f"Explicitly bound to evidence {c_id}",
                     "receipt_ref": ref,
                     "locator": c_loc,
                 })
@@ -341,8 +400,11 @@ class ResearchObjectIdentityAdapter(BaseArtifactAdapter):
         if envelope.payload_schema == "lineage-receipt-1.0" or p.get("protocol") == "lineage-receipt-1.0":
             if not p.get("receipt_id") or not p.get("receipt_digest"):
                 errors.append("Lineage receipt requires receipt_id and receipt_digest")
-        elif "id" not in p or "kind" not in p:
-            errors.append("ResearchObject requires 'id' and 'kind'")
+        else:
+            obj_id = p.get("object_id") or p.get("id")
+            obj_type = p.get("object_type") or p.get("kind")
+            if not obj_id or not obj_type:
+                errors.append("ResearchObject requires 'object_id'/'id' and 'object_type'/'kind'")
         return len(errors) == 0, errors
 
     def plan(
@@ -358,7 +420,7 @@ class ResearchObjectIdentityAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         if p.get("protocol") == "lineage-receipt-1.0":
-            plan.registered_receipts[p["receipt_id"]] = p
+            plan.registered_receipts[p["receipt_id"]] = copy.deepcopy(p)
             r_ref = ReceiptRef(
                 kind="lineage",
                 schema_version="lineage-receipt-1.0",
@@ -366,15 +428,16 @@ class ResearchObjectIdentityAdapter(BaseArtifactAdapter):
                 receipt_digest=p["receipt_digest"],
                 locator=envelope.locator,
             )
-            if bindings and "decision_id" in bindings:
-                plan.ledger_bases.append({
-                    "decision_id": bindings["decision_id"],
-                    "basis_kind": "lineage_receipt",
-                    "basis_id": p["receipt_id"],
-                    "receipt_ref": r_ref,
-                })
+            ev_id = f"ev-lineage-{p['receipt_id']}"
+            plan.ceg_evidences.append({
+                "id": ev_id,
+                "anchor_type": "lineage_receipt",
+                "locator": envelope.locator,
+                "receipt_ref": r_ref,
+            })
         else:
-            plan.created_objects[p["id"]] = copy.deepcopy(p)
+            obj_id = p.get("object_id") or p.get("id")
+            plan.created_objects[obj_id] = copy.deepcopy(p)
         return plan
 
 
@@ -414,12 +477,16 @@ class ClaimEvidenceGraphSnapshotAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         for c in p.get("claims", []):
-            plan.ceg_claims.append(c)
+            plan.ceg_claims.append(copy.deepcopy(c))
         ev_list = p.get("evidence_anchors") or p.get("evidences") or []
         for ev in ev_list:
-            plan.ceg_evidences.append(ev)
+            plan.ceg_evidences.append(copy.deepcopy(ev))
         for edge in p.get("support_edges", []):
-            plan.ceg_edges.append(edge)
+            plan.ceg_edges.append(copy.deepcopy(edge))
+        for r in p.get("claim_relations", []):
+            plan.ceg_relations.append(copy.deepcopy(r))
+        for u in p.get("uncertainties", []):
+            plan.uncertainties.append(copy.deepcopy(u))
         return plan
 
 
@@ -461,9 +528,17 @@ class DecisionLedgerSnapshotAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         for d in p.get("decisions", []):
-            plan.ledger_decisions.append(d)
+            plan.ledger_decisions.append(copy.deepcopy(d))
         for b in p.get("bases", []):
-            plan.ledger_bases.append(b)
+            plan.ledger_bases.append(copy.deepcopy(b))
+        for f in p.get("forks", []):
+            plan.ledger_forks.append(copy.deepcopy(f))
+        for s in sorted(p.get("state_events", []), key=lambda x: x.get("sequence", 0)):
+            plan.ledger_state_events.append(copy.deepcopy(s))
+        for c in sorted(p.get("corrections", []), key=lambda x: x.get("sequence", 0)):
+            plan.ledger_outcome_corrections.append(copy.deepcopy(c))
+        for u in p.get("uncertainties", []):
+            plan.uncertainties.append(copy.deepcopy(u))
         return plan
 
 
@@ -553,8 +628,8 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         errors = []
         p = envelope.payload
-        if "verdict" not in p:
-            errors.append("Reproduction receipt requires 'verdict'")
+        if "status" not in p and "verdict" not in p:
+            errors.append("Reproduction receipt requires 'status' or 'verdict'")
         return len(errors) == 0, errors
 
     def plan(
@@ -569,8 +644,22 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        verdict = p.get("verdict", "inconclusive")
+        raw_status = p.get("status") or p.get("verdict", "inconclusive")
         ev_id = f"ev-repro-{envelope.artifact_id[4:16]}"
+
+        if raw_status in ("reproducible", "reproduced"):
+            support_status = "supported"
+        elif raw_status in ("inconsistent", "failed"):
+            support_status = "contradicted"
+        else:
+            support_status = "unverifiable"
+            plan.uncertainties.append({
+                "item_id": f"unc-repro-{envelope.artifact_id[4:16]}",
+                "subject_id": ev_id,
+                "kind": "reproducibility_gap",
+                "reason": f"Reproduction audit status: {raw_status}",
+                "needs_human": True,
+            })
 
         plan.ceg_evidences.append({
             "id": ev_id,
@@ -578,27 +667,17 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
             "locator": envelope.locator,
             "metadata": {
                 "sub_type": "reproduction_receipt",
-                "verdict": verdict,
+                "status": raw_status,
                 "discrepancies": p.get("discrepancies", []),
             },
         })
 
-        if verdict in ("failed", "inconclusive"):
-            plan.uncertainties.append({
-                "item_id": f"unc-repro-{envelope.artifact_id[4:16]}",
-                "subject_id": ev_id,
-                "kind": "reproducibility_gap",
-                "reason": f"Reproduction verdict: {verdict}",
-                "needs_human": True,
-            })
-
         if bindings and "claim_id" in bindings:
-            status = "supported" if verdict == "reproduced" else "contradicted"
             plan.ceg_edges.append({
                 "evidence_id": ev_id,
                 "claim_id": bindings["claim_id"],
-                "support_status": status,
-                "rationale": f"Independent reproduction attempt: {verdict}",
+                "support_status": support_status,
+                "rationale": f"Independent reproduction attempt: {raw_status}",
             })
 
         return plan
@@ -620,8 +699,8 @@ class CrossReviewAdapter(BaseArtifactAdapter):
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         errors = []
         p = envelope.payload
-        if "findings" not in p and "consensus" not in p:
-            errors.append("Cross-review payload requires 'findings' or 'consensus'")
+        if "findings" not in p and "consensus" not in p and "contradictions" not in p:
+            errors.append("Cross-review payload requires 'consensus', 'contradictions', or 'findings'")
         return len(errors) == 0, errors
 
     def plan(
@@ -636,8 +715,52 @@ class CrossReviewAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        findings = p.get("findings", [])
-        for idx, f in enumerate(findings):
+
+        # 1. Consensus issues
+        for idx, item in enumerate(p.get("consensus", [])):
+            ev_id = f"ev-rev-cons-{envelope.artifact_id[4:12]}-{idx}"
+            plan.ceg_evidences.append({
+                "id": ev_id,
+                "anchor_type": "direct_observation",
+                "metadata": {
+                    "sub_type": "review_consensus",
+                    "issue": item,
+                },
+            })
+
+        # 2. Contradictions -> evidence + uncertainties
+        for idx, item in enumerate(p.get("contradictions", [])):
+            ev_id = f"ev-rev-contra-{envelope.artifact_id[4:12]}-{idx}"
+            plan.ceg_evidences.append({
+                "id": ev_id,
+                "anchor_type": "direct_observation",
+                "metadata": {
+                    "sub_type": "review_contradiction",
+                    "issue": item,
+                },
+            })
+            plan.uncertainties.append({
+                "item_id": f"unc-contra-{envelope.artifact_id[4:12]}-{idx}",
+                "subject_id": ev_id,
+                "kind": "expert_disagreement",
+                "reason": str(item.get("summary") or item.get("title") or item),
+                "needs_human": True,
+            })
+
+        # 3. Singletons -> evidence + uncertainties
+        for idx, item in enumerate(p.get("singletons", [])):
+            ev_id = f"ev-rev-single-{envelope.artifact_id[4:12]}-{idx}"
+            plan.ceg_evidences.append({
+                "id": ev_id,
+                "anchor_type": "direct_observation",
+                "metadata": {
+                    "sub_type": "review_singleton",
+                    "issue": item,
+                },
+            })
+
+        # 4. Findings (if present)
+        for idx, f in enumerate(p.get("findings", [])):
             f_id = f"ev-review-{envelope.artifact_id[4:12]}-{idx}"
             plan.ceg_evidences.append({
                 "id": f_id,
@@ -650,9 +773,8 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                 },
             })
 
-        # Dissenting opinions are strictly preserved as uncertainties, never squashed
-        dissents = p.get("dissenting_opinions", [])
-        for idx, d in enumerate(dissents):
+        # 5. Dissenting opinions -> uncertainties
+        for idx, d in enumerate(p.get("dissenting_opinions", [])):
             plan.uncertainties.append({
                 "item_id": f"unc-dissent-{envelope.artifact_id[4:12]}-{idx}",
                 "subject_id": envelope.artifact_id,
@@ -859,6 +981,7 @@ class MathComputationAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         ev_id = f"ev-math-{envelope.artifact_id[4:16]}"
+        is_verified = bool(p.get("verified", False))
         plan.ceg_evidences.append({
             "id": ev_id,
             "anchor_type": "direct_observation",
@@ -866,7 +989,7 @@ class MathComputationAdapter(BaseArtifactAdapter):
                 "sub_type": "computed_evidence",
                 "expression": p.get("expression"),
                 "result": p.get("result"),
-                "verified": p.get("verified", True),
+                "verified": is_verified,
             },
         })
 
@@ -874,7 +997,7 @@ class MathComputationAdapter(BaseArtifactAdapter):
             plan.ceg_edges.append({
                 "evidence_id": ev_id,
                 "claim_id": bindings["claim_id"],
-                "support_status": "supported" if p.get("verified", True) else "contradicted",
+                "support_status": "supported" if is_verified else "contradicted",
                 "rationale": "Symbolic/numerical mathematical verification",
             })
 

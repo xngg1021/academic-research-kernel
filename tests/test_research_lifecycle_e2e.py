@@ -47,7 +47,7 @@ def test_full_research_state_lifecycle_e2e():
         "query": "DOI:10.1037/bul0000209",
         "claims": [{
             "claim": "Interleaving practice boosts test retention by 42%",
-            "evidence_type": "data_point",
+            "evidence_type": "computed",
             "locator": "table-2",
             "source": "DOI:10.1037/bul0000209",
             "support_status": "supported",
@@ -137,33 +137,40 @@ def test_full_research_state_lifecycle_e2e():
     assert state.ledger.current_state("dec-interleaving-strategy").status == "reopened"
 
     # -------------------------------------------------------------------------
-    # Step 5: Export full kernel state and verify mathematical replay parity
+    # Step 5: Ingest exported snapshots via IngestionBridge and verify exact replay parity
     # -------------------------------------------------------------------------
     initial_digests = state.compute_digests()
     ceg_export = state.ceg.to_dict()
     ledger_export = state.ledger.to_dict()
 
-    # Rehydrate in clean instances
-    reloaded_ceg = ceg_mod.ClaimEvidenceGraph()
-    for k, r in state.receipts.items():
-        reloaded_ceg.register_receipt(k, r)
-    for c in ceg_export["claims"]:
-        reloaded_ceg.add_claim(c["id"], c["text"], target_work_id=c.get("target_work_id"), locator=c.get("locator"))
-    for ev in ceg_export.get("evidence_anchors", []):
-        ref_obj = ReceiptRef(**ev["receipt_ref"]) if ev.get("receipt_ref") else None
-        reloaded_ceg.add_evidence(
-            ev["id"],
-            ev["anchor_type"],
-            source_work_id=ev.get("source_work_id"),
-            locator=ev.get("locator"),
-            receipt_ref=ref_obj,
-            metadata=ev.get("metadata"),
-        )
-    for edge in ceg_export["support_edges"]:
-        reloaded_ceg.add_support_edge(edge["evidence_id"], edge["claim_id"], edge["support_status"], metadata=edge.get("metadata"))
+    # Rehydrate via IngestionBridge snapshot adapters
+    clean_state = IngestionKernelState(
+        ceg=ceg_mod.ClaimEvidenceGraph(),
+        ledger=ledger_mod.DecisionLedger(),
+        receipts=copy.deepcopy(state.receipts),
+    )
+    env_ceg = ArtifactEnvelope.create(
+        payload=ceg_export,
+        producer_skill="claim-evidence-graph",
+        producer_version="1.0.0",
+        artifact_kind="ceg_snapshot",
+        payload_schema="claim-evidence-graph-1.0",
+    )
+    env_ledger = ArtifactEnvelope.create(
+        payload=ledger_export,
+        producer_skill="decision-ledger",
+        producer_version="1.0.0",
+        artifact_kind="ledger_snapshot",
+        payload_schema="decision-ledger-1.0",
+    )
 
-    reloaded_ledger = ledger_mod.DecisionLedger.from_dict(ledger_export)
+    r_ceg = engine.ingest(env_ceg, state=clean_state)
+    assert r_ceg.status == "accepted"
 
-    # Cryptographic digests match exactly
-    assert reloaded_ceg.graph_digest() == initial_digests["ceg_digest"]
-    assert reloaded_ledger.ledger_digest() == initial_digests["ledger_digest"]
+    r_ledger = engine.ingest(env_ledger, state=clean_state)
+    assert r_ledger.status == "accepted"
+
+    # Cryptographic digests match exactly across snapshot replay
+    clean_digests = clean_state.compute_digests()
+    assert clean_digests["ceg_digest"] == initial_digests["ceg_digest"]
+    assert clean_digests["ledger_digest"] == initial_digests["ledger_digest"]

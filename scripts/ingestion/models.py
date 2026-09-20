@@ -7,6 +7,7 @@ import copy
 from dataclasses import dataclass, field
 import hashlib
 import json
+import re
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 from shared_contracts.evidence import (
@@ -36,8 +37,10 @@ class ArtifactEnvelope:
     def __post_init__(self):
         if self.protocol != "artifact-envelope-1.0":
             raise ValueError(f"Invalid envelope protocol: {self.protocol!r}. Must be 'artifact-envelope-1.0'.")
-        if not self.artifact_id.startswith("art-") or len(self.artifact_id) != 36:
+        if not re.match(r"^art-[0-9a-f]{32}$", self.artifact_id):
             raise ValueError(f"Invalid artifact_id: {self.artifact_id!r}. Must start with 'art-' followed by 32 hex chars.")
+        if not re.match(r"^[0-9a-f]{64}$", self.payload_sha256):
+            raise ValueError(f"Invalid payload_sha256: {self.payload_sha256!r}. Must be 64 lowercase hex digits.")
         if not isinstance(self.producer, collections.abc.Mapping) or "skill" not in self.producer or "version" not in self.producer:
             raise ValueError("Envelope 'producer' must be a mapping with 'skill' and 'version'.")
         if not isinstance(self.payload, collections.abc.Mapping):
@@ -45,6 +48,14 @@ class ArtifactEnvelope:
         if self.locator is not None:
             if not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048):
                 raise ValueError("locator must be a non-empty string of at most 2048 characters.")
+
+        # Cryptographic content-addressing invariant verification
+        calc_sha = hashlib.sha256(canonical_json_bytes(_thaw_val(self.payload))).hexdigest().lower()
+        if self.payload_sha256 != calc_sha:
+            raise ValueError(f"Payload hash mismatch: envelope declares {self.payload_sha256}, actual payload computes to {calc_sha}")
+        expected_id = f"art-{calc_sha[:32]}"
+        if self.artifact_id != expected_id:
+            raise ValueError(f"artifact_id content-addressing mismatch: declares {self.artifact_id}, expected {expected_id}")
 
     @classmethod
     def create(
@@ -187,6 +198,9 @@ class IngestionReceipt:
             "created_or_reused_objects": sorted(created_or_reused_objects or []),
             "ceg_nodes": sorted(ceg_nodes or []),
             "ceg_edges": sorted(ceg_edges or []),
+            "ledger_bindings": sorted(ledger_bindings or [], key=lambda b: (b.get("decision_id", ""), b.get("basis_id", ""))),
+            "uncertainties": sorted(uncertainties or [], key=lambda u: u.get("item_id", "")),
+            "ignored_fields": sorted(ignored_fields or []),
             "failure_reason": failure_reason or "",
         }
         r_sha = compute_sha256(canonical_json_bytes(id_inputs))
@@ -248,19 +262,38 @@ class IngestionKernelState:
     ledger: Any = None  # DecisionLedger instance
     objects: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     receipts: Dict[str, Any] = field(default_factory=dict)
+    uncertainties: List[Dict[str, Any]] = field(default_factory=list)
+    ingested_artifacts: Dict[str, str] = field(default_factory=dict)
+    ingestion_receipts: Dict[str, IngestionReceipt] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.receipts and self.ceg is not None:
+            for k, r in self.receipts.items():
+                self.ceg.register_receipt(k, r)
 
     def clone(self) -> IngestionKernelState:
         """Create a detached deep clone for transaction simulation and rollback."""
         new_ceg = copy.deepcopy(self.ceg) if self.ceg is not None else None
         new_ledger = None
         if self.ledger is not None:
-            new_ledger = self.ledger.__class__.from_dict(self.ledger.to_dict())
+            l_dict = self.ledger.to_dict()
+            manifest = l_dict.get("verification_manifest", {})
+            relevant_receipts = {
+                k: v for k, v in self.receipts.items() if k in manifest
+            }
+            new_ledger = self.ledger.__class__.from_dict(
+                l_dict,
+                receipt_registry=relevant_receipts if relevant_receipts else None,
+            )
 
         return IngestionKernelState(
             ceg=new_ceg,
             ledger=new_ledger,
             objects=copy.deepcopy(self.objects),
             receipts=copy.deepcopy(self.receipts),
+            uncertainties=copy.deepcopy(self.uncertainties),
+            ingested_artifacts=copy.deepcopy(self.ingested_artifacts),
+            ingestion_receipts=copy.deepcopy(self.ingestion_receipts),
         )
 
     def compute_digests(self) -> Dict[str, str]:
@@ -268,7 +301,7 @@ class IngestionKernelState:
         digests: Dict[str, str] = {}
         if self.objects:
             obj_bytes = canonical_json_bytes(
-                sorted(self.objects.values(), key=lambda x: str(x.get("id", "")))
+                [self.objects[k] for k in sorted(self.objects.keys())]
             )
             digests["object_registry_digest"] = compute_sha256(obj_bytes)
         if self.ceg is not None:
