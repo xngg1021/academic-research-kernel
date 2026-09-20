@@ -149,7 +149,10 @@ TOOLS = [
                                 "required": ["id"],
                                 "properties": {
                                     "id": {"type": "string", "minLength": 1},
-                                    "type": {"type": "string", "minLength": 1},
+                                    "type": {
+                                        "type": "string",
+                                        "enum": sorted(prov_mod.VALID_ENTITY_TYPES),
+                                    },
                                     "sha256": {
                                         "type": "string",
                                         "pattern": "^[0-9a-f]{64}$",
@@ -167,7 +170,10 @@ TOOLS = [
                                 "required": ["id", "timestamp"],
                                 "properties": {
                                     "id": {"type": "string", "minLength": 1},
-                                    "type": {"type": "string", "minLength": 1},
+                                    "type": {
+                                        "type": "string",
+                                        "enum": sorted(prov_mod.VALID_ACTIVITY_TYPES),
+                                    },
                                     "command": {"type": "string"},
                                     "script_id": {"type": "string"},
                                     "commit_sha": {"type": "string"},
@@ -383,9 +389,13 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 plan = adapter.plan(env, temp_state)
                 errors.extend(plan.errors)
                 if not errors and env.lineage_ref is not None:
-                    physical = plan.registered_receipts.get(
-                        env.lineage_ref.receipt_id
-                    ) or temp_state.receipts.get(env.lineage_ref.receipt_id)
+                    receipt_id = env.lineage_ref.receipt_id
+                    if receipt_id in plan.registered_receipts:
+                        physical = plan.registered_receipts[receipt_id]
+                    elif receipt_id in temp_state.receipts:
+                        physical = temp_state.receipts[receipt_id]
+                    else:
+                        physical = None
                     if physical is not None:
                         lineage_ok, lineage_error = validate_lineage_receipt_contract(
                             env.lineage_ref,
@@ -465,16 +475,19 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             except Exception as exc:
                 return {"valid": False, "error": f"Invalid ReceiptRef format: {exc}"}
 
-            ok, err = verify_receipt_reference(ref, receipt_payload)
+            schema_file = (
+                "lineage-receipt.schema.json"
+                if ref.kind == "lineage"
+                else "evidence-receipt.schema.json"
+            )
+            schema_errors = validate_schema(receipt_payload, schema_file)
+            if schema_errors:
+                return {"valid": False, "error": "; ".join(schema_errors)}
+            try:
+                ok, err = verify_receipt_reference(ref, receipt_payload)
+            except Exception as exc:
+                return {"valid": False, "error": f"Receipt verification failed: {exc}"}
             if ok:
-                schema_file = (
-                    "lineage-receipt.schema.json"
-                    if ref.kind == "lineage"
-                    else "evidence-receipt.schema.json"
-                )
-                schema_errors = validate_schema(receipt_payload, schema_file)
-                if schema_errors:
-                    return {"valid": False, "error": "; ".join(schema_errors)}
                 return {"valid": True}
             return {"valid": False, "error": err or "Receipt verification failed"}
 

@@ -592,6 +592,22 @@ class IngestionKernelState:
         frozen = FrozenJSONMap(_thaw_val(value))
         existing = self.objects.get(object_id)
         if existing is not None and _thaw_val(existing) != _thaw_val(frozen):
+            existing_raw = _thaw_val(existing)
+            incoming_raw = _thaw_val(frozen)
+            is_work_placeholder = existing_raw == {
+                "id": object_id,
+                "kind": "work",
+            }
+            is_canonical_work = (
+                isinstance(incoming_raw, dict)
+                and all(
+                    key in incoming_raw
+                    for key in ("work_type", "title", "authors")
+                )
+            )
+            if is_work_placeholder and is_canonical_work:
+                self.objects[object_id] = frozen
+                return
             raise ValueError(
                 f"ResearchObject ID collision for {object_id!r}: existing object differs"
             )

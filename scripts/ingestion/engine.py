@@ -159,9 +159,13 @@ class IngestionEngine:
                     raise ValueError("; ".join(plan.errors) or "Adapter validation failed")
 
                 if env.lineage_ref is not None:
-                    physical = plan.registered_receipts.get(
-                        env.lineage_ref.receipt_id
-                    ) or staged.receipts.get(env.lineage_ref.receipt_id)
+                    receipt_id = env.lineage_ref.receipt_id
+                    if receipt_id in plan.registered_receipts:
+                        physical = plan.registered_receipts[receipt_id]
+                    elif receipt_id in staged.receipts:
+                        physical = staged.receipts[receipt_id]
+                    else:
+                        physical = None
                     if physical is None:
                         plan.uncertainties.append(
                             lineage_ref_uncertainty_dict(

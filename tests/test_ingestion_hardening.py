@@ -1769,3 +1769,242 @@ def test_mcp_lineage_trace_rejects_malformed_entities_and_edges():
         assert response["result"]["isError"] is True
         assert body["error"] == "Invalid tool arguments"
         assert any("required" in detail for detail in body["details"])
+
+
+def test_literature_watch_rejects_conflicting_ids_before_plan_overwrite():
+    payloads = [
+        {
+            "new_papers": [
+                {"id": "record-1", "title": "First"},
+                {"id": "record-1", "title": "Conflicting"},
+            ],
+        },
+        {
+            "new_papers": [{"id": "record-1", "title": "Paper"}],
+            "new_citations": [{"id": "record-1", "citing": "Other"}],
+        },
+    ]
+
+    for payload in payloads:
+        receipt = IngestionEngine().ingest(
+            envelope(
+                payload,
+                "literature-watch",
+                "literature-delta-1.0",
+            ),
+            state=kernel(),
+        )
+        assert receipt.status == "rejected"
+        assert "Conflicting planned ResearchObject" in receipt.failure_reason
+
+
+def test_cross_review_evidence_is_scoped_to_envelope_locator():
+    payload = {"contradictions": [{"summary": "Disputed point"}]}
+    first = envelope(
+        payload,
+        "cross-review-five",
+        "cross-review-2.0",
+        producer_version="2.0.0",
+        locator="review:one",
+    )
+    second = envelope(
+        payload,
+        "cross-review-five",
+        "cross-review-2.0",
+        producer_version="2.0.0",
+        locator="review:two",
+    )
+    state = kernel()
+
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(state.ceg.evidence_anchors) == 2
+    assert {item.locator for item in state.ceg.evidence_anchors.values()} == {
+        "review:one",
+        "review:two",
+    }
+
+
+def test_mcp_lineage_trace_rejects_unknown_node_types_as_arguments():
+    malformed_graphs = [
+        {
+            "entities": [{"id": "entity-1", "type": "bogus"}],
+            "activities": [],
+            "edges": [],
+        },
+        {
+            "entities": [],
+            "activities": [{
+                "id": "activity-1",
+                "type": "bogus",
+                "timestamp": "2026-09-20T00:00:00Z",
+            }],
+            "edges": [],
+        },
+    ]
+
+    for graph in malformed_graphs:
+        response, body = call_tool(
+            "research_lineage_trace",
+            {"lineage_graph": graph, "target_entity_id": "result"},
+        )
+        assert response["result"]["isError"] is True
+        assert body["error"] == "Invalid tool arguments"
+        assert any("not one of" in detail for detail in body["details"])
+
+
+def test_cross_review_fallback_reasons_are_canonical_json():
+    first_item = {"zeta": 1, "alpha": {"right": 2, "left": 1}}
+    second_item = {"alpha": {"left": 1, "right": 2}, "zeta": 1}
+    first = envelope(
+        {"contradictions": [first_item]},
+        "cross-review-five",
+        "cross-review-2.0",
+        producer_version="2.0.0",
+    )
+    second = envelope(
+        {"contradictions": [second_item]},
+        "cross-review-five",
+        "cross-review-2.0",
+        producer_version="2.0.0",
+    )
+    assert first.artifact_id == second.artifact_id
+
+    first_receipt = IngestionEngine().ingest(first, state=kernel())
+    second_receipt = IngestionEngine().ingest(second, state=kernel())
+
+    assert first_receipt.status == second_receipt.status == "accepted"
+    assert first_receipt.receipt_id == second_receipt.receipt_id
+    assert first_receipt.uncertainties[0]["reason"] == (
+        '{"alpha":{"left":1,"right":2},"zeta":1}'
+    )
+    assert first_receipt.uncertainties == second_receipt.uncertainties
+
+
+def test_receipt_verify_returns_invalid_for_incomplete_lineage_payload():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    physical = mcp_server.prov_mod.trace_origin(
+        graph,
+        "entity-1",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    ref = {
+        "kind": "lineage",
+        "schema_version": "lineage-receipt-1.0",
+        "receipt_id": physical["receipt_id"],
+        "receipt_digest": physical["receipt_digest"],
+    }
+    incomplete = copy.deepcopy(physical)
+    incomplete.pop("verification_status")
+
+    response, body = call_tool(
+        "research_receipt_verify",
+        {"receipt_ref": ref, "receipt_payload": incomplete},
+    )
+
+    assert response["result"]["isError"] is True
+    assert body["valid"] is False
+    assert "verification_status" in body["error"]
+    assert "Internal execution failure" not in body["error"]
+
+
+def test_falsy_registered_lineage_receipt_is_rejected_not_treated_as_missing():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    physical = mcp_server.prov_mod.trace_origin(
+        graph,
+        "entity-1",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=physical["receipt_id"],
+        receipt_digest=physical["receipt_digest"],
+    )
+    env = envelope(
+        {"text": "artifact"},
+        "unknown-producer",
+        "unknown-schema-1.0",
+        lineage_ref=ref,
+    )
+    state = kernel()
+    state.register_receipt(physical["receipt_id"], {})
+
+    receipt = IngestionEngine().ingest(env, state=state)
+    _, preflight = call_tool(
+        "research_artifact_validate",
+        {
+            "envelope": env.to_dict(),
+            "receipts": {physical["receipt_id"]: {}},
+        },
+    )
+
+    assert receipt.status == "rejected"
+    assert "invalid protocol" in receipt.failure_reason
+    assert preflight["valid"] is False
+    assert any("invalid protocol" in error for error in preflight["errors"])
+
+
+def test_canonical_work_upgrades_an_evidence_placeholder():
+    work_id = "work:placeholder-upgrade"
+    state = kernel()
+    evidence = envelope(
+        evidence_payload(),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=[work_id],
+    )
+    canonical = {
+        "work_id": work_id,
+        "work_type": "article",
+        "title": "Canonical metadata",
+        "authors": [{"family": "Example"}],
+    }
+    canonical_env = envelope(
+        canonical,
+        "literature-analysis",
+        "canonical-work-1.0",
+        producer_version="1.3.0",
+    )
+    engine = IngestionEngine()
+
+    first = engine.ingest(evidence, state=state)
+    second = engine.ingest(canonical_env, state=state)
+
+    assert first.status == "accepted"
+    assert second.status == "accepted"
+    assert state.to_dict()["objects"][work_id] == canonical
+
+
+def test_opaque_fallback_objects_are_scoped_to_full_envelope_context():
+    payload = {"value": "same bytes"}
+    first = envelope(
+        payload,
+        "unknown-producer-a",
+        "unknown-schema-1.0",
+        artifact_kind="classification-a",
+    )
+    second = envelope(
+        payload,
+        "unknown-producer-b",
+        "unknown-schema-1.0",
+        artifact_kind="classification-b",
+    )
+    assert first.artifact_id == second.artifact_id
+    state = kernel()
+
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    opaque_objects = [
+        value for value in state.objects.values()
+        if value["kind"] == "opaque_artifact"
+    ]
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(opaque_objects) == 2
+    assert {item["artifact_kind"] for item in opaque_objects} == {
+        "classification-a",
+        "classification-b",
+    }

@@ -156,6 +156,23 @@ def _ceg_declared_receipt_registry(
     return projected
 
 
+class _PlanObjectRegistry(dict):
+    """Reject conflicting object identities before a plan can hide an overwrite."""
+
+    def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
+        object_id = str(key)
+        candidate = _thaw_val(value)
+        existing = self.get(object_id)
+        if (
+            existing is not None
+            and canonical_json_bytes(existing) != canonical_json_bytes(candidate)
+        ):
+            raise ValueError(
+                f"Conflicting planned ResearchObject registration for {object_id!r}"
+            )
+        super().__setitem__(object_id, candidate)
+
+
 class IngestionPlan:
     """Pre-computed, side-effect-free plan of mutations to be applied to the kernel."""
 
@@ -172,7 +189,7 @@ class IngestionPlan:
         self.adapter_version = adapter_version
         self.valid = valid
         self.errors = list(errors)
-        self.created_objects: Dict[str, Dict[str, Any]] = {}
+        self.created_objects: Dict[str, Dict[str, Any]] = _PlanObjectRegistry()
         self.ceg_claims: List[Dict[str, Any]] = []
         self.ceg_evidences: List[Dict[str, Any]] = []
         self.ceg_edges: List[Dict[str, Any]] = []
@@ -1162,6 +1179,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         artifact_identity = envelope.artifact_id[4:]
+        context_identity = envelope.ingestion_context_digest(bindings)[:32]
         registry_id = f"review-registry-{artifact_identity}"
         plan.created_objects[registry_id] = {
             "id": registry_id,
@@ -1171,10 +1189,11 @@ class CrossReviewAdapter(BaseArtifactAdapter):
 
         # 1. Consensus issues
         for idx, item in enumerate(p.get("consensus", [])):
-            ev_id = f"ev-rev-cons-{artifact_identity}-{idx}"
+            ev_id = f"ev-rev-cons-{context_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "direct_observation",
+                "locator": envelope.locator,
                 "metadata": {
                     "sub_type": "review_consensus",
                     "issue": item,
@@ -1183,48 +1202,55 @@ class CrossReviewAdapter(BaseArtifactAdapter):
 
         # 2. Contradictions -> evidence + uncertainties
         for idx, item in enumerate(p.get("contradictions", [])):
-            ev_id = f"ev-rev-contra-{artifact_identity}-{idx}"
+            ev_id = f"ev-rev-contra-{context_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "direct_observation",
+                "locator": envelope.locator,
                 "metadata": {
                     "sub_type": "review_contradiction",
                     "issue": item,
                 },
             })
             plan.uncertainties.append({
-                "item_id": f"unc-contra-{artifact_identity}-{idx}",
+                "item_id": f"unc-contra-{context_identity}-{idx}",
                 "subject_id": ev_id,
                 "kind": "expert_disagreement",
-                "reason": str(item.get("summary") or item.get("title") or item),
+                "reason": str(item.get("summary") or item.get("title"))
+                if item.get("summary") or item.get("title")
+                else canonical_json_bytes(_thaw_val(item)).decode("utf-8"),
                 "needs_human": True,
             })
 
         # 3. Singletons -> evidence + uncertainties
         for idx, item in enumerate(p.get("singletons", [])):
-            ev_id = f"ev-rev-single-{artifact_identity}-{idx}"
+            ev_id = f"ev-rev-single-{context_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": ev_id,
                 "anchor_type": "direct_observation",
+                "locator": envelope.locator,
                 "metadata": {
                     "sub_type": "review_singleton",
                     "issue": item,
                 },
             })
             plan.uncertainties.append({
-                "item_id": f"unc-single-{artifact_identity}-{idx}",
+                "item_id": f"unc-single-{context_identity}-{idx}",
                 "subject_id": ev_id,
                 "kind": "expert_disagreement",
-                "reason": str(item.get("summary") or item.get("title") or item),
+                "reason": str(item.get("summary") or item.get("title"))
+                if item.get("summary") or item.get("title")
+                else canonical_json_bytes(_thaw_val(item)).decode("utf-8"),
                 "needs_human": True,
             })
 
         # 4. Findings (if present)
         for idx, f in enumerate(p.get("findings", [])):
-            f_id = f"ev-review-{artifact_identity}-{idx}"
+            f_id = f"ev-review-{context_identity}-{idx}"
             plan.ceg_evidences.append({
                 "id": f_id,
                 "anchor_type": "direct_observation",
+                "locator": envelope.locator,
                 "metadata": {
                     "sub_type": "review_finding",
                     "reviewer": f.get("reviewer"),
@@ -1705,11 +1731,15 @@ class OpaqueFallbackAdapter(BaseArtifactAdapter):
         bindings: Optional[Mapping[str, Any]] = None,
     ) -> IngestionPlan:
         plan = IngestionPlan(envelope, self.adapter_id, self.adapter_version, True, [])
-        plan.created_objects[envelope.artifact_id] = {
-            "id": envelope.artifact_id,
+        context_digest = envelope.ingestion_context_digest(bindings)
+        object_id = f"{envelope.artifact_id}:context:{context_digest[:32]}"
+        plan.created_objects[object_id] = {
+            "id": object_id,
             "kind": "opaque_artifact",
             "artifact_kind": envelope.artifact_kind,
             "producer": envelope.producer,
             "payload_sha256": envelope.payload_sha256,
+            "locator": envelope.locator,
+            "subject_refs": list(envelope.subject_refs),
         }
         return plan
