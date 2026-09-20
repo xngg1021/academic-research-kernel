@@ -274,11 +274,23 @@ def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional
             "edges": sorted(data["edges"], key=edge_key),
             "trace_steps": data.get("trace_steps", []),
         }
-        lineage_digest = compute_sha256(canonical_json_bytes(lineage_payload))
+        recomputed_lineage = compute_sha256(canonical_json_bytes(lineage_payload))
     except (KeyError, TypeError, ValueError) as exc:
         return False, f"Lineage receipt cannot be canonically replayed: {exc}"
 
     declared_lineage = str(data.get("lineage_digest", "")).lower()
+    missing_input_form = (
+        declared_lineage == "0" * 64
+        and data.get("verification_status") == "missing_input"
+        and data.get("topology_status") == "missing_input"
+        and data.get("content_verification") == "unchecked"
+        and not data.get("root_ancestors")
+        and not data.get("entities")
+        and not data.get("activities")
+        and not data.get("edges")
+        and not data.get("trace_steps")
+    )
+    lineage_digest = declared_lineage if missing_input_form else recomputed_lineage
     if declared_lineage != lineage_digest:
         return False, (
             f"Lineage content digest mismatch: declared {declared_lineage!r}, "

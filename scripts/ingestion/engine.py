@@ -110,7 +110,7 @@ class IngestionEngine:
                 )
             cached = staged.ingestion_receipts.get(cache_key)
             if cached is not None:
-                results[index] = cached
+                results[index] = cached.with_caller_metadata(env.caller_metadata)
                 continue
 
             adapter = self.registry.resolve(env)
@@ -159,7 +159,9 @@ class IngestionEngine:
                 cache_key = f"{env.artifact_id}:{env.ingestion_context_digest(bindings)}"
                 cached = target_state.ingestion_receipts.get(cache_key)
                 if cached is not None:
-                    aborted_results[index] = cached
+                    aborted_results[index] = cached.with_caller_metadata(
+                        env.caller_metadata
+                    )
                     continue
                 adapter = adapters.get(index) or self.registry.resolve(env)
                 errors = (

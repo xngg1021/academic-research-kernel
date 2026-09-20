@@ -11,10 +11,11 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 - PR history: **12 total; 11 merged; PR #12 open**.
 - Exact-head CI history at audit start: **12/12 workflow runs successful; 0 failed or cancelled runs**.
 - Standalone GitHub issues: **0 open, 0 closed**. Review findings are therefore accounted for from PR threads and repository audit records rather than an issue tracker.
-- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The remediation in this branch implements all 31 findings and adds regression coverage.
+- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. A review of remediation head `24469778b15b` then opened **7 additional P1 threads**; the follow-up remediation implements all seven with regression coverage.
+- First remediation checkpoint: head `24469778b15b` passed [run 35494388854](https://github.com/xngg1021/academic-research-kernel/actions/runs/35494388854) with upstream canary plus all 12 platform jobs successful; `tap-lifecycle` was condition-false and skipped as designed.
 - Historical 2026-09-06 correctness audit: **34/34 grouped findings resolved** (`P0=0`, `P1=22`, `P2=12`), with resolution evidence retained in `docs/findings.json` and executable regression suites.
-- Current implementation gate after remediation: **691 passed, 3 intentionally skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
-- Open code defects found at P0/P1: **0 after remediation**, subject to the new PR-head remote matrix and review gate. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
+- Current implementation gate after remediation: **696 passed, 3 intentionally skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
+- Open code defects found at P0/P1: **0 after follow-up remediation**, subject to the new PR-head remote matrix and review gate. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
 
 ## Complete PR and exact-head CI ledger
 
@@ -32,6 +33,8 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 | [#10](https://github.com/xngg1021/academic-research-kernel/pull/10) | Node 24, Ubuntu 26, locator determinism | merged | `689b076c036c` | 2 | [35366683037](https://github.com/xngg1021/academic-research-kernel/actions/runs/35366683037): success | upstream canary + 12 platform checks success; tap skipped |
 | [#11](https://github.com/xngg1021/academic-research-kernel/pull/11) | Research Decision Log v1 | merged | `4a7e8738d23c` | 16 | [35448287394](https://github.com/xngg1021/academic-research-kernel/actions/runs/35448287394): success | upstream canary + 12 platform checks success; tap skipped |
 | [#12](https://github.com/xngg1021/academic-research-kernel/pull/12) | Artifact Ingestion Bridge v1 | open | `51c288144298` (pre-remediation snapshot) | 2 | [35488732107](https://github.com/xngg1021/academic-research-kernel/actions/runs/35488732107): success | upstream canary + 12 platform checks success; tap skipped |
+
+The first remediation checkpoint `24469778b15b` is also exact-head verified by run `35494388854` (13 successful jobs, `tap-lifecycle` skipped). The follow-up commit containing the seven second-review fixes must pass its own matrix before merge.
 
 ### CI interpretation
 
@@ -54,6 +57,8 @@ The 31 review findings were not treated as independent one-line patches. They we
 | Audit context | 31 | Caller metadata is preserved on receipts while intentionally excluded from content-addressed receipt identity. |
 
 Additional P1 defects outside the 31 review threads were found during implementation and fixed: `LineageReceipt` nested dictionaries were reachable despite a frozen dataclass; receipt validation did not recompute declared lineage/receipt digests; a global “producer major 1” rule rejected the real `cross-review-five` 2.x producer; the quantitative schema rejected several real recomputation result shapes and treated `consistent: null` as contradiction; direct `CanonicalWork.to_dict()` output and meta-analysis-only artifacts were rejected; and an empty-but-valid cross-review registry could be acknowledged without preservation. CEG and ledger frozen mappings now also resist direct backing-map mutation and non-JSON values.
+
+The seven follow-up P1 findings are also closed in code: academic-evidence CEG IDs bind the target work; MCP artifact validation accepts the physical receipt context needed by receipt-backed snapshots; screening decisions cannot overwrite included-study objects; caller metadata is excluded from mutation cache identity while remaining on each returned receipt; ledger bindings expose the real content-addressed correction ID; producer-generated `missing_input` lineage receipts verify consistently; and timestamp-only lineage receipt emissions share one registry identity.
 
 ## Project-planning audit
 
@@ -90,7 +95,7 @@ The remaining planning limitations are recorded below; they are not silently rep
 
 ## Verification performed for this remediation
 
-- `python3 -m pytest -q`: **691 passed, 3 skipped**.
+- `python3 -m pytest -q`: **696 passed, 3 skipped**.
 - `python3 ../scripts/recompute_direction_coverage.py` (from `docs/`): all 235 pain items reproduced with the documented rankings.
 - `python3 scripts/qa.py`: repository static and executable-fence gate.
 - `python3 scripts/i18n_sync.py --check`: manifest/hash/status consistency gate.

@@ -23,6 +23,12 @@ import graph as ceg_mod
 import ledger as ledger_mod
 import mcp_server
 from ingestion import ArtifactEnvelope, IngestionEngine, IngestionKernelState, IngestionReceipt
+from shared_contracts.evidence import (
+    ReceiptRef,
+    canonical_evidence_claim_digest,
+    canonical_json_bytes,
+    compute_sha256,
+)
 
 
 def evidence_payload(claim: str = "A verified claim") -> dict:
@@ -114,6 +120,54 @@ def test_caller_metadata_is_preserved_but_excluded_from_receipt_identity():
     assert r1.caller_metadata["run_id"] == "one"
     assert r2.caller_metadata["run_id"] == "two"
     assert r1.receipt_id == r2.receipt_id
+
+
+def test_caller_metadata_replay_does_not_reapply_outcome_correction():
+    state = kernel()
+    state.ledger.add_decision("dec-1", "Decision", decision_action="commit")
+    engine = IngestionEngine()
+    bindings_a = {
+        "action": "add_outcome_correction",
+        "decision_id": "dec-1",
+        "verdict": "positive",
+        "rationale": "result A",
+    }
+    first = envelope(
+        evidence_payload("Evidence A"),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        caller_metadata={"run_id": "first"},
+    )
+    second = envelope(
+        evidence_payload("Evidence B"),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+    )
+    r_a = engine.ingest(first, state=state, bindings=bindings_a)
+    r_b = engine.ingest(
+        second,
+        state=state,
+        bindings={
+            "action": "add_outcome_correction",
+            "decision_id": "dec-1",
+            "verdict": "negative",
+            "rationale": "result B",
+        },
+    )
+    replay = envelope(
+        evidence_payload("Evidence A"),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        caller_metadata={"run_id": "replay"},
+    )
+    r_replay = engine.ingest(replay, state=state, bindings=bindings_a)
+
+    corrections = state.ledger.to_dict()["corrections"]
+    assert len(corrections) == 2
+    assert state.ledger.outcome_of("dec-1")["latest_correction_id"] == r_b.ledger_bindings[0]["basis_id"]
+    assert r_a.ledger_bindings[0]["basis_id"] == corrections[0]["correction_id"]
+    assert r_replay.receipt_id == r_a.receipt_id
+    assert r_replay.caller_metadata["run_id"] == "replay"
 
 
 def test_runtime_schema_rejects_documented_but_incomplete_receipt():
@@ -344,8 +398,24 @@ def test_screening_only_and_citation_only_payloads_mutate_state():
     )
     receipts, _ = IngestionEngine().batch_ingest([screening, citation], state=state)
     assert all(item.status == "accepted" for item in receipts)
-    assert state.objects["record-1"]["kind"] == "screening_result"
+    assert state.objects["screening:record-1"]["kind"] == "screening_result"
     assert state.objects["citation-1"]["kind"] == "citation_delta"
+
+
+def test_screening_record_does_not_replace_included_study_with_same_id():
+    state = kernel()
+    env = envelope(
+        {
+            "included_studies": [{"study_id": "study-1", "effect": 0.42}],
+            "screening_results": [{"study_id": "study-1", "decision": "include"}],
+        },
+        "systematic-review-meta-analysis",
+        "screening-matrix-1.0",
+    )
+    receipt = IngestionEngine().ingest(env, state=state)
+    assert receipt.status == "accepted"
+    assert state.objects["study-1"]["effect"] == 0.42
+    assert state.objects["screening:study-1"]["decision"] == "include"
 
 
 @pytest.mark.parametrize(
@@ -396,6 +466,44 @@ def test_ceg_declared_digest_and_evidence_content_are_strictly_replayed():
     replayed = state.ceg.evidence_anchors["evidence-1"]
     assert replayed.content_sha256 == "a" * 64
     assert replayed.excerpt == "Exact excerpt"
+
+
+def test_mcp_artifact_validation_accepts_receipt_context_for_ceg_snapshot():
+    physical = evidence_payload()
+    payload_sha = compute_sha256(canonical_json_bytes(physical))
+    claim_digest = canonical_evidence_claim_digest(physical["claims"][0])
+    ref = ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest=claim_digest,
+        payload_sha256=payload_sha,
+    )
+    source = ceg_mod.ClaimEvidenceGraph(graph_id="receipt-backed")
+    source.register_receipt(payload_sha, physical)
+    source.add_claim("claim-1", "A verified claim", target_work_id="work:A")
+    source.add_evidence(
+        "evidence-1",
+        "evidence_receipt",
+        source_work_id="work:A",
+        receipt_ref=ref,
+    )
+    source.add_support_edge("evidence-1", "claim-1", "supported", receipt_ref=ref)
+    env = envelope(
+        source.to_dict(),
+        "claim-evidence-graph",
+        "claim-evidence-graph-1.0",
+        artifact_kind="ceg_snapshot",
+    )
+
+    _, without_context = call_tool(
+        "research_artifact_validate", {"envelope": env.to_dict()}
+    )
+    _, with_context = call_tool(
+        "research_artifact_validate",
+        {"envelope": env.to_dict(), "receipts": {payload_sha: physical}},
+    )
+    assert without_context["valid"] is False
+    assert with_context["valid"] is True
 
 
 def test_complete_kernel_snapshot_round_trip_and_tamper_rejection():
@@ -542,7 +650,7 @@ def test_object_registry_digest_is_insertion_order_invariant():
     assert first.compute_digests()["object_registry_digest"] == second.compute_digests()["object_registry_digest"]
 
 
-def test_wrapper_context_does_not_reuse_incompatible_cached_receipt():
+def test_equal_claims_for_different_works_get_distinct_ceg_nodes():
     payload = evidence_payload()
     first = envelope(
         payload,
@@ -557,12 +665,71 @@ def test_wrapper_context_does_not_reuse_incompatible_cached_receipt():
         subject_refs=["work:B"],
     )
     state = kernel()
-    accepted = IngestionEngine().ingest(first, state=state)
-    rejected = IngestionEngine().ingest(second, state=state)
-    assert accepted.status == "accepted"
-    assert rejected.status == "rejected"
-    assert rejected.receipt_id != accepted.receipt_id
-    assert "work:B" not in state.objects
+    accepted_a = IngestionEngine().ingest(first, state=state)
+    accepted_b = IngestionEngine().ingest(second, state=state)
+    assert accepted_a.status == "accepted"
+    assert accepted_b.status == "accepted"
+    assert accepted_b.receipt_id != accepted_a.receipt_id
+    assert accepted_a.ceg_nodes != accepted_b.ceg_nodes
+    assert {claim.target_work_id for claim in state.ceg.claims.values()} == {
+        "work:A",
+        "work:B",
+    }
+
+
+def test_missing_input_lineage_receipt_verifies_and_ingests():
+    receipt = mcp_server.prov_mod.trace_origin(
+        mcp_server.prov_mod.LineageGraph(),
+        "missing-target",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    ref = {
+        "kind": "lineage",
+        "schema_version": "lineage-receipt-1.0",
+        "receipt_id": receipt["receipt_id"],
+        "receipt_digest": receipt["receipt_digest"],
+    }
+    _, verified = call_tool(
+        "research_receipt_verify",
+        {"receipt_ref": ref, "receipt_payload": receipt},
+    )
+    env = envelope(
+        receipt,
+        "research-object-identity",
+        "lineage-receipt-1.0",
+        artifact_kind="lineage_receipt",
+    )
+    ingested = IngestionEngine().ingest(env, state=kernel())
+    assert verified["valid"] is True
+    assert ingested.status == "accepted"
+
+
+def test_lineage_receipt_timestamp_variants_share_registry_identity():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    first_payload = mcp_server.prov_mod.trace_origin(
+        graph, "entity-1", check_on_disk_hashes=False
+    ).to_dict()
+    first_payload["timestamp"] = "2026-09-20T00:00:00Z"
+    second_payload = copy.deepcopy(first_payload)
+    second_payload["timestamp"] = "2026-09-20T00:00:01Z"
+    first = envelope(
+        first_payload,
+        "research-object-identity",
+        "lineage-receipt-1.0",
+        artifact_kind="lineage_receipt",
+    )
+    second = envelope(
+        second_payload,
+        "research-object-identity",
+        "lineage-receipt-1.0",
+        artifact_kind="lineage_receipt",
+    )
+    state = kernel()
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(state.receipts) == 1
+    assert state.receipts[first_payload["receipt_id"]]["timestamp"] == first_payload["timestamp"]
 
 
 def test_batch_bindings_length_must_match_exactly():

@@ -27,7 +27,7 @@
 - **端到端完整生命周期与对抗性用例**：
   - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
   - 新增 `tests/test_ingestion_hardening.py`，覆盖深不可变、运行时 schema、真实生产者契约、原子回滚、语义幂等、完整状态回放、防篡改摘要、三态证据语义与真实 stdio MCP 握手；
-  - 单测基线由 632 项扩充至 **691 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
+  - 单测基线由 632 项扩充至 **696 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
 
 ### PR #12 合并前完整性加固与历史对账
 
@@ -37,7 +37,8 @@
 - **[P1] MCP 公共面闭环**：严格工具入参 schema、统一 `isError`、完整 kernel state 输入输出、实际 lineage/ledger API、物理收据复核，并以真实 stdio 子进程覆盖 initialize/list/call。
 - **[P1] 深不可变**：信封、入库收据、LineageReceipt、CEG 与 Ledger 的全部嵌套 JSON 数据递归冻结；对 `to_dict()` 结果和底层映射的外部变异均不影响域对象。
 - **[P2] 审计上下文**：caller metadata 完整传递但不污染内容寻址 receipt ID；对象、物理收据、不确定性、已入库产物与总内核内容均有独立摘要。
-- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、31 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
+- **[P1] 二次复审闭环**：继续修复 7 个新发现的边界条件：CEG ID 绑定目标 work、MCP 快照校验接收物理收据、筛选/纳入研究对象隔离、caller metadata 不触发重复变异、回执引用真实 correction ID、`missing_input` 谱系收据可验证、时间戳变体不冲突。
+- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 38 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
 
 ---
 

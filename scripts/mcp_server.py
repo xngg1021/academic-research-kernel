@@ -56,6 +56,10 @@ TOOLS = [
                 "envelope": {
                     "type": "object",
                     "description": "The ResearchArtifactEnvelope dictionary to validate."
+                },
+                "receipts": {
+                    "type": "object",
+                    "description": "Optional physical receipt registry required to replay receipt-backed CEG or Ledger snapshots."
                 }
             }
         }
@@ -306,9 +310,13 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             adapter = _DEFAULT_ENGINE.registry.resolve(env)
             errors = validate_adapter_contract(env, adapter)
             if not errors:
+                receipts = arguments.get("receipts") or {}
+                if not isinstance(receipts, dict):
+                    return {"valid": False, "errors": ["'receipts' must be a dictionary"]}
                 temp_state = IngestionKernelState(
                     ceg=ceg_mod.ClaimEvidenceGraph(),
                     ledger=ledger_mod.DecisionLedger(),
+                    receipts=receipts,
                 )
                 plan = adapter.plan(env, temp_state)
                 errors.extend(plan.errors)

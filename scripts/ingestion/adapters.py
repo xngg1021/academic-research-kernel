@@ -284,11 +284,10 @@ class BaseArtifactAdapter(ABC):
                     locator=corr.get("locator"),
                     metadata=corr.get("metadata") or {},
                 )
-                corr_seq = getattr(corr_res, "sequence", 0)
                 applied_ledger_bindings.append({
                     "decision_id": corr["decision_id"],
                     "binding_kind": "outcome_correction",
-                    "basis_id": f"corr-{corr['decision_id']}-{corr_seq}",
+                    "basis_id": corr_res.correction_id,
                 })
 
         # 5. Persist uncertainties into kernel state
@@ -390,10 +389,16 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             c_loc = c_item.get("locator") or envelope.locator
             c_stat = c_item.get("support_status", "supported")
 
-            # Deterministic claim ID
+            # Receipt claim digests identify the physical claim entry only.
+            # CEG nodes also bind that entry to its target work so equal claim
+            # text about different works cannot collide.
             c_dig = canonical_evidence_claim_digest(c_item)
-            c_id = f"clm-{c_dig[:16]}"
-            ev_id = f"ev-{c_dig[:16]}"
+            node_dig = compute_sha256(canonical_json_bytes({
+                "claim_digest": c_dig,
+                "target_work_id": target_work,
+            }))
+            c_id = f"clm-{node_dig[:16]}"
+            ev_id = f"ev-{node_dig[:16]}"
 
             plan.ceg_claims.append({
                 "id": c_id,
@@ -975,9 +980,12 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
             s_id = s.get("study_id") or f"study-{idx}"
             plan.created_objects[s_id] = dict(copy.deepcopy(s), id=s_id, kind="study_entry")
         for idx, result in enumerate(p.get("screening_results", [])):
-            result_id = result.get("study_id") or result.get("record_id")
-            if not result_id:
-                result_id = f"screen-{compute_sha256(canonical_json_bytes(result))[:16]}"
+            source_id = result.get("study_id") or result.get("record_id")
+            if not source_id:
+                source_id = compute_sha256(canonical_json_bytes(result))[:16]
+            # A screening decision and an extracted included-study record are
+            # distinct objects even when they share the same study identifier.
+            result_id = f"screening:{source_id}"
             plan.created_objects[result_id] = dict(
                 copy.deepcopy(result), id=result_id, kind="screening_result"
             )

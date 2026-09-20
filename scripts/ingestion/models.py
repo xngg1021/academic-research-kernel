@@ -133,7 +133,11 @@ class ArtifactEnvelope:
             )
 
     def ingestion_context_digest(self, bindings: Optional[Mapping[str, Any]] = None) -> str:
-        """Hash every mutation-affecting wrapper field and explicit caller binding."""
+        """Hash every mutation-affecting wrapper field and explicit caller binding.
+
+        ``caller_metadata`` is per-call correlation context and must never
+        cause an already-applied state mutation to run again.
+        """
         context = {
             "artifact_id": self.artifact_id,
             "artifact_kind": self.artifact_kind,
@@ -142,7 +146,6 @@ class ArtifactEnvelope:
             "subject_refs": list(self.subject_refs),
             "lineage_ref": self.lineage_ref.to_dict() if self.lineage_ref else None,
             "locator": self.locator,
-            "caller_metadata": _thaw_val(self.caller_metadata),
             "bindings": _thaw_val(bindings or {}),
         }
         return compute_sha256(canonical_json_bytes(context))
@@ -434,6 +437,17 @@ class IngestionReceipt:
             caller_metadata=data.get("caller_metadata"),
         )
 
+    def with_caller_metadata(
+        self, caller_metadata: Optional[Mapping[str, Any]]
+    ) -> "IngestionReceipt":
+        """Return this content-addressed result with fresh call correlation context."""
+        data = self.to_dict()
+        if caller_metadata is None:
+            data.pop("caller_metadata", None)
+        else:
+            data["caller_metadata"] = _thaw_val(caller_metadata)
+        return IngestionReceipt.from_dict(data)
+
 
 def _normalise_uncertainty(value: Mapping[str, Any]) -> FrozenJSONMap:
     if not isinstance(value, collections.abc.Mapping):
@@ -459,6 +473,20 @@ def _normalise_uncertainty(value: Mapping[str, Any]) -> FrozenJSONMap:
     if "metadata" in value and not isinstance(value["metadata"], collections.abc.Mapping):
         raise ValueError("uncertainty.metadata must be an object")
     return FrozenJSONMap(value)
+
+
+def _receipt_conflict_payload(value: Any) -> Any:
+    """Return identity-bearing data for duplicate receipt registration.
+
+    A lineage receipt timestamp is excluded from both of its declared
+    identities. Repeated producer runs may therefore emit the same receipt at
+    different times without constituting conflicting physical evidence.
+    """
+    payload = _thaw_val(value)
+    if isinstance(payload, dict) and payload.get("protocol") == "lineage-receipt-1.0":
+        payload = dict(payload)
+        payload.pop("timestamp", None)
+    return payload
 
 
 @dataclass
@@ -511,8 +539,14 @@ class IngestionKernelState:
 
     def register_receipt(self, key: str, value: Any) -> None:
         snapshot = copy.deepcopy(_thaw_val(value))
-        if key in self.receipts and canonical_json_bytes(self.receipts[key]) != canonical_json_bytes(snapshot):
-            raise ValueError(f"Conflicting physical receipt registration for {key!r}")
+        if key in self.receipts:
+            existing = _receipt_conflict_payload(self.receipts[key])
+            incoming = _receipt_conflict_payload(snapshot)
+            if canonical_json_bytes(existing) != canonical_json_bytes(incoming):
+                raise ValueError(f"Conflicting physical receipt registration for {key!r}")
+            # Keep the first physical emission. Timestamp-only variants share
+            # the exact same verified receipt identity and need no re-register.
+            return
         self.receipts[key] = snapshot
         if self.ceg is not None:
             self.ceg.register_receipt(key, snapshot)
