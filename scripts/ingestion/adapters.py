@@ -17,6 +17,7 @@ from shared_contracts.evidence import (
     compute_sha256,
     validate_academic_receipt_contract,
     validate_lineage_receipt_contract,
+    validate_lineage_receipt_integrity,
 )
 from .models import ArtifactEnvelope, IngestionKernelState, IngestionReceipt
 
@@ -378,8 +379,6 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             plan.created_objects[target_work] = {
                 "id": target_work,
                 "kind": "work",
-                "source_query": p.get("query"),
-                "identifiers": p.get("identifiers", []),
             }
 
         # 2. Ingest claims and evidences into CEG
@@ -389,16 +388,23 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             c_loc = c_item.get("locator") or envelope.locator
             c_stat = c_item.get("support_status", "supported")
 
-            # Receipt claim digests identify the physical claim entry only.
-            # CEG nodes also bind that entry to its target work so equal claim
-            # text about different works cannot collide.
+            # Receipt claim digests identify the claim entry as serialized by
+            # the producer. CEG claim nodes additionally bind the effective
+            # envelope locator and target work. Evidence anchors also bind the
+            # physical receipt so separate retrievals remain independently
+            # traceable without polluting the stable ResearchObject identity.
             c_dig = canonical_evidence_claim_digest(c_item)
-            node_dig = compute_sha256(canonical_json_bytes({
+            claim_node_dig = compute_sha256(canonical_json_bytes({
                 "claim_digest": c_dig,
                 "target_work_id": target_work,
+                "locator": c_loc,
             }))
-            c_id = f"clm-{node_dig[:16]}"
-            ev_id = f"ev-{node_dig[:16]}"
+            evidence_node_dig = compute_sha256(canonical_json_bytes({
+                "claim_node_digest": claim_node_dig,
+                "payload_sha256": envelope.payload_sha256,
+            }))
+            c_id = f"clm-{claim_node_dig[:16]}"
+            ev_id = f"ev-{evidence_node_dig[:16]}"
 
             plan.ceg_claims.append({
                 "id": c_id,
@@ -422,7 +428,12 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
                 "target_work_id": target_work,
                 "locator": c_loc,
                 "receipt_ref": ref,
-                "metadata": {"evidence_type": c_type, "source": c_item.get("source")},
+                "metadata": {
+                    "evidence_type": c_type,
+                    "source": c_item.get("source"),
+                    "receipt_query": p.get("query"),
+                    "receipt_identifiers": copy.deepcopy(p.get("identifiers", [])),
+                },
             })
 
             plan.ceg_edges.append({
@@ -472,6 +483,9 @@ class ResearchObjectIdentityAdapter(BaseArtifactAdapter):
         if envelope.payload_schema == "lineage-receipt-1.0" or p.get("protocol") == "lineage-receipt-1.0":
             if not p.get("receipt_id") or not p.get("receipt_digest"):
                 errors.append("Lineage receipt requires receipt_id and receipt_digest")
+            integrity_ok, integrity_error = validate_lineage_receipt_integrity(p)
+            if not integrity_ok and integrity_error:
+                errors.append(integrity_error)
         else:
             obj_id = p.get("object_id") or p.get("id")
             obj_type = p.get("object_type") or p.get("kind")
@@ -626,7 +640,23 @@ class DecisionLedgerSnapshotAdapter(BaseArtifactAdapter):
             return plan
         p = _thaw_val(envelope.payload)
         try:
-            replayed = state.ledger.__class__.from_dict(p, receipt_registry=state.receipts)
+            manifest = p.get("verification_manifest", {})
+            if not isinstance(manifest, collections.abc.Mapping):
+                raise ValueError("DecisionLedger snapshot verification_manifest must be a mapping")
+            missing_receipts = sorted(set(manifest) - set(state.receipts))
+            if missing_receipts:
+                raise ValueError(
+                    "DecisionLedger snapshot is missing declared physical receipts: "
+                    + ", ".join(missing_receipts)
+                )
+            declared_receipts = {
+                key: state.receipts[key]
+                for key in sorted(manifest)
+            }
+            replayed = state.ledger.__class__.from_dict(
+                p,
+                receipt_registry=declared_receipts,
+            )
         except Exception as exc:
             plan.valid = False
             plan.errors.append(f"DecisionLedger snapshot replay failed: {exc}")
@@ -980,7 +1010,10 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
             s_id = s.get("study_id") or f"study-{idx}"
             plan.created_objects[s_id] = dict(copy.deepcopy(s), id=s_id, kind="study_entry")
         for idx, result in enumerate(p.get("screening_results", [])):
-            source_id = result.get("study_id") or result.get("record_id")
+            # A study can have multiple reports/records. Prefer the unique
+            # screening-record identity and only fall back to study_id for
+            # older producer payloads that do not expose record_id.
+            source_id = result.get("record_id") or result.get("study_id")
             if not source_id:
                 source_id = compute_sha256(canonical_json_bytes(result))[:16]
             # A screening decision and an extracted included-study record are
@@ -1155,8 +1188,14 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             "target_work_id": target,
             "observation": copy.deepcopy(dict(p)),
         }
-        retraction_signal = bool(p["is_retracted"] or p.get("signals"))
-        if p["is_retracted"] is None:
+        current_unknown = (
+            p.get("verification_status") in {"retained_prior", "unverified"}
+            or ("current_observation" in p and p.get("current_observation") is None)
+            or p["is_retracted"] is None
+        )
+        current_observation = p.get("current_observation", p["is_retracted"])
+        retraction_signal = bool(current_observation or p.get("signals"))
+        if current_unknown:
             plan.uncertainties.append({
                 "item_id": f"unc-retract-{envelope.artifact_id[4:16]}",
                 "subject_id": target,
@@ -1169,7 +1208,7 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             plan.uncertainties.append({
                 "item_id": f"unc-retract-{envelope.artifact_id[4:16]}",
                 "subject_id": target,
-                "kind": "retraction_alert" if p["is_retracted"] else "publication_status_change",
+                "kind": "retraction_alert" if current_observation else "publication_status_change",
                 "reason": reason,
                 "needs_human": True,
             })

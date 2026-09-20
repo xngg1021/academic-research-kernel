@@ -164,7 +164,11 @@ def test_mcp_call_research_lineage_trace():
             {"id": "model-eval-1", "type": "statistic_artifact"},
         ],
         "activities": [
-            {"id": "eval-run-1", "type": "statistical_analysis"},
+            {
+                "id": "eval-run-1",
+                "type": "statistical_analysis",
+                "timestamp": "2026-09-20T00:00:00Z",
+            },
         ],
         "edges": [
             {"source_id": "eval-run-1", "target_id": "data-snapshot-1", "type": "used"},

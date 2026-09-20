@@ -135,6 +135,19 @@ TOOLS = [
             "properties": {
                 "lineage_graph": {
                     "type": "object",
+                    "properties": {
+                        "activities": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["id", "timestamp"],
+                                "properties": {
+                                    "id": {"type": "string", "minLength": 1},
+                                    "timestamp": {"type": "string", "minLength": 1}
+                                }
+                            }
+                        }
+                    },
                     "description": "Exported LineageGraph dictionary."
                 },
                 "target_entity_id": {
@@ -425,6 +438,11 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                     metadata=ent.get("metadata"),
                 )
             for act in graph_data.get("activities", []):
+                timestamp = act.get("timestamp")
+                if not isinstance(timestamp, str) or not timestamp.strip():
+                    raise ValueError(
+                        f"Lineage activity {act.get('id')!r} requires an explicit timestamp"
+                    )
                 lg.add_activity(
                     act["id"],
                     type=act.get("type", "generic_activity"),
@@ -433,7 +451,7 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                     commit_sha=act.get("commit_sha"),
                     parameters=act.get("parameters"),
                     environment=act.get("environment"),
-                    timestamp=act.get("timestamp"),
+                    timestamp=timestamp,
                 )
             for edge in graph_data.get("edges", []):
                 edge_type = edge["type"]

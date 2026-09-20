@@ -736,3 +736,154 @@ def test_batch_bindings_length_must_match_exactly():
     env = envelope({"value": 1}, "unknown", "unknown-1.0")
     with pytest.raises(ValueError, match="exactly match"):
         IngestionEngine().batch_ingest([env], bindings_list=[])
+
+
+def test_academic_retrieval_metadata_does_not_change_stable_work_identity():
+    first_payload = evidence_payload()
+    second_payload = copy.deepcopy(first_payload)
+    second_payload["query"] = "title:A verified claim"
+    second_payload["identifiers"] = {"openalex_id": "W123"}
+    state = kernel()
+
+    first = envelope(
+        first_payload,
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=["work:stable"],
+    )
+    second = envelope(
+        second_payload,
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=["work:stable"],
+    )
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert dict(state.objects["work:stable"]) == {"id": "work:stable", "kind": "work"}
+    assert len(state.ceg.claims) == 1
+    assert len(state.ceg.evidence_anchors) == 2
+
+
+def test_effective_envelope_locator_participates_in_academic_ceg_identity():
+    payload = evidence_payload()
+    state = kernel()
+    first = envelope(
+        payload,
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=["work:stable"],
+        locator="page:1",
+    )
+    second = envelope(
+        payload,
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=["work:stable"],
+        locator="page:2",
+    )
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert {claim.locator for claim in state.ceg.claims.values()} == {"page:1", "page:2"}
+    assert len(state.ceg.evidence_anchors) == 2
+
+
+def test_screening_record_id_prevents_same_study_reports_from_overwriting():
+    env = envelope(
+        {
+            "screening_results": [
+                {"record_id": "report-a", "study_id": "study-1", "decision": "include"},
+                {"record_id": "report-b", "study_id": "study-1", "decision": "exclude"},
+            ]
+        },
+        "systematic-review-meta-analysis",
+        "screening-matrix-1.0",
+    )
+    state = kernel()
+    receipt = IngestionEngine().ingest(env, state=state)
+
+    assert receipt.status == "accepted"
+    assert state.objects["screening:report-a"]["decision"] == "include"
+    assert state.objects["screening:report-b"]["decision"] == "exclude"
+
+
+def test_retraction_retained_prior_is_not_treated_as_current_negative():
+    env = envelope(
+        {
+            "is_retracted": False,
+            "signals": [],
+            "current_observation": None,
+            "verification_status": "retained_prior",
+        },
+        "retraction-watch",
+        "retraction-delta-1.0",
+        subject_refs=["doi:10.1000/example"],
+    )
+    receipt = IngestionEngine().ingest(env, state=kernel())
+
+    assert receipt.status == "accepted"
+    assert len(receipt.uncertainties) == 1
+    assert receipt.uncertainties[0]["kind"] == "publication_status_change"
+
+
+def test_artifact_preflight_rejects_forged_lineage_identity():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    receipt = mcp_server.prov_mod.trace_origin(
+        graph,
+        "entity-1",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    receipt["lineage_digest"] = "f" * 64
+    env = envelope(
+        receipt,
+        "research-object-identity",
+        "lineage-receipt-1.0",
+        artifact_kind="lineage_receipt",
+    )
+
+    _, body = call_tool("research_artifact_validate", {"envelope": env.to_dict()})
+
+    assert body["valid"] is False
+    assert any("digest mismatch" in error for error in body["errors"])
+
+
+def test_mcp_lineage_trace_requires_explicit_activity_timestamp():
+    response, body = call_tool(
+        "research_lineage_trace",
+        {
+            "lineage_graph": {
+                "entities": [],
+                "activities": [{"id": "run", "type": "statistical_analysis"}],
+                "edges": [],
+            },
+            "target_entity_id": "result",
+        },
+    )
+
+    assert response["result"]["isError"] is True
+    assert body["error"] == "Invalid tool arguments"
+    assert any("timestamp" in error for error in body["details"])
+
+
+def test_ledger_snapshot_replay_ignores_unrelated_kernel_receipts():
+    snapshot_ledger = ledger_mod.DecisionLedger("snapshot-ledger")
+    snapshot_ledger.add_decision("decision-1", "Snapshot decision", decision_action="commit")
+    snapshot = snapshot_ledger.to_dict()
+    assert snapshot["verification_manifest"] == {}
+
+    state = kernel()
+    state.register_receipt("unrelated", evidence_payload())
+    env = envelope(
+        snapshot,
+        "decision-ledger",
+        "decision-ledger-1.0",
+        artifact_kind="decision_ledger_snapshot",
+    )
+    receipt = IngestionEngine().ingest(env, state=state)
+
+    assert receipt.status == "accepted"
+    assert state.ledger.ledger_id == "snapshot-ledger"
+    assert state.ledger.to_dict()["decisions"][0]["id"] == "decision-1"
+    assert "unrelated" in state.ledger.to_dict()["verification_manifest"]

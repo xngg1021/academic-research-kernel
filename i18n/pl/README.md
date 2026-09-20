@@ -81,7 +81,7 @@ git diff --check
 
 QA weryfikuje metadane, odwołania, wzorce ścieżek osobistych i znanych sekretów, składnię Pythona oraz oznaczone bloki kodu. Zwraca 0 przy sukcesie, 1 przy błędzie kodu/schematu/tożsamości oraz 2 przy niedostępności transportu/uwierzytelniania/limitu.
 
-CI uruchamia pełny zestaw testów w systemach Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 i macOS Intel, z 696 zaliczonymi testami jednostkowymi i 40 zweryfikowanymi blokami kodu wykonywalnego.
+CI uruchamia pełny zestaw testów w systemach Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 i macOS Intel, z 703 zaliczonymi testami jednostkowymi i 40 zweryfikowanymi blokami kodu wykonywalnego.
 
 tools/longtail/ zawiera deterministyczny generator skrajnych scenariuszy długiego ogona: 4096 kombinacji kandydatów z ziarnem SHA256 na rozdzielonych osiach czynników, zachłanny wybór pokrycia i raport w generated-scenarios.json.
 
