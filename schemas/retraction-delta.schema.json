@@ -4,15 +4,114 @@
   "title": "RetractionWatchDelta",
   "type": "object",
   "additionalProperties": false,
-  "required": ["is_retracted", "signals"],
+  "required": [
+    "is_retracted",
+    "signals"
+  ],
   "properties": {
-    "doi": {"type": "string", "minLength": 1},
-    "target_work_id": {"type": "string", "minLength": 1},
-    "is_retracted": {"type": ["boolean", "null"]},
-    "signals": {"type": "array", "items": {"type": "string"}},
-    "verification_status": {"enum": ["verified_current", "retained_prior", "unverified"]},
-    "current_observation": {"type": ["boolean", "null"]},
-    "truncated": {"type": "boolean"},
-    "retraction_reason": {"type": "string"}
-  }
+    "doi": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_work_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "is_retracted": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "verification_status": {
+      "enum": [
+        "verified_current",
+        "retained_prior",
+        "unverified"
+      ]
+    },
+    "current_observation": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "retraction_reason": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "verification_status"
+        ],
+        "properties": {
+          "verification_status": {
+            "const": "retained_prior"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "is_retracted": {
+            "type": "boolean"
+          },
+          "current_observation": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "required": [
+            "current_observation"
+          ]
+        },
+        "then": {
+          "oneOf": [
+            {
+              "properties": {
+                "is_retracted": {
+                  "const": true
+                },
+                "current_observation": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "properties": {
+                "is_retracted": {
+                  "const": false
+                },
+                "current_observation": {
+                  "const": false
+                }
+              }
+            },
+            {
+              "properties": {
+                "is_retracted": {
+                  "const": null
+                },
+                "current_observation": {
+                  "const": null
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
 }

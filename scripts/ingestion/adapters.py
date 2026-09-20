@@ -18,11 +18,14 @@ from shared_contracts.evidence import (
     canonical_json_bytes,
     canonical_text,
     compute_sha256,
+    require_registry_key,
+    require_unique_snapshot_records,
     validate_academic_receipt_contract,
     validate_lineage_receipt_contract,
     validate_lineage_receipt_integrity,
 )
 from .commitments import bind_mutations, mutation_inventory
+from .contracts import validate_schema
 from .models import (
     ArtifactEnvelope,
     IngestionKernelState,
@@ -252,7 +255,7 @@ class _PlanObjectRegistry(dict):
     """Reject conflicting object identities before a plan can hide an overwrite."""
 
     def __setitem__(self, key: str, value: Mapping[str, Any]) -> None:
-        object_id = str(key)
+        object_id = require_registry_key(key)
         candidate = _thaw_val(value)
         existing = self.get(object_id)
         if (
@@ -987,6 +990,13 @@ class ClaimEvidenceGraphSnapshotAdapter(BaseArtifactAdapter):
             errors.append("CEG snapshot invalid protocol")
         if "claims" not in p or "evidence_anchors" not in p:
             errors.append("CEG snapshot missing 'claims' or 'evidence_anchors' lists")
+        try:
+            require_unique_snapshot_records(p, {
+                "claims": "id", "evidence_anchors": "id", "support_edges": None,
+                "claim_relations": None, "uncertainties": "item_id",
+            })
+        except (KeyError, TypeError, ValueError) as exc:
+            errors.append(f"Invalid CEG snapshot records: {exc}")
         return len(errors) == 0, errors
 
     def plan(
@@ -1060,6 +1070,14 @@ class DecisionLedgerSnapshotAdapter(BaseArtifactAdapter):
             errors.append("DecisionLedger snapshot invalid protocol")
         if "decisions" not in p:
             errors.append("DecisionLedger snapshot missing 'decisions' list")
+        try:
+            require_unique_snapshot_records(p, {
+                "decisions": "id", "bases": None, "forks": None,
+                "state_events": "event_id", "corrections": "correction_id",
+                "uncertainties": "item_id",
+            })
+        except (KeyError, TypeError, ValueError) as exc:
+            errors.append(f"Invalid DecisionLedger snapshot records: {exc}")
         return len(errors) == 0, errors
 
     def plan(
@@ -1622,7 +1640,8 @@ class LiteratureWatchAdapter(BaseArtifactAdapter):
         p = envelope.payload
         if "new_citations" not in p and "new_papers" not in p:
             return False, ["Literature watch delta requires 'new_citations' or 'new_papers'"]
-        return True, []
+        errors = validate_schema(p, "literature-delta.schema.json")
+        return not errors, errors
 
     def plan(
         self,
@@ -1673,7 +1692,8 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             return False, [
                 "Retraction delta requires 'target_work_id', 'doi', or an envelope subject_ref"
             ]
-        return True, []
+        errors = validate_schema(p, "retraction-delta.schema.json")
+        return not errors, errors
 
     def plan(
         self,

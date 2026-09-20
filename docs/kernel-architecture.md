@@ -84,6 +84,14 @@ Containers commit identity separately from their record sets so later append-onl
 
 Pre-closeout experimental ingestion caches without complete bindings fail closed and require reingestion; they are not silently treated as verified. Persisted CEG/Ledger historical hash modes remain supported. Current `evidence-receipt-1.0` admission uses the full producer schema. The explicit `academic-evidence-1.0` compatibility alias uses `legacy-academic-evidence.schema.json` for the historical compact receipt shape; physical consumers recognize that same closed shape, and any supplied claim digest must match the complete canonical claim.
 
+### Closure contract rules
+
+Explicit monitoring object IDs and every kernel registry key must be nonempty strings; no Python `str()` representation may define a research identity. Missing monitoring and systematic-review IDs use canonical JSON digests, including frozen nested JSON. Canonical serialization preserves the existing distinctions between booleans, integers and floating-point values.
+
+Serialized CEG, Ledger and kernel uncertainty collections reject duplicate record identities before replay. Records without a separate ID are compared using complete canonical bytes. This is distinct from the intentional idempotence of incremental add operations. Schemas enforce structural field contracts; adapters and replay check identity uniqueness and canonical record uniqueness with linear set-based checks. In particular, records whose metadata differs canonically as `1`, `1.0` or `true` remain distinct, avoiding JSON Schema numeric-equality deduplication. Lineage entity/activity/edge/root uniqueness remains enforced by its independent structural replay.
+
+Retraction records with a current observation must agree with `is_retracted` unless the explicit `retained_prior` state applies. That exception requires a retained boolean and an unknown (`null`, or omitted in the older compact shape) current observation. Conflicting verified, unverified or unspecified-status observations fail schema, adapter, preflight and admission checks without mutation. Retained positive retractions still emit both the alert and the current-coverage uncertainty.
+
 ### Trusted lineage verification context
 
 Portable receipts contain evidence, never filesystem authority. `LineageVerificationContext` is an immutable invocation argument carrying a trusted content root, exact authorized paths or entity-indexed bytes and a maximum byte budget. Trusted Python producers, adapters, CEG/Ledger replay and `IngestionKernelState.from_dict(..., verification_context=...)` use this same context. It is excluded from serialized receipts and snapshots. The historical trusted absolute-locator producer API authorizes only the exact explicitly supplied files; it does not grant directory-wide authority.
@@ -117,7 +125,7 @@ Tool arguments use closed JSON Schemas and are validated before dispatch. Each r
 
 ## Verification and residual boundaries
 
-The remediation baseline is **819 passed, zero skipped** tests plus 40 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
+The remediation baseline is **873 passed, zero skipped** tests plus 40 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
 
 The complete historical PR/CI ledger, fixed PR #12 review findings, and still-open operational/governance/P3 boundaries are maintained in [the 2026-09-20 project lineage audit](project-lineage-audit-20260920.md).
 

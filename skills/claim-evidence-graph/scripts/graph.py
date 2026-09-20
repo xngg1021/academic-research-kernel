@@ -281,6 +281,7 @@ try:
         canonical_receipt_ref_tuple,
         canonical_academic_receipt_payload_sha256,
         LineageVerificationContext,
+        require_unique_snapshot_records,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -296,6 +297,7 @@ except ImportError:
         canonical_receipt_ref_tuple,
         canonical_academic_receipt_payload_sha256,
         LineageVerificationContext,
+        require_unique_snapshot_records,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -1068,6 +1070,10 @@ class ClaimEvidenceGraph:
                 f"CEG protocol mismatch: expected 'claim-evidence-graph-1.0', got {data.get('protocol')!r}"
             )
 
+        require_unique_snapshot_records(data, {
+            "claims": "id", "evidence_anchors": "id", "support_edges": None,
+            "claim_relations": None, "uncertainties": "item_id",
+        })
         g = cls(graph_id=data["graph_id"], verification_context=verification_context)
         if receipt_registry:
             for k, v in receipt_registry.items():

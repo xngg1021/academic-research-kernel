@@ -14,7 +14,7 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 - PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. Reviews of heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, `21fa30065f92`, `659fa48466fe`, `6b4265036dd9`, `2f322d96a8e4`, `6228fb5ad48c`, and `1a8ad3ac3094` then opened **7 P1**, **6 P1 + 1 P2**, **5 P1 + 3 P2**, **5 P1**, **8 P1 + 1 P2**, **5 P1 + 3 P2**, **4 P1 + 4 P2**, **2 P1 + 2 P2**, **4 P1 + 1 P2**, **4 P1**, **6 P1**, and **4 P1 + 3 P2** findings respectively. Those twelve historical follow-up sets were implemented with regression coverage. The next exact-head review of `f4709c9d597e` reopened **6 P1 + 2 P2**. At final-wave intake, **117 threads** were observed (**31 resolved, 86 unresolved**); this is an intake snapshot, not the final live-thread count. The eight latest findings and sibling defects are addressed by the candidate below. Final thread dispositions and review census are recorded in the evidence annex after exact-head validation.
 - Verified remediation checkpoints: heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, `21fa30065f92`, `659fa48466fe`, `6b4265036dd9`, `2f322d96a8e4`, and `1a8ad3ac3094` passed runs [35494388854](https://github.com/xngg1021/academic-research-kernel/actions/runs/35494388854), [35495732974](https://github.com/xngg1021/academic-research-kernel/actions/runs/35495732974), [35496991058](https://github.com/xngg1021/academic-research-kernel/actions/runs/35496991058), [35497895958](https://github.com/xngg1021/academic-research-kernel/actions/runs/35497895958), [35498961191](https://github.com/xngg1021/academic-research-kernel/actions/runs/35498961191), [35500414450](https://github.com/xngg1021/academic-research-kernel/actions/runs/35500414450), [35501417685](https://github.com/xngg1021/academic-research-kernel/actions/runs/35501417685), [35503474068](https://github.com/xngg1021/academic-research-kernel/actions/runs/35503474068), [35503922950](https://github.com/xngg1021/academic-research-kernel/actions/runs/35503922950), [35504757502](https://github.com/xngg1021/academic-research-kernel/actions/runs/35504757502), and [35507956889](https://github.com/xngg1021/academic-research-kernel/actions/runs/35507956889). Each had upstream canary plus all 12 platform jobs successful; `tap-lifecycle` was condition-false and skipped as designed.
 - Historical 2026-09-06 correctness audit: **34/34 grouped findings resolved** (`P0=0`, `P1=22`, `P2=12`), with resolution evidence retained in `docs/findings.json` and executable regression suites.
-- Current implementation gate after remediation: **819 passed, zero skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
+- Current implementation gate after remediation: **873 passed, zero skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
 - Candidate code defects at P0/P1/P2: **none reproduced after the consolidated local repair and full suite**. This is local evidence; it does not assert a clean final review before that review occurs. Exact-head CI and the final cumulative review remain mandatory merge gates in the evidence annex. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
 
 ## Complete PR and exact-head CI ledger
@@ -84,9 +84,9 @@ The thirteenth review produced four P1 findings and three P2 findings, all now c
 
 ## Consolidated final-candidate ledger
 
-Parent: `f4709c9d597e4e1a61215530af7bcb85e1dd1d06`; base at intake: `ad807295a42ba132a669152dde145f3f530c8fc1`. Same PR #12 and branch `work/research-artifact-ingestion-bridge-v1`; forward-only publication. Final candidate SHA/tree are the containing Git commit and its tree, recorded explicitly in the evidence annex once published.
+Closure-candidate parent: `304f016d008f8d526f3eef4f264ddd66885ede12`; base at intake: `ad807295a42ba132a669152dde145f3f530c8fc1`. Same PR #12 and branch `work/research-artifact-ingestion-bridge-v1`; forward-only publication. Final candidate SHA/tree are the containing Git commit and its tree, recorded explicitly in the evidence annex once published.
 
-| Latest finding | Severity | Candidate repair and regression |
+| Original handoff finding | Severity | Candidate repair and regression |
 | --- | --- | --- |
 | CEG node/relation content binding | P1 | Full Claim, EvidenceAnchor, SupportEdge and ClaimRelation commitments; same-ID semantic tampering and removals fail replay |
 | ResearchObject replacement | P1 | Full object digest; only independently attested minimal-placeholder to canonical-work upgrade is legal |
@@ -102,6 +102,20 @@ Parent: `f4709c9d597e4e1a61215530af7bcb85e1dd1d06`; base at intake: `ad807295a42
 The complete commitment/authority rules and narrow compatibility exceptions are specified in [kernel architecture](kernel-architecture.md). Snapshot integrity and semantic cache integrity are separate checks. No prose-to-claim inference, automatic truth adjudication, synthetic quality score, or automatic researcher decision was added. All 14 adapters and 12 MCP tools remain. LICENSE/SLL boundary files and PR #1–#11 evidence remain unchanged.
 
 For cost control the final candidate runs the full matrix while Draft via the existing `full-ci` label. Promotion of that already-tested candidate to Ready triggers the single cumulative Codex review without repeating its CI matrix. Normal synchronize events with `full-ci` still run all platform jobs and the upstream canary. The exact successful run, not a skipped promotion workflow, is the required merge evidence. A maximum of one batched repair and closure round is allowed; no third automatic review.
+
+### Final review round 1 and the single closure repair
+
+Candidate `304f016d008f8d526f3eef4f264ddd66885ede12`, tree `22108290a861fbdd41af254e5b8a12df78fcde0b`, passed 819 local tests and exact-head [run 35516780578](https://github.com/xngg1021/academic-research-kernel/actions/runs/35516780578): 13 successful jobs, one expected tap skip, no failed/cancelled jobs. Its [cumulative review 5260863339](https://github.com/xngg1021/academic-research-kernel/pull/12#pullrequestreview-5260863339) returned one P1 and two P2. All three were classified actionable and reproduced; none was dismissed as stylistic or duplicate.
+
+| Round 1 finding | Severity | Closure repair |
+| --- | --- | --- |
+| Conflicting retraction observations suppress a retained alert | P1 | Schema and runtime require observation agreement; the narrow retained-prior unknown-current exception remains |
+| Non-string literature-watch IDs depend on Python representation order | P2 | String-only IDs/registry keys; absent IDs hash canonical JSON, including frozen payloads |
+| Duplicate CEG snapshot records silently collapse | P2 | Shared lossless collection validation across CEG, Ledger and kernel uncertainty snapshots |
+
+Sibling audit also repaired duplicate kernel uncertainties and frozen-JSON fallback hashing in monitoring and systematic-review adapters. It verified that canonical metadata distinctions (`1`, `1.0`, `true`) survive legitimate snapshots. `tests/test_ingestion_closure.py` adds 54 focused cases; the closure candidate passes **873 tests, zero skipped**. At closure intake there are **120 threads: 31 already resolved, 89 unresolved** (86 from the first candidate plus these three); final resolved/live counts belong to the evidence annex.
+
+This is the sole permitted repair wave. Its candidate SHA/tree, independent exact-head CI and final closure review are recorded in the annex. A reproducible blocking finding in round 2 stops merge and produces a residual checkpoint; there is no third automatic review. Removing `full-ci` before returning to Draft avoided a duplicate construction matrix; it is added only after the closure candidate passes all local gates.
 
 ## Project-planning audit
 
@@ -141,7 +155,7 @@ Severity labels on external, governance and operational rows describe retained l
 
 ## Verification performed for this remediation
 
-- `python -m pytest -q tests`: **819 passed, zero skipped** (CPU PyTorch installed).
+- `python -m pytest -q tests`: **873 passed, zero skipped** (CPU PyTorch installed).
 - `python3 ../scripts/recompute_direction_coverage.py` (from `docs/`): all 235 pain items reproduced with the documented rankings.
 - `python scripts/qa.py`: repository static QA and **40 independent executable fences PASS**.
 - `python3 scripts/i18n_sync.py --check`: manifest/hash/status consistency gate.

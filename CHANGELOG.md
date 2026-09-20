@@ -6,11 +6,17 @@
 
 ## 2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）
 
+### 唯一闭环修复（最终评审第 1 轮后）
+
+- 首个候选 `304f016d008f` 的完整 CI（35516780578）通过；累计评审新增 1 P1 + 2 P2，均复现并在本批次修复：撤稿观察冲突、非字符串监控 ID、重复 CEG 快照记录。
+- 同类路径一并补齐：kernel 不确定项重复拒绝、所有注册键类型、冻结 JSON 的缺省 ID 哈希；54 项新回归验证合法数值元数据、追加与保留历史例外。
+- 闭环候选本地 873 passed、零跳过；仅允许一次闭环 CI 与第 2 轮最终评审。具体 SHA、远端结果与合并状态仍由收尾证据账本记录。
+
 ### 最终集中收尾候选
 
 - 修复最新 6 P1 + 2 P2：所有语义变异绑定规范内容摘要，可信谱系内容权限带外传递，生产/验证字节策略一致，空 Ledger 与错误 MCP 输入可稳定重放/预检。
 - 同类审计补齐生产者诊断字段、严格不确定项碰撞、历史学术凭证兼容 schema 与 dry-run 预检；完整回归保留。无绑定的合并前实验缓存须重新入库，不能静默升级为可信。
-- 英文及简体中文 README 同步，其他译文仍如实标记 stale/queued。40 个独立代码围栏与本地 819 项测试构成发布前门禁；最终 SHA、CI、累计评审及合并结果见[收尾证据](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151)。
+- 英文及简体中文 README 同步，其他译文仍如实标记 stale/queued。40 个独立代码围栏与本地 873 项测试构成发布前门禁；最终 SHA、CI、累计评审及合并结果见[收尾证据](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151)。
 - 构建期保持 Draft，完整 CI 在 `full-ci` 标签下运行；同一候选转 Ready 仅触发最终评审，避免重复矩阵。PR #13 分发范围及 LICENSE/SLL 历史不变。
 
 ### 统一科研产物入库桥接与确定性内核公开界面 (Research Artifact Ingestion Bridge v1 / 协议：ingestion-receipt-1.0)
@@ -34,7 +40,7 @@
 - **端到端完整生命周期与对抗性用例**：
   - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
   - 新增 `tests/test_ingestion_hardening.py`，覆盖深不可变、运行时 schema、真实生产者契约、原子回滚、语义幂等、完整状态回放、防篡改摘要、三态证据语义与真实 stdio MCP 握手；
-  - 单测基线由 632 项扩充至 **819 passed, zero skipped**（40 independent executable smoke fences PASS）。
+  - 单测基线由 632 项扩充至 **873 passed, zero skipped**（40 independent executable smoke fences PASS）。
 
 ### PR #12 合并前完整性加固与历史对账
 

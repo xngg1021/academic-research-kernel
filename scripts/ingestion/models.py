@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, Union
 from shared_contracts.evidence import (
     FrozenJSONMap,
     LineageVerificationContext,
+    require_registry_key,
+    require_unique_snapshot_records,
     ReceiptRef,
     _thaw_val,
     canonical_json_bytes,
@@ -581,19 +583,19 @@ class IngestionKernelState:
 
     def __post_init__(self) -> None:
         self.objects = {
-            str(key): FrozenJSONMap(_thaw_val(value)) for key, value in self.objects.items()
+            require_registry_key(key): FrozenJSONMap(_thaw_val(value)) for key, value in self.objects.items()
         }
         self.receipts = {
-            str(key): FrozenJSONMap(_thaw_val(value))
+            require_registry_key(key): FrozenJSONMap(_thaw_val(value))
             for key, value in self.receipts.items()
         }
         existing_uncertainties = list(self.uncertainties)
         self.uncertainties = []
         for value in existing_uncertainties:
             self.add_uncertainty(value)
-        self.ingested_artifacts = dict(self.ingested_artifacts)
+        self.ingested_artifacts = {require_registry_key(key): value for key, value in self.ingested_artifacts.items()}
         self.ingestion_receipts = {
-            str(key): (
+            require_registry_key(key): (
                 value if isinstance(value, IngestionReceipt) else IngestionReceipt.from_dict(value)
             )
             for key, value in self.ingestion_receipts.items()
@@ -611,6 +613,7 @@ class IngestionKernelState:
                 self.ledger.register_receipt(key, value)
 
     def register_object(self, object_id: str, value: Mapping[str, Any]) -> None:
+        object_id = require_registry_key(object_id)
         frozen = FrozenJSONMap(_thaw_val(value))
         existing = self.objects.get(object_id)
         if (
@@ -640,6 +643,7 @@ class IngestionKernelState:
         self.objects[object_id] = frozen
 
     def register_receipt(self, key: str, value: Any) -> None:
+        key = require_registry_key(key)
         snapshot = FrozenJSONMap(_thaw_val(value))
         if key in self.receipts:
             existing = _receipt_conflict_payload(self.receipts[key])
@@ -948,6 +952,7 @@ class IngestionKernelState:
             raise ValueError(
                 f"Kernel snapshot tampering detected: declared {declared}, recomputed {actual}"
             )
+        require_unique_snapshot_records(raw, {"uncertainties": "item_id"})
         receipts = copy.deepcopy(raw["receipts"])
         ceg = ceg_cls.from_dict(raw["ceg"], receipt_registry=receipts, verification_context=verification_context) if raw["ceg"] else None
         ledger = (

@@ -151,6 +151,30 @@ def freeze_json(value: Any) -> Any:
     raise TypeError(f"Value of type {type(value).__name__!r} is outside the JSON domain")
 
 
+def require_registry_key(key: Any) -> str:
+    """Registry identities are JSON strings, never Python repr conversions."""
+    if not isinstance(key, str) or not key:
+        raise ValueError("Registry key must be a nonempty string")
+    return key
+
+
+def require_unique_snapshot_records(data: Mapping[str, Any], fields: Mapping[str, Optional[str]]) -> None:
+    """Snapshot arrays are lossless sets; incremental idempotence is separate."""
+    for field_name, identity_field in fields.items():
+        values = data[field_name]
+        if not isinstance(values, (list, tuple)):
+            raise ValueError(f"Snapshot {field_name} must be an array")
+        seen = set()
+        for record in values:
+            if not isinstance(record, collections.abc.Mapping):
+                raise ValueError(f"Snapshot {field_name} records must be objects")
+            raw = _thaw_val(record)
+            identity = require_registry_key(raw.get(identity_field)) if identity_field else canonical_json_bytes(raw)
+            if identity in seen:
+                raise ValueError(f"Duplicate snapshot record in {field_name}")
+            seen.add(identity)
+
+
 def canonical_text(text: str) -> str:
     """Normalize text deterministically (NFKC unicode, stripped)."""
     import unicodedata
@@ -160,7 +184,7 @@ def canonical_text(text: str) -> str:
 def canonical_json_bytes(obj: Any) -> bytes:
     """Serialize object to strictly canonical UTF-8 JSON bytes."""
     return json.dumps(
-        obj,
+        _thaw_val(obj),
         sort_keys=True,
         ensure_ascii=False,
         separators=(",", ":"),

@@ -464,6 +464,7 @@ try:
         canonical_academic_receipt_payload_sha256,
         canonical_evidence_claim_digest,
         LineageVerificationContext,
+        require_unique_snapshot_records,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -480,6 +481,7 @@ except ImportError:
         canonical_academic_receipt_payload_sha256,
         canonical_evidence_claim_digest,
         LineageVerificationContext,
+        require_unique_snapshot_records,
         validate_lineage_receipt_contract,
         validate_academic_receipt_contract,
         verify_receipt_reference,
@@ -2065,6 +2067,12 @@ class DecisionLedger:
                 raise ValueError(f"Export contract violation: missing required key {key!r}.")
         if data["protocol"] != PROTOCOL:
             raise ValueError(f"Export protocol mismatch: expected {PROTOCOL!r}, got {data['protocol']!r}.")
+
+        require_unique_snapshot_records(data, {
+            "decisions": "id", "bases": None, "forks": None,
+            "state_events": "event_id", "corrections": "correction_id",
+            "uncertainties": "item_id",
+        })
 
         # Gate 1: raw content digest over declared records
         raw_payload = canonical_payload_from_export(data)
