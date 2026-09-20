@@ -1,6 +1,6 @@
 {
   "protocol": "project-lineage-audit-1.0",
-  "as_of": "2026-09-20T09:19:27Z",
+  "as_of": "2026-09-20T09:40:28Z",
   "repository": "xngg1021/academic-research-kernel",
   "summary": {
     "pull_requests_total": 12,
@@ -17,7 +17,7 @@
       "P2": 1,
       "P3": 0
     },
-    "pr12_review_threads_observed_total": 83,
+    "pr12_review_threads_observed_total": 87,
     "pr12_followup_review_findings_by_severity": {
       "P0": 0,
       "P1": 7,
@@ -67,8 +67,15 @@
       "P3": 0
     },
     "pr12_seventh_followup_findings_remediated_locally": 8,
+    "pr12_eighth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 2,
+      "P2": 2,
+      "P3": 0
+    },
+    "pr12_eighth_followup_findings_remediated_locally": 4,
     "local_tests_after_remediation": {
-      "passed": 736,
+      "passed": 740,
       "skipped": 3,
       "failed": 0
     }
@@ -96,6 +103,13 @@
     {"pull_request": 12, "head_sha": "8af81dd29ce1a2e20764c3b8d1191d1293931a34", "workflow_run_id": 35500414450, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5, "P2": 3}},
     {"pull_request": 12, "head_sha": "21fa30065f9285d7edb824ca6a100630da4a53b4", "workflow_run_id": 35501417685, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 4}}
   ],
+  "reviewed_head_without_workflow": {
+    "pull_request": 12,
+    "head_sha": "659fa48466fe866ce577b90ab3fef9d73b62ca5e",
+    "review_completed_at": "2026-09-20T09:40:28Z",
+    "review_findings": {"P1": 2, "P2": 2},
+    "workflow_run": null
+  },
   "open_register": [
     {"id": "OPS-01", "severity": "P2", "category": "ci_coverage", "status": "accepted_operational_limitation"},
     {"id": "EXT-01", "severity": "P2", "category": "external_verification", "status": "open_credential_bound"},

@@ -173,7 +173,9 @@ def test_tier3_opaque_stays_opaque():
     assert len(state.ceg.to_dict()["claims"]) == 0
     assert len(state.ledger.to_dict()["decisions"]) == 0
     # Object registered for provenance
-    assert envelope.artifact_id in state.objects
+    object_id = receipt.created_or_reused_objects[0]
+    assert object_id in state.objects
+    assert object_id.startswith(f"{envelope.artifact_id}:context:")
 
 
 def test_transactional_batch_atomicity_on_failure():

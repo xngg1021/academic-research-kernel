@@ -2008,3 +2008,132 @@ def test_opaque_fallback_objects_are_scoped_to_full_envelope_context():
         "classification-a",
         "classification-b",
     }
+
+
+def test_dissenting_opinion_reasons_are_canonical_json():
+    first = envelope(
+        {
+            "contradictions": [],
+            "dissenting_opinions": [{"zeta": 1, "alpha": {"b": 2, "a": 1}}],
+        },
+        "cross-review-five",
+        "cross-review-2.0",
+        producer_version="2.0.0",
+    )
+    second = envelope(
+        {
+            "dissenting_opinions": [{"alpha": {"a": 1, "b": 2}, "zeta": 1}],
+            "contradictions": [],
+        },
+        "cross-review-five",
+        "cross-review-2.0",
+        producer_version="2.0.0",
+    )
+    assert first.artifact_id == second.artifact_id
+
+    first_receipt = IngestionEngine().ingest(first, state=kernel())
+    second_receipt = IngestionEngine().ingest(second, state=kernel())
+
+    assert first_receipt.status == second_receipt.status == "accepted"
+    assert first_receipt.receipt_id == second_receipt.receipt_id
+    assert first_receipt.uncertainties[0]["reason"] == (
+        '{"alpha":{"a":1,"b":2},"zeta":1}'
+    )
+
+
+def test_preflight_reports_planning_collisions_as_validation_errors():
+    env = envelope(
+        {
+            "new_papers": [
+                {"id": "duplicate", "title": "First"},
+                {"id": "duplicate", "title": "Conflicting"},
+            ],
+        },
+        "literature-watch",
+        "literature-delta-1.0",
+    )
+
+    response, body = call_tool(
+        "research_artifact_validate",
+        {"envelope": env.to_dict()},
+    )
+
+    assert response["result"]["isError"] is False
+    assert body["valid"] is False
+    assert any("Conflicting planned ResearchObject" in error for error in body["errors"])
+
+
+def test_manuscript_objects_include_producer_version_context():
+    payload = {"text": "Same manuscript"}
+    first = envelope(
+        payload,
+        "academic-writing",
+        "manuscript-opaque-1.0",
+        artifact_kind="opaque_manuscript",
+        producer_version="1.0.0",
+    )
+    second = envelope(
+        payload,
+        "academic-writing",
+        "manuscript-opaque-1.0",
+        artifact_kind="opaque_manuscript",
+        producer_version="1.1.0",
+    )
+    assert first.artifact_id == second.artifact_id
+    state = kernel()
+
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    manuscripts = [
+        value for value in state.objects.values()
+        if value["kind"] == "opaque_manuscript"
+    ]
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(manuscripts) == 2
+    assert {item["producer"]["version"] for item in manuscripts} == {
+        "1.0.0",
+        "1.1.0",
+    }
+
+
+def test_doi_retraction_targets_the_canonical_work_identity():
+    canonical = {
+        "work_type": "article",
+        "title": "Retracted work",
+        "authors": [],
+        "doi": "10.1000/example",
+    }
+    state = kernel()
+    engine = IngestionEngine()
+    work_receipt = engine.ingest(
+        envelope(
+            canonical,
+            "literature-analysis",
+            "canonical-work-1.0",
+            producer_version="1.3.0",
+        ),
+        state=state,
+    )
+    retraction_receipt = engine.ingest(
+        envelope(
+            {
+                "doi": " 10.1000/EXAMPLE ",
+                "is_retracted": True,
+                "signals": ["retraction"],
+            },
+            "retraction-watch",
+            "retraction-delta-1.0",
+        ),
+        state=state,
+    )
+    status_object = next(
+        value for value in state.objects.values()
+        if value.get("kind") == "publication_status_observation"
+    )
+
+    assert work_receipt.status == "accepted"
+    assert retraction_receipt.status == "accepted"
+    assert status_object["target_work_id"] == "work:doi:10.1000/example"
+    assert {item["subject_id"] for item in retraction_receipt.uncertainties} == {
+        "work:doi:10.1000/example"
+    }

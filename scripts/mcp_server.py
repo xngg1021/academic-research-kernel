@@ -386,9 +386,14 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                     ledger=ledger_mod.DecisionLedger(),
                     receipts=receipts,
                 )
-                plan = adapter.plan(env, temp_state)
-                errors.extend(plan.errors)
-                if not errors and env.lineage_ref is not None:
+                try:
+                    plan = adapter.plan(env, temp_state)
+                except Exception as exc:
+                    plan = None
+                    errors.append(f"Adapter planning failed: {exc}")
+                if plan is not None:
+                    errors.extend(plan.errors)
+                if not errors and plan is not None and env.lineage_ref is not None:
                     receipt_id = env.lineage_ref.receipt_id
                     if receipt_id in plan.registered_receipts:
                         physical = plan.registered_receipts[receipt_id]

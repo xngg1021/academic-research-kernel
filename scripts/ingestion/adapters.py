@@ -64,6 +64,14 @@ def _compute_ceg_claim_digest(
     }))
 
 
+def _canonical_reason(value: Any) -> str:
+    """Render arbitrary producer values without representation-order drift."""
+    raw = _thaw_val(value)
+    if isinstance(raw, str):
+        return raw
+    return canonical_json_bytes(raw).decode("utf-8")
+
+
 def _domain_derived_uncertainties(
     state: IngestionKernelState,
 ) -> List[Dict[str, Any]]:
@@ -1216,9 +1224,9 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                 "item_id": f"unc-contra-{context_identity}-{idx}",
                 "subject_id": ev_id,
                 "kind": "expert_disagreement",
-                "reason": str(item.get("summary") or item.get("title"))
-                if item.get("summary") or item.get("title")
-                else canonical_json_bytes(_thaw_val(item)).decode("utf-8"),
+                "reason": _canonical_reason(
+                    item.get("summary") or item.get("title") or item
+                ),
                 "needs_human": True,
             })
 
@@ -1238,9 +1246,9 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                 "item_id": f"unc-single-{context_identity}-{idx}",
                 "subject_id": ev_id,
                 "kind": "expert_disagreement",
-                "reason": str(item.get("summary") or item.get("title"))
-                if item.get("summary") or item.get("title")
-                else canonical_json_bytes(_thaw_val(item)).decode("utf-8"),
+                "reason": _canonical_reason(
+                    item.get("summary") or item.get("title") or item
+                ),
                 "needs_human": True,
             })
 
@@ -1265,7 +1273,7 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                 "item_id": f"unc-dissent-{artifact_identity}-{idx}",
                 "subject_id": envelope.artifact_id,
                 "kind": "expert_disagreement",
-                "reason": str(d),
+                "reason": _canonical_reason(d),
                 "needs_human": True,
             })
 
@@ -1522,7 +1530,7 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
         p = envelope.payload
         target = p.get("target_work_id")
         if not target and p.get("doi"):
-            target = f"doi:{p['doi']}"
+            target = f"work:doi:{canonical_text(p['doi']).lower()}"
         if not target:
             target = envelope.subject_refs[0]
         event_digest = compute_sha256(canonical_json_bytes({
@@ -1689,14 +1697,10 @@ class AcademicWritingAdapter(BaseArtifactAdapter):
         if not valid:
             return plan
 
-        # Keep the content-addressed ID for context-free artifacts while
-        # namespacing contextual manifestations so the same prose may be
-        # associated with multiple locators or research objects losslessly.
-        has_context = envelope.locator is not None or bool(envelope.subject_refs)
-        object_id = envelope.artifact_id
-        if has_context:
-            context_digest = envelope.ingestion_context_digest(bindings)
-            object_id = f"{envelope.artifact_id}:context:{context_digest[:32]}"
+        # Producer identity is stored on the object, so every mutation-bearing
+        # envelope context participates in the object identity as well.
+        context_digest = envelope.ingestion_context_digest(bindings)
+        object_id = f"{envelope.artifact_id}:context:{context_digest[:32]}"
         plan.created_objects[object_id] = {
             "id": object_id,
             "kind": "opaque_manuscript",

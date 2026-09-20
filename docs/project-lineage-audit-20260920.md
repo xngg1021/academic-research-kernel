@@ -11,10 +11,10 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 - PR history: **12 total; 11 merged; PR #12 open**.
 - Exact-head CI history at audit start: **12/12 workflow runs successful; 0 failed or cancelled runs**.
 - Standalone GitHub issues: **0 open, 0 closed**. Review findings are therefore accounted for from PR threads and repository audit records rather than an issue tracker.
-- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. Reviews of heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, and `21fa30065f92` then opened **7 P1**, **6 P1 + 1 P2**, **5 P1 + 3 P2**, **5 P1**, **8 P1 + 1 P2**, **5 P1 + 3 P2**, and **4 P1 + 4 P2** findings respectively. All seven follow-up sets are implemented with regression coverage; the newest set remains gated on the next exact-head matrix and review.
+- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. Reviews of heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, `21fa30065f92`, and `659fa48466fe` then opened **7 P1**, **6 P1 + 1 P2**, **5 P1 + 3 P2**, **5 P1**, **8 P1 + 1 P2**, **5 P1 + 3 P2**, **4 P1 + 4 P2**, and **2 P1 + 2 P2** findings respectively. All eight follow-up sets are implemented with regression coverage; the newest set remains gated on the next exact-head matrix and review.
 - Verified remediation checkpoints: heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, and `21fa30065f92` passed runs [35494388854](https://github.com/xngg1021/academic-research-kernel/actions/runs/35494388854), [35495732974](https://github.com/xngg1021/academic-research-kernel/actions/runs/35495732974), [35496991058](https://github.com/xngg1021/academic-research-kernel/actions/runs/35496991058), [35497895958](https://github.com/xngg1021/academic-research-kernel/actions/runs/35497895958), [35498961191](https://github.com/xngg1021/academic-research-kernel/actions/runs/35498961191), [35500414450](https://github.com/xngg1021/academic-research-kernel/actions/runs/35500414450), and [35501417685](https://github.com/xngg1021/academic-research-kernel/actions/runs/35501417685). Each had upstream canary plus all 12 platform jobs successful; `tap-lifecycle` was condition-false and skipped as designed.
 - Historical 2026-09-06 correctness audit: **34/34 grouped findings resolved** (`P0=0`, `P1=22`, `P2=12`), with resolution evidence retained in `docs/findings.json` and executable regression suites.
-- Current implementation gate after remediation: **736 passed, 3 intentionally skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
+- Current implementation gate after remediation: **740 passed, 3 intentionally skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
 - Open code defects found at P0/P1: **0 locally reproduced after the latest follow-up remediation**, subject to the new PR-head remote matrix and review gate. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
 
 ## Complete PR and exact-head CI ledger
@@ -34,7 +34,7 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 | [#11](https://github.com/xngg1021/academic-research-kernel/pull/11) | Research Decision Log v1 | merged | `4a7e8738d23c` | 16 | [35448287394](https://github.com/xngg1021/academic-research-kernel/actions/runs/35448287394): success | upstream canary + 12 platform checks success; tap skipped |
 | [#12](https://github.com/xngg1021/academic-research-kernel/pull/12) | Artifact Ingestion Bridge v1 | open | `51c288144298` (pre-remediation snapshot) | 2 | [35488732107](https://github.com/xngg1021/academic-research-kernel/actions/runs/35488732107): success | upstream canary + 12 platform checks success; tap skipped |
 
-Remediation checkpoints `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, and `21fa30065f92` are exact-head verified by runs `35494388854`, `35495732974`, `35496991058`, `35497895958`, `35498961191`, `35500414450`, and `35501417685` (13 successful jobs each, `tap-lifecycle` skipped). The next commit containing the eight eighth-review fixes must pass its own matrix before merge.
+Remediation checkpoints `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, `d388fa11fefe`, `8af81dd29ce1`, and `21fa30065f92` are exact-head verified by runs `35494388854`, `35495732974`, `35496991058`, `35497895958`, `35498961191`, `35500414450`, and `35501417685` (13 successful jobs each, `tap-lifecycle` skipped). Head `659fa48466fe` completed review but GitHub Actions did not create an exact-head workflow run. The next commit containing the four ninth-review fixes must pass its own matrix before merge.
 
 ### CI interpretation
 
@@ -72,6 +72,8 @@ The seventh review produced five P1 findings and three P2 findings, all now clos
 
 The eighth review produced four P1 findings and four P2 findings, all now closed locally with focused regressions: every plan rejects conflicting ResearchObject identities before dictionary overwrite; cross-review evidence is scoped to the full ingestion context and retains its locator; lineage entity and activity types use closed MCP argument enums; untitled review disagreements use canonical JSON reasons; incomplete lineage receipts return normal invalid results; present-but-falsy physical lineage receipts are verified and rejected rather than treated as missing; canonical work metadata deterministically upgrades provisional work placeholders; and opaque fallback objects are scoped to their full envelope context.
 
+The ninth review produced two P1 findings and two P2 findings, all now closed locally with focused regressions: non-string dissenting-opinion reasons use canonical JSON; adapter planning collisions are returned by preflight as ordinary validation errors; manuscript objects always include the full producer context, including producer version; and DOI-only retraction targets use the same normalized canonical-work identity as adjacent ingestion paths.
+
 ## Project-planning audit
 
 The 2026-09-17 agenda audit's principal factual defect is closed: the invalid, unreproducible `146/138/136` direction counts were voided; `direction-primitive-mapping.json` now records the grouping; and `../scripts/recompute_direction_coverage.py` reproduces all 235 rows under single/core/baseline sensitivity runs. The leverage table was downgraded from a gate to a documented judgment, and the README labels the planning documents exploratory rather than binding.
@@ -107,7 +109,7 @@ The remaining planning limitations are recorded below; they are not silently rep
 
 ## Verification performed for this remediation
 
-- `python3 -m pytest -q`: **736 passed, 3 skipped**.
+- `python3 -m pytest -q`: **740 passed, 3 skipped**.
 - `python3 ../scripts/recompute_direction_coverage.py` (from `docs/`): all 235 pain items reproduced with the documented rankings.
 - `python3 scripts/qa.py`: repository static and executable-fence gate.
 - `python3 scripts/i18n_sync.py --check`: manifest/hash/status consistency gate.
