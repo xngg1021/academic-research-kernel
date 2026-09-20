@@ -46,7 +46,7 @@
         "additionalProperties": false,
         "required": ["claim", "evidence_type", "source", "support_status"],
         "properties": {
-          "claim": { "type": "string" },
+          "claim": { "type": "string", "minLength": 1 },
           "evidence_type": {
             "enum": ["metadata", "citation_count", "update_signal", "full_text", "computed"]
           },

@@ -16,6 +16,7 @@ from shared_contracts.evidence import (
     canonical_json_bytes,
     compute_sha256,
     freeze_json,
+    validate_lineage_receipt_contract,
 )
 from .contracts import (
     validate_envelope_dict,
@@ -50,6 +51,31 @@ VALID_KERNEL_UNCERTAINTY_KINDS = frozenset({
     "quantitative_verification_gap",
     "generic_uncertainty",
 })
+
+
+def lineage_ref_uncertainty_dict(
+    source_artifact_id: str,
+    lineage_ref: ReceiptRef,
+) -> Dict[str, Any]:
+    """Derive the stable kernel uncertainty for an unavailable envelope lineage."""
+    digest = compute_sha256(canonical_json_bytes({
+        "source_artifact_id": source_artifact_id,
+        "lineage_ref": lineage_ref.to_dict(),
+    }))
+    return {
+        "item_id": f"unc-lineage-{digest[:32]}",
+        "subject_id": source_artifact_id,
+        "kind": "missing_receipt",
+        "reason": (
+            f"Envelope lineage receipt {lineage_ref.receipt_id!r} is not loaded "
+            "in the kernel receipt registry"
+        ),
+        "needs_human": False,
+        "metadata": {
+            "kernel_origin": "envelope_lineage",
+            "lineage_ref": lineage_ref.to_dict(),
+        },
+    }
 
 
 def _raise_schema_errors(kind: str, errors: List[str]) -> None:
@@ -235,6 +261,8 @@ class IngestionReceipt:
     status: str
     validation_state: Mapping[str, Any]
     output_digests: Mapping[str, str]
+    ingestion_context_digest: Optional[str] = None
+    source_lineage_ref: Optional[ReceiptRef] = None
     created_or_reused_objects: Tuple[str, ...] = field(default_factory=tuple)
     ceg_nodes: Tuple[str, ...] = field(default_factory=tuple)
     ceg_edges: Tuple[str, ...] = field(default_factory=tuple)
@@ -255,6 +283,16 @@ class IngestionReceipt:
             raise ValueError("source_artifact_sha256 has invalid format")
         if self.status not in {"accepted", "rejected", "partial"}:
             raise ValueError("status must be accepted, rejected, or partial")
+        if self.ingestion_context_digest is not None and not SHA256_RE.fullmatch(
+            str(self.ingestion_context_digest)
+        ):
+            raise ValueError("ingestion_context_digest must be 64 lowercase hex characters")
+        if self.status == "accepted" and self.ingestion_context_digest is None:
+            raise ValueError("accepted ingestion receipts require ingestion_context_digest")
+        if self.source_lineage_ref is not None and not isinstance(
+            self.source_lineage_ref, ReceiptRef
+        ):
+            raise TypeError("source_lineage_ref must be a ReceiptRef or None")
 
         validation = FrozenJSONMap(self.validation_state)
         output = FrozenJSONMap(self.output_digests)
@@ -277,6 +315,8 @@ class IngestionReceipt:
             adapter_id=self.adapter_id,
             adapter_version=self.adapter_version,
             status=self.status,
+            ingestion_context_digest=self.ingestion_context_digest,
+            source_lineage_ref=self.source_lineage_ref,
             validation_state=validation,
             output_digests=output,
             created_or_reused_objects=self.created_or_reused_objects,
@@ -302,6 +342,8 @@ class IngestionReceipt:
         adapter_id: str,
         adapter_version: str,
         status: str,
+        ingestion_context_digest: Optional[str],
+        source_lineage_ref: Optional[ReceiptRef],
         validation_state: Mapping[str, Any],
         output_digests: Mapping[str, Any],
         created_or_reused_objects: Tuple[str, ...],
@@ -319,6 +361,10 @@ class IngestionReceipt:
             "adapter_id": adapter_id,
             "adapter_version": adapter_version,
             "status": status,
+            "ingestion_context_digest": ingestion_context_digest or "",
+            "source_lineage_ref": (
+                source_lineage_ref.to_dict() if source_lineage_ref else None
+            ),
             "validation_state": _thaw_val(validation_state),
             "output_digests": dict(sorted(_thaw_val(output_digests).items())),
             "created_or_reused_objects": sorted(created_or_reused_objects),
@@ -354,6 +400,7 @@ class IngestionReceipt:
         valid: bool,
         errors: List[str],
         output_digests: Mapping[str, str],
+        ingestion_context_digest: Optional[str] = None,
         created_or_reused_objects: Optional[List[str]] = None,
         ceg_nodes: Optional[List[str]] = None,
         ceg_edges: Optional[List[str]] = None,
@@ -370,6 +417,8 @@ class IngestionReceipt:
             "adapter_id": adapter_id,
             "adapter_version": adapter_version,
             "status": status,
+            "ingestion_context_digest": ingestion_context_digest,
+            "source_lineage_ref": envelope.lineage_ref,
             "validation_state": validation_state,
             "output_digests": output_digests,
             "created_or_reused_objects": tuple(created_or_reused_objects or ()),
@@ -406,6 +455,10 @@ class IngestionReceipt:
             "ignored_fields": list(self.ignored_fields),
             "output_digests": _thaw_val(self.output_digests),
         }
+        if self.ingestion_context_digest is not None:
+            data["ingestion_context_digest"] = self.ingestion_context_digest
+        if self.source_lineage_ref is not None:
+            data["source_lineage_ref"] = self.source_lineage_ref.to_dict()
         if self.failure_reason is not None:
             data["failure_reason"] = self.failure_reason
         if self.caller_metadata is not None:
@@ -425,6 +478,12 @@ class IngestionReceipt:
             adapter_id=data["adapter_id"],
             adapter_version=data["adapter_version"],
             status=data["status"],
+            ingestion_context_digest=data.get("ingestion_context_digest"),
+            source_lineage_ref=(
+                ReceiptRef(**data["source_lineage_ref"])
+                if data.get("source_lineage_ref")
+                else None
+            ),
             validation_state=data.get("validation_state", {"valid": False, "errors": []}),
             output_digests=data["output_digests"],
             created_or_reused_objects=tuple(data.get("created_or_reused_objects") or ()),
@@ -506,7 +565,8 @@ class IngestionKernelState:
             str(key): FrozenJSONMap(_thaw_val(value)) for key, value in self.objects.items()
         }
         self.receipts = {
-            str(key): copy.deepcopy(_thaw_val(value)) for key, value in self.receipts.items()
+            str(key): FrozenJSONMap(_thaw_val(value))
+            for key, value in self.receipts.items()
         }
         existing_uncertainties = list(self.uncertainties)
         self.uncertainties = []
@@ -538,7 +598,7 @@ class IngestionKernelState:
         self.objects[object_id] = frozen
 
     def register_receipt(self, key: str, value: Any) -> None:
-        snapshot = copy.deepcopy(_thaw_val(value))
+        snapshot = FrozenJSONMap(_thaw_val(value))
         if key in self.receipts:
             existing = _receipt_conflict_payload(self.receipts[key])
             incoming = _receipt_conflict_payload(snapshot)
@@ -611,6 +671,50 @@ class IngestionKernelState:
                 errors.append(
                     f"Ingestion receipt cache {cache_key!r} payload SHA conflicts with artifact registry"
                 )
+            if receipt.status != "accepted":
+                errors.append(
+                    f"Ingestion receipt cache {cache_key!r} contains a non-accepted receipt"
+                )
+            elif receipt.ingestion_context_digest is None:
+                errors.append(
+                    f"Ingestion receipt cache {cache_key!r} lacks an ingestion context digest"
+                )
+            else:
+                expected_cache_key = (
+                    f"{receipt.source_artifact_id}:"
+                    f"{receipt.ingestion_context_digest}"
+                )
+                if cache_key != expected_cache_key:
+                    errors.append(
+                        f"Ingestion receipt cache key {cache_key!r} does not match "
+                        f"the receipt context {expected_cache_key!r}"
+                    )
+
+            lineage_ref = receipt.source_lineage_ref
+            if lineage_ref is not None:
+                physical = self.receipts.get(lineage_ref.receipt_id)
+                if physical is None:
+                    expected_uncertainty = lineage_ref_uncertainty_dict(
+                        receipt.source_artifact_id,
+                        lineage_ref,
+                    )["item_id"]
+                    if expected_uncertainty not in {
+                        value["item_id"] for value in self.uncertainties
+                    }:
+                        errors.append(
+                            f"Ingestion receipt cache {cache_key!r} has an unresolved "
+                            "lineage_ref without its missing_receipt uncertainty"
+                        )
+                else:
+                    ok, error = validate_lineage_receipt_contract(
+                        lineage_ref,
+                        physical,
+                    )
+                    if not ok:
+                        errors.append(
+                            f"Ingestion receipt cache {cache_key!r} lineage_ref is invalid: "
+                            f"{error}"
+                        )
         return not errors, errors
 
     def compute_digests(self) -> Dict[str, str]:

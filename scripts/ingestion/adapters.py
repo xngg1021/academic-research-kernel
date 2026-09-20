@@ -21,19 +21,12 @@ from shared_contracts.evidence import (
     validate_lineage_receipt_contract,
     validate_lineage_receipt_integrity,
 )
-from .models import ArtifactEnvelope, IngestionKernelState, IngestionReceipt
-
-
-_DOMAIN_DERIVED_UNCERTAINTY_KINDS = {
-    "unverifiable_claim",
-    "unresolved_contradiction",
-    "missing_receipt",
-    "ambiguous_locator",
-    "decision_without_basis",
-    "unsupported_negative_result",
-    "unsupported_pruning",
-    "unevidenced_claim_basis",
-}
+from .models import (
+    ArtifactEnvelope,
+    IngestionKernelState,
+    IngestionReceipt,
+    lineage_ref_uncertainty_dict,
+)
 
 
 def _canonical_item_set(items: List[Mapping[str, Any]]) -> Set[bytes]:
@@ -89,7 +82,66 @@ def _domain_derived_uncertainties(
         metadata["kernel_origin"] = "domain_derived"
         raw["metadata"] = metadata
         values.append(raw)
+    for receipt in state.ingestion_receipts.values():
+        lineage_ref = receipt.source_lineage_ref
+        if (
+            receipt.status == "accepted"
+            and lineage_ref is not None
+            and lineage_ref.receipt_id not in state.receipts
+        ):
+            values.append(
+                lineage_ref_uncertainty_dict(
+                    receipt.source_artifact_id,
+                    lineage_ref,
+                )
+            )
     return values
+
+
+def _ceg_declared_receipt_registry(
+    payload: Mapping[str, Any],
+    state: IngestionKernelState,
+) -> Dict[str, Any]:
+    """Project target receipts onto the availability declared by a CEG export."""
+    missing_subjects = {
+        item.get("subject_id")
+        for item in payload.get("uncertainties", [])
+        if item.get("kind") == "missing_receipt"
+    }
+    blocked_lineage_ids: Set[str] = set()
+    blocked_academic_shas: Set[str] = set()
+
+    refs: List[Tuple[str, Mapping[str, Any]]] = []
+    for evidence in payload.get("evidence_anchors", []):
+        if evidence.get("receipt_ref"):
+            refs.append((evidence.get("id"), evidence["receipt_ref"]))
+    for edge in payload.get("support_edges", []):
+        if edge.get("receipt_ref"):
+            refs.append((edge.get("evidence_id"), edge["receipt_ref"]))
+    for subject_id, ref in refs:
+        if subject_id not in missing_subjects:
+            continue
+        if ref.get("kind") == "lineage" and ref.get("receipt_id"):
+            blocked_lineage_ids.add(ref["receipt_id"])
+        if ref.get("kind") == "academic_evidence" and ref.get("payload_sha256"):
+            blocked_academic_shas.add(ref["payload_sha256"])
+
+    projected: Dict[str, Any] = {}
+    for key, value in state.receipts.items():
+        if key in blocked_lineage_ids or key in blocked_academic_shas:
+            continue
+        raw = _thaw_val(value)
+        if (
+            blocked_academic_shas
+            and isinstance(raw, dict)
+            and raw.get("schema_version") == "1.0"
+            and isinstance(raw.get("claims"), list)
+            and canonical_academic_receipt_payload_sha256(raw)
+            in blocked_academic_shas
+        ):
+            continue
+        projected[key] = value
+    return projected
 
 
 class IngestionPlan:
@@ -178,6 +230,9 @@ class BaseArtifactAdapter(ABC):
             raise ValueError(
                 f"Missing required binding fields for {self.adapter_id}: {sorted(missing)}"
             )
+        for key in self.required_binding_fields:
+            if not isinstance(values[key], str) or not values[key].strip():
+                raise ValueError(f"bindings.{key} must be a non-empty string")
         return {key: values[key] for key in sorted(values)}
 
     @abstractmethod
@@ -200,7 +255,12 @@ class BaseArtifactAdapter(ABC):
         """Generate a side-effect-free mutation plan."""
         pass
 
-    def apply(self, plan: IngestionPlan, state: IngestionKernelState) -> IngestionReceipt:
+    def apply(
+        self,
+        plan: IngestionPlan,
+        state: IngestionKernelState,
+        ingestion_context_digest: str,
+    ) -> IngestionReceipt:
         """Apply a validated mutation plan to the kernel state atomically."""
         if not plan.valid:
             return IngestionReceipt.create(
@@ -211,6 +271,7 @@ class BaseArtifactAdapter(ABC):
                 valid=False,
                 errors=plan.errors,
                 output_digests=state.compute_digests(),
+                ingestion_context_digest=ingestion_context_digest,
                 failure_reason="; ".join(plan.errors),
                 caller_metadata=plan.envelope.caller_metadata,
             )
@@ -232,10 +293,8 @@ class BaseArtifactAdapter(ABC):
         managed_derived_ids.update(
             value["item_id"]
             for value in state.uncertainties
-            if (
-                value["kind"] in _DOMAIN_DERIVED_UNCERTAINTY_KINDS
-                or value.get("metadata", {}).get("kernel_origin") == "domain_derived"
-            )
+            if value.get("metadata", {}).get("kernel_origin")
+            in {"domain_derived", "envelope_lineage"}
         )
 
         # 1. Apply Research Objects with fail-closed collision defense
@@ -432,6 +491,7 @@ class BaseArtifactAdapter(ABC):
             valid=True,
             errors=[],
             output_digests=state.compute_digests(),
+            ingestion_context_digest=ingestion_context_digest,
             created_or_reused_objects=list(plan.created_objects.keys()),
             ceg_nodes=created_ceg_nodes,
             ceg_edges=created_ceg_edges,
@@ -493,6 +553,12 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             errors.append("AcademicEvidence receipt missing schema_version='1.0'")
         if "claims" not in p or not isinstance(p["claims"], (list, tuple)):
             errors.append("AcademicEvidence receipt missing 'claims' list")
+        else:
+            for index, claim in enumerate(p["claims"]):
+                if not canonical_text(claim.get("claim", "")):
+                    errors.append(
+                        f"AcademicEvidence claims[{index}].claim must be nonblank"
+                    )
         calc_sha = canonical_academic_receipt_payload_sha256(p)
         if calc_sha != envelope.payload_sha256:
             errors.append(f"Payload SHA-256 mismatch: envelope claims {envelope.payload_sha256}, actual payload computes to {calc_sha}")
@@ -724,7 +790,10 @@ class ClaimEvidenceGraphSnapshotAdapter(BaseArtifactAdapter):
             return plan
         p = _thaw_val(envelope.payload)
         try:
-            replayed = state.ceg.__class__.from_dict(p, receipt_registry=state.receipts)
+            replayed = state.ceg.__class__.from_dict(
+                p,
+                receipt_registry=_ceg_declared_receipt_registry(p, state),
+            )
         except Exception as exc:
             plan.valid = False
             plan.errors.append(f"CEG snapshot replay failed: {exc}")
@@ -748,8 +817,6 @@ class ClaimEvidenceGraphSnapshotAdapter(BaseArtifactAdapter):
             plan.errors.append("CEG snapshot is divergent; only exact or forward-only snapshots are accepted")
             return plan
         plan.ceg_snapshot = replayed
-        for u in p.get("uncertainties", []):
-            plan.uncertainties.append(copy.deepcopy(u))
         return plan
 
 
@@ -837,8 +904,6 @@ class DecisionLedgerSnapshotAdapter(BaseArtifactAdapter):
             )
             return plan
         plan.ledger_snapshot = replayed
-        for u in p.get("uncertainties", []):
-            plan.uncertainties.append(copy.deepcopy(u))
         return plan
 
 
@@ -1206,11 +1271,20 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
             source_id = result.get("record_id") or result.get("study_id")
             if not source_id:
                 source_id = compute_sha256(canonical_json_bytes(result))[:32]
-            # A screening decision and an extracted included-study record are
-            # distinct objects even when they share the same study identifier.
-            result_id = f"screening:{source_id}"
+            # Screening decisions are review-specific extractions. Bind their
+            # identity to the artifact context so separate protocols may make
+            # different decisions about the same bibliographic record.
+            screening_digest = compute_sha256(canonical_json_bytes({
+                "artifact_id": envelope.artifact_id,
+                "entry_index": idx,
+                "source_id": source_id,
+            }))
+            result_id = f"screening:{screening_digest[:32]}"
             plan.created_objects[result_id] = dict(
-                copy.deepcopy(result), id=result_id, kind="screening_result"
+                copy.deepcopy(result),
+                id=result_id,
+                kind="screening_result",
+                screening_source_id=source_id,
             )
             if result.get("decision") in {None, "maybe"}:
                 plan.uncertainties.append({
@@ -1382,7 +1456,7 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             "target_work_id": target,
             "observation": copy.deepcopy(dict(p)),
         }
-        current_unknown = (
+        coverage_unknown = (
             p.get("verification_status") in {"retained_prior", "unverified"}
             or ("current_observation" in p and p.get("current_observation") is None)
             or p["is_retracted"] is None
@@ -1390,9 +1464,9 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
         )
         current_observation = p.get("current_observation", p["is_retracted"])
         retraction_signal = bool(current_observation or p.get("signals"))
-        if current_unknown:
+        if coverage_unknown:
             plan.uncertainties.append({
-                "item_id": f"unc-retract-{event_digest[:32]}",
+                "item_id": f"unc-retract-coverage-{event_digest[:32]}",
                 "subject_id": target,
                 "kind": "publication_status_change",
                 "reason": (
@@ -1402,10 +1476,10 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
                 ),
                 "needs_human": True,
             })
-        elif retraction_signal:
+        if retraction_signal:
             reason = p.get("retraction_reason") or "Retraction/correction signal requires revalidation"
             plan.uncertainties.append({
-                "item_id": f"unc-retract-{event_digest[:32]}",
+                "item_id": f"unc-retract-alert-{event_digest[:32]}",
                 "subject_id": target,
                 "kind": "retraction_alert" if current_observation else "publication_status_change",
                 "reason": reason,

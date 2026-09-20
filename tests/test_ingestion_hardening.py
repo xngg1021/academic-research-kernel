@@ -99,6 +99,21 @@ def test_envelope_and_receipt_are_deeply_immutable():
     with pytest.raises(TypeError):
         receipt.caller_metadata["run"]["new"] = True
 
+    receipt_state = kernel()
+    evidence = evidence_payload()
+    accepted = IngestionEngine().ingest(
+        envelope(
+            evidence,
+            "academic-source-verification",
+            "evidence-receipt-1.0",
+        ),
+        state=receipt_state,
+    )
+    assert accepted.status == "accepted"
+    physical = receipt_state.receipts[compute_sha256(canonical_json_bytes(evidence))]
+    with pytest.raises(TypeError):
+        physical["claims"][0]["claim"] = "tampered"
+
 
 def test_caller_metadata_is_preserved_but_excluded_from_receipt_identity():
     payload = {"value": 1}
@@ -228,6 +243,25 @@ def test_runtime_schema_rejects_documented_but_incomplete_receipt():
     assert "required property" in receipt.failure_reason
 
 
+def test_academic_receipt_rejects_empty_claim_text():
+    for claim_text in ("", " \t "):
+        payload = evidence_payload(claim_text)
+        receipt = IngestionEngine().ingest(
+            envelope(
+                payload,
+                "academic-source-verification",
+                "evidence-receipt-1.0",
+            ),
+            state=kernel(),
+        )
+        assert receipt.status == "rejected"
+        assert "claim" in receipt.failure_reason
+        assert (
+            "nonblank" in receipt.failure_reason
+            or "non-empty" in receipt.failure_reason
+        )
+
+
 def test_known_producer_schema_mismatch_does_not_fall_back_to_opaque():
     env = envelope(
         {"text": "not an evidence receipt"},
@@ -331,6 +365,20 @@ def test_direct_canonical_work_producer_shape_is_accepted():
     receipt = IngestionEngine().ingest(env, state=state)
     assert receipt.status == "accepted"
     assert state.objects["work:doi:10.1000/example"] == payload
+
+
+def test_wrapped_canonical_works_use_the_full_runtime_schema():
+    for payload in ({"canonical_work": {}}, {"works": [{}]}):
+        receipt = IngestionEngine().ingest(
+            envelope(
+                payload,
+                "literature-analysis",
+                "canonical-work-1.0",
+            ),
+            state=kernel(),
+        )
+        assert receipt.status == "rejected"
+        assert "not valid under any" in receipt.failure_reason
 
 
 def test_meta_analysis_only_artifact_creates_a_kernel_object():
@@ -445,7 +493,11 @@ def test_screening_only_and_citation_only_payloads_mutate_state():
     )
     receipts, _ = IngestionEngine().batch_ingest([screening, citation], state=state)
     assert all(item.status == "accepted" for item in receipts)
-    assert state.objects["screening:record-1"]["kind"] == "screening_result"
+    screening_object = next(
+        value for value in state.objects.values()
+        if value["kind"] == "screening_result"
+    )
+    assert screening_object["screening_source_id"] == "record-1"
     assert state.objects["citation-1"]["kind"] == "citation_delta"
 
 
@@ -468,18 +520,33 @@ def test_screening_record_does_not_replace_included_study_with_same_id():
     )
     assert extraction["study_id"] == "study-1"
     assert extraction["effect"] == 0.42
-    assert state.objects["screening:study-1"]["decision"] == "include"
+    screening = next(
+        value for value in state.objects.values()
+        if value["kind"] == "screening_result"
+    )
+    assert screening["screening_source_id"] == "study-1"
+    assert screening["decision"] == "include"
 
 
 def test_study_extractions_are_scoped_to_each_review_artifact():
     state = kernel()
     first = envelope(
-        {"included_studies": [{"study_id": "study-1", "effect": 0.42}]},
+        {
+            "included_studies": [{"study_id": "study-1", "effect": 0.42}],
+            "screening_results": [
+                {"record_id": "record-1", "decision": "include"}
+            ],
+        },
         "systematic-review-meta-analysis",
         "screening-matrix-1.0",
     )
     second = envelope(
-        {"included_studies": [{"study_id": "study-1", "effect": 0.73}]},
+        {
+            "included_studies": [{"study_id": "study-1", "effect": 0.73}],
+            "screening_results": [
+                {"record_id": "record-1", "decision": "exclude"}
+            ],
+        },
         "systematic-review-meta-analysis",
         "screening-matrix-1.0",
     )
@@ -490,11 +557,19 @@ def test_study_extractions_are_scoped_to_each_review_artifact():
         for value in state.objects.values()
         if value["kind"] == "study_extraction"
     ]
+    screenings = [
+        value
+        for value in state.objects.values()
+        if value["kind"] == "screening_result"
+    ]
 
     assert [item.status for item in receipts] == ["accepted", "accepted"]
     assert len(extractions) == 2
     assert {item["study_id"] for item in extractions} == {"study-1"}
     assert {item["effect"] for item in extractions} == {0.42, 0.73}
+    assert len(screenings) == 2
+    assert {item["screening_source_id"] for item in screenings} == {"record-1"}
+    assert {item["decision"] for item in screenings} == {"include", "exclude"}
 
 
 @pytest.mark.parametrize(
@@ -584,6 +659,34 @@ def test_mcp_artifact_validation_accepts_receipt_context_for_ceg_snapshot():
     assert without_context["valid"] is False
     assert with_context["valid"] is True
 
+    missing_source = ceg_mod.ClaimEvidenceGraph(graph_id="receipt-missing-at-export")
+    missing_source.add_claim("claim-1", "A verified claim", target_work_id="work:A")
+    missing_source.add_evidence(
+        "evidence-1",
+        "evidence_receipt",
+        source_work_id="work:A",
+        receipt_ref=ref,
+    )
+    missing_source.add_support_edge(
+        "evidence-1",
+        "claim-1",
+        "supported",
+        receipt_ref=ref,
+    )
+    target = kernel()
+    target.register_receipt(payload_sha, physical)
+    snapshot_receipt = IngestionEngine().ingest(
+        envelope(
+            missing_source.to_dict(),
+            "claim-evidence-graph",
+            "claim-evidence-graph-1.0",
+            artifact_kind="ceg_snapshot",
+        ),
+        state=target,
+    )
+    assert snapshot_receipt.status == "accepted"
+    assert not [item for item in target.uncertainties if item["kind"] == "missing_receipt"]
+
 
 def test_complete_kernel_snapshot_round_trip_and_tamper_rejection():
     state = kernel()
@@ -601,6 +704,24 @@ def test_complete_kernel_snapshot_round_trip_and_tamper_rejection():
         ledger_cls=ledger_mod.DecisionLedger,
     )
     assert replayed.to_dict() == snapshot
+
+    rekeyed = copy.deepcopy(snapshot)
+    old_key, cached_receipt = rekeyed["ingestion_receipts"].popitem()
+    other_context = envelope(
+        evidence_payload(),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+        subject_refs=["work:other"],
+    ).ingestion_context_digest()
+    rekeyed["ingestion_receipts"][f"{env.artifact_id}:{other_context}"] = cached_receipt
+    unsigned = {key: value for key, value in rekeyed.items() if key != "snapshot_digest"}
+    rekeyed["snapshot_digest"] = compute_sha256(canonical_json_bytes(unsigned))
+    with pytest.raises(ValueError, match="context"):
+        IngestionKernelState.from_dict(
+            rekeyed,
+            ceg_cls=ceg_mod.ClaimEvidenceGraph,
+            ledger_cls=ledger_mod.DecisionLedger,
+        )
 
     tampered = copy.deepcopy(snapshot)
     tampered["objects"][next(iter(tampered["objects"]))]["tampered"] = True
@@ -785,6 +906,71 @@ def test_missing_input_lineage_receipt_verifies_and_ingests():
     assert ingested.status == "accepted"
 
 
+def test_envelope_lineage_reference_is_preserved_verified_and_resolved():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    physical = mcp_server.prov_mod.trace_origin(
+        graph,
+        "entity-1",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=physical["receipt_id"],
+        receipt_digest=physical["receipt_digest"],
+    )
+    source = envelope(
+        {"value": 1},
+        "unknown-producer",
+        "unknown-schema-1.0",
+        lineage_ref=ref,
+    )
+    state = kernel()
+    engine = IngestionEngine()
+
+    unresolved = engine.ingest(source, state=state)
+    assert unresolved.status == "accepted"
+    assert unresolved.source_lineage_ref == ref
+    assert [item["kind"] for item in state.uncertainties] == ["missing_receipt"]
+
+    physical_receipt = engine.ingest(
+        envelope(
+            physical,
+            "research-object-identity",
+            "lineage-receipt-1.0",
+            artifact_kind="lineage_receipt",
+        ),
+        state=state,
+    )
+    assert physical_receipt.status == "accepted"
+    assert not [
+        item
+        for item in state.uncertainties
+        if item.get("metadata", {}).get("kernel_origin") == "envelope_lineage"
+    ]
+
+    mismatched_ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=physical["receipt_id"],
+        receipt_digest="0" * 64,
+    )
+    mismatch_state = kernel()
+    mismatch_state.register_receipt(physical["receipt_id"], physical)
+    mismatch = engine.ingest(
+        envelope(
+            {"value": 2},
+            "unknown-producer",
+            "unknown-schema-1.0",
+            lineage_ref=mismatched_ref,
+        ),
+        state=mismatch_state,
+    )
+    assert mismatch.status == "rejected"
+    assert "lineage_ref verification failed" in mismatch.failure_reason
+
+
 def test_lineage_receipt_timestamp_variants_share_registry_identity():
     graph = mcp_server.prov_mod.LineageGraph()
     graph.add_entity("entity-1", "data_snapshot")
@@ -885,8 +1071,13 @@ def test_screening_record_id_prevents_same_study_reports_from_overwriting():
     receipt = IngestionEngine().ingest(env, state=state)
 
     assert receipt.status == "accepted"
-    assert state.objects["screening:report-a"]["decision"] == "include"
-    assert state.objects["screening:report-b"]["decision"] == "exclude"
+    screenings = {
+        value["screening_source_id"]: value
+        for value in state.objects.values()
+        if value["kind"] == "screening_result"
+    }
+    assert screenings["report-a"]["decision"] == "include"
+    assert screenings["report-b"]["decision"] == "exclude"
 
 
 def test_retraction_retained_prior_is_not_treated_as_current_negative():
@@ -1078,6 +1269,27 @@ def test_truncated_retraction_check_creates_coverage_uncertainty():
     assert len(receipt.uncertainties) == 1
     assert "truncated" in receipt.uncertainties[0]["reason"]
 
+    confirmed = IngestionEngine().ingest(
+        envelope(
+            {
+                "is_retracted": True,
+                "signals": ["retraction"],
+                "current_observation": True,
+                "verification_status": "verified_current",
+                "truncated": True,
+            },
+            "retraction-watch",
+            "retraction-delta-1.0",
+            subject_refs=["doi:10.1000/confirmed"],
+        ),
+        state=kernel(),
+    )
+    assert confirmed.status == "accepted"
+    assert {item["kind"] for item in confirmed.uncertainties} == {
+        "publication_status_change",
+        "retraction_alert",
+    }
+
 
 def test_unknown_screening_decision_is_rejected_fail_closed():
     env = envelope(
@@ -1154,6 +1366,26 @@ def test_resolved_domain_uncertainty_is_removed_from_kernel_queue():
         item for item in state.ceg.extract_uncertainties()
         if item.kind == "missing_receipt"
     ]
+
+    state.add_uncertainty({
+        "item_id": "manual-missing-receipt",
+        "subject_id": "manual-audit",
+        "kind": "missing_receipt",
+        "reason": "Explicit manual audit finding",
+        "needs_human": True,
+    })
+    opaque = engine.ingest(
+        envelope(
+            {"text": "unrelated"},
+            "unknown-producer",
+            "unknown-schema-1.0",
+        ),
+        state=state,
+    )
+    assert opaque.status == "accepted"
+    assert "manual-missing-receipt" in {
+        item["item_id"] for item in state.uncertainties
+    }
 
 
 def test_evidence_verdicts_share_one_semantic_claim_node():

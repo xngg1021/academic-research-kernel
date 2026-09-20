@@ -11,11 +11,11 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 - PR history: **12 total; 11 merged; PR #12 open**.
 - Exact-head CI history at audit start: **12/12 workflow runs successful; 0 failed or cancelled runs**.
 - Standalone GitHub issues: **0 open, 0 closed**. Review findings are therefore accounted for from PR threads and repository audit records rather than an issue tracker.
-- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. Reviews of heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, and `73f57fdc64c7` then opened **7 P1**, **6 P1 + 1 P2**, **5 P1 + 3 P2**, and **5 P1** findings respectively. All four follow-up sets are implemented with regression coverage; the newest set remains gated on the next exact-head matrix and review.
-- Verified remediation checkpoints: heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, and `73f57fdc64c7` passed runs [35494388854](https://github.com/xngg1021/academic-research-kernel/actions/runs/35494388854), [35495732974](https://github.com/xngg1021/academic-research-kernel/actions/runs/35495732974), [35496991058](https://github.com/xngg1021/academic-research-kernel/actions/runs/35496991058), and [35497895958](https://github.com/xngg1021/academic-research-kernel/actions/runs/35497895958). Each had upstream canary plus all 12 platform jobs successful; `tap-lifecycle` was condition-false and skipped as designed.
+- PR #12 review debt at audit start: **31 unresolved threads** — **30 P1 and 1 P2**; 12 threads were already outdated by intervening edits and 19 were on current lines. The first remediation implemented and closed all 31. Reviews of heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, and `d388fa11fefe` then opened **7 P1**, **6 P1 + 1 P2**, **5 P1 + 3 P2**, **5 P1**, and **8 P1 + 1 P2** findings respectively. All five follow-up sets are implemented with regression coverage; the newest set remains gated on the next exact-head matrix and review.
+- Verified remediation checkpoints: heads `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, and `d388fa11fefe` passed runs [35494388854](https://github.com/xngg1021/academic-research-kernel/actions/runs/35494388854), [35495732974](https://github.com/xngg1021/academic-research-kernel/actions/runs/35495732974), [35496991058](https://github.com/xngg1021/academic-research-kernel/actions/runs/35496991058), [35497895958](https://github.com/xngg1021/academic-research-kernel/actions/runs/35497895958), and [35498961191](https://github.com/xngg1021/academic-research-kernel/actions/runs/35498961191). Each had upstream canary plus all 12 platform jobs successful; `tap-lifecycle` was condition-false and skipped as designed.
 - Historical 2026-09-06 correctness audit: **34/34 grouped findings resolved** (`P0=0`, `P1=22`, `P2=12`), with resolution evidence retained in `docs/findings.json` and executable regression suites.
-- Current implementation gate after remediation: **717 passed, 3 intentionally skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
-- Open code defects found at P0/P1: **0 locally reproduced after the fourth follow-up remediation**, subject to the new PR-head remote matrix and review gate. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
+- Current implementation gate after remediation: **720 passed, 3 intentionally skipped**. Before this pass the actual baseline was 663 passed and 3 skipped; the earlier “666 passed” wording conflated collected tests with passed tests and has been corrected.
+- Open code defects found at P0/P1: **0 locally reproduced after the latest follow-up remediation**, subject to the new PR-head remote matrix and review gate. Remaining items are explicit operational, governance, distribution, localization, or experimental-scope limitations listed below.
 
 ## Complete PR and exact-head CI ledger
 
@@ -34,7 +34,7 @@ The GitHub snapshot was taken on 2026-09-20 UTC. “Successful CI” below means
 | [#11](https://github.com/xngg1021/academic-research-kernel/pull/11) | Research Decision Log v1 | merged | `4a7e8738d23c` | 16 | [35448287394](https://github.com/xngg1021/academic-research-kernel/actions/runs/35448287394): success | upstream canary + 12 platform checks success; tap skipped |
 | [#12](https://github.com/xngg1021/academic-research-kernel/pull/12) | Artifact Ingestion Bridge v1 | open | `51c288144298` (pre-remediation snapshot) | 2 | [35488732107](https://github.com/xngg1021/academic-research-kernel/actions/runs/35488732107): success | upstream canary + 12 platform checks success; tap skipped |
 
-Remediation checkpoints `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, and `73f57fdc64c7` are exact-head verified by runs `35494388854`, `35495732974`, `35496991058`, and `35497895958` (13 successful jobs each, `tap-lifecycle` skipped). The next commit containing the five fifth-review fixes must pass its own matrix before merge.
+Remediation checkpoints `24469778b15b`, `5e9a802c1bbd`, `9bb8726b5b0e`, `73f57fdc64c7`, and `d388fa11fefe` are exact-head verified by runs `35494388854`, `35495732974`, `35496991058`, `35497895958`, and `35498961191` (13 successful jobs each, `tap-lifecycle` skipped). The next commit containing the nine sixth-review fixes must pass its own matrix before merge.
 
 ### CI interpretation
 
@@ -64,7 +64,9 @@ The next review produced six P1 findings and one P2 finding, all now closed in c
 
 The subsequent review produced five P1 findings and three P2 findings, all now closed in code: lineage anchors bind their effective locator; publication-status observations bind their resolved work; CEG validation reports integrity failures as validation results; claim traces expose supporting and refuting anchors in addition to lineage receipts; truncated retraction checks become coverage uncertainties; screening decisions use a closed vocabulary; incremental CEG/Ledger mutations persist the same derived uncertainties as snapshot replay; and adapter-generated identities use 128-bit widths. The implementation also reuses richer pre-existing work objects and applies the same context/width invariant to adjacent reproduction, review, literature, meta-analysis, and math adapters.
 
-The fifth review produced five P1 findings, all now closed locally with focused regressions: resolved CEG/Ledger uncertainties are removed from the kernel queue; included-study extraction objects are scoped to their review artifact; successful receipt verification no longer carries an `error` key or MCP `isError`; adapters reject unknown or ineffective binding fields before deriving mutation cache keys; and support versus contradiction receipts for the same proposition converge on one semantic CEG claim while retaining distinct evidence anchors.
+The fifth review produced five P1 findings, all now closed locally with focused regressions: resolved CEG/Ledger uncertainties are removed from the kernel queue; included-study extraction objects and adjacent screening decisions are scoped to their review artifact; successful receipt verification no longer carries an `error` key or MCP `isError`; adapters reject unknown or ineffective binding fields before deriving mutation cache keys; and support versus contradiction receipts for the same proposition converge on one semantic CEG claim while retaining distinct evidence anchors.
+
+The sixth review produced eight P1 findings and one P2 finding, all now closed locally with focused regressions: accepted cache receipts are bound to and validated against their full ingestion context; envelope lineage references are preserved, verified against physical receipts, and represented as resolvable uncertainty when absent; physical receipts are deeply immutable; CEG snapshots replay against their declared receipt availability before synchronization; only kernel-owned derived uncertainties are removed; screening decisions are scoped to the review instance; blank academic claims fail closed; wrapped canonical works use the complete runtime schema; and a confirmed retraction under truncated coverage retains both the alert and the coverage uncertainty.
 
 ## Project-planning audit
 
@@ -88,7 +90,7 @@ The remaining planning limitations are recorded below; they are not silently rep
 | ID | Severity | Type | Status | Residual / next gate |
 | --- | --- | --- | --- | --- |
 | OPEN-P0 | P0 | Code/security/data loss | none open | No P0 was found in the current audit. |
-| OPEN-P1 | P1 | Code correctness | none locally reproduced after fourth follow-up remediation | Closure still depends on the updated PR-head remote matrix and review gate; a regression reopens this row. |
+| OPEN-P1 | P1 | Code correctness | none locally reproduced after latest follow-up remediation | Closure still depends on the updated PR-head remote matrix and review gate; a regression reopens this row. |
 | OPS-01 | P2 | CI coverage | accepted operational limitation | `tap-lifecycle` cannot test an unmerged PR head through the pinned remote tap. It runs on `main`; local discovery, upstream canary, and stdio MCP tests cover the PR path. |
 | EXT-01 | P2 | External verification | open/credential-bound | Live OpenAlex/Crossref/Unpaywall and hardware-specific accelerator claims were not re-executed in this offline correctness pass. No absence or success is inferred from an unavailable credential/service. |
 | GOV-01 | P2 | Historical provenance | grandfathered, cannot be reconstructed honestly | The original 235 pain-atlas entries lack per-item source-model and cross-confirmation provenance. New entries must record both; old entries remain explicitly marked as missing rather than backfilled speculatively. |
@@ -101,7 +103,7 @@ The remaining planning limitations are recorded below; they are not silently rep
 
 ## Verification performed for this remediation
 
-- `python3 -m pytest -q`: **717 passed, 3 skipped**.
+- `python3 -m pytest -q`: **720 passed, 3 skipped**.
 - `python3 ../scripts/recompute_direction_coverage.py` (from `docs/`): all 235 pain items reproduced with the documented rankings.
 - `python3 scripts/qa.py`: repository static and executable-fence gate.
 - `python3 scripts/i18n_sync.py --check`: manifest/hash/status consistency gate.

@@ -1,6 +1,6 @@
 {
   "protocol": "project-lineage-audit-1.0",
-  "as_of": "2026-09-20T00:00:00Z",
+  "as_of": "2026-09-20T08:26:12Z",
   "repository": "xngg1021/academic-research-kernel",
   "summary": {
     "pull_requests_total": 12,
@@ -8,7 +8,7 @@
     "pull_requests_open": 1,
     "exact_head_workflow_runs_successful": 12,
     "exact_head_workflow_runs_failed": 0,
-    "verified_remediation_workflow_runs_successful": 4,
+    "verified_remediation_workflow_runs_successful": 5,
     "standalone_issues": 0,
     "pr12_review_threads_unresolved_at_start": 31,
     "pr12_review_findings_by_severity": {
@@ -17,7 +17,7 @@
       "P2": 1,
       "P3": 0
     },
-    "pr12_review_threads_observed_total": 58,
+    "pr12_review_threads_observed_total": 67,
     "pr12_followup_review_findings_by_severity": {
       "P0": 0,
       "P1": 7,
@@ -46,8 +46,15 @@
       "P3": 0
     },
     "pr12_fourth_followup_findings_remediated_locally": 5,
+    "pr12_fifth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 8,
+      "P2": 1,
+      "P3": 0
+    },
+    "pr12_fifth_followup_findings_remediated_locally": 9,
     "local_tests_after_remediation": {
-      "passed": 717,
+      "passed": 720,
       "skipped": 3,
       "failed": 0
     }
@@ -70,7 +77,8 @@
     {"pull_request": 12, "head_sha": "24469778b15bd8cba136d4494d8da9c69c7fc1d9", "workflow_run_id": 35494388854, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 7}},
     {"pull_request": 12, "head_sha": "5e9a802c1bbd21a697cb6859eefc5ed54112dc39", "workflow_run_id": 35495732974, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 6, "P2": 1}},
     {"pull_request": 12, "head_sha": "9bb8726b5b0ef4b3df02083a5e4c24b52b317fd9", "workflow_run_id": 35496991058, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5, "P2": 3}},
-    {"pull_request": 12, "head_sha": "73f57fdc64c77de3b7befaf648b5104df0881218", "workflow_run_id": 35497895958, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5}}
+    {"pull_request": 12, "head_sha": "73f57fdc64c77de3b7befaf648b5104df0881218", "workflow_run_id": 35497895958, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5}},
+    {"pull_request": 12, "head_sha": "d388fa11fefee62e2e37d8f9e3e5208ff1706776", "workflow_run_id": 35498961191, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 8, "P2": 1}}
   ],
   "open_register": [
     {"id": "OPS-01", "severity": "P2", "category": "ci_coverage", "status": "accepted_operational_limitation"},

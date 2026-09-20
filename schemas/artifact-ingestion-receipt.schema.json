@@ -47,6 +47,22 @@
       "type": "string",
       "enum": ["accepted", "rejected", "partial"]
     },
+    "ingestion_context_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source_lineage_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "schema_version", "receipt_id", "receipt_digest"],
+      "properties": {
+        "kind": {"const": "lineage"},
+        "schema_version": {"const": "lineage-receipt-1.0"},
+        "receipt_id": {"type": "string", "minLength": 1},
+        "receipt_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "locator": {"type": "string", "minLength": 1, "maxLength": 2048}
+      }
+    },
     "validation_state": {
       "type": "object",
       "additionalProperties": false,
