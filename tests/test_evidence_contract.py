@@ -13,6 +13,7 @@ import provenance
 
 from shared_contracts.evidence import (
     ReceiptRef,
+    _replay_lineage_receipt_structure,
     canonical_receipt_ref_tuple,
     canonical_academic_receipt_payload_sha256,
     validate_lineage_receipt_contract,
@@ -174,7 +175,10 @@ def test_lineage_hashes_cannot_bless_a_dangling_edge_as_intact():
     ok, error = validate_lineage_receipt_contract(ref, receipt)
 
     assert ok is False
-    assert "topology status mismatch" in error
+    assert (
+        "topology status mismatch" in error
+        or "target-scoped causal closure" in error
+    )
 
 
 @pytest.mark.parametrize("tamper", ["roots", "steps"])
@@ -204,6 +208,120 @@ def test_lineage_replay_rejects_resigned_roots_and_trace_steps(tamper):
 
     assert ok is False
     assert "root ancestors mismatch" in error or "trace steps" in error
+
+
+def test_lineage_replay_rejects_resigned_disconnected_cycle():
+    receipt, _ = _lineage_fixture()
+    receipt["entities"].extend([
+        {"id": "unrelated-a", "type": "generic_entity"},
+        {"id": "unrelated-b", "type": "generic_entity"},
+    ])
+    receipt["edges"].extend([
+        {
+            "type": "derived_from",
+            "source_id": "unrelated-a",
+            "target_id": "unrelated-b",
+        },
+        {
+            "type": "derived_from",
+            "source_id": "unrelated-b",
+            "target_id": "unrelated-a",
+        },
+    ])
+    receipt["verification_status"] = "cycle_detected"
+    receipt["topology_status"] = "cycle_detected"
+    receipt["content_verification"] = "unchecked"
+    receipt["root_ancestors"] = []
+    receipt["trace_steps"] = []
+    receipt["error_detail"] = "Causal dependency cycle detected in graph"
+    ref = _resign_lineage_receipt(receipt)
+
+    ok, error = validate_lineage_receipt_contract(ref, receipt)
+
+    assert ok is False
+    assert "target-scoped causal closure" in error
+
+
+def test_lineage_replay_requires_observable_content_verification(tmp_path):
+    receipt, _ = _lineage_fixture()
+    receipt["entities"][0].update({
+        "sha256": "a" * 64,
+        "locator": "https://example.org/opaque.bin",
+    })
+    receipt["verification_status"] = "intact"
+    receipt["content_verification"] = "fully_verified"
+    ref = _resign_lineage_receipt(receipt, check_on_disk_hashes=True)
+
+    ok, error = validate_lineage_receipt_contract(ref, receipt)
+
+    assert ok is False
+    assert "cannot be independently established" in error
+
+    artifact = tmp_path / "observable.bin"
+    artifact.write_bytes(b"observable lineage bytes")
+    graph = provenance.LineageGraph()
+    graph.add_entity(
+        "observable",
+        "data_snapshot",
+        locator=str(artifact),
+        sha256=compute_sha256(artifact.read_bytes()),
+    )
+    observed = provenance.trace_origin(
+        graph,
+        "observable",
+        check_on_disk_hashes=True,
+    ).to_dict()
+    observed_ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=observed["receipt_id"],
+        receipt_digest=observed["receipt_digest"],
+    )
+    assert validate_lineage_receipt_contract(observed_ref, observed) == (True, None)
+
+
+def test_lineage_activity_memberships_are_preindexed():
+    class CountingEdge(dict):
+        get_calls = 0
+
+        def get(self, key, default=None):
+            type(self).get_calls += 1
+            return super().get(key, default)
+
+    size = 100
+    entities = [
+        {"id": f"entity-{index}", "type": "generic_entity"}
+        for index in range(size + 1)
+    ]
+    activities = [
+        {"id": f"activity-{index}", "type": "generic_activity"}
+        for index in range(1, size + 1)
+    ]
+    edges = []
+    for index in range(1, size + 1):
+        activity = f"activity-{index}"
+        source = f"entity-{index - 1}"
+        result = f"entity-{index}"
+        edges.extend([
+            CountingEdge(type="used", source_id=activity, target_id=source),
+            CountingEdge(type="generated", source_id=activity, target_id=result),
+            CountingEdge(
+                type="derived_from",
+                source_id=result,
+                target_id=source,
+                activity_id=activity,
+            ),
+        ])
+
+    replayed = _replay_lineage_receipt_structure({
+        "target_id": f"entity-{size}",
+        "entities": entities,
+        "activities": activities,
+        "edges": edges,
+    })
+
+    assert replayed[1] == "valid_dag"
+    assert CountingEdge.get_calls < 15_000
 
 
 def test_validate_academic_receipt_contract():

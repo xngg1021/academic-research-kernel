@@ -113,8 +113,25 @@
           },
           "basis_id": {
             "type": "string"
+          },
+          "record_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "binding_kind": {"const": "ledger_decision"}
+              },
+              "required": ["binding_kind"]
+            },
+            "then": {
+              "required": ["record_digest"]
+            }
+          }
+        ]
       }
     },
     "uncertainties": {

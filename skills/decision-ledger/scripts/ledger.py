@@ -1109,6 +1109,7 @@ class DecisionLedger:
         # snapshot is replayed, while all newly registered receipts use the
         # timestamp-normalised canonical form.
         self._receipt_manifest_modes: Dict[str, str] = {}
+        self._receipt_manifest_legacy_hashes: Dict[str, str] = {}
         self._next_correction_sequence = 1
         self._next_state_sequence = 1
         self._bases_by_decision: Dict[str, List[DecisionBasisEdge]] = collections.defaultdict(list)
@@ -1150,6 +1151,7 @@ class DecisionLedger:
             return
         self._receipts[rid] = snapshot
         self._receipt_manifest_modes[rid] = "canonical"
+        self._receipt_manifest_legacy_hashes.pop(rid, None)
         snap_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
         if isinstance(snap_dict, dict):
             try:
@@ -1968,7 +1970,10 @@ class DecisionLedger:
         """Compute the canonical verification manifest (receipt_id -> payload_sha256)."""
         return {
             rid: (
-                _legacy_ledger_payload_sha256(_jsonable(r))
+                self._receipt_manifest_legacy_hashes.get(
+                    rid,
+                    _legacy_ledger_payload_sha256(_jsonable(r)),
+                )
                 if self._receipt_manifest_modes.get(rid) == "legacy_v1"
                 else canonical_ledger_payload_sha256(_jsonable(r))
             )
@@ -2234,13 +2239,45 @@ class DecisionLedger:
                         else None
                     )
                     if declared_hash != legacy_hash:
-                        raise ValueError(
-                            f"Provided receipt_registry payload hash mismatch for {rid!r}: "
-                            f"declared {declared_hash!r}, recomputed {canonical_hash!r}."
-                        )
+                        # The legacy hash covered emission-only ``timestamp``.
+                        # A registry may already retain a byte-different but
+                        # timestamp-equivalent emission, so the historical hash
+                        # cannot be recomputed from those bytes.  In that case
+                        # the lineage receipt's own independently verified
+                        # receipt_id/receipt_digest binds every substantive
+                        # field; retain the declared legacy wire hash verbatim.
+                        equivalent_legacy_lineage = False
+                        if (
+                            is_lineage
+                            and payload.get("timestamp") is not None
+                            and payload.get("receipt_id") == rid
+                            and SHA256_REGEX.fullmatch(declared_hash)
+                        ):
+                            try:
+                                lineage_ref = ReceiptRef(
+                                    kind="lineage",
+                                    schema_version="lineage-receipt-1.0",
+                                    receipt_id=rid,
+                                    receipt_digest=payload.get("receipt_digest"),
+                                )
+                                equivalent_legacy_lineage, _ = (
+                                    validate_lineage_receipt_contract(
+                                        lineage_ref,
+                                        payload,
+                                    )
+                                )
+                            except (KeyError, TypeError, ValueError):
+                                equivalent_legacy_lineage = False
+                        if not equivalent_legacy_lineage:
+                            raise ValueError(
+                                f"Provided receipt_registry payload hash mismatch for {rid!r}: "
+                                f"declared {declared_hash!r}, recomputed {canonical_hash!r}."
+                            )
                     manifest_mode = "legacy_v1"
                 ledger.register_receipt(rid, r)
                 ledger._receipt_manifest_modes[rid] = manifest_mode
+                if manifest_mode == "legacy_v1":
+                    ledger._receipt_manifest_legacy_hashes[rid] = declared_hash
             if ledger.verification_digest() != str(data["verification_digest"]).lower():
                 raise ValueError(
                     f"Provided receipt_registry verification digest mismatch: recomputed {ledger.verification_digest()!r} "

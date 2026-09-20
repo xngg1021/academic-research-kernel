@@ -2338,10 +2338,39 @@ def test_cached_decision_only_snapshot_cannot_suppress_restoration():
     )
     assert receipt.status == "accepted"
     assert receipt.ledger_bindings[0]["binding_kind"] == "ledger_decision"
+    assert receipt.ledger_bindings[0]["basis_id"] == "decision-1"
+    assert receipt.ledger_bindings[0]["record_digest"] == compute_sha256(
+        canonical_json_bytes(state.ledger.to_dict()["decisions"][0])
+    )
 
     state.ledger._decisions.clear()
     valid, errors = state.validate_invariants()
 
+    assert valid is False
+    assert any("missing Ledger binding" in error for error in errors)
+
+    restored = kernel()
+    accepted = IngestionEngine().ingest(
+        envelope(
+            source.to_dict(),
+            "decision-ledger",
+            "decision-ledger-1.0",
+            artifact_kind="decision_ledger_snapshot",
+        ),
+        state=restored,
+    )
+    replacement = ledger_mod.DecisionLedger("decision-only")
+    replacement.add_decision(
+        "decision-1",
+        "Mutated decision",
+        decision_action="revise",
+        locator="table:changed",
+        metadata={"tampered": True},
+    )
+    restored.ledger = replacement
+    valid, errors = restored.validate_invariants()
+
+    assert accepted.status == "accepted"
     assert valid is False
     assert any("missing Ledger binding" in error for error in errors)
 
@@ -2387,7 +2416,7 @@ def test_ledger_snapshot_replay_normalizes_lineage_timestamp_variants():
         "receipts": legacy_snapshot["verification_manifest"],
     }))
     legacy_state = kernel()
-    legacy_state.register_receipt(later["receipt_id"], later)
+    legacy_state.register_receipt(earlier["receipt_id"], earlier)
 
     legacy_result = IngestionEngine().ingest(
         envelope(
@@ -2404,6 +2433,7 @@ def test_ledger_snapshot_replay_normalizes_lineage_timestamp_variants():
         legacy_state.ledger.to_dict()["verification_manifest"]
         == legacy_snapshot["verification_manifest"]
     )
+    assert legacy_state.receipts[earlier["receipt_id"]]["timestamp"] == earlier["timestamp"]
 
 
 @pytest.mark.parametrize(
@@ -2411,6 +2441,8 @@ def test_ledger_snapshot_replay_normalizes_lineage_timestamp_variants():
     [
         ({"doi": " HTTPS://DOI.ORG/10.1000/EXAMPLE "}, [], "work:doi:10.1000/example"),
         ({}, ["doi:10.1000/EXAMPLE"], "work:doi:10.1000/example"),
+        ({"doi": "https://doi.org/10.1000/result."}, [], "work:doi:10.1000/result."),
+        ({"doi": "https://doi.org/10.1000/result/"}, [], "work:doi:10.1000/result/"),
         ({"arxiv_id": "arXiv:2106.09624"}, [], "work:arxiv:2106.09624"),
         ({"pmid": "PMID:123456"}, [], "work:pmid:123456"),
         ({"openalex_id": "https://openalex.org/w123"}, [], "work:openalex:W123"),

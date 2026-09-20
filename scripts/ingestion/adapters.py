@@ -86,7 +86,10 @@ def _canonical_doi(value: Any) -> str:
         if lowered.startswith(prefix):
             text = text[len(prefix):]
             break
-    return text.strip().strip("/").rstrip(".").lower()
+    # The DOI suffix is opaque: terminal punctuation such as ``.`` or ``/``
+    # can be significant identifier content.  Only remove transport prefixes
+    # and surrounding whitespace.
+    return text.strip().lower()
 
 
 def _canonical_work_id_from_identifiers(
@@ -489,6 +492,7 @@ class BaseArtifactAdapter(ABC):
                     "decision_id": decision["id"],
                     "binding_kind": "ledger_decision",
                     "basis_id": decision["id"],
+                    "record_digest": compute_sha256(canonical_json_bytes(decision)),
                 })
             for basis in ledger_export.get("bases", []):
                 applied_ledger_bindings.append({
@@ -530,6 +534,9 @@ class BaseArtifactAdapter(ABC):
                     "decision_id": decision.id,
                     "binding_kind": "ledger_decision",
                     "basis_id": decision.id,
+                    "record_digest": compute_sha256(
+                        canonical_json_bytes(decision.to_dict())
+                    ),
                 })
 
             for b in plan.ledger_bases:

@@ -1037,12 +1037,14 @@ def test_from_dict_round_trip_with_receipt_registry():
 def test_from_dict_preserves_legacy_v1_timestamped_lineage_manifest():
     lineage, ref = _lineage_fixture()
     lineage["timestamp"] = "2026-09-20T00:00:00Z"
+    later_emission = copy.deepcopy(lineage)
+    later_emission["timestamp"] = "2026-09-20T00:00:01Z"
     ledger = dl.DecisionLedger(ledger_id="legacy-manifest")
     ledger.add_decision(id="d1", title="Legacy decision")
     ledger.register_receipt(ref.receipt_id, lineage)
     exported = ledger.to_dict()
 
-    legacy_hash = dl._legacy_ledger_payload_sha256(lineage)
+    legacy_hash = dl._legacy_ledger_payload_sha256(later_emission)
     exported["verification_manifest"] = {ref.receipt_id: legacy_hash}
     exported["verification_digest"] = hashlib.sha256(
         dl._canonical_json_bytes({

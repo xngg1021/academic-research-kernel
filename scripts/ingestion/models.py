@@ -694,16 +694,17 @@ class IngestionKernelState:
                 for item in ceg_data.get("support_edges", [])
             )
 
-        ledger_decisions = set()
+        ledger_decisions: Dict[str, str] = {}
         ledger_bases = set()
         ledger_forks = set()
         ledger_state_events = set()
         ledger_corrections = set()
         if self.ledger is not None:
             ledger_data = self.ledger.to_dict()
-            ledger_decisions.update(
-                item["id"] for item in ledger_data.get("decisions", [])
-            )
+            ledger_decisions.update({
+                item["id"]: compute_sha256(canonical_json_bytes(item))
+                for item in ledger_data.get("decisions", [])
+            })
             ledger_bases.update(
                 (item["decision_id"], item["basis_kind"], item["basis_id"])
                 for item in ledger_data.get("bases", [])
@@ -786,7 +787,11 @@ class IngestionKernelState:
                 binding_kind = binding.get("binding_kind")
                 basis_id = binding.get("basis_id")
                 if binding_kind == "ledger_decision":
-                    retained = decision_id == basis_id and decision_id in ledger_decisions
+                    retained = (
+                        decision_id == basis_id
+                        and ledger_decisions.get(decision_id)
+                        == binding.get("record_digest")
+                    )
                 elif binding_kind == "ledger_fork":
                     retained = (decision_id, basis_id) in ledger_forks
                 elif binding_kind == "ledger_state_event":

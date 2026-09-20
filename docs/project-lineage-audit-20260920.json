@@ -1,6 +1,6 @@
 {
   "protocol": "project-lineage-audit-1.0",
-  "as_of": "2026-09-20T10:32:25Z",
+  "as_of": "2026-09-20T11:22:00Z",
   "repository": "xngg1021/academic-research-kernel",
   "summary": {
     "pull_requests_total": 12,
@@ -17,7 +17,9 @@
       "P2": 1,
       "P3": 0
     },
-    "pr12_review_threads_observed_total": 96,
+    "pr12_review_threads_observed_total": 102,
+    "pr12_review_threads_resolved_current": 31,
+    "pr12_review_threads_unresolved_current": 71,
     "pr12_followup_review_findings_by_severity": {
       "P0": 0,
       "P1": 7,
@@ -88,8 +90,17 @@
       "P3": 0
     },
     "pr12_tenth_followup_findings_remediated_locally": 4,
+    "pr12_eleventh_followup_review_head": "6228fb5ad48cfaeb223bb1754406cde458710ebc",
+    "pr12_eleventh_followup_exact_head_ci": "not_enqueued",
+    "pr12_eleventh_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 6,
+      "P2": 0,
+      "P3": 0
+    },
+    "pr12_eleventh_followup_findings_remediated_locally": 6,
     "local_tests_after_remediation": {
-      "passed": 756,
+      "passed": 761,
       "skipped": 3,
       "failed": 0
     }

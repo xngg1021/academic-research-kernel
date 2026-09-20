@@ -8,9 +8,12 @@ Identity, Claim-Evidence Graph, and Decision Ledger.
 from __future__ import annotations
 
 import collections.abc
+from collections import deque
 from dataclasses import dataclass
 import hashlib
+import heapq
 import json
+from pathlib import Path
 import re
 from types import MappingProxyType
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple, Union
@@ -18,6 +21,7 @@ from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple, Uni
 VALID_RECEIPT_KINDS = frozenset({"lineage", "academic_evidence"})
 VALID_EVIDENCE_TYPES = frozenset({"metadata", "citation_count", "update_signal", "full_text", "computed"})
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
+REMOTE_LOCATOR_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
 
 
 class FrozenJSONMap(collections.abc.Mapping):
@@ -246,6 +250,81 @@ def canonical_evidence_claim_digest(claim_item: Mapping[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(payload)).hexdigest().lower()
 
 
+def _replay_lineage_content_verification(
+    entities: List[Mapping[str, Any]],
+    *,
+    check_on_disk_hashes: bool,
+) -> Tuple[str, str, Optional[str]]:
+    """Reproduce the provenance kernel's independently observable file checks.
+
+    A serialized receipt does not carry its producer's ``root_dir``.  Relative
+    locators are therefore deliberately unanchored here, while absolute local
+    paths can be re-hashed and remote identifiers remain unverified.
+    """
+    if not check_on_disk_hashes:
+        return "unchecked", "unchecked", None
+
+    total_hashed = 0
+    verified_hashed = 0
+    unanchored_relatives = 0
+    for entity in entities:
+        declared_sha = entity.get("sha256")
+        locator = entity.get("locator")
+        if not declared_sha or not locator:
+            continue
+        total_hashed += 1
+        locator_text = str(locator).strip()
+        if (
+            REMOTE_LOCATOR_REGEX.match(locator_text)
+            or locator_text.startswith(("urn:", "doi:"))
+        ):
+            continue
+        clean_path = locator_text.split("#", 1)[0].split("?", 1)[0]
+        path = Path(clean_path)
+        if not path.is_absolute():
+            unanchored_relatives += 1
+            continue
+        resolved = path.resolve()
+        if not resolved.is_file():
+            return (
+                "missing_artifact",
+                "missing_artifact",
+                f"Entity {entity.get('id')!r} declared SHA256 and local locator "
+                f"{locator!r}, but file does not exist on disk.",
+            )
+        digest = hashlib.sha256()
+        with resolved.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        computed = digest.hexdigest().lower()
+        if computed != str(declared_sha).lower():
+            return (
+                "hash_mismatch",
+                "hash_mismatch",
+                f"Content hash mismatch on entity {entity.get('id')!r}: "
+                f"expected {declared_sha}, got {computed}",
+            )
+        verified_hashed += 1
+
+    if total_hashed == 0:
+        return "unchecked", "unchecked", None
+    if verified_hashed == total_hashed:
+        return "intact", "fully_verified", None
+    if verified_hashed > 0:
+        detail = (
+            "Relative local locator requires explicit root_dir for on-disk verification"
+            if unanchored_relatives > 0
+            else None
+        )
+        return "partial", "partially_verified", detail
+    detail = (
+        "Relative local locator requires explicit root_dir for on-disk verification"
+        if unanchored_relatives > 0
+        else None
+    )
+    return "unchecked", "unverified", detail
+
+
 def _replay_lineage_receipt_structure(
     data: Mapping[str, Any],
 ) -> Tuple[str, str, List[str], List[Dict[str, Any]], Optional[str]]:
@@ -293,7 +372,12 @@ def _replay_lineage_receipt_structure(
         ),
     )
     edge_identities: Set[bytes] = set()
-    generated_by: Dict[str, str] = {}
+    activity_inputs: Dict[str, Set[str]] = {
+        activity_id: set() for activity_id in activity_by_id
+    }
+    activity_outputs: Dict[str, Set[str]] = {
+        activity_id: set() for activity_id in activity_by_id
+    }
     for edge in sorted_edges:
         if not isinstance(edge, dict):
             raise ValueError("Every lineage edge must be an object")
@@ -302,114 +386,121 @@ def _replay_lineage_receipt_structure(
             raise ValueError("Duplicate lineage edge in serialized closure")
         edge_identities.add(edge_identity)
         edge_type = edge.get("type")
+        if edge_type not in {"used", "generated", "derived_from"}:
+            raise ValueError(f"Unsupported lineage edge type {edge_type!r}")
+        if edge_type == "used":
+            activity_inputs.setdefault(edge.get("source_id"), set()).add(
+                edge.get("target_id")
+            )
+        elif edge_type == "generated":
+            activity_outputs.setdefault(edge.get("source_id"), set()).add(
+                edge.get("target_id")
+            )
+
+    structural_failure: Optional[Tuple[str, str, str]] = None
+
+    def record_failure(verification: str, topology: str, detail: str) -> None:
+        nonlocal structural_failure
+        if structural_failure is None:
+            structural_failure = (verification, topology, detail)
+
+    generated_by: Dict[str, str] = {}
+    for edge in sorted_edges:
+        edge_type = edge["type"]
         source_id = edge.get("source_id")
         target = edge.get("target_id")
         if edge_type == "used":
             if source_id not in activity_by_id:
-                return "missing_input", "missing_input", [], [], (
-                    f"Activity {source_id!r} referenced in 'used' edge does not exist"
+                record_failure(
+                    "missing_input",
+                    "missing_input",
+                    f"Activity {source_id!r} referenced in 'used' edge does not exist",
                 )
             if target not in entity_by_id:
-                return "missing_input", "missing_input", [], [], (
-                    f"Entity {target!r} consumed by activity {source_id!r} does not exist"
+                record_failure(
+                    "missing_input",
+                    "missing_input",
+                    f"Entity {target!r} consumed by activity {source_id!r} does not exist",
                 )
         elif edge_type == "generated":
             if source_id not in activity_by_id:
-                return "broken_chain", "broken_chain", [], [], (
-                    f"Activity {source_id!r} referenced in 'generated' edge does not exist"
+                record_failure(
+                    "broken_chain",
+                    "broken_chain",
+                    f"Activity {source_id!r} referenced in 'generated' edge does not exist",
                 )
             if target not in entity_by_id:
-                return "broken_chain", "broken_chain", [], [], (
-                    f"Entity {target!r} generated by activity {source_id!r} does not exist"
+                record_failure(
+                    "broken_chain",
+                    "broken_chain",
+                    f"Entity {target!r} generated by activity {source_id!r} does not exist",
                 )
             previous = generated_by.get(target)
             if previous is not None and previous != source_id:
-                return "broken_chain", "broken_chain", [], [], (
-                    f"Entity {target!r} has multiple generating activities"
+                record_failure(
+                    "broken_chain",
+                    "broken_chain",
+                    f"Entity {target!r} has multiple generating activities",
                 )
             generated_by[target] = source_id
-        elif edge_type == "derived_from":
+        else:
             if source_id not in entity_by_id:
-                return "broken_chain", "broken_chain", [], [], (
-                    f"Derived entity {source_id!r} does not exist"
+                record_failure(
+                    "broken_chain",
+                    "broken_chain",
+                    f"Derived entity {source_id!r} does not exist",
                 )
             if target not in entity_by_id:
-                return "broken_chain", "broken_chain", [], [], (
-                    f"Source entity {target!r} in derivation does not exist"
+                record_failure(
+                    "broken_chain",
+                    "broken_chain",
+                    f"Source entity {target!r} in derivation does not exist",
                 )
             if source_id == target:
-                return "cycle_detected", "cycle_detected", [], [], (
-                    f"Self-derivation loop detected on entity {source_id!r}"
+                record_failure(
+                    "cycle_detected",
+                    "cycle_detected",
+                    f"Self-derivation loop detected on entity {source_id!r}",
                 )
             activity_id = edge.get("activity_id")
             if activity_id:
                 if activity_id not in activity_by_id:
-                    return "broken_chain", "broken_chain", [], [], (
-                        f"Derivation activity {activity_id!r} does not exist in activities"
+                    record_failure(
+                        "broken_chain",
+                        "broken_chain",
+                        f"Derivation activity {activity_id!r} does not exist in activities",
                     )
-                activity_inputs = {
-                    item.get("target_id")
-                    for item in sorted_edges
-                    if item.get("type") == "used" and item.get("source_id") == activity_id
-                }
-                activity_outputs = {
-                    item.get("target_id")
-                    for item in sorted_edges
-                    if item.get("type") == "generated" and item.get("source_id") == activity_id
-                }
-                if target not in activity_inputs and source_id not in activity_outputs:
-                    return "broken_chain", "broken_chain", [], [], (
-                        f"Derivation activity {activity_id!r} is detached from its derivation"
+                elif (
+                    target not in activity_inputs.get(activity_id, set())
+                    and source_id not in activity_outputs.get(activity_id, set())
+                ):
+                    record_failure(
+                        "broken_chain",
+                        "broken_chain",
+                        f"Derivation activity {activity_id!r} is detached from its derivation",
                     )
-        else:
-            raise ValueError(f"Unsupported lineage edge type {edge_type!r}")
 
     for activity_id, activity in sorted(activity_by_id.items()):
         script_id = activity.get("script_id")
         if not script_id:
             continue
         if script_id not in entity_by_id:
-            return "missing_input", "missing_input", [], [], (
-                f"Activity {activity_id!r} references missing script entity {script_id!r}"
+            record_failure(
+                "missing_input",
+                "missing_input",
+                f"Activity {activity_id!r} references missing script entity {script_id!r}",
             )
-        if entity_by_id[script_id].get("type") != "code_file":
-            return "broken_chain", "broken_chain", [], [], (
-                f"Activity {activity_id!r} script {script_id!r} is not a 'code_file' entity"
+        elif entity_by_id[script_id].get("type") != "code_file":
+            record_failure(
+                "broken_chain",
+                "broken_chain",
+                f"Activity {activity_id!r} script {script_id!r} is not a 'code_file' entity",
             )
 
-    adjacency: Dict[str, List[str]] = {node_id: [] for node_id in all_ids}
-    indegree: Dict[str, int] = {node_id: 0 for node_id in all_ids}
-    for edge in sorted_edges:
-        if edge["type"] == "used":
-            upstream, downstream = edge["target_id"], edge["source_id"]
-        elif edge["type"] == "generated":
-            upstream, downstream = edge["source_id"], edge["target_id"]
-        else:
-            upstream, downstream = edge["target_id"], edge["source_id"]
-        adjacency[upstream].append(downstream)
-        indegree[downstream] += 1
-
-    ready = sorted(node_id for node_id, degree in indegree.items() if degree == 0)
-    visited_count = 0
-    while ready:
-        current = ready.pop(0)
-        visited_count += 1
-        for downstream in sorted(adjacency[current]):
-            indegree[downstream] -= 1
-            if indegree[downstream] == 0:
-                ready.append(downstream)
-                ready.sort()
-    if visited_count != len(all_ids):
-        return (
-            "cycle_detected",
-            "cycle_detected",
-            [],
-            [],
-            "Causal dependency cycle detected in graph",
-        )
-
-    # Recompute the exact target-scoped reverse closure. Extra unrelated nodes
-    # or edges are not valid members of a trace_origin receipt.
+    # Recompute the exact target-scoped reverse closure before returning any
+    # topology status.  Otherwise an unrelated cycle could bless a receipt for
+    # an isolated target.  Pre-indexed activity memberships above also keep
+    # this replay linear in the number of edges.
     reverse: Dict[str, List[Tuple[str, int]]] = {}
     for index, edge in enumerate(sorted_edges):
         if edge["type"] == "used":
@@ -423,9 +514,9 @@ def _replay_lineage_receipt_structure(
 
     closure_nodes: Set[str] = {target_id}
     closure_edges: Set[int] = set()
-    queue = [target_id]
+    queue = deque([target_id])
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
         for upstream, edge_index in reverse.get(current, []):
             closure_edges.add(edge_index)
             if upstream not in closure_nodes:
@@ -435,8 +526,46 @@ def _replay_lineage_receipt_structure(
         activity = activity_by_id.get(node_id)
         if activity and activity.get("script_id") in entity_by_id:
             closure_nodes.add(activity["script_id"])
-    if closure_nodes != all_ids or closure_edges != set(range(len(sorted_edges))):
+    if (
+        closure_nodes.intersection(all_ids) != all_ids
+        or closure_edges != set(range(len(sorted_edges)))
+    ):
         raise ValueError("Serialized lineage graph is not the exact target-scoped causal closure")
+
+    if structural_failure is not None:
+        verification, topology, detail = structural_failure
+        return verification, topology, [], [], detail
+
+    adjacency: Dict[str, List[str]] = {node_id: [] for node_id in all_ids}
+    indegree: Dict[str, int] = {node_id: 0 for node_id in all_ids}
+    for edge in sorted_edges:
+        if edge["type"] == "used":
+            upstream, downstream = edge["target_id"], edge["source_id"]
+        elif edge["type"] == "generated":
+            upstream, downstream = edge["source_id"], edge["target_id"]
+        else:
+            upstream, downstream = edge["target_id"], edge["source_id"]
+        adjacency[upstream].append(downstream)
+        indegree[downstream] += 1
+
+    ready = [node_id for node_id, degree in indegree.items() if degree == 0]
+    heapq.heapify(ready)
+    visited_count = 0
+    while ready:
+        current = heapq.heappop(ready)
+        visited_count += 1
+        for downstream in sorted(adjacency[current]):
+            indegree[downstream] -= 1
+            if indegree[downstream] == 0:
+                heapq.heappush(ready, downstream)
+    if visited_count != len(all_ids):
+        return (
+            "cycle_detected",
+            "cycle_detected",
+            [],
+            [],
+            "Causal dependency cycle detected in graph",
+        )
 
     derived_or_generated = {
         edge["target_id"]
@@ -472,25 +601,31 @@ def _replay_lineage_receipt_structure(
         if producer and producer != consumer:
             activity_dependencies[consumer].add(producer)
 
-    ordered_activities: List[str] = []
-    ready_activities = sorted(
-        activity_id
+    activity_dependents: Dict[str, Set[str]] = {
+        activity_id: set() for activity_id in activity_by_id
+    }
+    remaining_dependencies = {
+        activity_id: len(dependencies)
         for activity_id, dependencies in activity_dependencies.items()
-        if not dependencies
-    )
+    }
+    for consumer, dependencies in activity_dependencies.items():
+        for producer in dependencies:
+            activity_dependents[producer].add(consumer)
+
+    ordered_activities: List[str] = []
+    ready_activities = [
+        activity_id
+        for activity_id, dependency_count in remaining_dependencies.items()
+        if dependency_count == 0
+    ]
+    heapq.heapify(ready_activities)
     while ready_activities:
-        current = ready_activities.pop(0)
+        current = heapq.heappop(ready_activities)
         ordered_activities.append(current)
-        for activity_id, dependencies in activity_dependencies.items():
-            if current in dependencies:
-                dependencies.remove(current)
-                if (
-                    not dependencies
-                    and activity_id not in ordered_activities
-                    and activity_id not in ready_activities
-                ):
-                    ready_activities.append(activity_id)
-                    ready_activities.sort()
+        for activity_id in sorted(activity_dependents[current]):
+            remaining_dependencies[activity_id] -= 1
+            if remaining_dependencies[activity_id] == 0:
+                heapq.heappush(ready_activities, activity_id)
 
     inputs: Dict[str, List[str]] = {activity_id: [] for activity_id in activity_by_id}
     outputs: Dict[str, List[str]] = {activity_id: [] for activity_id in activity_by_id}
@@ -564,6 +699,30 @@ def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional
     if data.get("content_digest") is not None and str(data["content_digest"]).lower() != lineage_digest:
         return False, "Lineage content_digest alias does not match lineage_digest"
 
+    receipt_base = {
+        "lineage_digest": lineage_digest,
+        "target_id": data["target_id"],
+        "verification_status": data["verification_status"],
+        "topology_status": data["topology_status"],
+        "content_verification": data["content_verification"],
+        "error_detail": data.get("error_detail") or "",
+    }
+    possible_by_mode = {
+        mode: compute_sha256(
+            canonical_json_bytes(dict(receipt_base, check_on_disk_hashes=mode))
+        )
+        for mode in (False, True)
+    }
+    declared_receipt = str(data.get("receipt_digest", "")).lower()
+    matching_modes = [
+        mode for mode, digest in possible_by_mode.items()
+        if digest == declared_receipt
+    ]
+    if not matching_modes:
+        return False, "Lineage verification receipt_digest does not match either valid verification mode"
+    if data.get("receipt_id") != f"rec-{declared_receipt[:32]}":
+        return False, "Lineage receipt_id is not derived from receipt_digest"
+
     try:
         (
             structural_verification,
@@ -593,31 +752,39 @@ def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional
         if not data.get("error_detail") and structural_error:
             return False, "Invalid lineage topology requires an error_detail"
     else:
-        verification_for_content = {
-            "fully_verified": "intact",
-            "partially_verified": "partial",
-            "unverified": "unchecked",
-            "unchecked": "unchecked",
-            "hash_mismatch": "hash_mismatch",
-            "missing_artifact": "missing_artifact",
-        }
         content_status = data.get("content_verification")
-        expected_verification = verification_for_content.get(content_status)
-        if expected_verification is None:
+        if content_status not in {
+            "fully_verified",
+            "partially_verified",
+            "unverified",
+            "unchecked",
+            "hash_mismatch",
+            "missing_artifact",
+        }:
             return False, f"Unsupported lineage content verification status {content_status!r}"
-        if data.get("verification_status") != expected_verification:
+        try:
+            independent_results = [
+                _replay_lineage_content_verification(
+                    data["entities"],
+                    check_on_disk_hashes=mode,
+                )
+                for mode in matching_modes
+            ]
+        except OSError as exc:
             return False, (
-                "Lineage verification status is inconsistent with content verification: "
-                f"declared {data.get('verification_status')!r}, "
-                f"expected {expected_verification!r}"
+                "Lineage content verification cannot be independently established: "
+                f"local locator check failed: {exc}"
             )
-        if content_status != "unchecked" and not any(
-            entity.get("sha256") and entity.get("locator")
-            for entity in data["entities"]
-        ):
+        declared_content_result = (
+            data.get("verification_status"),
+            content_status,
+            data.get("error_detail") or None,
+        )
+        if declared_content_result not in independent_results:
+            replayed = independent_results[0]
             return False, (
-                f"Lineage content status {content_status!r} requires at least one "
-                "hash-addressed artifact"
+                "Lineage content verification cannot be independently established: "
+                f"declared {declared_content_result!r}, replayed {replayed!r}"
             )
         expected_roots = (
             [] if content_status in {"hash_mismatch", "missing_artifact"}
@@ -634,23 +801,6 @@ def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional
             )
         if data.get("trace_steps", []) != expected_steps:
             return False, "Lineage trace steps do not match the replayed causal graph"
-    receipt_base = {
-        "lineage_digest": lineage_digest,
-        "target_id": data["target_id"],
-        "verification_status": data["verification_status"],
-        "topology_status": data["topology_status"],
-        "content_verification": data["content_verification"],
-        "error_detail": data.get("error_detail") or "",
-    }
-    possible = {
-        compute_sha256(canonical_json_bytes(dict(receipt_base, check_on_disk_hashes=mode)))
-        for mode in (False, True)
-    }
-    declared_receipt = str(data.get("receipt_digest", "")).lower()
-    if declared_receipt not in possible:
-        return False, "Lineage verification receipt_digest does not match either valid verification mode"
-    if data.get("receipt_id") != f"rec-{declared_receipt[:32]}":
-        return False, "Lineage receipt_id is not derived from receipt_digest"
     return True, None
 
 

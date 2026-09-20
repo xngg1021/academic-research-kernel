@@ -27,7 +27,7 @@
 - **端到端完整生命周期与对抗性用例**：
   - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
   - 新增 `tests/test_ingestion_hardening.py`，覆盖深不可变、运行时 schema、真实生产者契约、原子回滚、语义幂等、完整状态回放、防篡改摘要、三态证据语义与真实 stdio MCP 握手；
-  - 单测基线由 632 项扩充至 **756 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
+  - 单测基线由 632 项扩充至 **761 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
 
 ### PR #12 合并前完整性加固与历史对账
 
@@ -47,7 +47,8 @@
 - **[P1/P2] 九次复审闭环**：修复后续 2 个 P1 与 2 个 P2：异议意见的非字符串原因统一为规范 JSON、预检将适配器计划碰撞返回为普通 invalid、手稿对象始终绑定完整生产者上下文、DOI-only 撤稿目标统一到规范 work 身份。
 - **[P1/P2] 十次复审闭环**：修复后续 4 个 P1 与 1 个 P2：跨产物对象碰撞使用规范 JSON 字节比较、缓存收据强制核验其记录的对象/CEG/Ledger 变异仍被保留、Ledger 验证清单统一 lineage 时间戳等价、学术证据优先解析 DOI/arXiv/PMID/OpenAlex 稳定身份、学术凭证仅接受完整 canonical evidence-claim digest。
 - **[P1] 十一次复审闭环**：修复后续 4 个 P1：兼容并原样保留旧版含时间戳 Ledger 清单身份、缓存收据覆盖 Ledger 快照中的决策/分支/状态事件/依据/修正、各学术适配器共用 DOI 解析器、谱系收据独立重放拓扑/闭包/根节点/步骤与验证状态。
-- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 96 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
+- **[P1] 十二次复审闭环**：修复后续 6 个 P1：所有拓扑状态返回前先验证目标闭包、物理内容状态必须可独立重放、缓存决策引用绑定完整记录摘要、旧版 Ledger 清单接受时间戳等价发射、DOI 保留不透明后缀标点，并将谱系活动输入/输出预索引以消除大图二次复杂度。
+- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 102 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
 
 ---
 
