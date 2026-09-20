@@ -28,7 +28,11 @@ sys.path.insert(0, str(ROOT / "skills" / "quantitative-paper-audit" / "scripts")
 sys.path.insert(0, str(ROOT / "skills" / "academic-source-verification" / "scripts"))
 sys.path.insert(0, str(ROOT / "scripts" / "scfabric"))
 
-from shared_contracts.evidence import ReceiptRef, verify_receipt_reference
+from shared_contracts.evidence import (
+    ReceiptRef,
+    validate_lineage_receipt_contract,
+    verify_receipt_reference,
+)
 from ingestion import IngestionEngine, ArtifactEnvelope, IngestionKernelState
 from ingestion.contracts import validate_adapter_contract, validate_schema
 import identity as id_mod
@@ -135,23 +139,68 @@ TOOLS = [
             "properties": {
                 "lineage_graph": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
+                        "entities": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {"type": "string", "minLength": 1},
+                                    "type": {"type": "string", "minLength": 1},
+                                    "sha256": {
+                                        "type": "string",
+                                        "pattern": "^[0-9a-f]{64}$",
+                                    },
+                                    "locator": {"type": "string"},
+                                    "metadata": {"type": "object"},
+                                },
+                            },
+                        },
                         "activities": {
                             "type": "array",
                             "items": {
                                 "type": "object",
+                                "additionalProperties": False,
                                 "required": ["id", "timestamp"],
                                 "properties": {
                                     "id": {"type": "string", "minLength": 1},
-                                    "timestamp": {"type": "string", "minLength": 1}
-                                }
-                            }
-                        }
+                                    "type": {"type": "string", "minLength": 1},
+                                    "command": {"type": "string"},
+                                    "script_id": {"type": "string"},
+                                    "commit_sha": {"type": "string"},
+                                    "parameters": {"type": "object"},
+                                    "environment": {"type": "object"},
+                                    "timestamp": {"type": "string", "minLength": 1},
+                                },
+                            },
+                        },
+                        "edges": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": ["type", "source_id", "target_id"],
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["used", "generated", "derived_from"],
+                                    },
+                                    "source_id": {"type": "string", "minLength": 1},
+                                    "target_id": {"type": "string", "minLength": 1},
+                                    "activity_id": {"type": "string"},
+                                    "metadata": {"type": "object"},
+                                },
+                            },
+                        },
                     },
                     "description": "Exported LineageGraph dictionary."
                 },
                 "target_entity_id": {
                     "type": "string",
+                    "minLength": 1,
                     "description": "The entity ID to trace upstream lineage from."
                 }
             }
@@ -333,6 +382,20 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 )
                 plan = adapter.plan(env, temp_state)
                 errors.extend(plan.errors)
+                if not errors and env.lineage_ref is not None:
+                    physical = plan.registered_receipts.get(
+                        env.lineage_ref.receipt_id
+                    ) or temp_state.receipts.get(env.lineage_ref.receipt_id)
+                    if physical is not None:
+                        lineage_ok, lineage_error = validate_lineage_receipt_contract(
+                            env.lineage_ref,
+                            physical,
+                        )
+                        if not lineage_ok:
+                            errors.append(
+                                "Envelope lineage_ref verification failed: "
+                                f"{lineage_error}"
+                            )
             valid = not errors
             return {
                 "valid": valid,

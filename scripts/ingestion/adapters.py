@@ -103,8 +103,8 @@ def _ceg_declared_receipt_registry(
     state: IngestionKernelState,
 ) -> Dict[str, Any]:
     """Project target receipts onto the availability declared by a CEG export."""
-    missing_subjects = {
-        item.get("subject_id")
+    declared_missing_ids = {
+        item.get("item_id")
         for item in payload.get("uncertainties", [])
         if item.get("kind") == "missing_receipt"
     }
@@ -118,13 +118,25 @@ def _ceg_declared_receipt_registry(
     for edge in payload.get("support_edges", []):
         if edge.get("receipt_ref"):
             refs.append((edge.get("evidence_id"), edge["receipt_ref"]))
-    for subject_id, ref in refs:
-        if subject_id not in missing_subjects:
+    for subject_id, raw_ref in refs:
+        ref = ReceiptRef(**raw_ref)
+        ident = ref.receipt_id or ref.payload_sha256 or "unidentified"
+        reason = (
+            f"Referenced {ref.kind} receipt {ident!r} is not loaded in local "
+            "receipt registry."
+        )
+        uncertainty_id = "unc-" + compute_sha256(canonical_json_bytes({
+            "kind": "missing_receipt",
+            "needs_human": False,
+            "reason": reason,
+            "subject_id": subject_id,
+        }))[:16]
+        if uncertainty_id not in declared_missing_ids:
             continue
-        if ref.get("kind") == "lineage" and ref.get("receipt_id"):
-            blocked_lineage_ids.add(ref["receipt_id"])
-        if ref.get("kind") == "academic_evidence" and ref.get("payload_sha256"):
-            blocked_academic_shas.add(ref["payload_sha256"])
+        if ref.kind == "lineage" and ref.receipt_id:
+            blocked_lineage_ids.add(ref.receipt_id)
+        if ref.kind == "academic_evidence" and ref.payload_sha256:
+            blocked_academic_shas.add(ref.payload_sha256)
 
     projected: Dict[str, Any] = {}
     for key, value in state.receipts.items():
@@ -515,7 +527,9 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
     accepted_schemas = {"evidence-receipt-1.0", "academic-evidence-1.0"}
     is_lossless = True
     tier = 1
-    accepted_binding_fields = {"action", "decision_id", "verdict", "rationale"}
+    accepted_binding_fields = {
+        "action", "claim_digest", "decision_id", "verdict", "rationale"
+    }
     required_binding_fields = {"action", "decision_id", "verdict"}
 
     def normalize_bindings(
@@ -537,6 +551,11 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             not isinstance(values["rationale"], str) or not values["rationale"].strip()
         ):
             raise ValueError("bindings.rationale must be a non-empty string when supplied")
+        if "claim_digest" in values and (
+            not isinstance(values["claim_digest"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", values["claim_digest"]) is None
+        ):
+            raise ValueError("bindings.claim_digest must be 64 lowercase hex characters")
         return values
 
     def probe(self, envelope: ArtifactEnvelope) -> bool:
@@ -597,6 +616,7 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
                 }
 
         # 2. Ingest claims and evidences into CEG
+        correction_candidates: List[Tuple[str, ReceiptRef, str, Optional[str]]] = []
         for idx, c_item in enumerate(p.get("claims", [])):
             c_text = c_item.get("claim", "")
             c_type = c_item.get("evidence_type", "data_point")
@@ -659,21 +679,44 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
                 "support_status": c_stat,
                 "rationale": f"Extracted from {envelope.producer['skill']} receipt",
             })
+            correction_candidates.append((c_dig, ref, c_id, c_loc))
 
-            # Explicit Ledger outcome correction binding: only when caller explicitly requests action='add_outcome_correction' with explicit verdict
-            if (
-                bindings
-                and bindings.get("action") == "add_outcome_correction"
-                and "decision_id" in bindings
-                and "verdict" in bindings
-            ):
-                plan.ledger_outcome_corrections.append({
-                    "decision_id": bindings["decision_id"],
-                    "verdict": bindings["verdict"],
-                    "rationale": bindings.get("rationale") or f"Explicitly bound to evidence {c_id}",
-                    "receipt_ref": ref,
-                    "locator": c_loc,
-                })
+        # A caller binding represents one ledger action, not one action per
+        # claim in the physical receipt. Multi-claim receipts therefore need
+        # an explicit claim digest to select the supporting receipt entry.
+        if bindings and bindings.get("action") == "add_outcome_correction":
+            selected_digest = bindings.get("claim_digest")
+            distinct_digests = {item[0] for item in correction_candidates}
+            if selected_digest is None and len(distinct_digests) != 1:
+                plan.valid = False
+                plan.errors.append(
+                    "Multi-claim academic receipts require bindings.claim_digest "
+                    "for an outcome correction"
+                )
+                return plan
+            selected = next(
+                (
+                    item
+                    for item in correction_candidates
+                    if item[0] == (selected_digest or next(iter(distinct_digests), None))
+                ),
+                None,
+            )
+            if selected is None:
+                plan.valid = False
+                plan.errors.append(
+                    "bindings.claim_digest does not identify a claim in the academic receipt"
+                )
+                return plan
+            _, selected_ref, selected_claim_id, selected_locator = selected
+            plan.ledger_outcome_corrections.append({
+                "decision_id": bindings["decision_id"],
+                "verdict": bindings["verdict"],
+                "rationale": bindings.get("rationale")
+                or f"Explicitly bound to evidence {selected_claim_id}",
+                "receipt_ref": selected_ref,
+                "locator": selected_locator,
+            })
 
         return plan
 
@@ -1354,7 +1397,18 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
                 or (f"work:{title}" if title else None)
                 or f"work:{compute_sha256(canonical_json_bytes(w))[:32]}"
             )
-            plan.created_objects[w_id] = copy.deepcopy(w)
+            candidate = _thaw_val(w)
+            existing = plan.created_objects.get(w_id)
+            if (
+                existing is not None
+                and canonical_json_bytes(existing) != canonical_json_bytes(candidate)
+            ):
+                plan.valid = False
+                plan.errors.append(
+                    f"Conflicting canonical work entries resolve to {w_id!r}"
+                )
+                return plan
+            plan.created_objects[w_id] = candidate
         return plan
 
 
@@ -1463,7 +1517,12 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             or p.get("truncated") is True
         )
         current_observation = p.get("current_observation", p["is_retracted"])
-        retraction_signal = bool(current_observation or p.get("signals"))
+        retained_prior_retraction = (
+            p.get("verification_status") == "retained_prior"
+            and p.get("is_retracted") is True
+        )
+        known_retraction = current_observation is True or retained_prior_retraction
+        retraction_signal = bool(known_retraction or p.get("signals"))
         if coverage_unknown:
             plan.uncertainties.append({
                 "item_id": f"unc-retract-coverage-{event_digest[:32]}",
@@ -1481,7 +1540,7 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             plan.uncertainties.append({
                 "item_id": f"unc-retract-alert-{event_digest[:32]}",
                 "subject_id": target,
-                "kind": "retraction_alert" if current_observation else "publication_status_change",
+                "kind": "retraction_alert" if known_retraction else "publication_status_change",
                 "reason": reason,
                 "needs_human": True,
             })
@@ -1521,12 +1580,17 @@ class MathComputationAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        artifact_identity = envelope.artifact_id[4:]
+        effective_locator = p.get("locator") or envelope.locator
+        artifact_identity = compute_sha256(canonical_json_bytes({
+            "artifact_id": envelope.artifact_id,
+            "locator": effective_locator or "",
+        }))[:32]
         ev_id = f"ev-math-{artifact_identity}"
         is_verified = p.get("verified")
         plan.ceg_evidences.append({
             "id": ev_id,
             "anchor_type": "direct_observation",
+            "locator": effective_locator,
             "metadata": {
                 "sub_type": "computed_evidence",
                 "expression": p.get("expression"),
@@ -1599,9 +1663,16 @@ class AcademicWritingAdapter(BaseArtifactAdapter):
         if not valid:
             return plan
 
-        # Register exclusively as an opaque research object存证
-        plan.created_objects[envelope.artifact_id] = {
-            "id": envelope.artifact_id,
+        # Keep the content-addressed ID for context-free artifacts while
+        # namespacing contextual manifestations so the same prose may be
+        # associated with multiple locators or research objects losslessly.
+        has_context = envelope.locator is not None or bool(envelope.subject_refs)
+        object_id = envelope.artifact_id
+        if has_context:
+            context_digest = envelope.ingestion_context_digest(bindings)
+            object_id = f"{envelope.artifact_id}:context:{context_digest[:32]}"
+        plan.created_objects[object_id] = {
+            "id": object_id,
             "kind": "opaque_manuscript",
             "producer": envelope.producer,
             "payload_sha256": envelope.payload_sha256,

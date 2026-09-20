@@ -1500,3 +1500,272 @@ def test_reproduction_evidence_identity_includes_envelope_locator():
 
     assert [item.status for item in receipts] == ["accepted", "accepted"]
     assert len(state.ceg.evidence_anchors) == 2
+
+
+def test_ceg_snapshot_projects_missingness_per_receipt_reference():
+    present_payload = evidence_payload("Present receipt")
+    missing_payload = evidence_payload("Missing at export")
+    present_sha = compute_sha256(canonical_json_bytes(present_payload))
+    missing_sha = compute_sha256(canonical_json_bytes(missing_payload))
+    present_ref = ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest=canonical_evidence_claim_digest(present_payload["claims"][0]),
+        payload_sha256=present_sha,
+    )
+    missing_ref = ReceiptRef(
+        kind="academic_evidence",
+        schema_version="1.0",
+        claim_digest=canonical_evidence_claim_digest(missing_payload["claims"][0]),
+        payload_sha256=missing_sha,
+    )
+    source = ceg_mod.ClaimEvidenceGraph("per-reference-receipts")
+    source.register_receipt(present_sha, present_payload)
+    source.add_claim("claim-1", "Claim")
+    source.add_evidence(
+        "evidence-1",
+        "evidence_receipt",
+        receipt_ref=present_ref,
+    )
+    source.add_support_edge(
+        "evidence-1",
+        "claim-1",
+        "supported",
+        receipt_ref=missing_ref,
+    )
+    snapshot = source.to_dict()
+    assert len([
+        item for item in snapshot["uncertainties"]
+        if item["kind"] == "missing_receipt"
+    ]) == 1
+
+    target = kernel()
+    target.register_receipt(present_sha, present_payload)
+    target.register_receipt(missing_sha, missing_payload)
+    receipt = IngestionEngine().ingest(
+        envelope(
+            snapshot,
+            "claim-evidence-graph",
+            "claim-evidence-graph-1.0",
+            artifact_kind="ceg_snapshot",
+        ),
+        state=target,
+    )
+
+    assert receipt.status == "accepted"
+    assert not [
+        item for item in target.uncertainties
+        if item["kind"] == "missing_receipt"
+    ]
+
+
+def test_preflight_rejects_mismatched_envelope_lineage_reference():
+    graph = mcp_server.prov_mod.LineageGraph()
+    graph.add_entity("entity-1", "data_snapshot")
+    physical = mcp_server.prov_mod.trace_origin(
+        graph,
+        "entity-1",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    mismatched_ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=physical["receipt_id"],
+        receipt_digest="0" * 64,
+    )
+    env = envelope(
+        {"text": "lineage-bound artifact"},
+        "unknown-producer",
+        "unknown-schema-1.0",
+        lineage_ref=mismatched_ref,
+    )
+
+    _, body = call_tool(
+        "research_artifact_validate",
+        {
+            "envelope": env.to_dict(),
+            "receipts": {physical["receipt_id"]: physical},
+        },
+    )
+
+    assert body["valid"] is False
+    assert any("lineage_ref verification failed" in error for error in body["errors"])
+
+
+def test_retained_prior_positive_retraction_keeps_alert_and_coverage_gap():
+    receipt = IngestionEngine().ingest(
+        envelope(
+            {
+                "is_retracted": True,
+                "signals": [],
+                "current_observation": None,
+                "verification_status": "retained_prior",
+            },
+            "retraction-watch",
+            "retraction-delta-1.0",
+            subject_refs=["doi:10.1000/prior-retraction"],
+        ),
+        state=kernel(),
+    )
+
+    assert receipt.status == "accepted"
+    assert {item["kind"] for item in receipt.uncertainties} == {
+        "publication_status_change",
+        "retraction_alert",
+    }
+
+
+def test_manuscript_objects_are_scoped_to_envelope_context():
+    payload = {"text": "Same immutable manuscript payload"}
+    first = envelope(
+        payload,
+        "academic-writing",
+        "manuscript-opaque-1.0",
+        artifact_kind="opaque_manuscript",
+        locator="section:one",
+    )
+    second = envelope(
+        payload,
+        "academic-writing",
+        "manuscript-opaque-1.0",
+        artifact_kind="opaque_manuscript",
+        locator="section:two",
+    )
+    assert first.artifact_id == second.artifact_id
+    state = kernel()
+
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+
+    manuscripts = [
+        value for value in state.objects.values()
+        if value["kind"] == "opaque_manuscript"
+    ]
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(manuscripts) == 2
+    assert {item["locator"] for item in manuscripts} == {"section:one", "section:two"}
+
+
+def test_math_evidence_preserves_and_binds_effective_locator():
+    state = kernel()
+    state.ceg.add_claim("claim-1", "Computed claim")
+    payload = {"expression": "x + 1", "result": 2, "verified": True}
+    first = envelope(
+        payload,
+        "math-computation",
+        "computation-receipt-1.0",
+        locator="equation:one",
+    )
+    second = envelope(
+        payload,
+        "math-computation",
+        "computation-receipt-1.0",
+        locator="equation:two",
+    )
+    payload_locator = envelope(
+        {**payload, "locator": "equation:payload"},
+        "math-computation",
+        "computation-receipt-1.0",
+        locator="equation:ignored-envelope",
+    )
+
+    receipts, _ = IngestionEngine().batch_ingest(
+        [first, second, payload_locator],
+        state=state,
+        bindings_list=[{"claim_id": "claim-1"}] * 3,
+    )
+
+    assert [item.status for item in receipts] == ["accepted"] * 3
+    assert {item.locator for item in state.ceg.evidence_anchors.values()} == {
+        "equation:one",
+        "equation:two",
+        "equation:payload",
+    }
+
+
+def test_multi_claim_receipt_adds_one_explicitly_selected_correction():
+    payload = evidence_payload("First claim")
+    payload["claims"].append({
+        "claim": "Second claim",
+        "evidence_type": "computed",
+        "source": "doi:10.1000/second",
+        "support_status": "supported",
+    })
+    selected_digest = canonical_evidence_claim_digest(payload["claims"][1])
+    env = envelope(
+        payload,
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+    )
+    state = kernel()
+    state.ledger.add_decision("decision-1", "Decision", decision_action="commit")
+    common_binding = {
+        "action": "add_outcome_correction",
+        "decision_id": "decision-1",
+        "verdict": "positive",
+        "rationale": "Explicit correction",
+    }
+    engine = IngestionEngine()
+
+    ambiguous = engine.ingest(env, state=state, bindings=common_binding)
+    selected = engine.ingest(
+        env,
+        state=state,
+        bindings={**common_binding, "claim_digest": selected_digest},
+    )
+    corrections = state.ledger.to_dict()["corrections"]
+
+    assert ambiguous.status == "rejected"
+    assert "claim_digest" in ambiguous.failure_reason
+    assert selected.status == "accepted"
+    assert len(corrections) == 1
+    assert corrections[0]["receipt_ref"]["claim_digest"] == selected_digest
+
+
+def test_literature_artifact_rejects_conflicting_duplicate_work_ids():
+    env = envelope(
+        {
+            "works": [
+                {
+                    "work_id": "work:duplicate",
+                    "work_type": "article",
+                    "title": "First metadata record",
+                    "authors": [],
+                },
+                {
+                    "work_id": "work:duplicate",
+                    "work_type": "article",
+                    "title": "Conflicting metadata record",
+                    "authors": [],
+                },
+            ],
+        },
+        "literature-analysis",
+        "corpus-matrix-1.0",
+    )
+    state = kernel()
+
+    receipt = IngestionEngine().ingest(env, state=state)
+
+    assert receipt.status == "rejected"
+    assert "Conflicting canonical work entries" in receipt.failure_reason
+    assert not state.objects
+
+
+def test_mcp_lineage_trace_rejects_malformed_entities_and_edges():
+    malformed_graphs = [
+        {"entities": [{}], "activities": [], "edges": []},
+        {
+            "entities": [],
+            "activities": [],
+            "edges": [{"type": "used"}],
+        },
+    ]
+
+    for graph in malformed_graphs:
+        response, body = call_tool(
+            "research_lineage_trace",
+            {"lineage_graph": graph, "target_entity_id": "result"},
+        )
+        assert response["result"]["isError"] is True
+        assert body["error"] == "Invalid tool arguments"
+        assert any("required" in detail for detail in body["details"])
