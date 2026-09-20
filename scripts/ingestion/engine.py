@@ -96,11 +96,24 @@ class IngestionEngine:
         staged = target_state.clone()
         results: Dict[int, IngestionReceipt] = {}
         adapters: Dict[int, Any] = {}
+        cache_keys: Dict[int, str] = {}
         failure: Optional[Tuple[int, List[str]]] = None
 
         for index, env in enumerate(parsed):
-            bindings = bindings_list[index] if bindings_list is not None else None
+            raw_bindings = bindings_list[index] if bindings_list is not None else None
+            adapter = self.registry.resolve(env)
+            adapters[index] = adapter
+            try:
+                bindings = adapter.normalize_bindings(raw_bindings)
+            except Exception as exc:
+                errors = [str(exc)]
+                results[index] = self._rejected(env, adapter, staged, errors)
+                failure = (index, errors)
+                if atomic:
+                    break
+                continue
             cache_key = f"{env.artifact_id}:{env.ingestion_context_digest(bindings)}"
+            cache_keys[index] = cache_key
 
             registered_sha = staged.ingested_artifacts.get(env.artifact_id)
             if registered_sha is not None and registered_sha != env.payload_sha256:
@@ -113,8 +126,6 @@ class IngestionEngine:
                 results[index] = cached.with_caller_metadata(env.caller_metadata)
                 continue
 
-            adapter = self.registry.resolve(env)
-            adapters[index] = adapter
             contract_errors = validate_adapter_contract(env, adapter)
             if contract_errors:
                 failure = (index, contract_errors)
@@ -155,15 +166,30 @@ class IngestionEngine:
             failed_index, failed_errors = failure
             aborted_results: Dict[int, IngestionReceipt] = {}
             for index, env in enumerate(parsed):
-                bindings = bindings_list[index] if bindings_list is not None else None
-                cache_key = f"{env.artifact_id}:{env.ingestion_context_digest(bindings)}"
-                cached = target_state.ingestion_receipts.get(cache_key)
+                adapter = adapters.get(index) or self.registry.resolve(env)
+                adapters[index] = adapter
+                cache_key = cache_keys.get(index)
+                if cache_key is None and index != failed_index:
+                    raw_bindings = bindings_list[index] if bindings_list is not None else None
+                    try:
+                        bindings = adapter.normalize_bindings(raw_bindings)
+                    except Exception:
+                        bindings = None
+                    else:
+                        cache_key = (
+                            f"{env.artifact_id}:"
+                            f"{env.ingestion_context_digest(bindings)}"
+                        )
+                cached = (
+                    target_state.ingestion_receipts.get(cache_key)
+                    if cache_key is not None
+                    else None
+                )
                 if cached is not None:
                     aborted_results[index] = cached.with_caller_metadata(
                         env.caller_metadata
                     )
                     continue
-                adapter = adapters.get(index) or self.registry.resolve(env)
                 errors = (
                     failed_errors
                     if index == failed_index

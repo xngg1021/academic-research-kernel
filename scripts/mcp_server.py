@@ -412,7 +412,8 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 schema_errors = validate_schema(receipt_payload, schema_file)
                 if schema_errors:
                     return {"valid": False, "error": "; ".join(schema_errors)}
-            return {"valid": ok, "error": err}
+                return {"valid": True}
+            return {"valid": False, "error": err or "Receipt verification failed"}
 
         # 4. research_object_resolve
         elif name == "research_object_resolve":

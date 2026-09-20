@@ -170,6 +170,53 @@ def test_caller_metadata_replay_does_not_reapply_outcome_correction():
     assert r_replay.caller_metadata["run_id"] == "replay"
 
 
+def test_unknown_binding_cannot_reapply_an_old_outcome_correction():
+    state = kernel()
+    state.ledger.add_decision("dec-1", "Decision", decision_action="commit")
+    engine = IngestionEngine()
+    first = envelope(
+        evidence_payload("Evidence A"),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+    )
+    second = envelope(
+        evidence_payload("Evidence B"),
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+    )
+    binding_a = {
+        "action": "add_outcome_correction",
+        "decision_id": "dec-1",
+        "verdict": "positive",
+        "rationale": "result A",
+    }
+    engine.ingest(first, state=state, bindings=binding_a)
+    accepted_b = engine.ingest(
+        second,
+        state=state,
+        bindings={
+            "action": "add_outcome_correction",
+            "decision_id": "dec-1",
+            "verdict": "negative",
+            "rationale": "result B",
+        },
+    )
+
+    rejected = engine.ingest(
+        first,
+        state=state,
+        bindings={**binding_a, "claim_id": "unused"},
+    )
+
+    assert rejected.status == "rejected"
+    assert "Unsupported binding fields" in rejected.failure_reason
+    assert len(state.ledger.to_dict()["corrections"]) == 2
+    assert (
+        state.ledger.outcome_of("dec-1")["latest_correction_id"]
+        == accepted_b.ledger_bindings[0]["basis_id"]
+    )
+
+
 def test_runtime_schema_rejects_documented_but_incomplete_receipt():
     env = envelope(
         {"schema_version": "1.0", "claims": []},
@@ -414,8 +461,40 @@ def test_screening_record_does_not_replace_included_study_with_same_id():
     )
     receipt = IngestionEngine().ingest(env, state=state)
     assert receipt.status == "accepted"
-    assert state.objects["study-1"]["effect"] == 0.42
+    extraction = next(
+        value
+        for value in state.objects.values()
+        if value["kind"] == "study_extraction"
+    )
+    assert extraction["study_id"] == "study-1"
+    assert extraction["effect"] == 0.42
     assert state.objects["screening:study-1"]["decision"] == "include"
+
+
+def test_study_extractions_are_scoped_to_each_review_artifact():
+    state = kernel()
+    first = envelope(
+        {"included_studies": [{"study_id": "study-1", "effect": 0.42}]},
+        "systematic-review-meta-analysis",
+        "screening-matrix-1.0",
+    )
+    second = envelope(
+        {"included_studies": [{"study_id": "study-1", "effect": 0.73}]},
+        "systematic-review-meta-analysis",
+        "screening-matrix-1.0",
+    )
+
+    receipts, _ = IngestionEngine().batch_ingest([first, second], state=state)
+    extractions = [
+        value
+        for value in state.objects.values()
+        if value["kind"] == "study_extraction"
+    ]
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(extractions) == 2
+    assert {item["study_id"] for item in extractions} == {"study-1"}
+    assert {item["effect"] for item in extractions} == {0.42, 0.73}
 
 
 @pytest.mark.parametrize(
@@ -689,7 +768,7 @@ def test_missing_input_lineage_receipt_verifies_and_ingests():
         "receipt_id": receipt["receipt_id"],
         "receipt_digest": receipt["receipt_digest"],
     }
-    _, verified = call_tool(
+    response, verified = call_tool(
         "research_receipt_verify",
         {"receipt_ref": ref, "receipt_payload": receipt},
     )
@@ -701,6 +780,8 @@ def test_missing_input_lineage_receipt_verifies_and_ingests():
     )
     ingested = IngestionEngine().ingest(env, state=kernel())
     assert verified["valid"] is True
+    assert "error" not in verified
+    assert response["result"]["isError"] is False
     assert ingested.status == "accepted"
 
 
@@ -1026,6 +1107,89 @@ def test_incremental_ceg_mutation_persists_derived_uncertainty():
     assert [item["kind"] for item in state.uncertainties] == ["unverifiable_claim"]
     assert [item["kind"] for item in receipt.uncertainties] == ["unverifiable_claim"]
     assert receipt.output_digests == state.compute_digests()
+
+
+def test_resolved_domain_uncertainty_is_removed_from_kernel_queue():
+    payload = evidence_payload("Receipt-backed claim")
+    payload_sha = compute_sha256(canonical_json_bytes(payload))
+    claim_digest = canonical_evidence_claim_digest(payload["claims"][0])
+    graph = ceg_mod.ClaimEvidenceGraph("eventual-receipt")
+    graph.add_claim("claim-1", "Receipt-backed claim")
+    graph.add_evidence(
+        "evidence-1",
+        "evidence_receipt",
+        receipt_ref=ReceiptRef(
+            kind="academic_evidence",
+            schema_version="1.0",
+            claim_digest=claim_digest,
+            payload_sha256=payload_sha,
+        ),
+    )
+    graph.add_support_edge("evidence-1", "claim-1", "supported")
+    snapshot = envelope(
+        graph.to_dict(),
+        "claim-evidence-graph",
+        "claim-evidence-graph-1.0",
+    )
+    state = kernel()
+    engine = IngestionEngine()
+
+    first = engine.ingest(snapshot, state=state)
+    missing_id = next(
+        item["item_id"]
+        for item in state.uncertainties
+        if item["kind"] == "missing_receipt"
+    )
+    receipt_env = envelope(
+        payload,
+        "academic-source-verification",
+        "evidence-receipt-1.0",
+    )
+    second = engine.ingest(receipt_env, state=state)
+
+    assert first.status == "accepted"
+    assert second.status == "accepted"
+    assert missing_id not in {item["item_id"] for item in state.uncertainties}
+    assert not [
+        item for item in state.ceg.extract_uncertainties()
+        if item.kind == "missing_receipt"
+    ]
+
+
+def test_evidence_verdicts_share_one_semantic_claim_node():
+    supported = evidence_payload("One proposition")
+    contradicted = evidence_payload("One proposition")
+    contradicted["claims"][0]["source"] = "doi:10.1000/independent"
+    contradicted["claims"][0]["support_status"] = "contradicted"
+    state = kernel()
+
+    receipts, _ = IngestionEngine().batch_ingest(
+        [
+            envelope(
+                supported,
+                "academic-source-verification",
+                "evidence-receipt-1.0",
+                subject_refs=["work:shared"],
+            ),
+            envelope(
+                contradicted,
+                "academic-source-verification",
+                "evidence-receipt-1.0",
+                subject_refs=["work:shared"],
+            ),
+        ],
+        state=state,
+    )
+
+    assert [item.status for item in receipts] == ["accepted", "accepted"]
+    assert len(state.ceg.claims) == 1
+    assert len(state.ceg.evidence_anchors) == 2
+    claim_ids = {edge.claim_id for edge in state.ceg.support_edges}
+    assert len(claim_ids) == 1
+    assert {edge.support_status for edge in state.ceg.support_edges} == {
+        "supported",
+        "contradicted",
+    }
 
 
 def test_quantitative_evidence_uses_contextual_128_bit_identity():

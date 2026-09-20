@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import collections.abc
 import copy
+import re
+import unicodedata
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Set
 
 from shared_contracts.evidence import (
@@ -22,6 +24,18 @@ from shared_contracts.evidence import (
 from .models import ArtifactEnvelope, IngestionKernelState, IngestionReceipt
 
 
+_DOMAIN_DERIVED_UNCERTAINTY_KINDS = {
+    "unverifiable_claim",
+    "unresolved_contradiction",
+    "missing_receipt",
+    "ambiguous_locator",
+    "decision_without_basis",
+    "unsupported_negative_result",
+    "unsupported_pruning",
+    "unevidenced_claim_basis",
+}
+
+
 def _canonical_item_set(items: List[Mapping[str, Any]]) -> Set[bytes]:
     return {canonical_json_bytes(item) for item in items}
 
@@ -37,6 +51,45 @@ def _snapshot_fast_forwards(
         <= _canonical_item_set(list(incoming.get(field, [])))
         for field in collection_fields
     )
+
+
+def _compute_ceg_claim_digest(
+    text: str,
+    target_work_id: Optional[str],
+    locator: Optional[str],
+    claim_type: str = "empirical_finding",
+) -> str:
+    """Mirror the CEG semantic claim-identity contract without evidence fields."""
+    normalised_text = unicodedata.normalize("NFC", str(text or ""))
+    normalised_text = re.sub(r"[\r\n\t]+", " ", normalised_text)
+    normalised_text = re.sub(r"\s+", " ", normalised_text).strip()
+    return compute_sha256(canonical_json_bytes({
+        "claim_type": claim_type,
+        "locator": locator or "",
+        "target_work_id": target_work_id or "",
+        "text": normalised_text,
+    }))
+
+
+def _domain_derived_uncertainties(
+    state: IngestionKernelState,
+) -> List[Dict[str, Any]]:
+    """Return the current CEG/Ledger uncertainty projection with ownership tags."""
+    derived: List[Any] = []
+    if state.ceg is not None:
+        derived.extend(state.ceg.extract_uncertainties())
+    if state.ledger is not None:
+        derived.extend(state.ledger.export_uncertainties())
+
+    values: List[Dict[str, Any]] = []
+    for item in derived:
+        raw = item.to_dict() if hasattr(item, "to_dict") else _thaw_val(item)
+        raw = copy.deepcopy(raw)
+        metadata = dict(raw.get("metadata") or {})
+        metadata["kernel_origin"] = "domain_derived"
+        raw["metadata"] = metadata
+        values.append(raw)
+    return values
 
 
 class IngestionPlan:
@@ -100,6 +153,32 @@ class BaseArtifactAdapter(ABC):
     accepted_schemas: Set[str]
     is_lossless: bool
     tier: int  # 1 = native receipt, 2 = structured artifact, 3 = opaque artifact
+    accepted_binding_fields: Set[str] = set()
+    required_binding_fields: Set[str] = set()
+
+    def normalize_bindings(
+        self,
+        bindings: Optional[Mapping[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        """Validate and canonicalise only fields that can affect this adapter."""
+        if bindings is None:
+            return None
+        if not isinstance(bindings, collections.abc.Mapping):
+            raise TypeError("bindings must be a mapping or None")
+        values = _thaw_val(bindings)
+        if not values:
+            return None
+        unknown = set(values) - self.accepted_binding_fields
+        if unknown:
+            raise ValueError(
+                f"Unsupported binding fields for {self.adapter_id}: {sorted(unknown)}"
+            )
+        missing = self.required_binding_fields - set(values)
+        if missing:
+            raise ValueError(
+                f"Missing required binding fields for {self.adapter_id}: {sorted(missing)}"
+            )
+        return {key: values[key] for key in sorted(values)}
 
     @abstractmethod
     def probe(self, envelope: ArtifactEnvelope) -> bool:
@@ -147,9 +226,17 @@ class BaseArtifactAdapter(ABC):
                 "refusing an accepted no-op"
             )
 
-        uncertainty_ids_before = {
-            value["item_id"] for value in state.uncertainties
-        }
+        uncertainty_ids_before = {value["item_id"] for value in state.uncertainties}
+        derived_before = _domain_derived_uncertainties(state)
+        managed_derived_ids = {item["item_id"] for item in derived_before}
+        managed_derived_ids.update(
+            value["item_id"]
+            for value in state.uncertainties
+            if (
+                value["kind"] in _DOMAIN_DERIVED_UNCERTAINTY_KINDS
+                or value.get("metadata", {}).get("kernel_origin") == "domain_derived"
+            )
+        )
 
         # 1. Apply Research Objects with fail-closed collision defense
         for obj_id, obj_data in plan.created_objects.items():
@@ -295,25 +382,33 @@ class BaseArtifactAdapter(ABC):
                     "basis_id": corr_res.correction_id,
                 })
 
-        # 5. Persist both adapter-declared and domain-derived uncertainties.
-        # Snapshot loaders already carry these queues; incremental mutations
-        # must converge to the same kernel uncertainty state.
+        # 5. Synchronise the domain-derived projection while retaining
+        # adapter-declared uncertainties as append-only observations.
         receipt_uncertainties: List[Dict[str, Any]] = []
         receipt_uncertainty_ids: Set[str] = set()
+
+        derived_uncertainties = _domain_derived_uncertainties(state)
+        current_derived_ids = {item["item_id"] for item in derived_uncertainties}
+        managed_derived_ids.update(current_derived_ids)
+        state.uncertainties = [
+            value
+            for value in state.uncertainties
+            if value["item_id"] not in managed_derived_ids
+        ]
+
         for u in plan.uncertainties:
             raw = _thaw_val(u)
+            # Snapshot adapters expose the same derived queue in their wire
+            # format. The freshly recomputed, ownership-tagged projection is
+            # authoritative and prevents stale snapshot entries persisting.
+            if raw["item_id"] in current_derived_ids:
+                continue
             state.add_uncertainty(raw)
             if raw["item_id"] not in receipt_uncertainty_ids:
                 receipt_uncertainties.append(raw)
                 receipt_uncertainty_ids.add(raw["item_id"])
 
-        derived_uncertainties: List[Any] = []
-        if state.ceg is not None:
-            derived_uncertainties.extend(state.ceg.extract_uncertainties())
-        if state.ledger is not None:
-            derived_uncertainties.extend(state.ledger.export_uncertainties())
-        for item in derived_uncertainties:
-            raw = item.to_dict() if hasattr(item, "to_dict") else _thaw_val(item)
+        for raw in derived_uncertainties:
             state.add_uncertainty(raw)
             item_id = raw["item_id"]
             if (
@@ -360,6 +455,29 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
     accepted_schemas = {"evidence-receipt-1.0", "academic-evidence-1.0"}
     is_lossless = True
     tier = 1
+    accepted_binding_fields = {"action", "decision_id", "verdict", "rationale"}
+    required_binding_fields = {"action", "decision_id", "verdict"}
+
+    def normalize_bindings(
+        self,
+        bindings: Optional[Mapping[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        values = super().normalize_bindings(bindings)
+        if values is None:
+            return None
+        if values["action"] != "add_outcome_correction":
+            raise ValueError(
+                "academic-source-verification binding action must be "
+                "'add_outcome_correction'"
+            )
+        for key in ("decision_id", "verdict"):
+            if not isinstance(values[key], str) or not values[key].strip():
+                raise ValueError(f"bindings.{key} must be a non-empty string")
+        if "rationale" in values and (
+            not isinstance(values["rationale"], str) or not values["rationale"].strip()
+        ):
+            raise ValueError("bindings.rationale must be a non-empty string when supplied")
+        return values
 
     def probe(self, envelope: ArtifactEnvelope) -> bool:
         return (
@@ -425,14 +543,16 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             # physical receipt so separate retrievals remain independently
             # traceable without polluting the stable ResearchObject identity.
             c_dig = canonical_evidence_claim_digest(c_item)
-            claim_node_dig = compute_sha256(canonical_json_bytes({
-                "claim_digest": c_dig,
-                "target_work_id": target_work,
-                "locator": c_loc,
-            }))
+            claim_node_dig = _compute_ceg_claim_digest(
+                c_text,
+                target_work,
+                c_loc,
+                "empirical_finding",
+            )
             evidence_node_dig = compute_sha256(canonical_json_bytes({
                 "claim_node_digest": claim_node_dig,
                 "payload_sha256": envelope.payload_sha256,
+                "receipt_claim_digest": c_dig,
             }))
             c_id = f"clm-{claim_node_dig[:32]}"
             ev_id = f"ev-{evidence_node_dig[:32]}"
@@ -735,6 +855,8 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
     accepted_schemas = {"quantitative-audit-1.0"}
     is_lossless = False
     tier = 2
+    accepted_binding_fields = {"claim_id"}
+    required_binding_fields = {"claim_id"}
 
     def probe(self, envelope: ArtifactEnvelope) -> bool:
         return envelope.producer.get("skill") in self.accepted_producers
@@ -828,6 +950,8 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
     accepted_schemas = {"reproduction-receipt-1.0"}
     is_lossless = False
     tier = 2
+    accepted_binding_fields = {"claim_id"}
+    required_binding_fields = {"claim_id"}
 
     def probe(self, envelope: ArtifactEnvelope) -> bool:
         return envelope.producer.get("skill") in self.accepted_producers
@@ -1060,8 +1184,21 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
         p = envelope.payload
         studies = p.get("included_studies", [])
         for idx, s in enumerate(studies):
-            s_id = s.get("study_id") or f"study-{idx}"
-            plan.created_objects[s_id] = dict(copy.deepcopy(s), id=s_id, kind="study_entry")
+            source_study_id = s.get("study_id") or (
+                "study-" + compute_sha256(canonical_json_bytes(s))[:32]
+            )
+            extraction_digest = compute_sha256(canonical_json_bytes({
+                "artifact_id": envelope.artifact_id,
+                "entry_index": idx,
+                "study_id": source_study_id,
+            }))
+            extraction_id = f"study-extraction:{extraction_digest[:32]}"
+            plan.created_objects[extraction_id] = dict(
+                copy.deepcopy(s),
+                id=extraction_id,
+                kind="study_extraction",
+                study_id=source_study_id,
+            )
         for idx, result in enumerate(p.get("screening_results", [])):
             # A study can have multiple reports/records. Prefer the unique
             # screening-record identity and only fall back to study_id for
@@ -1286,6 +1423,8 @@ class MathComputationAdapter(BaseArtifactAdapter):
     accepted_schemas = {"computation-receipt-1.0"}
     is_lossless = False
     tier = 2
+    accepted_binding_fields = {"claim_id"}
+    required_binding_fields = {"claim_id"}
 
     def probe(self, envelope: ArtifactEnvelope) -> bool:
         return envelope.producer.get("skill") in self.accepted_producers

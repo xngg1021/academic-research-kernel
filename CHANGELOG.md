@@ -27,7 +27,7 @@
 - **端到端完整生命周期与对抗性用例**：
   - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
   - 新增 `tests/test_ingestion_hardening.py`，覆盖深不可变、运行时 schema、真实生产者契约、原子回滚、语义幂等、完整状态回放、防篡改摘要、三态证据语义与真实 stdio MCP 握手；
-  - 单测基线由 632 项扩充至 **713 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
+  - 单测基线由 632 项扩充至 **717 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
 
 ### PR #12 合并前完整性加固与历史对账
 
@@ -40,7 +40,8 @@
 - **[P1] 二次复审闭环**：继续修复 7 个新发现的边界条件：CEG ID 绑定目标 work、MCP 快照校验接收物理收据、筛选/纳入研究对象隔离、caller metadata 不触发重复变异、回执引用真实 correction ID、`missing_input` 谱系收据可验证、时间戳变体不冲突。
 - **[P1/P2] 三次复审闭环**：修复后续 6 个 P1 与 1 个 P2：稳定 work 身份与检索元数据解耦、CEG claim/evidence 分层绑定 locator 与物理回执、筛选记录优先 `record_id`、撤稿 retained-prior 状态进入不确定性、预检重算 lineage 身份、MCP lineage 活动强制显式时间戳、Ledger 快照仅按声明 manifest 重放。
 - **[P1/P2] 四次复审闭环**：修复后续 5 个 P1 与 3 个 P2：lineage locator 与撤稿 target 进入身份、CEG 校验错误保持验证契约、claim trace 返回支持/反驳锚点、截断撤稿进入覆盖不确定性、筛选决策闭集、增量与快照不确定性同步、适配器内容 ID 统一为 128-bit；同时将同类约束扩展到相邻适配器并复用已有丰富 work 对象。
-- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 53 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
+- **[P1] 五次复审闭环**：修复后续 5 个 P1：派生不确定性随因果状态同步清退、系统综述抽取按 review artifact 命名空间隔离、成功的 receipt verify 不再误标 MCP `isError`、适配器 bindings 先归一化并拒绝未知字段、同一命题的支持与反驳证据汇聚至同一语义 claim 节点。
+- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 58 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
 
 ---
 

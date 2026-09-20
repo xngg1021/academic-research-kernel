@@ -105,6 +105,6 @@ Tool arguments use closed JSON Schemas and are validated before dispatch. Each r
 
 ## Verification and residual boundaries
 
-The remediation baseline is **713 passed, 3 intentionally skipped** tests plus 40 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
+The remediation baseline is **717 passed, 3 intentionally skipped** tests plus 40 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
 
 The complete historical PR/CI ledger, fixed PR #12 review findings, and still-open operational/governance/P3 boundaries are maintained in [the 2026-09-20 project lineage audit](project-lineage-audit-20260920.md).

@@ -81,7 +81,7 @@ git diff --check
 
 QA inathibitisha metadata, marejeleo, mifumo ya njia za kibinafsi/siri, sintaksia ya Python na vizuizi vya msimbo vilivyowekwa alama. Hutoa 0 kwa mafanikio, 1 kwa hitilafu ya msimbo/schema/utambulisho na 2 kwa kutopatikana kwa mtandao/uthibitishaji/kiwango.
 
-CI huendesha majaribio kamili kwenye Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 na macOS Intel, huku majaribio 713 ya vitengo yakifaulu na vizuizi 40 vya msimbo vinavyotekelezeka vikiwa vimethibitishwa.
+CI huendesha majaribio kamili kwenye Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 na macOS Intel, huku majaribio 717 ya vitengo yakifaulu na vizuizi 40 vya msimbo vinavyotekelezeka vikiwa vimethibitishwa.
 
 tools/longtail/ inashikilia jenereta ya hali ngumu: michanganyiko 4096 ya wagombea yenye mbegu ya SHA256 na ripoti ya chanjo katika generated-scenarios.json.
 
