@@ -1,6 +1,6 @@
 {
   "protocol": "project-lineage-audit-1.0",
-  "as_of": "2026-09-20T10:07:56Z",
+  "as_of": "2026-09-20T10:32:25Z",
   "repository": "xngg1021/academic-research-kernel",
   "summary": {
     "pull_requests_total": 12,
@@ -8,7 +8,7 @@
     "pull_requests_open": 1,
     "exact_head_workflow_runs_successful": 12,
     "exact_head_workflow_runs_failed": 0,
-    "verified_remediation_workflow_runs_successful": 9,
+    "verified_remediation_workflow_runs_successful": 10,
     "standalone_issues": 0,
     "pr12_review_threads_unresolved_at_start": 31,
     "pr12_review_findings_by_severity": {
@@ -17,7 +17,7 @@
       "P2": 1,
       "P3": 0
     },
-    "pr12_review_threads_observed_total": 92,
+    "pr12_review_threads_observed_total": 96,
     "pr12_followup_review_findings_by_severity": {
       "P0": 0,
       "P1": 7,
@@ -81,8 +81,15 @@
       "P3": 0
     },
     "pr12_ninth_followup_findings_remediated_locally": 5,
+    "pr12_tenth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 4,
+      "P2": 0,
+      "P3": 0
+    },
+    "pr12_tenth_followup_findings_remediated_locally": 4,
     "local_tests_after_remediation": {
-      "passed": 749,
+      "passed": 756,
       "skipped": 3,
       "failed": 0
     }
@@ -110,14 +117,15 @@
     {"pull_request": 12, "head_sha": "8af81dd29ce1a2e20764c3b8d1191d1293931a34", "workflow_run_id": 35500414450, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5, "P2": 3}},
     {"pull_request": 12, "head_sha": "21fa30065f9285d7edb824ca6a100630da4a53b4", "workflow_run_id": 35501417685, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 4}},
     {"pull_request": 12, "head_sha": "659fa48466fe866ce577b90ab3fef9d73b62ca5e", "workflow_run_id": 35503474068, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 2, "P2": 2}},
-    {"pull_request": 12, "head_sha": "6b4265036dd9883ecf6d1a6865760bdbf39a3e94", "same_tree_parent_sha": "685f7cbb36bf8a46ca032a3815455aed5c814d0c", "workflow_run_id": 35503922950, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 1}}
+    {"pull_request": 12, "head_sha": "6b4265036dd9883ecf6d1a6865760bdbf39a3e94", "same_tree_parent_sha": "685f7cbb36bf8a46ca032a3815455aed5c814d0c", "workflow_run_id": 35503922950, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 1}},
+    {"pull_request": 12, "head_sha": "2f322d96a8e4eef8fa053bb02ae06389fa8aaa36", "same_tree_parent_sha": "14770943253d6caf5415ef297e25abf00abe1e77", "workflow_run_id": 35504757502, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4}}
   ],
   "open_register": [
     {"id": "OPS-01", "severity": "P2", "category": "ci_coverage", "status": "accepted_operational_limitation"},
     {"id": "EXT-01", "severity": "P2", "category": "external_verification", "status": "open_credential_bound"},
     {"id": "GOV-01", "severity": "P2", "category": "historical_provenance", "status": "grandfathered_missing"},
     {"id": "DIST-01", "severity": "P3", "category": "distribution", "status": "planned_pr13"},
-    {"id": "I18N-01", "severity": "P3", "category": "localization", "status": "queued", "canonical_current": 55, "localized_current": 22, "queued_for_generation": 1078},
+    {"id": "I18N-01", "severity": "P3", "category": "localization", "status": "queued", "canonical_current": 55, "localized_current": 2, "localized_stale": 20, "queued_for_generation": 1078},
     {"id": "GOV-02", "severity": "P3", "category": "independent_agenda_validation", "status": "open"},
     {"id": "GOV-03", "severity": "P3", "category": "portfolio_review", "status": "open"},
     {"id": "SCF-01", "severity": "P3", "category": "experimental_compute_scope", "status": "open"},

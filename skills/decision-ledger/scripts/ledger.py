@@ -213,6 +213,13 @@ def canonical_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
     return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest().lower()
 
 
+def _legacy_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
+    """Canonical SHA256 used by early v1 exports before timestamp normalisation."""
+    return hashlib.sha256(
+        _canonical_json_bytes(_jsonable(payload_dict))
+    ).hexdigest().lower()
+
+
 def _jsonable(obj: Any, _seen: Optional[set] = None) -> Any:
     """Deterministically convert a registered payload to JSON-able structures.
 
@@ -1097,6 +1104,11 @@ class DecisionLedger:
         self._state_events: List[DecisionStateEvent] = []
         self._corrections: Dict[str, OutcomeCorrection] = {}
         self._receipts: Dict[str, Any] = {}
+        # Early decision-ledger-1.0 exports included the emission timestamp in
+        # lineage receipt manifest hashes. Keep that wire identity when such a
+        # snapshot is replayed, while all newly registered receipts use the
+        # timestamp-normalised canonical form.
+        self._receipt_manifest_modes: Dict[str, str] = {}
         self._next_correction_sequence = 1
         self._next_state_sequence = 1
         self._bases_by_decision: Dict[str, List[DecisionBasisEdge]] = collections.defaultdict(list)
@@ -1137,6 +1149,7 @@ class DecisionLedger:
                 raise ValueError(f"Conflicting receipt registration for {rid!r}: existing data differs from new registration.")
             return
         self._receipts[rid] = snapshot
+        self._receipt_manifest_modes[rid] = "canonical"
         snap_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
         if isinstance(snap_dict, dict):
             try:
@@ -1954,7 +1967,11 @@ class DecisionLedger:
     def _compute_verification_manifest(self) -> Dict[str, str]:
         """Compute the canonical verification manifest (receipt_id -> payload_sha256)."""
         return {
-            rid: canonical_ledger_payload_sha256(_jsonable(r))
+            rid: (
+                _legacy_ledger_payload_sha256(_jsonable(r))
+                if self._receipt_manifest_modes.get(rid) == "legacy_v1"
+                else canonical_ledger_payload_sha256(_jsonable(r))
+            )
             for rid, r in sorted(self._receipts.items())
         }
 
@@ -2193,8 +2210,37 @@ class DecisionLedger:
 
         # Optional receipt registry population
         if receipt_registry is not None:
+            declared_ids = set(v_manifest)
+            provided_ids = set(receipt_registry)
+            if provided_ids != declared_ids:
+                raise ValueError(
+                    "Provided receipt_registry keys do not match the verification_manifest: "
+                    f"missing={sorted(declared_ids - provided_ids)}, "
+                    f"unexpected={sorted(provided_ids - declared_ids)}."
+                )
             for rid, r in sorted(receipt_registry.items()):
+                payload = _jsonable(r)
+                declared_hash = str(v_manifest[rid]).lower()
+                canonical_hash = canonical_ledger_payload_sha256(payload)
+                manifest_mode = "canonical"
+                if declared_hash != canonical_hash:
+                    is_lineage = (
+                        isinstance(payload, dict)
+                        and payload.get("protocol") == "lineage-receipt-1.0"
+                    )
+                    legacy_hash = (
+                        _legacy_ledger_payload_sha256(payload)
+                        if is_lineage
+                        else None
+                    )
+                    if declared_hash != legacy_hash:
+                        raise ValueError(
+                            f"Provided receipt_registry payload hash mismatch for {rid!r}: "
+                            f"declared {declared_hash!r}, recomputed {canonical_hash!r}."
+                        )
+                    manifest_mode = "legacy_v1"
                 ledger.register_receipt(rid, r)
+                ledger._receipt_manifest_modes[rid] = manifest_mode
             if ledger.verification_digest() != str(data["verification_digest"]).lower():
                 raise ValueError(
                     f"Provided receipt_registry verification digest mismatch: recomputed {ledger.verification_digest()!r} "

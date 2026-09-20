@@ -694,13 +694,30 @@ class IngestionKernelState:
                 for item in ceg_data.get("support_edges", [])
             )
 
+        ledger_decisions = set()
         ledger_bases = set()
+        ledger_forks = set()
+        ledger_state_events = set()
         ledger_corrections = set()
         if self.ledger is not None:
             ledger_data = self.ledger.to_dict()
+            ledger_decisions.update(
+                item["id"] for item in ledger_data.get("decisions", [])
+            )
             ledger_bases.update(
                 (item["decision_id"], item["basis_kind"], item["basis_id"])
                 for item in ledger_data.get("bases", [])
+            )
+            ledger_forks.update(
+                (
+                    item["decision_id"],
+                    compute_sha256(canonical_json_bytes(item)),
+                )
+                for item in ledger_data.get("forks", [])
+            )
+            ledger_state_events.update(
+                (item["decision_id"], item["event_id"])
+                for item in ledger_data.get("state_events", [])
             )
             ledger_corrections.update(
                 (item["decision_id"], item["correction_id"])
@@ -755,12 +772,26 @@ class IngestionKernelState:
                         f"Ingestion receipt cache {cache_key!r} references missing "
                         f"CEG edge {edge_id!r}"
                     )
+            if (
+                receipt.adapter_id == "adapter-decision-ledger"
+                and not receipt.ledger_bindings
+            ):
+                errors.append(
+                    f"Ingestion receipt cache {cache_key!r} lacks Decision Ledger "
+                    "mutation references"
+                )
             for raw_binding in receipt.ledger_bindings:
                 binding = _thaw_val(raw_binding)
                 decision_id = binding.get("decision_id")
                 binding_kind = binding.get("binding_kind")
                 basis_id = binding.get("basis_id")
-                if binding_kind == "outcome_correction":
+                if binding_kind == "ledger_decision":
+                    retained = decision_id == basis_id and decision_id in ledger_decisions
+                elif binding_kind == "ledger_fork":
+                    retained = (decision_id, basis_id) in ledger_forks
+                elif binding_kind == "ledger_state_event":
+                    retained = (decision_id, basis_id) in ledger_state_events
+                elif binding_kind == "outcome_correction":
                     retained = (decision_id, basis_id) in ledger_corrections
                 else:
                     retained = (

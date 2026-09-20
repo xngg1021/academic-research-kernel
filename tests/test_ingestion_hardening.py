@@ -2139,6 +2139,65 @@ def test_doi_retraction_targets_the_canonical_work_identity():
     }
 
 
+def test_doi_resolver_forms_converge_across_all_scholarly_adapters():
+    canonical = {
+        "work_type": "article",
+        "title": "Resolver-form work",
+        "authors": [],
+        "doi": "HTTPS://DOI.ORG/10.1000/EXAMPLE",
+    }
+    evidence = evidence_payload()
+    evidence["identifiers"] = {"doi": "doi:10.1000/EXAMPLE"}
+    state = kernel()
+    engine = IngestionEngine()
+
+    work_receipt = engine.ingest(
+        envelope(
+            canonical,
+            "literature-analysis",
+            "canonical-work-1.0",
+            producer_version="1.3.0",
+        ),
+        state=state,
+    )
+    evidence_receipt = engine.ingest(
+        envelope(
+            evidence,
+            "academic-source-verification",
+            "evidence-receipt-1.0",
+        ),
+        state=state,
+    )
+    retraction_receipt = engine.ingest(
+        envelope(
+            {
+                "doi": "http://dx.doi.org/10.1000/Example",
+                "is_retracted": None,
+                "signals": [],
+            },
+            "retraction-watch",
+            "retraction-delta-1.0",
+        ),
+        state=state,
+    )
+
+    assert [work_receipt.status, evidence_receipt.status, retraction_receipt.status] == [
+        "accepted",
+        "accepted",
+        "accepted",
+    ]
+    assert "work:doi:10.1000/example" in state.objects
+    assert {claim.target_work_id for claim in state.ceg.claims.values()} == {
+        "work:doi:10.1000/example"
+    }
+    status_object = next(
+        value
+        for value in state.objects.values()
+        if value.get("kind") == "publication_status_observation"
+    )
+    assert status_object["target_work_id"] == "work:doi:10.1000/example"
+
+
 def test_cross_artifact_object_collisions_distinguish_json_boolean_and_number():
     first = envelope(
         {"new_papers": [{"id": "same-paper", "value": 1}]},
@@ -2216,6 +2275,77 @@ def test_cached_receipt_rejects_missing_recorded_mutations_on_replay():
         )
 
 
+def test_cached_ledger_snapshot_tracks_every_mutation_family():
+    source = ledger_mod.DecisionLedger("snapshot-ledger")
+    source.add_decision("decision-1", "Primary", decision_action="commit")
+    source.add_decision("decision-2", "Alternative", decision_action="explore")
+    source.add_fork("decision-1", "decision-2", "considered")
+    source.add_state_event("decision-1", "active")
+    source.add_outcome_correction("decision-1", "positive", "verified")
+    state = kernel()
+
+    receipt = IngestionEngine().ingest(
+        envelope(
+            source.to_dict(),
+            "decision-ledger",
+            "decision-ledger-1.0",
+            artifact_kind="decision_ledger_snapshot",
+        ),
+        state=state,
+    )
+
+    assert receipt.status == "accepted"
+    assert {binding["binding_kind"] for binding in receipt.ledger_bindings} == {
+        "ledger_decision",
+        "ledger_fork",
+        "ledger_state_event",
+        "outcome_correction",
+    }
+
+    fork_missing = state.clone()
+    fork_missing.ledger._forks.clear()
+    valid, errors = fork_missing.validate_invariants()
+    assert valid is False
+    assert any("missing Ledger binding" in error for error in errors)
+
+    event_missing = state.clone()
+    event_missing.ledger._state_events.clear()
+    event_missing.ledger._state_events_by_decision.clear()
+    valid, errors = event_missing.validate_invariants()
+    assert valid is False
+    assert any("missing Ledger binding" in error for error in errors)
+
+    correction_missing = state.clone()
+    correction_missing.ledger._corrections.clear()
+    correction_missing.ledger._corrections_by_decision.clear()
+    valid, errors = correction_missing.validate_invariants()
+    assert valid is False
+    assert any("missing Ledger binding" in error for error in errors)
+
+
+def test_cached_decision_only_snapshot_cannot_suppress_restoration():
+    source = ledger_mod.DecisionLedger("decision-only")
+    source.add_decision("decision-1", "Only decision", decision_action="commit")
+    state = kernel()
+    receipt = IngestionEngine().ingest(
+        envelope(
+            source.to_dict(),
+            "decision-ledger",
+            "decision-ledger-1.0",
+            artifact_kind="decision_ledger_snapshot",
+        ),
+        state=state,
+    )
+    assert receipt.status == "accepted"
+    assert receipt.ledger_bindings[0]["binding_kind"] == "ledger_decision"
+
+    state.ledger._decisions.clear()
+    valid, errors = state.validate_invariants()
+
+    assert valid is False
+    assert any("missing Ledger binding" in error for error in errors)
+
+
 def test_ledger_snapshot_replay_normalizes_lineage_timestamp_variants():
     graph = mcp_server.prov_mod.LineageGraph()
     graph.add_entity("entity-1", "data_snapshot")
@@ -2247,6 +2377,33 @@ def test_ledger_snapshot_replay_normalizes_lineage_timestamp_variants():
     assert result.status == "accepted"
     assert state.ledger.to_dict()["verification_manifest"] == source.to_dict()["verification_manifest"]
     assert state.receipts[earlier["receipt_id"]]["timestamp"] == earlier["timestamp"]
+
+    legacy_snapshot = source.to_dict()
+    legacy_snapshot["verification_manifest"][later["receipt_id"]] = (
+        ledger_mod._legacy_ledger_payload_sha256(later)
+    )
+    legacy_snapshot["verification_digest"] = compute_sha256(canonical_json_bytes({
+        "ledger_digest": legacy_snapshot["ledger_digest"],
+        "receipts": legacy_snapshot["verification_manifest"],
+    }))
+    legacy_state = kernel()
+    legacy_state.register_receipt(later["receipt_id"], later)
+
+    legacy_result = IngestionEngine().ingest(
+        envelope(
+            legacy_snapshot,
+            "decision-ledger",
+            "decision-ledger-1.0",
+            artifact_kind="decision_ledger_snapshot",
+        ),
+        state=legacy_state,
+    )
+
+    assert legacy_result.status == "accepted"
+    assert (
+        legacy_state.ledger.to_dict()["verification_manifest"]
+        == legacy_snapshot["verification_manifest"]
+    )
 
 
 @pytest.mark.parametrize(

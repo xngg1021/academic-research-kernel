@@ -1034,6 +1034,32 @@ def test_from_dict_round_trip_with_receipt_registry():
     assert [u.to_dict() for u in g2.export_uncertainties()] == export["uncertainties"]
 
 
+def test_from_dict_preserves_legacy_v1_timestamped_lineage_manifest():
+    lineage, ref = _lineage_fixture()
+    lineage["timestamp"] = "2026-09-20T00:00:00Z"
+    ledger = dl.DecisionLedger(ledger_id="legacy-manifest")
+    ledger.add_decision(id="d1", title="Legacy decision")
+    ledger.register_receipt(ref.receipt_id, lineage)
+    exported = ledger.to_dict()
+
+    legacy_hash = dl._legacy_ledger_payload_sha256(lineage)
+    exported["verification_manifest"] = {ref.receipt_id: legacy_hash}
+    exported["verification_digest"] = hashlib.sha256(
+        dl._canonical_json_bytes({
+            "ledger_digest": exported["ledger_digest"],
+            "receipts": exported["verification_manifest"],
+        })
+    ).hexdigest()
+
+    replayed = dl.DecisionLedger.from_dict(
+        exported,
+        receipt_registry={ref.receipt_id: lineage},
+    )
+
+    assert replayed.to_dict()["verification_manifest"] == exported["verification_manifest"]
+    assert replayed.to_dict()["verification_digest"] == exported["verification_digest"]
+
+
 def test_schema_validates_state_transition_automaton():
     schema = json.loads((ROOT / "schemas" / "decision-ledger-receipt.schema.json").read_text(encoding="utf-8"))
     g = dl.DecisionLedger()

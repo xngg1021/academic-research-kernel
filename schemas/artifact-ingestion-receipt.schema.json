@@ -109,7 +109,7 @@
           },
           "binding_kind": {
             "type": "string",
-            "enum": ["decision", "negative_result", "outcome_correction", "evidence_receipt", "reproduction_receipt", "computed_evidence", "review_finding", "uncertainty"]
+            "enum": ["decision", "negative_result", "outcome_correction", "evidence_receipt", "reproduction_receipt", "computed_evidence", "review_finding", "uncertainty", "ledger_decision", "ledger_fork", "ledger_state_event"]
           },
           "basis_id": {
             "type": "string"

@@ -40,6 +40,46 @@ def _lineage_fixture():
     return receipt, ref
 
 
+def _resign_lineage_receipt(receipt, check_on_disk_hashes=False):
+    edge_key = lambda edge: (
+        edge.get("type", ""),
+        edge.get("source_id", ""),
+        edge.get("target_id", ""),
+        edge.get("activity_id") or "",
+        canonical_json_bytes(edge.get("metadata", {})),
+    )
+    lineage_payload = {
+        "protocol": "lineage-receipt-1.0",
+        "target_id": receipt["target_id"],
+        "root_ancestors": sorted(receipt["root_ancestors"]),
+        "entities": sorted(receipt["entities"], key=lambda item: item["id"]),
+        "activities": sorted(receipt["activities"], key=lambda item: item["id"]),
+        "edges": sorted(receipt["edges"], key=edge_key),
+        "trace_steps": receipt.get("trace_steps", []),
+    }
+    lineage_digest = compute_sha256(canonical_json_bytes(lineage_payload))
+    receipt["lineage_digest"] = lineage_digest
+    receipt["content_digest"] = lineage_digest
+    verification_payload = {
+        "lineage_digest": lineage_digest,
+        "target_id": receipt["target_id"],
+        "verification_status": receipt["verification_status"],
+        "topology_status": receipt["topology_status"],
+        "content_verification": receipt["content_verification"],
+        "error_detail": receipt.get("error_detail") or "",
+        "check_on_disk_hashes": check_on_disk_hashes,
+    }
+    receipt_digest = compute_sha256(canonical_json_bytes(verification_payload))
+    receipt["receipt_digest"] = receipt_digest
+    receipt["receipt_id"] = f"rec-{receipt_digest[:32]}"
+    return ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=receipt["receipt_id"],
+        receipt_digest=receipt_digest,
+    )
+
+
 def test_shared_receipt_ref_lineage_validation():
     # Valid lineage ref
     ref = ReceiptRef(
@@ -120,6 +160,50 @@ def test_validate_lineage_receipt_contract():
     ok, err = validate_lineage_receipt_contract(ref, tampered)
     assert ok is False
     assert "content digest mismatch" in err
+
+
+def test_lineage_hashes_cannot_bless_a_dangling_edge_as_intact():
+    receipt, _ = _lineage_fixture()
+    receipt["edges"].append({
+        "type": "used",
+        "source_id": "missing-activity",
+        "target_id": "target",
+    })
+    ref = _resign_lineage_receipt(receipt)
+
+    ok, error = validate_lineage_receipt_contract(ref, receipt)
+
+    assert ok is False
+    assert "topology status mismatch" in error
+
+
+@pytest.mark.parametrize("tamper", ["roots", "steps"])
+def test_lineage_replay_rejects_resigned_roots_and_trace_steps(tamper):
+    graph = provenance.LineageGraph()
+    graph.add_entity("source", "data_snapshot")
+    graph.add_entity("result", "statistic_artifact")
+    graph.add_activity(
+        "run",
+        "statistical_analysis",
+        timestamp="2026-09-20T00:00:00Z",
+    )
+    graph.record_used("run", "source")
+    graph.record_generated("run", "result")
+    receipt = provenance.trace_origin(
+        graph,
+        "result",
+        check_on_disk_hashes=False,
+    ).to_dict()
+    if tamper == "roots":
+        receipt["root_ancestors"] = ["result"]
+    else:
+        receipt["trace_steps"][0]["outputs"] = ["source"]
+    ref = _resign_lineage_receipt(receipt)
+
+    ok, error = validate_lineage_receipt_contract(ref, receipt)
+
+    assert ok is False
+    assert "root ancestors mismatch" in error or "trace steps" in error
 
 
 def test_validate_academic_receipt_contract():

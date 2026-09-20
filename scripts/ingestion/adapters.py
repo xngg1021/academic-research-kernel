@@ -72,6 +72,23 @@ def _canonical_reason(value: Any) -> str:
     return canonical_json_bytes(raw).decode("utf-8")
 
 
+def _canonical_doi(value: Any) -> str:
+    """Return the repository-wide canonical DOI identity component."""
+    text = canonical_text(value) if value is not None else ""
+    lowered = text.lower()
+    for prefix in (
+        "https://dx.doi.org/",
+        "http://dx.doi.org/",
+        "https://doi.org/",
+        "http://doi.org/",
+        "doi:",
+    ):
+        if lowered.startswith(prefix):
+            text = text[len(prefix):]
+            break
+    return text.strip().strip("/").rstrip(".").lower()
+
+
 def _canonical_work_id_from_identifiers(
     identifiers: Any,
     subject_refs: Tuple[str, ...],
@@ -86,7 +103,7 @@ def _canonical_work_id_from_identifiers(
     for raw_ref in subject_refs:
         ref = canonical_text(raw_ref)
         if ref.lower().startswith("work:doi:"):
-            doi = ref[len("work:doi:"):].strip().lower()
+            doi = _canonical_doi(ref[len("work:doi:"):])
             return f"work:doi:{doi}"
         if ref.lower().startswith("work:"):
             return ref
@@ -114,13 +131,7 @@ def _canonical_work_id_from_identifiers(
         ))
     )
     if doi_candidates:
-        doi = strip_prefix(doi_candidates[0], (
-            "https://dx.doi.org/",
-            "http://dx.doi.org/",
-            "https://doi.org/",
-            "http://doi.org/",
-            "doi:",
-        )).lower().rstrip(".")
+        doi = _canonical_doi(doi_candidates[0])
         if doi:
             return f"work:doi:{doi}"
 
@@ -472,15 +483,40 @@ class BaseArtifactAdapter(ABC):
         if plan.ledger_snapshot is not None:
             state.ledger = copy.deepcopy(plan.ledger_snapshot)
             state._synchronise_receipts()
-            for basis in state.ledger.to_dict().get("bases", []):
+            ledger_export = state.ledger.to_dict()
+            for decision in ledger_export.get("decisions", []):
+                applied_ledger_bindings.append({
+                    "decision_id": decision["id"],
+                    "binding_kind": "ledger_decision",
+                    "basis_id": decision["id"],
+                })
+            for basis in ledger_export.get("bases", []):
                 applied_ledger_bindings.append({
                     "decision_id": basis["decision_id"],
                     "binding_kind": basis["basis_kind"],
                     "basis_id": basis["basis_id"],
                 })
+            for fork in ledger_export.get("forks", []):
+                applied_ledger_bindings.append({
+                    "decision_id": fork["decision_id"],
+                    "binding_kind": "ledger_fork",
+                    "basis_id": compute_sha256(canonical_json_bytes(fork)),
+                })
+            for event in ledger_export.get("state_events", []):
+                applied_ledger_bindings.append({
+                    "decision_id": event["decision_id"],
+                    "binding_kind": "ledger_state_event",
+                    "basis_id": event["event_id"],
+                })
+            for correction in ledger_export.get("corrections", []):
+                applied_ledger_bindings.append({
+                    "decision_id": correction["decision_id"],
+                    "binding_kind": "outcome_correction",
+                    "basis_id": correction["correction_id"],
+                })
         if state.ledger is not None:
             for dec in plan.ledger_decisions:
-                state.ledger.add_decision(
+                decision = state.ledger.add_decision(
                     id=dec["id"],
                     title=dec["title"],
                     decision_type=dec.get("decision_type") or dec.get("decision_action") or ("negative_result" if dec.get("entry_kind") == "negative_result" else "explore"),
@@ -490,6 +526,11 @@ class BaseArtifactAdapter(ABC):
                     locator=dec.get("locator"),
                     metadata=dec.get("metadata") or {},
                 )
+                applied_ledger_bindings.append({
+                    "decision_id": decision.id,
+                    "binding_kind": "ledger_decision",
+                    "basis_id": decision.id,
+                })
 
             for b in plan.ledger_bases:
                 state.ledger.add_basis(
@@ -508,18 +549,23 @@ class BaseArtifactAdapter(ABC):
             for f in getattr(plan, "ledger_forks", []):
                 ref = f.get("receipt_ref")
                 f_ref = ReceiptRef(**ref) if isinstance(ref, dict) else ref
-                state.ledger.add_fork(
+                fork = state.ledger.add_fork(
                     decision_id=f["decision_id"],
                     alternative_id=f["alternative_id"],
                     relation=f.get("relation", "considered"),
                     receipt_ref=f_ref,
                     metadata=f.get("metadata") or {},
                 )
+                applied_ledger_bindings.append({
+                    "decision_id": fork.decision_id,
+                    "binding_kind": "ledger_fork",
+                    "basis_id": compute_sha256(canonical_json_bytes(fork.to_dict())),
+                })
 
             for ev in getattr(plan, "ledger_state_events", []):
                 ref = ev.get("receipt_ref")
                 ev_ref = ReceiptRef(**ref) if isinstance(ref, dict) else ref
-                state.ledger.add_state_event(
+                event = state.ledger.add_state_event(
                     decision_id=ev["decision_id"],
                     to_state=ev["to_state"],
                     reason=ev.get("reason"),
@@ -528,6 +574,11 @@ class BaseArtifactAdapter(ABC):
                     receipt_ref=ev_ref,
                     metadata=ev.get("metadata") or {},
                 )
+                applied_ledger_bindings.append({
+                    "decision_id": event.decision_id,
+                    "binding_kind": "ledger_state_event",
+                    "basis_id": event.event_id,
+                })
 
             for corr in getattr(plan, "ledger_outcome_corrections", []):
                 ref = corr.get("receipt_ref")
@@ -1491,9 +1542,18 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
             works = [p["canonical_work"]] if "canonical_work" in p else p.get("works", [])
         for w in works:
             title = canonical_text(w.get("title", ""))
-            doi = canonical_text(w.get("doi", "")).lower()
+            doi = _canonical_doi(w.get("doi", ""))
+            declared_work_id = w.get("work_id")
+            if (
+                isinstance(declared_work_id, str)
+                and declared_work_id.lower().startswith("work:doi:")
+            ):
+                declared_work_id = (
+                    "work:doi:"
+                    + _canonical_doi(declared_work_id[len("work:doi:"):])
+                )
             w_id = (
-                w.get("work_id")
+                declared_work_id
                 or (f"work:doi:{doi}" if doi else None)
                 or (f"work:{title}" if title else None)
                 or f"work:{compute_sha256(canonical_json_bytes(w))[:32]}"
@@ -1596,8 +1656,13 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         target = p.get("target_work_id")
-        if not target and p.get("doi"):
-            target = f"work:doi:{canonical_text(p['doi']).lower()}"
+        if isinstance(target, str) and target.lower().startswith("work:doi:"):
+            target = "work:doi:" + _canonical_doi(target[len("work:doi:"):])
+        if not target:
+            target = _canonical_work_id_from_identifiers(
+                {"doi": p.get("doi")} if p.get("doi") else {},
+                envelope.subject_refs,
+            )
         if not target:
             target = envelope.subject_refs[0]
         event_digest = compute_sha256(canonical_json_bytes({
