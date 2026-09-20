@@ -5,11 +5,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import collections.abc
 import copy
-import hashlib
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Set
 
 from shared_contracts.evidence import (
     ReceiptRef,
+    _thaw_val,
     canonical_academic_receipt_payload_sha256,
     canonical_evidence_claim_digest,
     canonical_json_bytes,
@@ -19,6 +19,23 @@ from shared_contracts.evidence import (
     validate_lineage_receipt_contract,
 )
 from .models import ArtifactEnvelope, IngestionKernelState, IngestionReceipt
+
+
+def _canonical_item_set(items: List[Mapping[str, Any]]) -> Set[bytes]:
+    return {canonical_json_bytes(item) for item in items}
+
+
+def _snapshot_fast_forwards(
+    current: Mapping[str, Any],
+    incoming: Mapping[str, Any],
+    collection_fields: Tuple[str, ...],
+) -> bool:
+    """Return whether an incoming canonical snapshot only appends state."""
+    return all(
+        _canonical_item_set(list(current.get(field, [])))
+        <= _canonical_item_set(list(incoming.get(field, [])))
+        for field in collection_fields
+    )
 
 
 class IngestionPlan:
@@ -50,6 +67,27 @@ class IngestionPlan:
         self.uncertainties: List[Dict[str, Any]] = []
         self.ignored_fields: List[str] = []
         self.registered_receipts: Dict[str, Any] = {}
+        self.ceg_snapshot: Any = None
+        self.ledger_snapshot: Any = None
+
+    def has_ceg_mutations(self) -> bool:
+        return bool(
+            self.ceg_snapshot is not None
+            or self.ceg_claims
+            or self.ceg_evidences
+            or self.ceg_edges
+            or self.ceg_relations
+        )
+
+    def has_ledger_mutations(self) -> bool:
+        return bool(
+            self.ledger_snapshot is not None
+            or self.ledger_decisions
+            or self.ledger_bases
+            or self.ledger_forks
+            or self.ledger_state_events
+            or self.ledger_outcome_corrections
+        )
 
 
 class BaseArtifactAdapter(ABC):
@@ -94,30 +132,39 @@ class BaseArtifactAdapter(ABC):
                 errors=plan.errors,
                 output_digests=state.compute_digests(),
                 failure_reason="; ".join(plan.errors),
+                caller_metadata=plan.envelope.caller_metadata,
+            )
+
+        if plan.has_ceg_mutations() and state.ceg is None:
+            raise ValueError(
+                f"Adapter {self.adapter_id} requires a ClaimEvidenceGraph target; "
+                "refusing an accepted no-op"
+            )
+        if plan.has_ledger_mutations() and state.ledger is None:
+            raise ValueError(
+                f"Adapter {self.adapter_id} requires a DecisionLedger target; "
+                "refusing an accepted no-op"
             )
 
         # 1. Apply Research Objects with fail-closed collision defense
         for obj_id, obj_data in plan.created_objects.items():
-            if obj_id in state.objects:
-                if state.objects[obj_id] != obj_data:
-                    raise ValueError(
-                        f"ResearchObject ID collision for '{obj_id}': "
-                        f"existing object differs from incoming payload (fail-closed)."
-                    )
-            else:
-                state.objects[obj_id] = copy.deepcopy(obj_data)
+            state.register_object(obj_id, obj_data)
 
         # 2. Apply registered receipts
         for r_key, r_obj in plan.registered_receipts.items():
-            state.receipts[r_key] = r_obj
-            if state.ceg is not None:
-                state.ceg.register_receipt(r_key, r_obj)
-            if state.ledger is not None:
-                state.ledger.register_receipt(r_key, r_obj)
+            state.register_receipt(r_key, r_obj)
 
         # 3. Apply CEG nodes, edges, and relations
         created_ceg_nodes = []
         created_ceg_edges = []
+        if plan.ceg_snapshot is not None:
+            state.ceg = copy.deepcopy(plan.ceg_snapshot)
+            state._synchronise_receipts()
+            created_ceg_nodes.extend(sorted(state.ceg.claims))
+            created_ceg_nodes.extend(sorted(state.ceg.evidence_anchors))
+            created_ceg_edges.extend(
+                f"{edge.evidence_id}->{edge.claim_id}" for edge in state.ceg.support_edges
+            )
         if state.ceg is not None:
             for c in plan.ceg_claims:
                 state.ceg.add_claim(
@@ -127,6 +174,7 @@ class BaseArtifactAdapter(ABC):
                     locator=c.get("locator"),
                     claim_type=c.get("claim_type", "empirical_finding"),
                     entities=c.get("entities", ()),
+                    metadata=c.get("metadata"),
                 )
                 created_ceg_nodes.append(c["id"])
 
@@ -137,6 +185,8 @@ class BaseArtifactAdapter(ABC):
                     source_work_id=ev.get("source_work_id") or ev.get("target_work_id"),
                     locator=ev.get("locator"),
                     receipt_ref=ev.get("receipt_ref"),
+                    content_sha256=ev.get("content_sha256"),
+                    excerpt=ev.get("excerpt"),
                     metadata=ev.get("metadata"),
                 )
                 created_ceg_nodes.append(ev["id"])
@@ -163,6 +213,15 @@ class BaseArtifactAdapter(ABC):
 
         # 4. Apply Ledger decisions, bases, forks, state events, and corrections
         applied_ledger_bindings = []
+        if plan.ledger_snapshot is not None:
+            state.ledger = copy.deepcopy(plan.ledger_snapshot)
+            state._synchronise_receipts()
+            for basis in state.ledger.to_dict().get("bases", []):
+                applied_ledger_bindings.append({
+                    "decision_id": basis["decision_id"],
+                    "binding_kind": basis["basis_kind"],
+                    "basis_id": basis["basis_id"],
+                })
         if state.ledger is not None:
             for dec in plan.ledger_decisions:
                 state.ledger.add_decision(
@@ -182,6 +241,7 @@ class BaseArtifactAdapter(ABC):
                     basis_kind=b["basis_kind"],
                     basis_id=b["basis_id"],
                     receipt_ref=b.get("receipt_ref"),
+                    metadata=b.get("metadata") or {},
                 )
                 applied_ledger_bindings.append({
                     "decision_id": b["decision_id"],
@@ -233,7 +293,13 @@ class BaseArtifactAdapter(ABC):
 
         # 5. Persist uncertainties into kernel state
         for u in plan.uncertainties:
-            state.uncertainties.append(copy.deepcopy(u))
+            state.add_uncertainty(u)
+
+        valid, invariant_errors = state.validate_invariants()
+        if not valid:
+            raise ValueError(
+                "Post-apply kernel invariant failure: " + "; ".join(invariant_errors)
+            )
 
         return IngestionReceipt.create(
             envelope=plan.envelope,
@@ -249,6 +315,7 @@ class BaseArtifactAdapter(ABC):
             ledger_bindings=applied_ledger_bindings,
             uncertainties=plan.uncertainties,
             ignored_fields=plan.ignored_fields,
+            caller_metadata=plan.envelope.caller_metadata,
         )
 
 
@@ -278,7 +345,7 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
         p = envelope.payload
         if p.get("schema_version") != "1.0":
             errors.append("AcademicEvidence receipt missing schema_version='1.0'")
-        if "claims" not in p or not isinstance(p["claims"], list):
+        if "claims" not in p or not isinstance(p["claims"], (list, tuple)):
             errors.append("AcademicEvidence receipt missing 'claims' list")
         calc_sha = canonical_academic_receipt_payload_sha256(p)
         if calc_sha != envelope.payload_sha256:
@@ -460,7 +527,9 @@ class ClaimEvidenceGraphSnapshotAdapter(BaseArtifactAdapter):
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         errors = []
         p = envelope.payload
-        if "claims" not in p or ("evidences" not in p and "evidence_anchors" not in p):
+        if p.get("protocol") != "claim-evidence-graph-1.0":
+            errors.append("CEG snapshot invalid protocol")
+        if "claims" not in p or "evidence_anchors" not in p:
             errors.append("CEG snapshot missing 'claims' or 'evidence_anchors' lists")
         return len(errors) == 0, errors
 
@@ -475,16 +544,36 @@ class ClaimEvidenceGraphSnapshotAdapter(BaseArtifactAdapter):
         if not valid:
             return plan
 
-        p = envelope.payload
-        for c in p.get("claims", []):
-            plan.ceg_claims.append(copy.deepcopy(c))
-        ev_list = p.get("evidence_anchors") or p.get("evidences") or []
-        for ev in ev_list:
-            plan.ceg_evidences.append(copy.deepcopy(ev))
-        for edge in p.get("support_edges", []):
-            plan.ceg_edges.append(copy.deepcopy(edge))
-        for r in p.get("claim_relations", []):
-            plan.ceg_relations.append(copy.deepcopy(r))
+        if state.ceg is None:
+            plan.valid = False
+            plan.errors.append("CEG snapshot ingestion requires a ClaimEvidenceGraph target")
+            return plan
+        p = _thaw_val(envelope.payload)
+        try:
+            replayed = state.ceg.__class__.from_dict(p, receipt_registry=state.receipts)
+        except Exception as exc:
+            plan.valid = False
+            plan.errors.append(f"CEG snapshot replay failed: {exc}")
+            return plan
+
+        current = state.ceg.to_dict()
+        current_empty = not any(
+            current[field]
+            for field in ("claims", "evidence_anchors", "support_edges", "claim_relations")
+        )
+        if not current_empty and current["graph_id"] != p["graph_id"]:
+            plan.valid = False
+            plan.errors.append("CEG snapshot graph_id conflicts with the non-empty target graph")
+            return plan
+        if not current_empty and not _snapshot_fast_forwards(
+            current,
+            p,
+            ("claims", "evidence_anchors", "support_edges", "claim_relations"),
+        ):
+            plan.valid = False
+            plan.errors.append("CEG snapshot is divergent; only exact or forward-only snapshots are accepted")
+            return plan
+        plan.ceg_snapshot = replayed
         for u in p.get("uncertainties", []):
             plan.uncertainties.append(copy.deepcopy(u))
         return plan
@@ -526,17 +615,38 @@ class DecisionLedgerSnapshotAdapter(BaseArtifactAdapter):
         if not valid:
             return plan
 
-        p = envelope.payload
-        for d in p.get("decisions", []):
-            plan.ledger_decisions.append(copy.deepcopy(d))
-        for b in p.get("bases", []):
-            plan.ledger_bases.append(copy.deepcopy(b))
-        for f in p.get("forks", []):
-            plan.ledger_forks.append(copy.deepcopy(f))
-        for s in sorted(p.get("state_events", []), key=lambda x: x.get("sequence", 0)):
-            plan.ledger_state_events.append(copy.deepcopy(s))
-        for c in sorted(p.get("corrections", []), key=lambda x: x.get("sequence", 0)):
-            plan.ledger_outcome_corrections.append(copy.deepcopy(c))
+        if state.ledger is None:
+            plan.valid = False
+            plan.errors.append("DecisionLedger snapshot ingestion requires a DecisionLedger target")
+            return plan
+        p = _thaw_val(envelope.payload)
+        try:
+            replayed = state.ledger.__class__.from_dict(p, receipt_registry=state.receipts)
+        except Exception as exc:
+            plan.valid = False
+            plan.errors.append(f"DecisionLedger snapshot replay failed: {exc}")
+            return plan
+
+        current = state.ledger.to_dict()
+        current_empty = not any(
+            current[field]
+            for field in ("decisions", "bases", "forks", "state_events", "corrections")
+        )
+        if not current_empty and current["ledger_id"] != p["ledger_id"]:
+            plan.valid = False
+            plan.errors.append("DecisionLedger snapshot ledger_id conflicts with the non-empty target ledger")
+            return plan
+        if not current_empty and not _snapshot_fast_forwards(
+            current,
+            p,
+            ("decisions", "bases", "forks", "state_events", "corrections"),
+        ):
+            plan.valid = False
+            plan.errors.append(
+                "DecisionLedger snapshot is divergent; only exact or forward-only snapshots are accepted"
+            )
+            return plan
+        plan.ledger_snapshot = replayed
         for u in p.get("uncertainties", []):
             plan.uncertainties.append(copy.deepcopy(u))
         return plan
@@ -562,8 +672,10 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         errors = []
         p = envelope.payload
-        if "paper_title" not in p and "assertions" not in p:
-            errors.append("Quantitative audit payload must contain 'paper_title' or 'assertions'")
+        if "assertions" not in p and not any(
+            key in p for key in ("reported", "recomputed", "consistent", "discrepancy_detected")
+        ):
+            errors.append("Quantitative audit payload requires assertions or a direct result")
         return len(errors) == 0, errors
 
     def plan(
@@ -578,12 +690,22 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        assertions = p.get("assertions", [])
+        assertions = p.get("assertions")
+        if assertions is None:
+            assertions = [p]
         for idx, ass in enumerate(assertions):
             stat_name = ass.get("statistic", f"stat_{idx}")
-            reported = ass.get("reported_value")
-            recomputed = ass.get("recomputed_value")
-            discrepancy = ass.get("discrepancy_detected", False)
+            reported = ass.get("reported_value", ass.get("reported"))
+            recomputed = ass.get("recomputed_value", ass.get("recomputed"))
+            if "discrepancy_detected" in ass:
+                support_status = "contradicted" if ass["discrepancy_detected"] else "supported"
+                discrepancy = ass["discrepancy_detected"]
+            elif ass.get("consistent") is not None:
+                support_status = "supported" if ass["consistent"] else "contradicted"
+                discrepancy = not ass["consistent"]
+            else:
+                support_status = "unverifiable"
+                discrepancy = None
 
             ev_id = f"ev-quant-{envelope.artifact_id[4:12]}-{idx}"
             plan.ceg_evidences.append({
@@ -596,16 +718,25 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
                     "reported": reported,
                     "recomputed": recomputed,
                     "discrepancy": discrepancy,
+                    "audit_result": copy.deepcopy(dict(ass)),
                 },
             })
 
+            if support_status == "unverifiable":
+                plan.uncertainties.append({
+                    "item_id": f"unc-quant-{envelope.artifact_id[4:12]}-{idx}",
+                    "subject_id": ev_id,
+                    "kind": "quantitative_verification_gap",
+                    "reason": "Quantitative artifact did not provide an explicit consistency verdict",
+                    "needs_human": True,
+                })
+
             # If caller explicitly provided claim binding, attach edge
             if bindings and "claim_id" in bindings:
-                status = "contradicted" if discrepancy else "supported"
                 plan.ceg_edges.append({
                     "evidence_id": ev_id,
                     "claim_id": bindings["claim_id"],
-                    "support_status": status,
+                    "support_status": support_status,
                     "rationale": f"Quantitative recalculation of {stat_name}",
                 })
 
@@ -644,12 +775,12 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        raw_status = p.get("status") or p.get("verdict", "inconclusive")
+        raw_status = p["status"]
         ev_id = f"ev-repro-{envelope.artifact_id[4:16]}"
 
-        if raw_status in ("reproducible", "reproduced"):
+        if raw_status == "reproducible":
             support_status = "supported"
-        elif raw_status in ("inconsistent", "failed"):
+        elif raw_status == "inconsistent":
             support_status = "contradicted"
         else:
             support_status = "unverifiable"
@@ -668,7 +799,7 @@ class ResearchReproducibilityAdapter(BaseArtifactAdapter):
             "metadata": {
                 "sub_type": "reproduction_receipt",
                 "status": raw_status,
-                "discrepancies": p.get("discrepancies", []),
+                "receipt": copy.deepcopy(dict(p)),
             },
         })
 
@@ -699,8 +830,11 @@ class CrossReviewAdapter(BaseArtifactAdapter):
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         errors = []
         p = envelope.payload
-        if "findings" not in p and "consensus" not in p and "contradictions" not in p:
-            errors.append("Cross-review payload requires 'consensus', 'contradictions', or 'findings'")
+        if not any(key in p for key in ("findings", "consensus", "contradictions", "singletons")):
+            errors.append(
+                "Cross-review payload requires 'consensus', 'contradictions', "
+                "'singletons', or 'findings'"
+            )
         return len(errors) == 0, errors
 
     def plan(
@@ -715,6 +849,12 @@ class CrossReviewAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
+        registry_id = f"review-registry-{envelope.artifact_id[4:20]}"
+        plan.created_objects[registry_id] = {
+            "id": registry_id,
+            "kind": "cross_review_registry",
+            "registry": copy.deepcopy(dict(p)),
+        }
 
         # 1. Consensus issues
         for idx, item in enumerate(p.get("consensus", [])):
@@ -758,6 +898,13 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                     "issue": item,
                 },
             })
+            plan.uncertainties.append({
+                "item_id": f"unc-single-{envelope.artifact_id[4:12]}-{idx}",
+                "subject_id": ev_id,
+                "kind": "expert_disagreement",
+                "reason": str(item.get("summary") or item.get("title") or item),
+                "needs_human": True,
+            })
 
         # 4. Findings (if present)
         for idx, f in enumerate(p.get("findings", [])):
@@ -783,6 +930,9 @@ class CrossReviewAdapter(BaseArtifactAdapter):
                 "needs_human": True,
             })
 
+        mapped = {"consensus", "contradictions", "singletons", "findings", "dissenting_opinions"}
+        plan.ignored_fields.extend(f"/{key}" for key in sorted(set(p) - mapped))
+
         return plan
 
 
@@ -801,8 +951,11 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
 
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         p = envelope.payload
-        if "included_studies" not in p and "screening_results" not in p:
-            return False, ["Systematic review payload requires 'included_studies' or 'screening_results'"]
+        if not any(key in p for key in ("included_studies", "screening_results", "meta_analysis")):
+            return False, [
+                "Systematic review payload requires 'included_studies', "
+                "'screening_results', or 'meta_analysis'"
+            ]
         return True, []
 
     def plan(
@@ -820,11 +973,29 @@ class SystematicReviewAdapter(BaseArtifactAdapter):
         studies = p.get("included_studies", [])
         for idx, s in enumerate(studies):
             s_id = s.get("study_id") or f"study-{idx}"
-            plan.created_objects[s_id] = {
-                "id": s_id,
-                "kind": "study_entry",
-                "title": s.get("title"),
-                "effect_size": s.get("effect_size"),
+            plan.created_objects[s_id] = dict(copy.deepcopy(s), id=s_id, kind="study_entry")
+        for idx, result in enumerate(p.get("screening_results", [])):
+            result_id = result.get("study_id") or result.get("record_id")
+            if not result_id:
+                result_id = f"screen-{compute_sha256(canonical_json_bytes(result))[:16]}"
+            plan.created_objects[result_id] = dict(
+                copy.deepcopy(result), id=result_id, kind="screening_result"
+            )
+            if result.get("decision") in {None, "unclear", "maybe"}:
+                plan.uncertainties.append({
+                    "item_id": f"unc-screen-{envelope.artifact_id[4:12]}-{idx}",
+                    "subject_id": result_id,
+                    "kind": "screening_ambiguity",
+                    "reason": "Screening result has no determinate include/exclude decision",
+                    "needs_human": True,
+                })
+        if "meta_analysis" in p:
+            analysis_id = f"meta-{envelope.artifact_id[4:20]}"
+            plan.created_objects[analysis_id] = {
+                "id": analysis_id,
+                "kind": "meta_analysis",
+                "value": copy.deepcopy(p["meta_analysis"]),
+                "protocol_id": p.get("protocol_id"),
             }
         return plan
 
@@ -844,8 +1015,13 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
 
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         p = envelope.payload
+        if envelope.payload_schema == "canonical-work-1.0" and "work_type" in p:
+            return True, []
         if "canonical_work" not in p and "works" not in p:
-            return False, ["Literature analysis payload requires 'canonical_work' or 'works'"]
+            return False, [
+                "Literature analysis payload requires a direct CanonicalWork, "
+                "'canonical_work', or 'works'"
+            ]
         return True, []
 
     def plan(
@@ -860,9 +1036,19 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        works = [p["canonical_work"]] if "canonical_work" in p else p.get("works", [])
+        if envelope.payload_schema == "canonical-work-1.0" and "work_type" in p:
+            works = [p]
+        else:
+            works = [p["canonical_work"]] if "canonical_work" in p else p.get("works", [])
         for w in works:
-            w_id = w.get("work_id") or f"work:{canonical_text(w.get('title', ''))}"
+            title = canonical_text(w.get("title", ""))
+            doi = canonical_text(w.get("doi", "")).lower()
+            w_id = (
+                w.get("work_id")
+                or (f"work:doi:{doi}" if doi else None)
+                or (f"work:{title}" if title else None)
+                or f"work:{compute_sha256(canonical_json_bytes(w))[:16]}"
+            )
             plan.created_objects[w_id] = copy.deepcopy(w)
         return plan
 
@@ -901,6 +1087,18 @@ class LiteratureWatchAdapter(BaseArtifactAdapter):
         for p_item in p.get("new_papers", []):
             pid = p_item.get("id") or f"paper-{compute_sha256(canonical_json_bytes(p_item))[:16]}"
             plan.created_objects[pid] = copy.deepcopy(p_item)
+        for citation in p.get("new_citations", []):
+            cid = citation.get("id") or f"citation-{compute_sha256(canonical_json_bytes(citation))[:16]}"
+            plan.created_objects[cid] = dict(copy.deepcopy(citation), id=cid, kind="citation_delta")
+        if p.get("truncations"):
+            plan.uncertainties.append({
+                "item_id": f"unc-literature-{envelope.artifact_id[4:16]}",
+                "subject_id": envelope.artifact_id,
+                "kind": "literature_coverage_gap",
+                "reason": "Literature delta reports truncated result coverage",
+                "needs_human": True,
+                "metadata": {"truncations": copy.deepcopy(p["truncations"])},
+            })
         return plan
 
 
@@ -919,8 +1117,10 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
 
     def validate(self, envelope: ArtifactEnvelope) -> Tuple[bool, List[str]]:
         p = envelope.payload
-        if "target_work_id" not in p and "doi" not in p:
-            return False, ["Retraction alert requires 'target_work_id' or 'doi'"]
+        if "target_work_id" not in p and "doi" not in p and not envelope.subject_refs:
+            return False, [
+                "Retraction delta requires 'target_work_id', 'doi', or an envelope subject_ref"
+            ]
         return True, []
 
     def plan(
@@ -935,17 +1135,36 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
             return plan
 
         p = envelope.payload
-        target = p.get("target_work_id") or f"doi:{p.get('doi')}"
-        reason = p.get("retraction_reason") or "Paper retracted or under formal investigation"
-
-        # Signal uncertainty and revalidation needed; never purge historical nodes!
-        plan.uncertainties.append({
-            "item_id": f"unc-retract-{envelope.artifact_id[4:16]}",
-            "subject_id": target,
-            "kind": "retraction_alert",
-            "reason": reason,
-            "needs_human": True,
-        })
+        target = p.get("target_work_id")
+        if not target and p.get("doi"):
+            target = f"doi:{p['doi']}"
+        if not target:
+            target = envelope.subject_refs[0]
+        event_id = f"publication-status-{envelope.artifact_id[4:20]}"
+        plan.created_objects[event_id] = {
+            "id": event_id,
+            "kind": "publication_status_observation",
+            "target_work_id": target,
+            "observation": copy.deepcopy(dict(p)),
+        }
+        retraction_signal = bool(p["is_retracted"] or p.get("signals"))
+        if p["is_retracted"] is None:
+            plan.uncertainties.append({
+                "item_id": f"unc-retract-{envelope.artifact_id[4:16]}",
+                "subject_id": target,
+                "kind": "publication_status_change",
+                "reason": "Current publication status could not be verified",
+                "needs_human": True,
+            })
+        elif retraction_signal:
+            reason = p.get("retraction_reason") or "Retraction/correction signal requires revalidation"
+            plan.uncertainties.append({
+                "item_id": f"unc-retract-{envelope.artifact_id[4:16]}",
+                "subject_id": target,
+                "kind": "retraction_alert" if p["is_retracted"] else "publication_status_change",
+                "reason": reason,
+                "needs_human": True,
+            })
         return plan
 
 
@@ -981,7 +1200,7 @@ class MathComputationAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         ev_id = f"ev-math-{envelope.artifact_id[4:16]}"
-        is_verified = bool(p.get("verified", False))
+        is_verified = p.get("verified")
         plan.ceg_evidences.append({
             "id": ev_id,
             "anchor_type": "direct_observation",
@@ -993,11 +1212,23 @@ class MathComputationAdapter(BaseArtifactAdapter):
             },
         })
 
+        if is_verified is None:
+            support_status = "unverifiable"
+            plan.uncertainties.append({
+                "item_id": f"unc-math-{envelope.artifact_id[4:16]}",
+                "subject_id": ev_id,
+                "kind": "computation_unverified",
+                "reason": p.get("verification_error") or "Computation artifact omitted a verification result",
+                "needs_human": True,
+            })
+        else:
+            support_status = "supported" if is_verified else "contradicted"
+
         if bindings and "claim_id" in bindings:
             plan.ceg_edges.append({
                 "evidence_id": ev_id,
                 "claim_id": bindings["claim_id"],
-                "support_status": "supported" if is_verified else "contradicted",
+                "support_status": support_status,
                 "rationale": "Symbolic/numerical mathematical verification",
             })
 

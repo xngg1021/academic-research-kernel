@@ -68,8 +68,13 @@ def test_valid_ingestion_receipt():
         "uncertainties": [],
         "ignored_fields": [],
         "output_digests": {
+            "object_registry_digest": "a" * 64,
+            "receipt_registry_digest": "b" * 64,
+            "uncertainty_state_digest": "e" * 64,
+            "ingested_artifact_digest": "f" * 64,
             "ceg_digest": "c" * 64,
             "ledger_digest": "d" * 64,
+            "kernel_content_digest": "0" * 64,
         },
     }
     jsonschema.validate(instance=rec, schema=RECEIPT_SCHEMA)

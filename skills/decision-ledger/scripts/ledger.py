@@ -385,6 +385,12 @@ class FrozenDict(collections.abc.Mapping):
     def __hash__(self) -> int:
         return hash(frozenset(self._data.items()))
 
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "FrozenDict":
+        # Every reachable child is already recursively frozen, so sharing the
+        # value across transactional clones is safe and avoids MappingProxyType
+        # pickle failures.
+        return self
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, collections.abc.Mapping):
             return NotImplemented
@@ -1485,6 +1491,16 @@ class DecisionLedger:
                 continue
             out.append(edge.to_dict())
         return out
+
+    def bases_of(self, decision_id: str) -> List[Dict[str, Any]]:
+        """All upstream basis edges owned by ``decision_id``, sorted deterministically."""
+        return [
+            edge.to_dict()
+            for edge in sorted(
+                self._bases_by_decision.get(decision_id, []),
+                key=canonical_basis_tuple,
+            )
+        ]
 
     def _current_prune_graph(self) -> Dict[str, RouteStatus]:
         """Derived map of currently stopped/pruned decisions to their derived state views."""

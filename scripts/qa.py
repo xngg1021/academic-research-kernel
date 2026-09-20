@@ -271,10 +271,10 @@ def static_checks(root=ROOT):
     if manifest:
         try:
             canonical_docs = manifest.get("documents", [])
-            if len(canonical_docs) != 54:
-                errors.append(f"i18n manifest incomplete: expected 54 canonical documents, got {len(canonical_docs)}")
-            if manifest.get("total_theoretical_instances") != 1134:
-                errors.append(f"i18n manifest invariant failed: expected 1134 theoretical instances, got {manifest.get('total_theoretical_instances')}")
+            if len(canonical_docs) != 55:
+                errors.append(f"i18n manifest incomplete: expected 55 canonical documents, got {len(canonical_docs)}")
+            if manifest.get("total_theoretical_instances") != 1155:
+                errors.append(f"i18n manifest invariant failed: expected 1155 theoretical instances, got {manifest.get('total_theoretical_instances')}")
             recomputed_counts = {
                 "canonical_current": 0,
                 "localized_current": 0,

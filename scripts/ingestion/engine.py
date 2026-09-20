@@ -1,21 +1,19 @@
-"""Transactional Ingestion Engine for scholarly research artifacts."""
+"""Transactional ingestion engine for scholarly research artifacts."""
 
 from __future__ import annotations
 
-import collections.abc
-import copy
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-from shared_contracts.evidence import canonical_json_bytes, compute_sha256, _thaw_val
+from .contracts import validate_adapter_contract
 from .models import ArtifactEnvelope, IngestionKernelState, IngestionReceipt
 from .registry import AdapterRegistry, create_default_registry
 
-MAX_PAYLOAD_BYTES = 10 * 1024 * 1024  # 10 MB fail-closed boundary
-MAX_BATCH_SIZE = 1000  # Maximum envelopes per batch transaction
+
+MAX_BATCH_SIZE = 1000
 
 
 class IngestionEngine:
-    """Deterministic, transactional ingestion engine connecting artifacts to the kernel."""
+    """Deterministic, fail-closed bridge from artifacts to kernel state."""
 
     def __init__(self, registry: Optional[AdapterRegistry] = None):
         self.registry = registry or create_default_registry()
@@ -27,15 +25,44 @@ class IngestionEngine:
         bindings: Optional[Mapping[str, Any]] = None,
         dry_run: bool = False,
     ) -> IngestionReceipt:
-        """Ingest a single scholarly artifact envelope with transaction safety."""
         receipts, _ = self.batch_ingest(
             envelopes=[envelope],
             state=state,
-            bindings_list=[bindings] if bindings else None,
+            bindings_list=[bindings],
             dry_run=dry_run,
             atomic=True,
         )
         return receipts[0]
+
+    @staticmethod
+    def _rejected(
+        envelope: ArtifactEnvelope,
+        adapter: Any,
+        state: IngestionKernelState,
+        errors: List[str],
+    ) -> IngestionReceipt:
+        reason = "; ".join(errors) or "Artifact ingestion rejected"
+        return IngestionReceipt.create(
+            envelope=envelope,
+            adapter_id=adapter.adapter_id,
+            adapter_version=adapter.adapter_version,
+            status="rejected",
+            valid=False,
+            errors=errors or [reason],
+            output_digests=state.compute_digests(),
+            failure_reason=reason,
+            caller_metadata=envelope.caller_metadata,
+        )
+
+    @staticmethod
+    def _commit(source: IngestionKernelState, target: IngestionKernelState) -> None:
+        target.ceg = source.ceg
+        target.ledger = source.ledger
+        target.objects = source.objects
+        target.receipts = source.receipts
+        target.uncertainties = source.uncertainties
+        target.ingested_artifacts = source.ingested_artifacts
+        target.ingestion_receipts = source.ingestion_receipts
 
     def batch_ingest(
         self,
@@ -45,115 +72,105 @@ class IngestionEngine:
         dry_run: bool = False,
         atomic: bool = True,
     ) -> Tuple[List[IngestionReceipt], IngestionKernelState]:
-        """Ingest a batch of envelopes with strict atomicity and idempotency guarantees."""
+        """Ingest a bounded batch, committing only invariant-valid state."""
         if len(envelopes) > MAX_BATCH_SIZE:
-            raise ValueError(f"Batch size {len(envelopes)} exceeds maximum limit of {MAX_BATCH_SIZE}.")
+            raise ValueError(
+                f"Batch size {len(envelopes)} exceeds maximum limit of {MAX_BATCH_SIZE}"
+            )
+        if bindings_list is not None and len(bindings_list) != len(envelopes):
+            raise ValueError("bindings_list length must exactly match envelopes length")
 
         target_state = state if state is not None else IngestionKernelState()
-        # Working clone for staging atomic transactions
-        staged_state = target_state.clone()
+        valid, state_errors = target_state.validate_invariants()
+        if not valid:
+            raise ValueError(
+                "Cannot ingest into an invalid kernel state: " + "; ".join(state_errors)
+            )
 
-        # Output receipts aligned with input envelopes order
-        results_by_index: Dict[int, IngestionReceipt] = {}
-        pending_work: List[Tuple[int, ArtifactEnvelope, str]] = []  # (orig_idx, env, cache_key)
+        parsed: List[ArtifactEnvelope] = []
+        for raw in envelopes:
+            env = raw if isinstance(raw, ArtifactEnvelope) else ArtifactEnvelope.from_dict(raw)
+            env.assert_integrity()
+            parsed.append(env)
 
-        # 1. Parse and validate envelopes and evaluate state-scoped idempotency
-        for orig_idx, env_raw in enumerate(envelopes):
-            if isinstance(env_raw, ArtifactEnvelope):
-                env = env_raw
-            else:
-                env = ArtifactEnvelope.from_dict(env_raw)
+        staged = target_state.clone()
+        results: Dict[int, IngestionReceipt] = {}
+        adapters: Dict[int, Any] = {}
+        failure: Optional[Tuple[int, List[str]]] = None
 
-            # Payload size bound check on canonical UTF-8 bytes
-            p_bytes = len(canonical_json_bytes(_thaw_val(env.payload)))
-            if p_bytes > MAX_PAYLOAD_BYTES:
+        for index, env in enumerate(parsed):
+            bindings = bindings_list[index] if bindings_list is not None else None
+            cache_key = f"{env.artifact_id}:{env.ingestion_context_digest(bindings)}"
+
+            registered_sha = staged.ingested_artifacts.get(env.artifact_id)
+            if registered_sha is not None and registered_sha != env.payload_sha256:
                 raise ValueError(
-                    f"Envelope {env.artifact_id} payload size ({p_bytes} bytes) exceeds limit of {MAX_PAYLOAD_BYTES} bytes."
+                    f"Hash collision for artifact {env.artifact_id!r}: registered "
+                    f"{registered_sha}, incoming {env.payload_sha256}"
                 )
+            cached = staged.ingestion_receipts.get(cache_key)
+            if cached is not None:
+                results[index] = cached
+                continue
 
-            bindings = bindings_list[orig_idx] if (bindings_list and orig_idx < len(bindings_list)) else None
-            binding_sha = compute_sha256(canonical_json_bytes(_thaw_val(bindings or {})))
-            cache_key = f"{env.artifact_id}:{binding_sha}"
-
-            # Check collision: same artifact ID with differing payload in target_state
-            if env.artifact_id in target_state.ingested_artifacts:
-                registered_sha = target_state.ingested_artifacts[env.artifact_id]
-                if registered_sha != env.payload_sha256:
-                    raise ValueError(
-                        f"Hash collision detected for artifact '{env.artifact_id}': "
-                        f"registered payload SHA {registered_sha} conflicts with incoming {env.payload_sha256}."
-                    )
-                # Idempotent replay: if exact artifact + binding was already processed in this state
-                if cache_key in target_state.ingestion_receipts:
-                    results_by_index[orig_idx] = target_state.ingestion_receipts[cache_key]
-                    continue
-
-            pending_work.append((orig_idx, env, cache_key))
-
-        # 2. Plan and evaluate each pending envelope
-        plans = []
-        batch_failed = False
-        first_failure_error = None
-
-        for orig_idx, env, cache_key in pending_work:
-            bindings = bindings_list[orig_idx] if (bindings_list and orig_idx < len(bindings_list)) else None
             adapter = self.registry.resolve(env)
-            plan = adapter.plan(env, staged_state, bindings)
+            adapters[index] = adapter
+            contract_errors = validate_adapter_contract(env, adapter)
+            if contract_errors:
+                failure = (index, contract_errors)
+                results[index] = self._rejected(env, adapter, staged, contract_errors)
+                if atomic:
+                    break
+                continue
 
-            if not plan.valid:
-                batch_failed = True
-                first_failure_error = plan.errors[0] if plan.errors else "Adapter validation failed"
+            before = staged.clone()
+            try:
+                plan = adapter.plan(env, staged, bindings)
+                if not plan.valid:
+                    raise ValueError("; ".join(plan.errors) or "Adapter validation failed")
+
+                # The current artifact is first-class state and contributes to
+                # the success receipt's output digest.
+                staged.ingested_artifacts[env.artifact_id] = env.payload_sha256
+                receipt = adapter.apply(plan, staged)
+                if receipt.status != "accepted":
+                    raise ValueError(receipt.failure_reason or "Adapter rejected the artifact")
+                staged.ingestion_receipts[cache_key] = receipt
+
+                valid, invariant_errors = staged.validate_invariants()
+                if not valid:
+                    raise ValueError(
+                        "Post-cache kernel invariant failure: " + "; ".join(invariant_errors)
+                    )
+                results[index] = receipt
+            except Exception as exc:
+                staged = before
+                errors = [str(exc)]
+                results[index] = self._rejected(env, adapter, staged, errors)
+                failure = (index, errors)
                 if atomic:
                     break
 
-            plans.append((orig_idx, env, cache_key, adapter, plan))
-
-        # 3. If atomic and any failed, abort entire batch without modifying target state
-        if atomic and batch_failed:
-            rejected_receipts: List[IngestionReceipt] = []
-            for orig_idx, env, _ in pending_work:
-                adapter = self.registry.resolve(env)
-                r = IngestionReceipt.create(
-                    envelope=env,
-                    adapter_id=adapter.adapter_id,
-                    adapter_version=adapter.adapter_version,
-                    status="rejected",
-                    valid=False,
-                    errors=[first_failure_error or "Batch transaction aborted"],
-                    output_digests=target_state.compute_digests(),
-                    failure_reason=first_failure_error or "Batch transaction aborted",
+        if atomic and failure is not None:
+            failed_index, failed_errors = failure
+            aborted_results: Dict[int, IngestionReceipt] = {}
+            for index, env in enumerate(parsed):
+                bindings = bindings_list[index] if bindings_list is not None else None
+                cache_key = f"{env.artifact_id}:{env.ingestion_context_digest(bindings)}"
+                cached = target_state.ingestion_receipts.get(cache_key)
+                if cached is not None:
+                    aborted_results[index] = cached
+                    continue
+                adapter = adapters.get(index) or self.registry.resolve(env)
+                errors = (
+                    failed_errors
+                    if index == failed_index
+                    else [f"Atomic batch aborted because artifact index {failed_index} failed"]
                 )
-                results_by_index[orig_idx] = r
+                aborted_results[index] = self._rejected(env, adapter, target_state, errors)
+            return [aborted_results[i] for i in range(len(parsed))], target_state
 
-            ordered_receipts = [results_by_index[i] for i in range(len(envelopes))]
-            return ordered_receipts, target_state
-
-        # 4. Apply all plans to staged state and stage cache updates
-        staged_cache_updates: List[Tuple[str, str, str, IngestionReceipt]] = []
-        for orig_idx, env, cache_key, adapter, plan in plans:
-            receipt = adapter.apply(plan, staged_state)
-            results_by_index[orig_idx] = receipt
-            if receipt.status == "accepted":
-                staged_cache_updates.append((
-                    cache_key,
-                    receipt.source_artifact_id,
-                    receipt.source_artifact_sha256,
-                    receipt,
-                ))
-
-        # 5. Commit to target_state only after all applies succeed (atomic commit)
+        final_state = staged if dry_run else target_state
         if not dry_run:
-            target_state.ceg = staged_state.ceg
-            target_state.ledger = staged_state.ledger
-            target_state.objects = staged_state.objects
-            target_state.receipts = staged_state.receipts
-            target_state.uncertainties = staged_state.uncertainties
-            for c_key, art_id, art_sha, r in staged_cache_updates:
-                target_state.ingested_artifacts[art_id] = art_sha
-                target_state.ingestion_receipts[c_key] = r
-
-            ordered_receipts = [results_by_index[i] for i in range(len(envelopes))]
-            return ordered_receipts, target_state
-
-        ordered_receipts = [results_by_index[i] for i in range(len(envelopes))]
-        return ordered_receipts, staged_state
+            self._commit(staged, target_state)
+        return [results[i] for i in range(len(parsed))], final_state

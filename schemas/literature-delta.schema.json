@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/literature-delta.schema.json",
+  "title": "LiteratureWatchDelta",
+  "type": "object",
+  "additionalProperties": false,
+  "anyOf": [{"required": ["new_papers"]}, {"required": ["new_citations"]}],
+  "properties": {
+    "new_papers": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "new_citations": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "window_start": {"type": "string"},
+    "truncations": {"type": "array", "items": {"type": "string"}}
+  }
+}

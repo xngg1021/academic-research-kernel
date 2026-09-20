@@ -62,7 +62,10 @@ def test_tier1_academic_source_verification_ingest():
     evidence_receipt = {
         "schema_version": "1.0",
         "query": "DOI:10.1037/bul0000209",
+        "identifiers": {"doi": "10.1037/bul0000209"},
+        "sources": [],
         "claims": [claim_payload],
+        "generated_at": "2026-09-20T00:00:00Z",
     }
 
     envelope = ArtifactEnvelope.create(

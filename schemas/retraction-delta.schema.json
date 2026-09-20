@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/retraction-delta.schema.json",
+  "title": "RetractionWatchDelta",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["is_retracted", "signals"],
+  "properties": {
+    "doi": {"type": "string", "minLength": 1},
+    "target_work_id": {"type": "string", "minLength": 1},
+    "is_retracted": {"type": ["boolean", "null"]},
+    "signals": {"type": "array", "items": {"type": "string"}},
+    "verification_status": {"enum": ["verified_current", "retained_prior", "unverified"]},
+    "current_observation": {"type": ["boolean", "null"]},
+    "truncated": {"type": "boolean"},
+    "retraction_reason": {"type": "string"}
+  }
+}

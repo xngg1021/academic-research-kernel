@@ -36,10 +36,12 @@ import collections.abc
 import copy
 import hashlib
 import json
+import math
 import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
 __all__ = [
@@ -114,15 +116,34 @@ VALID_UNCERTAINTY_KINDS: Set[str] = {
     "generic_uncertainty",
 }
 
+CEG_ALLOWED_TOP_LEVEL_KEYS: Set[str] = {
+    "protocol",
+    "graph_id",
+    "graph_digest",
+    "claims",
+    "evidence_anchors",
+    "support_edges",
+    "claim_relations",
+    "uncertainties",
+}
+
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _freeze_val(val: Any) -> Any:
-    if isinstance(val, (dict, collections.abc.Mapping)):
+    if isinstance(val, collections.abc.Mapping):
         return FrozenDict(val)
-    if isinstance(val, (list, tuple, set)):
+    if isinstance(val, (list, tuple)):
         return tuple(_freeze_val(item) for item in val)
-    return val
+    if val is None or isinstance(val, (str, bool, int)):
+        return val
+    if isinstance(val, float):
+        if not math.isfinite(val):
+            raise ValueError("Metadata floats must be finite JSON numbers")
+        return val
+    raise TypeError(
+        f"Unsupported metadata value type {type(val).__name__!r}; expected JSON-domain data"
+    )
 
 
 def _thaw_val(val: Any) -> Any:
@@ -136,15 +157,26 @@ def _thaw_val(val: Any) -> Any:
 class FrozenDict(collections.abc.Mapping):
     """Deeply immutable mapping supporting hashing and preventing nested mutation."""
 
+    __slots__ = ("_store",)
+
     def __init__(self, mapping_or_iterable: Any = None):
-        self._store: Dict[str, Any] = {}
+        frozen: Dict[str, Any] = {}
         if mapping_or_iterable:
             if isinstance(mapping_or_iterable, collections.abc.Mapping):
                 items = mapping_or_iterable.items()
             else:
                 items = list(mapping_or_iterable)
             for k, v in items:
-                self._store[str(k)] = _freeze_val(v)
+                if not isinstance(k, str):
+                    raise TypeError(f"FrozenDict key must be str, got {type(k).__name__}")
+                frozen[k] = _freeze_val(v)
+        object.__setattr__(self, "_store", MappingProxyType(frozen))
+
+    def __setattr__(self, key: str, value: Any):
+        raise TypeError(f"'{self.__class__.__name__}' object does not support mutation.")
+
+    def __delattr__(self, key: str):
+        raise TypeError(f"'{self.__class__.__name__}' object does not support mutation.")
 
     def __getitem__(self, key: str) -> Any:
         return self._store[key]
@@ -157,6 +189,9 @@ class FrozenDict(collections.abc.Mapping):
 
     def __hash__(self) -> int:
         return hash(tuple(sorted(self._store.items())))
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "FrozenDict":
+        return self
 
     def __setitem__(self, key: Any, value: Any):
         raise TypeError(f"'{self.__class__.__name__}' object does not support item assignment (deeply frozen record).")
@@ -1010,48 +1045,106 @@ class ClaimEvidenceGraph:
         data: Mapping[str, Any],
         receipt_registry: Optional[Mapping[str, Any]] = None,
     ) -> "ClaimEvidenceGraph":
-        """Reconstruct a ClaimEvidenceGraph from an exported dictionary."""
-        g = cls(graph_id=data.get("graph_id", "default-graph"))
+        """Strictly reconstruct and verify a canonical ``to_dict()`` export.
+
+        The loader validates the declared digest, derived claim identity fields,
+        uncertainty queue, receipt bindings, and graph structure.  It therefore
+        cannot be used to silently "repair" or bless a tampered snapshot.
+        """
+        if not isinstance(data, collections.abc.Mapping):
+            raise TypeError("ClaimEvidenceGraph.from_dict expects a mapping")
+        unexpected = set(data) - CEG_ALLOWED_TOP_LEVEL_KEYS
+        if unexpected:
+            raise ValueError(f"Unexpected top-level fields in CEG export: {sorted(unexpected)}")
+        missing = CEG_ALLOWED_TOP_LEVEL_KEYS - set(data)
+        if missing:
+            raise ValueError(f"CEG export is missing required fields: {sorted(missing)}")
+        if data.get("protocol") != "claim-evidence-graph-1.0":
+            raise ValueError(
+                f"CEG protocol mismatch: expected 'claim-evidence-graph-1.0', got {data.get('protocol')!r}"
+            )
+
+        g = cls(graph_id=data["graph_id"])
         if receipt_registry:
             for k, v in receipt_registry.items():
                 g.register_receipt(k, v)
         for c in data.get("claims", []):
-            g.add_claim(
+            node = g.add_claim(
                 id=c["id"],
                 text=c["text"],
                 target_work_id=c.get("target_work_id"),
                 locator=c.get("locator"),
                 claim_type=c.get("claim_type", "empirical_finding"),
                 entities=tuple(c.get("entities", ())),
+                metadata=c.get("metadata"),
             )
-        ev_list = data.get("evidence_anchors") or data.get("evidences") or []
+            if node.to_dict() != dict(c):
+                raise ValueError(
+                    f"CEG claim identity mismatch for {c.get('id')!r}: declared derived fields do not replay"
+                )
+        ev_list = data.get("evidence_anchors") or []
         for ev in ev_list:
             ref = ReceiptRef(**ev["receipt_ref"]) if ev.get("receipt_ref") else None
-            g.add_evidence(
+            node = g.add_evidence(
                 id=ev["id"],
                 anchor_type=ev["anchor_type"],
-                source_work_id=ev.get("source_work_id") or ev.get("target_work_id"),
+                source_work_id=ev.get("source_work_id"),
                 locator=ev.get("locator"),
                 receipt_ref=ref,
                 content_sha256=ev.get("content_sha256"),
                 excerpt=ev.get("excerpt"),
                 metadata=ev.get("metadata"),
             )
+            if node.to_dict() != dict(ev):
+                raise ValueError(f"CEG evidence replay mismatch for {ev.get('id')!r}")
         for s in data.get("support_edges", []):
             s_ref = ReceiptRef(**s["receipt_ref"]) if s.get("receipt_ref") else None
-            g.add_support_edge(
+            edge = g.add_support_edge(
                 evidence_id=s["evidence_id"],
                 claim_id=s["claim_id"],
                 support_status=s["support_status"],
                 receipt_ref=s_ref,
                 metadata=s.get("metadata"),
             )
+            if edge.to_dict() != dict(s):
+                raise ValueError(
+                    f"CEG support edge replay mismatch for {s.get('evidence_id')!r}->{s.get('claim_id')!r}"
+                )
         for r in data.get("claim_relations", []):
-            g.add_claim_relation(
+            edge = g.add_claim_relation(
                 source_claim_id=r["source_claim_id"],
                 target_claim_id=r["target_claim_id"],
-                relation_type=r.get("relation_type") or r.get("relation_kind", "corroborates"),
+                relation_type=r["relation_type"],
                 evidence_refs=tuple(r.get("evidence_refs", ())),
                 metadata=r.get("metadata"),
+            )
+            if edge.to_dict() != dict(r):
+                raise ValueError(
+                    f"CEG claim relation replay mismatch for {r.get('source_claim_id')!r}->{r.get('target_claim_id')!r}"
+                )
+
+        valid, errors = g.validate_graph()
+        if not valid:
+            raise ValueError(f"Replayed CEG failed structural validation: {'; '.join(errors)}")
+
+        declared_uncertainties = sorted(
+            (dict(item) for item in data["uncertainties"]),
+            key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=False),
+        )
+        actual_uncertainties = sorted(
+            (item.to_dict() for item in g.extract_uncertainties()),
+            key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=False),
+        )
+        if declared_uncertainties != actual_uncertainties:
+            raise ValueError(
+                "CEG uncertainty queue mismatch: declared verification state does not replay "
+                "against the supplied receipt registry"
+            )
+
+        actual_digest = g.graph_digest()
+        if actual_digest != str(data["graph_digest"]).lower():
+            raise ValueError(
+                f"CEG snapshot tampering detected: declared graph_digest {data['graph_digest']!r}, "
+                f"recomputed {actual_digest!r}"
             )
         return g

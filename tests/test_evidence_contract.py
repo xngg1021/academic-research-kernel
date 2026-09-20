@@ -7,6 +7,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "skills" / "research-object-identity" / "scripts"))
+
+import provenance
 
 from shared_contracts.evidence import (
     ReceiptRef,
@@ -20,6 +23,21 @@ from shared_contracts.evidence import (
     compute_sha256,
     VALID_RECEIPT_KINDS,
 )
+
+
+def _lineage_fixture():
+    graph = provenance.LineageGraph()
+    graph.add_entity("target", "generic_entity")
+    receipt = provenance.trace_origin(
+        graph, "target", check_on_disk_hashes=False
+    ).to_dict()
+    ref = ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=receipt["receipt_id"],
+        receipt_digest=receipt["receipt_digest"],
+    )
+    return receipt, ref
 
 
 def test_shared_receipt_ref_lineage_validation():
@@ -79,17 +97,7 @@ def test_shared_receipt_ref_academic_evidence_validation():
 
 
 def test_validate_lineage_receipt_contract():
-    ref = ReceiptRef(
-        kind="lineage",
-        schema_version="lineage-receipt-1.0",
-        receipt_id="rec-100",
-        receipt_digest="e" * 64,
-    )
-    valid_receipt = {
-        "protocol": "lineage-receipt-1.0",
-        "receipt_id": "rec-100",
-        "receipt_digest": "e" * 64,
-    }
+    valid_receipt, ref = _lineage_fixture()
     ok, err = validate_lineage_receipt_contract(ref, valid_receipt)
     assert ok is True
     assert err is None
@@ -105,6 +113,13 @@ def test_validate_lineage_receipt_contract():
     ok, err = validate_lineage_receipt_contract(ref, bad_dig)
     assert ok is False
     assert "digest mismatch" in err
+
+    # Matching reference fields cannot bless altered lineage content.
+    tampered = dict(valid_receipt)
+    tampered["target_id"] = "different-target"
+    ok, err = validate_lineage_receipt_contract(ref, tampered)
+    assert ok is False
+    assert "content digest mismatch" in err
 
 
 def test_validate_academic_receipt_contract():
@@ -147,15 +162,6 @@ def test_validate_academic_receipt_contract():
 
 
 def test_verify_receipt_reference_dispatcher():
-    lineage_ref = ReceiptRef(
-        kind="lineage",
-        schema_version="lineage-receipt-1.0",
-        receipt_id="rec-1",
-        receipt_digest="1" * 64,
-    )
-    ok, _ = verify_receipt_reference(lineage_ref, {
-        "protocol": "lineage-receipt-1.0",
-        "receipt_id": "rec-1",
-        "receipt_digest": "1" * 64,
-    })
+    lineage_receipt, lineage_ref = _lineage_fixture()
+    ok, _ = verify_receipt_reference(lineage_ref, lineage_receipt)
     assert ok is True

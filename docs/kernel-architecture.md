@@ -51,6 +51,10 @@ ResearchObject     CEG     Decision Ledger
 
 The Ingestion Bridge (`scripts/ingestion/`) is the universal translation layer that ingests structured outputs from tools into the kernel without side effects.
 
+Every public ingestion path executes the repository's Draft 2020-12 JSON Schemas at runtime. Envelope identity, payload hash, producer-major compatibility, payload size/depth/cardinality bounds, and adapter routing are checked before planning. Unknown structured contracts fail closed; only the explicit opaque fallback stores an unknown artifact without claiming structured interoperability.
+
+Batch execution is transactional. Plans run against a detached state clone, every intermediate CEG/Ledger/kernel invariant is checked, and cache entries become visible only with the final commit. Idempotency keys include the complete mutation context (producer, kind, schema, subjects, lineage, locator, caller metadata, and bindings), so a replay cannot be incorrectly shared across a different target state or routing context.
+
 ### Ingestion Adapters (3 Tiers)
 
 - **Tier 1: Native Structured Receipts (Lossless)**
@@ -70,6 +74,12 @@ The Ingestion Bridge (`scripts/ingestion/`) is the universal translation layer t
 - **Tier 3: Opaque Artifacts (Prose Stays Prose)**
   - `academic-writing`: Manuscripts, submission packages, and drafts are stored with cryptographic hashes. The kernel **strictly forbids** extracting speculative claims or making automated decisions from unannotated prose.
 
+### Tamper-Evident Kernel State
+
+`IngestionKernelState` serializes the complete CEG, decision ledger, research-object registry, physical receipt registry, kernel uncertainty queue, ingested-artifact registry, and semantic receipt cache. Each first-class registry has a deterministic digest; those digests roll into `kernel_content_digest`, while the complete transport object carries a separate `snapshot_digest`. Strict loaders verify declared graph/ledger/lineage/receipt digests, replay invariants, and snapshot identity before accepting state.
+
+All envelope, receipt, object, uncertainty, CEG, ledger, and lineage metadata is recursively frozen inside domain objects. Serialization returns detached mutable copies, preventing callers from changing content-addressed state through a retained nested dictionary.
+
 ---
 
 ## Universal MCP Interface (12 Tools)
@@ -88,3 +98,13 @@ The stdio MCP server ([scripts/mcp_server.py](../scripts/mcp_server.py)) exposes
 10. `academic_recompute_statistics`: Recomputes statistical claims (t-tests, effect sizes).
 11. `academic_check_percentage`: Checks count/percentage compatibility.
 12. `academic_scfabric_hardware_probe`: Probes execution accelerators.
+
+Tool arguments use closed JSON Schemas and are validated before dispatch. Each response sets MCP `isError` consistently, and `research_artifact_ingest` accepts and returns a complete kernel snapshot rather than a lossy projection. The stdio surface is covered by an actual subprocess initialize → tools/list → tools/call exchange.
+
+---
+
+## Verification and residual boundaries
+
+The remediation baseline is **691 passed, 3 intentionally skipped** tests plus 40 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
+
+The complete historical PR/CI ledger, fixed PR #12 review findings, and still-open operational/governance/P3 boundaries are maintained in [the 2026-09-20 project lineage audit](project-lineage-audit-20260920.md).

@@ -9,12 +9,13 @@ Compatible with Claude Code, Cursor, Codex, Gemini CLI, and Hermes.
 
 from __future__ import annotations
 
-import copy
 import json
 import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -29,6 +30,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "scfabric"))
 
 from shared_contracts.evidence import ReceiptRef, verify_receipt_reference
 from ingestion import IngestionEngine, ArtifactEnvelope, IngestionKernelState
+from ingestion.contracts import validate_adapter_contract, validate_schema
 import identity as id_mod
 import provenance as prov_mod
 import graph as ceg_mod
@@ -252,9 +254,42 @@ TOOLS = [
     }
 ]
 
+# Snapshot verification accepts the physical receipt registry required to
+# validate cryptographic references inside graphs and ledgers.
+for _tool in TOOLS:
+    if _tool["name"] in {
+        "claim_evidence_validate",
+        "claim_evidence_trace",
+        "decision_ledger_validate",
+        "decision_trace",
+    }:
+        _tool["inputSchema"]["properties"]["receipts"] = {
+            "type": "object",
+            "description": "Physical receipt registry keyed by receipt ID or payload SHA-256.",
+        }
 
-# Persistent in-memory engine instance for stateful sessions if caller omits external state
+# MCP itself rejects undeclared top-level arguments rather than merely
+# advertising schemas that the runtime ignores.
+for _tool in TOOLS:
+    _tool["inputSchema"]["additionalProperties"] = False
+
+
+# Adapter registry holder. Kernel state is explicit per call or initialized fresh.
 _DEFAULT_ENGINE = IngestionEngine()
+
+
+def _tool_argument_errors(name: str, arguments: Any) -> List[str]:
+    tool = next((item for item in TOOLS if item["name"] == name), None)
+    if tool is None:
+        return [f"Unknown tool: {name}"]
+    errors = sorted(
+        Draft202012Validator(tool["inputSchema"]).iter_errors(arguments),
+        key=lambda error: (tuple(str(part) for part in error.absolute_path), error.message),
+    )
+    return [
+        f"/{'/'.join(str(part) for part in error.absolute_path)}: {error.message}"
+        for error in errors
+    ]
 
 
 def handle_tool_call(name: str, arguments: dict) -> dict:
@@ -269,7 +304,15 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             except Exception as exc:
                 return {"valid": False, "errors": [f"Malformed envelope: {exc}"]}
             adapter = _DEFAULT_ENGINE.registry.resolve(env)
-            valid, errors = adapter.validate(env)
+            errors = validate_adapter_contract(env, adapter)
+            if not errors:
+                temp_state = IngestionKernelState(
+                    ceg=ceg_mod.ClaimEvidenceGraph(),
+                    ledger=ledger_mod.DecisionLedger(),
+                )
+                plan = adapter.plan(env, temp_state)
+                errors.extend(plan.errors)
+            valid = not errors
             return {
                 "valid": valid,
                 "errors": errors,
@@ -290,32 +333,33 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
 
             env = ArtifactEnvelope.from_dict(env_data)
 
-            # Rehydrate state if provided, or initialize default state
-            state = IngestionKernelState(
-                ceg=ceg_mod.ClaimEvidenceGraph(),
-                ledger=ledger_mod.DecisionLedger(),
-            )
-            if state_data and isinstance(state_data, dict):
-                if "receipts" in state_data and isinstance(state_data["receipts"], dict):
-                    state.receipts = copy.deepcopy(state_data["receipts"])
-                if "ceg" in state_data and state_data["ceg"]:
-                    state.ceg = ceg_mod.ClaimEvidenceGraph.from_dict(state_data["ceg"], receipt_registry=state.receipts)
-                if "ledger" in state_data and state_data["ledger"]:
-                    state.ledger = ledger_mod.DecisionLedger.from_dict(state_data["ledger"], receipt_registry=state.receipts)
-                if "objects" in state_data and isinstance(state_data["objects"], dict):
-                    state.objects = copy.deepcopy(state_data["objects"])
+            if state_data is None:
+                state = IngestionKernelState(
+                    ceg=ceg_mod.ClaimEvidenceGraph(),
+                    ledger=ledger_mod.DecisionLedger(),
+                )
+            elif isinstance(state_data, dict):
+                state = IngestionKernelState.from_dict(
+                    state_data,
+                    ceg_cls=ceg_mod.ClaimEvidenceGraph,
+                    ledger_cls=ledger_mod.DecisionLedger,
+                )
+            else:
+                return {"success": False, "error": "'state' must be a complete kernel snapshot"}
 
-            receipt = _DEFAULT_ENGINE.ingest(env, state=state, bindings=bindings, dry_run=dry_run)
+            receipts, output_state = _DEFAULT_ENGINE.batch_ingest(
+                [env],
+                state=state,
+                bindings_list=[bindings],
+                dry_run=dry_run,
+                atomic=True,
+            )
+            receipt = receipts[0]
             resp = {
                 "success": receipt.status == "accepted",
                 "receipt": receipt.to_dict(),
+                "output_state": output_state.to_dict(),
             }
-            if not dry_run:
-                resp["output_state"] = {
-                    "ceg": state.ceg.to_dict() if state.ceg is not None else None,
-                    "ledger": state.ledger.to_dict() if state.ledger is not None else None,
-                    "objects": state.objects,
-                }
             return resp
 
         # 3. research_receipt_verify
@@ -338,6 +382,15 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 return {"valid": False, "error": f"Invalid ReceiptRef format: {exc}"}
 
             ok, err = verify_receipt_reference(ref, receipt_payload)
+            if ok:
+                schema_file = (
+                    "lineage-receipt.schema.json"
+                    if ref.kind == "lineage"
+                    else "evidence-receipt.schema.json"
+                )
+                schema_errors = validate_schema(receipt_payload, schema_file)
+                if schema_errors:
+                    return {"valid": False, "error": "; ".join(schema_errors)}
             return {"valid": ok, "error": err}
 
         # 4. research_object_resolve
@@ -356,22 +409,40 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
                 return {"error": "'lineage_graph' must be a dict and 'target_entity_id' non-empty"}
             lg = prov_mod.LineageGraph()
             for ent in graph_data.get("entities", []):
-                lg.add_entity(ent["id"], type=ent.get("type", "entity"), locator=ent.get("locator"), metadata=ent.get("metadata"))
+                lg.add_entity(
+                    ent["id"],
+                    type=ent.get("type", "generic_entity"),
+                    sha256=ent.get("sha256"),
+                    locator=ent.get("locator"),
+                    metadata=ent.get("metadata"),
+                )
             for act in graph_data.get("activities", []):
                 lg.add_activity(
                     act["id"],
                     type=act.get("type", "generic_activity"),
                     command=act.get("command"),
-                    parameters=act.get("parameters") or act.get("metadata"),
+                    script_id=act.get("script_id"),
+                    commit_sha=act.get("commit_sha"),
+                    parameters=act.get("parameters"),
+                    environment=act.get("environment"),
+                    timestamp=act.get("timestamp"),
                 )
             for edge in graph_data.get("edges", []):
-                rel = edge.get("relation", "wasDerivedFrom")
-                if rel == "wasDerivedFrom":
-                    lg.record_derivation(edge["source_id"], edge["target_id"])
-                elif rel == "used":
-                    lg.record_used(edge["source_id"], edge["target_id"])
-                elif rel == "wasGeneratedBy":
-                    lg.record_generated(edge["source_id"], edge["target_id"])
+                edge_type = edge["type"]
+                metadata = edge.get("metadata")
+                if edge_type == "derived_from":
+                    lg.record_derivation(
+                        edge["source_id"],
+                        edge["target_id"],
+                        activity_id=edge.get("activity_id"),
+                        metadata=metadata,
+                    )
+                elif edge_type == "used":
+                    lg.record_used(edge["source_id"], edge["target_id"], metadata=metadata)
+                elif edge_type == "generated":
+                    lg.record_generated(edge["source_id"], edge["target_id"], metadata=metadata)
+                else:
+                    raise ValueError(f"Unsupported lineage edge type: {edge_type!r}")
             receipt = prov_mod.trace_origin(lg, target_id, check_on_disk_hashes=False)
             return {"target_entity_id": target_id, "receipt": receipt.to_dict()}
 
@@ -380,7 +451,11 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             graph_data = arguments.get("graph")
             if not isinstance(graph_data, dict):
                 return {"valid": False, "errors": ["'graph' must be a dictionary"]}
-            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data)
+            schema_errors = validate_schema(graph_data, "claim-evidence-graph.schema.json")
+            if schema_errors:
+                return {"valid": False, "errors": schema_errors}
+            receipts = arguments.get("receipts") or {}
+            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data, receipt_registry=receipts)
             valid, errors = cg.validate_graph()
             return {
                 "valid": valid,
@@ -395,7 +470,11 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             claim_id = arguments.get("claim_id")
             if not isinstance(graph_data, dict) or not claim_id:
                 return {"error": "'graph' must be a dict and 'claim_id' non-empty"}
-            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data)
+            schema_errors = validate_schema(graph_data, "claim-evidence-graph.schema.json")
+            if schema_errors:
+                return {"error": "Invalid ClaimEvidenceGraph", "details": schema_errors}
+            receipts = arguments.get("receipts") or {}
+            cg = ceg_mod.ClaimEvidenceGraph.from_dict(graph_data, receipt_registry=receipts)
             trace_info = cg.trace_claim_provenance(claim_id)
             return {"claim_id": claim_id, "provenance_trace": trace_info}
 
@@ -405,7 +484,15 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             if not isinstance(ledger_data, dict):
                 return {"valid": False, "errors": ["'ledger' must be a dictionary"]}
             try:
-                ledger_obj = ledger_mod.DecisionLedger.from_dict(ledger_data)
+                schema_errors = validate_schema(
+                    ledger_data, "decision-ledger-receipt.schema.json"
+                )
+                if schema_errors:
+                    return {"valid": False, "errors": schema_errors}
+                receipts = arguments.get("receipts") or {}
+                ledger_obj = ledger_mod.DecisionLedger.from_dict(
+                    ledger_data, receipt_registry=receipts
+                )
                 return {
                     "valid": True,
                     "ledger_digest": ledger_obj.ledger_digest(),
@@ -422,19 +509,29 @@ def handle_tool_call(name: str, arguments: dict) -> dict:
             if not isinstance(ledger_data, dict) or not decision_id:
                 return {"error": "'ledger' must be a dict and 'decision_id' non-empty"}
             try:
-                ledger_obj = ledger_mod.DecisionLedger.from_dict(ledger_data)
+                schema_errors = validate_schema(
+                    ledger_data, "decision-ledger-receipt.schema.json"
+                )
+                if schema_errors:
+                    return {"error": "Invalid DecisionLedger", "details": schema_errors}
+                receipts = arguments.get("receipts") or {}
+                ledger_obj = ledger_mod.DecisionLedger.from_dict(
+                    ledger_data, receipt_registry=receipts
+                )
                 node = ledger_obj.get_decision(decision_id)
                 if node is None:
                     return {"error": f"Decision '{decision_id}' not found in ledger"}
-                events = ledger_obj.get_state_history(decision_id)
+                events = ledger_obj.state_history(decision_id)
                 corrections = ledger_obj.get_corrections(decision_id)
-                bases = ledger_obj.find_decisions_for(decision_id)
+                bases = ledger_obj.bases_of(decision_id)
+                dependent_decisions = ledger_obj.find_decisions_for(decision_id)
                 return {
                     "decision_id": decision_id,
                     "decision": node.to_dict(),
                     "state_history": events,
                     "corrections": [c.to_dict() for c in corrections],
                     "bases": bases,
+                    "dependent_decisions": dependent_decisions,
                 }
             except Exception as exc:
                 return {"error": f"Failed to trace decision: {exc}"}
@@ -528,7 +625,16 @@ def process_message(msg: dict) -> dict | None:
         params = msg.get("params") or {}
         name = params.get("name")
         arguments = params.get("arguments") or {}
-        result_data = handle_tool_call(name, arguments)
+        argument_errors = _tool_argument_errors(name, arguments)
+        result_data = (
+            {"error": "Invalid tool arguments", "details": argument_errors}
+            if argument_errors
+            else handle_tool_call(name, arguments)
+        )
+        is_error = bool(
+            "error" in result_data
+            or result_data.get("success") is False
+        )
         return {
             "jsonrpc": "2.0",
             "id": msg_id,
@@ -538,7 +644,8 @@ def process_message(msg: dict) -> dict | None:
                         "type": "text",
                         "text": json.dumps(result_data, ensure_ascii=False, indent=2)
                     }
-                ]
+                ],
+                "isError": is_error,
             }
         }
     elif method == "notifications/initialized":

@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [简体中文](../../README.zh-Hans.md) · [繁體中文](../../README.zh-Hant.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
 
-Nucleo neutro per la ricerca accademica e suite di deliberazione multi-agente. Fornisce 13 competenze accademiche e strumenti di verifica con punti di ingresso portatili Agent Plugins v1 e MCP (Model Context Protocol), oltre all'integrazione nativa per Hermes Agent, Claude Code, Cursor e sub-agenti CLI personalizzati. Copre verifica delle fonti, analisi della letteratura, scrittura accademica, calcolo numerico, audit quantitativo di articoli, audit di riproducibilità, revisione sistematica e meta-analisi, identità e provenienza degli oggetti di ricerca, orchestrazione dinamica della revisione incrociata tra modelli e due automazioni di monitoraggio settimanale. Il repository include controlli eseguibili di esempio; l'ambito di validazione e le limitazioni dei servizi esterni sono documentati nell'[audit](../../docs/audit-20260906.md).
+Nucleo neutro per la ricerca accademica e suite di deliberazione multi-agente. Fornisce 13 competenze accademiche e strumenti di verifica con punti di ingresso portatili Agent Plugins v1 e MCP (Model Context Protocol), oltre all'integrazione nativa per Hermes Agent, Claude Code, Cursor e sub-agenti CLI personalizzati. Copre verifica delle fonti, analisi della letteratura, scrittura accademica, calcolo numerico, audit quantitativo di articoli, audit di riproducibilità, revisione sistematica e meta-analisi, identità e provenienza degli oggetti di ricerca, orchestrazione dinamica della revisione incrociata tra modelli e due automazioni di monitoraggio settimanale. Il repository include controlli eseguibili di esempio; l'ambito di validazione e le limitazioni dei servizi esterni sono documentati nell'[audit](../../docs/project-lineage-audit-20260920.md).
 
 Autore: Junfu Shi (SJF, xngg1021), Hermes Agent. Offerta con ambito attuale: [Source Lineage License 1.0](../../LICENSE).
 
@@ -81,7 +81,7 @@ git diff --check
 
 Il QA convalida metadati, riferimenti, percorsi personali/segreti noti, sintassi Python e blocchi di codice contrassegnati. Restituisce 0 in caso di successo, 1 per errori di codice/schema/identità e 2 per indisponibilità di trasporto/autenticazione/quota.
 
-La CI esegue la suite completa di test su Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 e macOS Intel, con 666 test unitari superati e 40 blocchi di codice eseguibili validati.
+La CI esegue la suite completa di test su Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 e macOS Intel, con 691 test unitari superati e 40 blocchi di codice eseguibili validati.
 
 tools/longtail/ contiene il generatore deterministico di scenari estremi di coda lunga: 4096 combinazioni candidate con seed SHA256 su assi di fattori disaccoppiati, selezione vorace della copertura e report in generated-scenarios.json.
 

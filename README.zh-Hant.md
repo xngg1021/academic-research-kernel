@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-跨宿主中立的面向自主 Agent 科研工作流確定性科研狀態內核。倉庫通過統一產物入庫橋接與通用 Model Context Protocol (MCP) 服務，將研究對象身份歸一、因果憑證（Receipts）、主張證據圖譜（CEG）與追加式研究決策與失敗記錄深度連接。全倉 13 項學術技能作為科研狀態的生產者與消費者，原生兼容 Claude Code、Cursor、Codex、Gemini CLI 與 Hermes Agent。驗證範圍與外部服務限制記錄於[審計文檔](docs/audit-20260906.md)。
+跨宿主中立的面向自主 Agent 科研工作流確定性科研狀態內核。倉庫通過統一產物入庫橋接與通用 Model Context Protocol (MCP) 服務，將研究對象身份歸一、因果憑證（Receipts）、主張證據圖譜（CEG）與追加式研究決策與失敗記錄深度連接。全倉 13 項學術技能作為科研狀態的生產者與消費者，原生兼容 Claude Code、Cursor、Codex、Gemini CLI 與 Hermes Agent。驗證範圍與外部服務限制記錄於[審計文檔](docs/project-lineage-audit-20260920.md)。
 
 作者：Junfu Shi（SJF，xngg1021），Hermes Agent。當前授權範圍：[Source Lineage License 1.0](LICENSE)。
 
@@ -88,7 +88,7 @@ QA 校驗元數據、參考文件、個人路徑與已知密鑰模式、Python �
 
 固定版本的技能編寫規範測試（authoring tests）被複用，其逐技能規則不改動。完整 Hermes 上游發行包的全局測試不適用於本 tap；本倉庫測試覆蓋全部十三個技能，並按固定的捆綁與可選目錄解析參考文件。這不是完整的 Hermes 安裝測試。CI 僅在安裝依賴時使用網絡；常規 PR 測試不調用學術 API。
 
-CI 經 GitHub Actions 覆蓋 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 預遷移 Canary（ubuntu-26.04 與 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）與 macOS Intel（macos-15-intel）全平台全架構，全倉 666 項單元測試全部通過，並附帶針對上游 main 最新分支的即時 Canary 載入檢驗。另有一個 tap 集成工作流在 main 推送時運行：安裝 tests/upstream/provenance.json 所記錄的固定 Hermes 檢出，並針對本倉庫執行 tap add、search、install 與 list。確切版本、檢查項與限制見[審計文檔](docs/audit-20260906.md)。
+CI 經 GitHub Actions 覆蓋 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 預遷移 Canary（ubuntu-26.04 與 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）與 macOS Intel（macos-15-intel）全平台全架構，全倉 691 項單元測試全部通過，並附帶針對上游 main 最新分支的即時 Canary 載入檢驗。另有一個 tap 集成工作流在 main 推送時運行：安裝 tests/upstream/provenance.json 所記錄的固定 Hermes 檢出，並針對本倉庫執行 tap add、search、install 與 list。確切版本、檢查項與限制見[審計文檔](docs/project-lineage-audit-20260920.md)。
 
 tools/longtail/ 存放確定性極端長尾場景生成器：4096 個 SHA256 種子候選組合鋪滿解耦因子軸，貪心覆蓋選擇，generated-scenarios.json 內附機器計算的覆蓋報告。它是壓測技能的輸入層；語義展開（任務鏈、判據、注入事件）是獨立階段。
 

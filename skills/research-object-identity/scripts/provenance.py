@@ -25,11 +25,13 @@ import collections
 import copy
 import hashlib
 import json
+import math
 import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from types import MappingProxyType
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
 __all__ = [
     "Entity",
@@ -215,6 +217,67 @@ def edge_dict_sort_key(d: Dict[str, Any]) -> Tuple[str, str, str, str, str]:
     )
 
 
+def _freeze_receipt_json(value: Any) -> Any:
+    if isinstance(value, _FrozenReceiptMap):
+        return value
+    if isinstance(value, collections.abc.Mapping):
+        return _FrozenReceiptMap(value)
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_receipt_json(item) for item in value)
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("Lineage receipt values must be finite JSON numbers")
+        return value
+    raise TypeError(
+        f"Lineage receipt value {type(value).__name__!r} is outside the JSON domain"
+    )
+
+
+def _thaw_receipt_json(value: Any) -> Any:
+    if isinstance(value, _FrozenReceiptMap):
+        return value.to_dict()
+    if isinstance(value, tuple):
+        return [_thaw_receipt_json(item) for item in value]
+    return value
+
+
+class _FrozenReceiptMap(collections.abc.Mapping):
+    """Recursively immutable JSON mapping used inside LineageReceipt."""
+
+    __slots__ = ("_data",)
+
+    def __init__(self, value: Mapping[str, Any]):
+        frozen: Dict[str, Any] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError("Lineage receipt object keys must be strings")
+            frozen[key] = _freeze_receipt_json(item)
+        object.__setattr__(self, "_data", MappingProxyType(frozen))
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        raise TypeError("Lineage receipt mappings do not support mutation")
+
+    def __delattr__(self, key: str) -> None:
+        raise TypeError("Lineage receipt mappings do not support mutation")
+
+    def __getitem__(self, key: str) -> Any:
+        return self._data[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "_FrozenReceiptMap":
+        return self
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {key: _thaw_receipt_json(value) for key, value in self._data.items()}
+
+
 class LineageGraph:
     """In-memory causal derivation graph container enforcing disjoint namespaces and referential integrity."""
 
@@ -371,6 +434,16 @@ class LineageReceipt:
     edges: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
     trace_steps: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "root_ancestors", tuple(self.root_ancestors))
+        for field_name in ("entities", "activities", "edges", "trace_steps"):
+            values = getattr(self, field_name)
+            object.__setattr__(
+                self,
+                field_name,
+                tuple(_FrozenReceiptMap(value) for value in values),
+            )
+
     @property
     def content_digest(self) -> str:
         """Alias for lineage_digest maintaining backward compatibility."""
@@ -390,14 +463,14 @@ class LineageReceipt:
             "topology_status": self.topology_status,
             "content_verification": self.content_verification,
             "root_ancestors": list(self.root_ancestors),
-            "entities": [copy.deepcopy(e) for e in self.entities],
-            "activities": [copy.deepcopy(a) for a in self.activities],
-            "edges": [copy.deepcopy(ed) for ed in self.edges],
+            "entities": [_thaw_receipt_json(e) for e in self.entities],
+            "activities": [_thaw_receipt_json(a) for a in self.activities],
+            "edges": [_thaw_receipt_json(ed) for ed in self.edges],
         }
         if self.error_detail is not None:
             d["error_detail"] = self.error_detail
         if self.trace_steps:
-            d["trace_steps"] = [copy.deepcopy(s) for s in self.trace_steps]
+            d["trace_steps"] = [_thaw_receipt_json(s) for s in self.trace_steps]
         return copy.deepcopy(d)
 
 

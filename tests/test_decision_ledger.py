@@ -41,9 +41,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "skills/decision-ledger/scripts"))
 sys.path.insert(0, str(ROOT / "skills/claim-evidence-graph/scripts"))
+sys.path.insert(0, str(ROOT / "skills/research-object-identity/scripts"))
 
 import ledger as dl
 import graph as ceg
+import provenance
 
 
 def _receipt_fixture():
@@ -62,14 +64,17 @@ def _receipt_fixture():
 
 
 def _lineage_fixture():
-    lineage = {
-        "protocol": "lineage-receipt-1.0",
-        "receipt_id": "lin-77",
-        "receipt_digest": "a" * 64,
-        "timestamp": "2026-09-19T00:00:00Z",
-        "target_id": "tgt-1",
-    }
-    ref = dl.ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id="lin-77", receipt_digest="a" * 64)
+    graph = provenance.LineageGraph()
+    graph.add_entity("tgt-1", "generic_entity")
+    lineage = provenance.trace_origin(
+        graph, "tgt-1", check_on_disk_hashes=False
+    ).to_dict()
+    ref = dl.ReceiptRef(
+        kind="lineage",
+        schema_version="lineage-receipt-1.0",
+        receipt_id=lineage["receipt_id"],
+        receipt_digest=lineage["receipt_digest"],
+    )
     return lineage, ref
 
 
@@ -257,7 +262,7 @@ def test_lineage_receipt_positive_assertion():
     g.add_decision(id="d2", title="y")
     g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     bad = dict(lineage, receipt_digest="b" * 64)
-    g.register_receipt("lin-77", bad)
+    g.register_receipt(ref.receipt_id, bad)
     ok, errs = g.validate_ledger()
     assert not ok and any("digest mismatch" in e for e in errs)
 
@@ -458,12 +463,12 @@ def test_ledger_digest_receipt_sensitivity():
     g.add_decision(id="d2", title="y")
     g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
     before = g.ledger_digest()
-    g.register_receipt("lin-77", lineage)
+    g.register_receipt(ref.receipt_id, lineage)
     # content identity is registry-independent; verification state is separate
     assert g.ledger_digest() == before
     v_before = g.verification_digest()
     assert v_before != before
-    g.register_receipt("lin-77", copy.deepcopy(lineage))
+    g.register_receipt(ref.receipt_id, copy.deepcopy(lineage))
     assert g.ledger_digest() == before
     assert g.verification_digest() == v_before
 
@@ -474,7 +479,7 @@ def test_ledger_digest_registry_label_independence():
     g1.add_decision(id="d1", title="x")
     g1.add_decision(id="d2", title="y")
     g1.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
-    g1.register_receipt("lin-77", lineage)
+    g1.register_receipt(ref.receipt_id, lineage)
     g2 = dl.DecisionLedger(ledger_id="r")
     g2.add_decision(id="d1", title="x")
     g2.add_decision(id="d2", title="y")
@@ -533,7 +538,7 @@ def test_to_dict_matches_json_schema():
     lineage, lref = _lineage_fixture()
     g.add_decision(id="d-l", title="lineage decision")
     g.add_basis("d-l", basis_kind="decision", basis_id="d-a", receipt_ref=lref)
-    g.register_receipt("lin-77", lineage)
+    g.register_receipt(lref.receipt_id, lineage)
     export = g.to_dict()
     export["uncertainties"] = [u.to_dict() for u in g.export_uncertainties()]
     jsonschema.validate(instance=export, schema=schema)
@@ -1018,11 +1023,11 @@ def test_from_dict_round_trip_with_receipt_registry():
     g.add_decision(id="d1", title="x")
     g.add_decision(id="d2", title="y")
     g.add_basis("d2", basis_kind="decision", basis_id="d1", receipt_ref=ref)
-    g.register_receipt("lin-77", lineage)
+    g.register_receipt(ref.receipt_id, lineage)
     export = g.to_dict()
-    assert export["verification_manifest"] == {"lin-77": dl.canonical_ledger_payload_sha256(dl._jsonable(lineage))}
+    assert export["verification_manifest"] == {ref.receipt_id: dl.canonical_ledger_payload_sha256(dl._jsonable(lineage))}
     # With receipt_registry passed to from_dict, full round trip succeeds including verification_digest
-    g2 = dl.DecisionLedger.from_dict(export, receipt_registry={"lin-77": lineage})
+    g2 = dl.DecisionLedger.from_dict(export, receipt_registry={ref.receipt_id: lineage})
     assert g2.ledger_digest() == g.ledger_digest()
     assert g2.verification_digest() == g.verification_digest()
     assert g2.to_dict() == g.to_dict()

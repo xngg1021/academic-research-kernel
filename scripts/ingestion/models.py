@@ -6,56 +6,146 @@ import collections.abc
 import copy
 from dataclasses import dataclass, field
 import hashlib
-import json
 import re
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, Union
 
 from shared_contracts.evidence import (
+    FrozenJSONMap,
     ReceiptRef,
+    _thaw_val,
     canonical_json_bytes,
     compute_sha256,
-    _thaw_val,
+    freeze_json,
 )
+from .contracts import (
+    validate_envelope_dict,
+    validate_kernel_state_dict,
+    validate_receipt_dict,
+)
+
+
+ARTIFACT_ID_RE = re.compile(r"^art-[0-9a-f]{32}$")
+INGESTION_RECEIPT_ID_RE = re.compile(r"^ingest-[0-9a-f]{32}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+VALID_KERNEL_UNCERTAINTY_KINDS = frozenset({
+    # CEG
+    "unverifiable_claim",
+    "unresolved_contradiction",
+    "missing_receipt",
+    "ambiguous_locator",
+    # Decision Ledger
+    "decision_without_basis",
+    "unsupported_negative_result",
+    "unsupported_pruning",
+    "unevidenced_claim_basis",
+    # Ingestion bridge
+    "reproducibility_gap",
+    "expert_disagreement",
+    "screening_ambiguity",
+    "literature_coverage_gap",
+    "publication_status_change",
+    "retraction_alert",
+    "computation_unverified",
+    "quantitative_verification_gap",
+    "generic_uncertainty",
+})
+
+
+def _raise_schema_errors(kind: str, errors: List[str]) -> None:
+    if errors:
+        raise ValueError(f"{kind} schema validation failed: {'; '.join(errors)}")
 
 
 @dataclass(frozen=True)
 class ArtifactEnvelope:
-    """Standard envelope wrapping an artifact from any skill or external tool."""
+    """Deeply immutable envelope wrapping an artifact from any producer."""
 
     protocol: str
     artifact_id: str
     artifact_kind: str
-    producer: Dict[str, str]
+    producer: Mapping[str, str]
     payload_schema: str
     payload_sha256: str
-    payload: Dict[str, Any]
+    payload: Mapping[str, Any]
     subject_refs: Tuple[str, ...] = field(default_factory=tuple)
     lineage_ref: Optional[ReceiptRef] = None
     locator: Optional[str] = None
-    caller_metadata: Optional[Dict[str, Any]] = None
+    caller_metadata: Optional[Mapping[str, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.protocol != "artifact-envelope-1.0":
-            raise ValueError(f"Invalid envelope protocol: {self.protocol!r}. Must be 'artifact-envelope-1.0'.")
-        if not re.match(r"^art-[0-9a-f]{32}$", self.artifact_id):
-            raise ValueError(f"Invalid artifact_id: {self.artifact_id!r}. Must start with 'art-' followed by 32 hex chars.")
-        if not re.match(r"^[0-9a-f]{64}$", self.payload_sha256):
-            raise ValueError(f"Invalid payload_sha256: {self.payload_sha256!r}. Must be 64 lowercase hex digits.")
-        if not isinstance(self.producer, collections.abc.Mapping) or "skill" not in self.producer or "version" not in self.producer:
-            raise ValueError("Envelope 'producer' must be a mapping with 'skill' and 'version'.")
+            raise ValueError("protocol must be 'artifact-envelope-1.0'")
+        if not ARTIFACT_ID_RE.fullmatch(str(self.artifact_id)):
+            raise ValueError("artifact_id must be 'art-' followed by 32 lowercase hex characters")
+        if not SHA256_RE.fullmatch(str(self.payload_sha256)):
+            raise ValueError("payload_sha256 must be 64 lowercase hex characters")
+        if not isinstance(self.artifact_kind, str) or not re.fullmatch(r"[a-z0-9_.-]{1,64}", self.artifact_kind):
+            raise ValueError("artifact_kind must match ^[a-z0-9_.-]{1,64}$")
+        if not isinstance(self.payload_schema, str) or not (1 <= len(self.payload_schema) <= 128):
+            raise ValueError("payload_schema must be a non-empty string of at most 128 characters")
+        if not isinstance(self.producer, collections.abc.Mapping):
+            raise ValueError("producer must be a mapping")
+        if set(self.producer) != {"skill", "version"}:
+            raise ValueError("producer must contain exactly 'skill' and 'version'")
+        producer = FrozenJSONMap(self.producer)
+        for key, limit in (("skill", 128), ("version", 64)):
+            value = producer[key]
+            if not isinstance(value, str) or not (1 <= len(value) <= limit):
+                raise ValueError(f"producer.{key} must be a non-empty string of at most {limit} characters")
         if not isinstance(self.payload, collections.abc.Mapping):
-            raise ValueError("Envelope 'payload' must be a mapping.")
-        if self.locator is not None:
-            if not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048):
-                raise ValueError("locator must be a non-empty string of at most 2048 characters.")
+            raise ValueError("payload must be a mapping")
+        payload = FrozenJSONMap(self.payload)
 
-        # Cryptographic content-addressing invariant verification
-        calc_sha = hashlib.sha256(canonical_json_bytes(_thaw_val(self.payload))).hexdigest().lower()
-        if self.payload_sha256 != calc_sha:
-            raise ValueError(f"Payload hash mismatch: envelope declares {self.payload_sha256}, actual payload computes to {calc_sha}")
-        expected_id = f"art-{calc_sha[:32]}"
+        refs = tuple(self.subject_refs or ())
+        if any(not isinstance(ref, str) or not (1 <= len(ref) <= 256) for ref in refs):
+            raise ValueError("subject_refs entries must be non-empty strings of at most 256 characters")
+        if self.lineage_ref is not None and not isinstance(self.lineage_ref, ReceiptRef):
+            raise TypeError("lineage_ref must be a ReceiptRef or None")
+        if self.locator is not None and (
+            not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048)
+        ):
+            raise ValueError("locator must be a non-empty string of at most 2048 characters")
+        caller = None
+        if self.caller_metadata is not None:
+            if not isinstance(self.caller_metadata, collections.abc.Mapping):
+                raise TypeError("caller_metadata must be a mapping or None")
+            caller = FrozenJSONMap(self.caller_metadata)
+
+        object.__setattr__(self, "producer", producer)
+        object.__setattr__(self, "payload", payload)
+        object.__setattr__(self, "subject_refs", refs)
+        object.__setattr__(self, "caller_metadata", caller)
+        self.assert_integrity()
+        _raise_schema_errors("ArtifactEnvelope", validate_envelope_dict(self.to_dict()))
+
+    def assert_integrity(self) -> None:
+        """Re-assert content identity at every trust-boundary dispatch."""
+        actual = compute_sha256(canonical_json_bytes(_thaw_val(self.payload)))
+        if self.payload_sha256 != actual:
+            raise ValueError(
+                f"Payload hash mismatch: declared {self.payload_sha256}, recomputed {actual}"
+            )
+        expected_id = f"art-{actual[:32]}"
         if self.artifact_id != expected_id:
-            raise ValueError(f"artifact_id content-addressing mismatch: declares {self.artifact_id}, expected {expected_id}")
+            raise ValueError(
+                f"artifact_id content-addressing mismatch: declared {self.artifact_id}, expected {expected_id}"
+            )
+
+    def ingestion_context_digest(self, bindings: Optional[Mapping[str, Any]] = None) -> str:
+        """Hash every mutation-affecting wrapper field and explicit caller binding."""
+        context = {
+            "artifact_id": self.artifact_id,
+            "artifact_kind": self.artifact_kind,
+            "producer": _thaw_val(self.producer),
+            "payload_schema": self.payload_schema,
+            "subject_refs": list(self.subject_refs),
+            "lineage_ref": self.lineage_ref.to_dict() if self.lineage_ref else None,
+            "locator": self.locator,
+            "caller_metadata": _thaw_val(self.caller_metadata),
+            "bindings": _thaw_val(bindings or {}),
+        }
+        return compute_sha256(canonical_json_bytes(context))
 
     @classmethod
     def create(
@@ -69,76 +159,69 @@ class ArtifactEnvelope:
         lineage_ref: Optional[ReceiptRef] = None,
         locator: Optional[str] = None,
         caller_metadata: Optional[Mapping[str, Any]] = None,
-    ) -> ArtifactEnvelope:
-        """Deterministically create an envelope, computing payload_sha256 and content-addressed artifact_id."""
-        thawed_payload = _thaw_val(payload)
-        p_bytes = canonical_json_bytes(thawed_payload)
-        p_sha = hashlib.sha256(p_bytes).hexdigest().lower()
-        art_id = f"art-{p_sha[:32]}"
+    ) -> "ArtifactEnvelope":
+        thawed = _thaw_val(payload)
+        payload_sha = compute_sha256(canonical_json_bytes(thawed))
         return cls(
             protocol="artifact-envelope-1.0",
-            artifact_id=art_id,
+            artifact_id=f"art-{payload_sha[:32]}",
             artifact_kind=artifact_kind,
             producer={"skill": producer_skill, "version": producer_version},
             payload_schema=payload_schema,
-            payload_sha256=p_sha,
-            payload=thawed_payload,
-            subject_refs=tuple(subject_refs or []),
+            payload_sha256=payload_sha,
+            payload=thawed,
+            subject_refs=tuple(subject_refs or ()),
             lineage_ref=lineage_ref,
             locator=locator,
-            caller_metadata=dict(caller_metadata) if caller_metadata else None,
+            caller_metadata=caller_metadata,
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
+        data: Dict[str, Any] = {
             "protocol": self.protocol,
             "artifact_id": self.artifact_id,
             "artifact_kind": self.artifact_kind,
-            "producer": dict(self.producer),
+            "producer": _thaw_val(self.producer),
             "payload_schema": self.payload_schema,
             "payload_sha256": self.payload_sha256,
-            "payload": copy.deepcopy(self.payload),
+            "payload": _thaw_val(self.payload),
         }
         if self.subject_refs:
-            d["subject_refs"] = list(self.subject_refs)
+            data["subject_refs"] = list(self.subject_refs)
         if self.lineage_ref is not None:
-            d["lineage_ref"] = self.lineage_ref.to_dict()
-        if self.locator:
-            d["locator"] = self.locator
-        if self.caller_metadata:
-            d["caller_metadata"] = copy.deepcopy(self.caller_metadata)
-        return d
+            data["lineage_ref"] = self.lineage_ref.to_dict()
+        if self.locator is not None:
+            data["locator"] = self.locator
+        if self.caller_metadata is not None:
+            data["caller_metadata"] = _thaw_val(self.caller_metadata)
+        return data
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> ArtifactEnvelope:
-        lin_ref = None
-        if "lineage_ref" in data and data["lineage_ref"]:
-            lin_dict = data["lineage_ref"]
-            lin_ref = ReceiptRef(
-                kind=lin_dict["kind"],
-                schema_version=lin_dict["schema_version"],
-                receipt_id=lin_dict.get("receipt_id"),
-                receipt_digest=lin_dict.get("receipt_digest"),
-                locator=lin_dict.get("locator"),
-            )
+    def from_dict(cls, data: Mapping[str, Any]) -> "ArtifactEnvelope":
+        if not isinstance(data, collections.abc.Mapping):
+            raise TypeError("ArtifactEnvelope.from_dict expects a mapping")
+        _raise_schema_errors("ArtifactEnvelope", validate_envelope_dict(data))
+        lineage_ref = None
+        if data.get("lineage_ref"):
+            lineage_ref = ReceiptRef(**dict(data["lineage_ref"]))
         return cls(
             protocol=data["protocol"],
             artifact_id=data["artifact_id"],
             artifact_kind=data["artifact_kind"],
-            producer=dict(data["producer"]),
+            producer=data["producer"],
             payload_schema=data["payload_schema"],
             payload_sha256=data["payload_sha256"],
-            payload=copy.deepcopy(data["payload"]),
-            subject_refs=tuple(data.get("subject_refs") or []),
-            lineage_ref=lin_ref,
+            payload=data["payload"],
+            subject_refs=tuple(data.get("subject_refs") or ()),
+            lineage_ref=lineage_ref,
             locator=data.get("locator"),
-            caller_metadata=copy.deepcopy(data.get("caller_metadata")),
+            caller_metadata=data.get("caller_metadata"),
         )
 
 
 @dataclass(frozen=True)
 class IngestionReceipt:
-    """Deterministic cryptographic receipt emitted after an artifact ingestion attempt."""
+    """Deeply immutable, content-addressed result of one ingestion attempt."""
 
     protocol: str
     receipt_id: str
@@ -146,25 +229,117 @@ class IngestionReceipt:
     source_artifact_sha256: str
     adapter_id: str
     adapter_version: str
-    status: str  # "accepted", "rejected", "partial"
-    validation_state: Dict[str, Any]
-    output_digests: Dict[str, str]
+    status: str
+    validation_state: Mapping[str, Any]
+    output_digests: Mapping[str, str]
     created_or_reused_objects: Tuple[str, ...] = field(default_factory=tuple)
     ceg_nodes: Tuple[str, ...] = field(default_factory=tuple)
     ceg_edges: Tuple[str, ...] = field(default_factory=tuple)
-    ledger_bindings: Tuple[Dict[str, str], ...] = field(default_factory=tuple)
-    uncertainties: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
+    ledger_bindings: Tuple[Mapping[str, str], ...] = field(default_factory=tuple)
+    uncertainties: Tuple[Mapping[str, Any], ...] = field(default_factory=tuple)
     ignored_fields: Tuple[str, ...] = field(default_factory=tuple)
     failure_reason: Optional[str] = None
-    caller_metadata: Optional[Dict[str, Any]] = None
+    caller_metadata: Optional[Mapping[str, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.protocol != "ingestion-receipt-1.0":
-            raise ValueError(f"Invalid receipt protocol: {self.protocol!r}. Must be 'ingestion-receipt-1.0'.")
-        if not self.receipt_id.startswith("ingest-") or len(self.receipt_id) != 39:
-            raise ValueError(f"Invalid receipt_id: {self.receipt_id!r}. Must start with 'ingest-' followed by 32 hex chars.")
+            raise ValueError("protocol must be 'ingestion-receipt-1.0'")
+        if not INGESTION_RECEIPT_ID_RE.fullmatch(str(self.receipt_id)):
+            raise ValueError("receipt_id must be 'ingest-' followed by 32 lowercase hex characters")
+        if not ARTIFACT_ID_RE.fullmatch(str(self.source_artifact_id)):
+            raise ValueError("source_artifact_id has invalid format")
+        if not SHA256_RE.fullmatch(str(self.source_artifact_sha256)):
+            raise ValueError("source_artifact_sha256 has invalid format")
         if self.status not in {"accepted", "rejected", "partial"}:
-            raise ValueError(f"Invalid status: {self.status!r}. Must be 'accepted', 'rejected', or 'partial'.")
+            raise ValueError("status must be accepted, rejected, or partial")
+
+        validation = FrozenJSONMap(self.validation_state)
+        output = FrozenJSONMap(self.output_digests)
+        bindings = tuple(FrozenJSONMap(value) for value in self.ledger_bindings)
+        uncertainties = tuple(FrozenJSONMap(value) for value in self.uncertainties)
+        caller = FrozenJSONMap(self.caller_metadata) if self.caller_metadata is not None else None
+        object.__setattr__(self, "validation_state", validation)
+        object.__setattr__(self, "output_digests", output)
+        object.__setattr__(self, "created_or_reused_objects", tuple(self.created_or_reused_objects))
+        object.__setattr__(self, "ceg_nodes", tuple(self.ceg_nodes))
+        object.__setattr__(self, "ceg_edges", tuple(self.ceg_edges))
+        object.__setattr__(self, "ledger_bindings", bindings)
+        object.__setattr__(self, "uncertainties", uncertainties)
+        object.__setattr__(self, "ignored_fields", tuple(self.ignored_fields))
+        object.__setattr__(self, "caller_metadata", caller)
+
+        expected = self._derive_receipt_id(
+            source_artifact_id=self.source_artifact_id,
+            source_artifact_sha256=self.source_artifact_sha256,
+            adapter_id=self.adapter_id,
+            adapter_version=self.adapter_version,
+            status=self.status,
+            validation_state=validation,
+            output_digests=output,
+            created_or_reused_objects=self.created_or_reused_objects,
+            ceg_nodes=self.ceg_nodes,
+            ceg_edges=self.ceg_edges,
+            ledger_bindings=bindings,
+            uncertainties=uncertainties,
+            ignored_fields=self.ignored_fields,
+            failure_reason=self.failure_reason,
+            caller_metadata=caller,
+        )
+        if self.receipt_id != expected:
+            raise ValueError(
+                f"receipt_id content-addressing mismatch: declared {self.receipt_id}, expected {expected}"
+            )
+        _raise_schema_errors("IngestionReceipt", validate_receipt_dict(self.to_dict()))
+
+    @staticmethod
+    def _identity_payload(
+        *,
+        source_artifact_id: str,
+        source_artifact_sha256: str,
+        adapter_id: str,
+        adapter_version: str,
+        status: str,
+        validation_state: Mapping[str, Any],
+        output_digests: Mapping[str, Any],
+        created_or_reused_objects: Tuple[str, ...],
+        ceg_nodes: Tuple[str, ...],
+        ceg_edges: Tuple[str, ...],
+        ledger_bindings: Tuple[Mapping[str, Any], ...],
+        uncertainties: Tuple[Mapping[str, Any], ...],
+        ignored_fields: Tuple[str, ...],
+        failure_reason: Optional[str],
+        caller_metadata: Optional[Mapping[str, Any]],
+    ) -> Dict[str, Any]:
+        return {
+            "source_artifact_id": source_artifact_id,
+            "source_artifact_sha256": source_artifact_sha256,
+            "adapter_id": adapter_id,
+            "adapter_version": adapter_version,
+            "status": status,
+            "validation_state": _thaw_val(validation_state),
+            "output_digests": dict(sorted(_thaw_val(output_digests).items())),
+            "created_or_reused_objects": sorted(created_or_reused_objects),
+            "ceg_nodes": sorted(ceg_nodes),
+            "ceg_edges": sorted(ceg_edges),
+            "ledger_bindings": sorted(
+                (_thaw_val(value) for value in ledger_bindings),
+                key=lambda value: canonical_json_bytes(value),
+            ),
+            "uncertainties": sorted(
+                (_thaw_val(value) for value in uncertainties),
+                key=lambda value: canonical_json_bytes(value),
+            ),
+            "ignored_fields": sorted(ignored_fields),
+            "failure_reason": failure_reason or "",
+            # Caller metadata is correlation context, not mutation content; it
+            # is preserved on the receipt but intentionally excluded from the
+            # receipt's content-addressed identity.
+        }
+
+    @classmethod
+    def _derive_receipt_id(cls, **kwargs: Any) -> str:
+        digest = compute_sha256(canonical_json_bytes(cls._identity_payload(**kwargs)))
+        return f"ingest-{digest[:32]}"
 
     @classmethod
     def create(
@@ -175,59 +350,43 @@ class IngestionReceipt:
         status: str,
         valid: bool,
         errors: List[str],
-        output_digests: Dict[str, str],
+        output_digests: Mapping[str, str],
         created_or_reused_objects: Optional[List[str]] = None,
         ceg_nodes: Optional[List[str]] = None,
         ceg_edges: Optional[List[str]] = None,
-        ledger_bindings: Optional[List[Dict[str, str]]] = None,
-        uncertainties: Optional[List[Dict[str, Any]]] = None,
+        ledger_bindings: Optional[List[Mapping[str, str]]] = None,
+        uncertainties: Optional[List[Mapping[str, Any]]] = None,
         ignored_fields: Optional[List[str]] = None,
         failure_reason: Optional[str] = None,
-        caller_metadata: Optional[Dict[str, Any]] = None,
-    ) -> IngestionReceipt:
-        """Create a receipt with a deterministic, content-addressed receipt_id."""
-        id_inputs = {
+        caller_metadata: Optional[Mapping[str, Any]] = None,
+    ) -> "IngestionReceipt":
+        validation_state = {"valid": valid, "errors": list(errors)}
+        values = {
             "source_artifact_id": envelope.artifact_id,
             "source_artifact_sha256": envelope.payload_sha256,
             "adapter_id": adapter_id,
             "adapter_version": adapter_version,
             "status": status,
-            "valid": valid,
-            "errors": sorted(errors),
-            "output_digests": dict(sorted(output_digests.items())),
-            "created_or_reused_objects": sorted(created_or_reused_objects or []),
-            "ceg_nodes": sorted(ceg_nodes or []),
-            "ceg_edges": sorted(ceg_edges or []),
-            "ledger_bindings": sorted(ledger_bindings or [], key=lambda b: (b.get("decision_id", ""), b.get("basis_id", ""))),
-            "uncertainties": sorted(uncertainties or [], key=lambda u: u.get("item_id", "")),
-            "ignored_fields": sorted(ignored_fields or []),
-            "failure_reason": failure_reason or "",
+            "validation_state": validation_state,
+            "output_digests": output_digests,
+            "created_or_reused_objects": tuple(created_or_reused_objects or ()),
+            "ceg_nodes": tuple(ceg_nodes or ()),
+            "ceg_edges": tuple(ceg_edges or ()),
+            "ledger_bindings": tuple(ledger_bindings or ()),
+            "uncertainties": tuple(uncertainties or ()),
+            "ignored_fields": tuple(ignored_fields or ()),
+            "failure_reason": failure_reason,
+            "caller_metadata": caller_metadata,
         }
-        r_sha = compute_sha256(canonical_json_bytes(id_inputs))
-        r_id = f"ingest-{r_sha[:32]}"
-
+        receipt_id = cls._derive_receipt_id(**values)
         return cls(
             protocol="ingestion-receipt-1.0",
-            receipt_id=r_id,
-            source_artifact_id=envelope.artifact_id,
-            source_artifact_sha256=envelope.payload_sha256,
-            adapter_id=adapter_id,
-            adapter_version=adapter_version,
-            status=status,
-            validation_state={"valid": valid, "errors": list(errors)},
-            output_digests=dict(output_digests),
-            created_or_reused_objects=tuple(created_or_reused_objects or []),
-            ceg_nodes=tuple(ceg_nodes or []),
-            ceg_edges=tuple(ceg_edges or []),
-            ledger_bindings=tuple(ledger_bindings or []),
-            uncertainties=tuple(uncertainties or []),
-            ignored_fields=tuple(ignored_fields or []),
-            failure_reason=failure_reason,
-            caller_metadata=caller_metadata,
+            receipt_id=receipt_id,
+            **values,
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
+        data: Dict[str, Any] = {
             "protocol": self.protocol,
             "receipt_id": self.receipt_id,
             "source_artifact_id": self.source_artifact_id,
@@ -235,60 +394,147 @@ class IngestionReceipt:
             "adapter_id": self.adapter_id,
             "adapter_version": self.adapter_version,
             "status": self.status,
-            "validation_state": {
-                "valid": self.validation_state["valid"],
-                "errors": list(self.validation_state["errors"]),
-            },
+            "validation_state": _thaw_val(self.validation_state),
             "created_or_reused_objects": list(self.created_or_reused_objects),
             "ceg_nodes": list(self.ceg_nodes),
             "ceg_edges": list(self.ceg_edges),
-            "ledger_bindings": [dict(b) for b in self.ledger_bindings],
-            "uncertainties": [copy.deepcopy(u) for u in self.uncertainties],
+            "ledger_bindings": [_thaw_val(value) for value in self.ledger_bindings],
+            "uncertainties": [_thaw_val(value) for value in self.uncertainties],
             "ignored_fields": list(self.ignored_fields),
-            "output_digests": dict(self.output_digests),
+            "output_digests": _thaw_val(self.output_digests),
         }
-        if self.failure_reason:
-            d["failure_reason"] = self.failure_reason
-        if self.caller_metadata:
-            d["caller_metadata"] = copy.deepcopy(self.caller_metadata)
-        return d
+        if self.failure_reason is not None:
+            data["failure_reason"] = self.failure_reason
+        if self.caller_metadata is not None:
+            data["caller_metadata"] = _thaw_val(self.caller_metadata)
+        return data
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "IngestionReceipt":
+        if not isinstance(data, collections.abc.Mapping):
+            raise TypeError("IngestionReceipt.from_dict expects a mapping")
+        _raise_schema_errors("IngestionReceipt", validate_receipt_dict(data))
+        return cls(
+            protocol=data["protocol"],
+            receipt_id=data["receipt_id"],
+            source_artifact_id=data["source_artifact_id"],
+            source_artifact_sha256=data["source_artifact_sha256"],
+            adapter_id=data["adapter_id"],
+            adapter_version=data["adapter_version"],
+            status=data["status"],
+            validation_state=data.get("validation_state", {"valid": False, "errors": []}),
+            output_digests=data["output_digests"],
+            created_or_reused_objects=tuple(data.get("created_or_reused_objects") or ()),
+            ceg_nodes=tuple(data.get("ceg_nodes") or ()),
+            ceg_edges=tuple(data.get("ceg_edges") or ()),
+            ledger_bindings=tuple(data.get("ledger_bindings") or ()),
+            uncertainties=tuple(data.get("uncertainties") or ()),
+            ignored_fields=tuple(data.get("ignored_fields") or ()),
+            failure_reason=data.get("failure_reason"),
+            caller_metadata=data.get("caller_metadata"),
+        )
+
+
+def _normalise_uncertainty(value: Mapping[str, Any]) -> FrozenJSONMap:
+    if not isinstance(value, collections.abc.Mapping):
+        raise TypeError("Kernel uncertainty must be a mapping")
+    allowed = {"item_id", "subject_id", "kind", "reason", "needs_human", "metadata"}
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"Unknown uncertainty fields: {sorted(unknown)}")
+    required = {"item_id", "subject_id", "kind", "reason", "needs_human"}
+    missing = required - set(value)
+    if missing:
+        raise ValueError(f"Missing uncertainty fields: {sorted(missing)}")
+    for key in ("item_id", "subject_id", "reason"):
+        if not isinstance(value[key], str) or not value[key].strip():
+            raise ValueError(f"uncertainty.{key} must be a non-empty string")
+    if value["kind"] not in VALID_KERNEL_UNCERTAINTY_KINDS:
+        raise ValueError(
+            f"Invalid kernel uncertainty kind {value['kind']!r}; "
+            f"expected one of {sorted(VALID_KERNEL_UNCERTAINTY_KINDS)}"
+        )
+    if not isinstance(value["needs_human"], bool):
+        raise ValueError("uncertainty.needs_human must be a boolean")
+    if "metadata" in value and not isinstance(value["metadata"], collections.abc.Mapping):
+        raise ValueError("uncertainty.metadata must be an object")
+    return FrozenJSONMap(value)
 
 
 @dataclass
 class IngestionKernelState:
-    """Deterministic snapshot of the combined research-state kernel."""
+    """Combined deterministic kernel state with strict snapshot round-tripping."""
 
-    ceg: Any = None  # ClaimEvidenceGraph instance
-    ledger: Any = None  # DecisionLedger instance
-    objects: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    ceg: Any = None
+    ledger: Any = None
+    objects: Dict[str, Mapping[str, Any]] = field(default_factory=dict)
     receipts: Dict[str, Any] = field(default_factory=dict)
-    uncertainties: List[Dict[str, Any]] = field(default_factory=list)
+    uncertainties: List[Mapping[str, Any]] = field(default_factory=list)
     ingested_artifacts: Dict[str, str] = field(default_factory=dict)
     ingestion_receipts: Dict[str, IngestionReceipt] = field(default_factory=dict)
 
-    def __post_init__(self):
-        if self.receipts and self.ceg is not None:
-            for k, r in self.receipts.items():
-                self.ceg.register_receipt(k, r)
-
-    def clone(self) -> IngestionKernelState:
-        """Create a detached deep clone for transaction simulation and rollback."""
-        new_ceg = copy.deepcopy(self.ceg) if self.ceg is not None else None
-        new_ledger = None
-        if self.ledger is not None:
-            l_dict = self.ledger.to_dict()
-            manifest = l_dict.get("verification_manifest", {})
-            relevant_receipts = {
-                k: v for k, v in self.receipts.items() if k in manifest
-            }
-            new_ledger = self.ledger.__class__.from_dict(
-                l_dict,
-                receipt_registry=relevant_receipts if relevant_receipts else None,
+    def __post_init__(self) -> None:
+        self.objects = {
+            str(key): FrozenJSONMap(_thaw_val(value)) for key, value in self.objects.items()
+        }
+        self.receipts = {
+            str(key): copy.deepcopy(_thaw_val(value)) for key, value in self.receipts.items()
+        }
+        existing_uncertainties = list(self.uncertainties)
+        self.uncertainties = []
+        for value in existing_uncertainties:
+            self.add_uncertainty(value)
+        self.ingested_artifacts = dict(self.ingested_artifacts)
+        self.ingestion_receipts = {
+            str(key): (
+                value if isinstance(value, IngestionReceipt) else IngestionReceipt.from_dict(value)
             )
+            for key, value in self.ingestion_receipts.items()
+        }
+        self._synchronise_receipts()
 
+    def _synchronise_receipts(self) -> None:
+        for key, value in self.receipts.items():
+            if self.ceg is not None:
+                self.ceg.register_receipt(key, value)
+            if self.ledger is not None:
+                self.ledger.register_receipt(key, value)
+
+    def register_object(self, object_id: str, value: Mapping[str, Any]) -> None:
+        frozen = FrozenJSONMap(_thaw_val(value))
+        existing = self.objects.get(object_id)
+        if existing is not None and _thaw_val(existing) != _thaw_val(frozen):
+            raise ValueError(
+                f"ResearchObject ID collision for {object_id!r}: existing object differs"
+            )
+        self.objects[object_id] = frozen
+
+    def register_receipt(self, key: str, value: Any) -> None:
+        snapshot = copy.deepcopy(_thaw_val(value))
+        if key in self.receipts and canonical_json_bytes(self.receipts[key]) != canonical_json_bytes(snapshot):
+            raise ValueError(f"Conflicting physical receipt registration for {key!r}")
+        self.receipts[key] = snapshot
+        if self.ceg is not None:
+            self.ceg.register_receipt(key, snapshot)
+        if self.ledger is not None:
+            self.ledger.register_receipt(key, snapshot)
+
+    def add_uncertainty(self, value: Mapping[str, Any]) -> None:
+        frozen = _normalise_uncertainty(value)
+        item_id = frozen["item_id"]
+        for existing in self.uncertainties:
+            if existing["item_id"] == item_id:
+                if _thaw_val(existing) != _thaw_val(frozen):
+                    raise ValueError(f"Uncertainty ID collision for {item_id!r}")
+                return
+        self.uncertainties.append(frozen)
+        self.uncertainties.sort(key=lambda item: item["item_id"])
+
+    def clone(self) -> "IngestionKernelState":
+        """Detached transactional clone without replaying the complete ledger."""
         return IngestionKernelState(
-            ceg=new_ceg,
-            ledger=new_ledger,
+            ceg=copy.deepcopy(self.ceg),
+            ledger=copy.deepcopy(self.ledger),
             objects=copy.deepcopy(self.objects),
             receipts=copy.deepcopy(self.receipts),
             uncertainties=copy.deepcopy(self.uncertainties),
@@ -296,16 +542,141 @@ class IngestionKernelState:
             ingestion_receipts=copy.deepcopy(self.ingestion_receipts),
         )
 
+    def validate_invariants(self) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        try:
+            self._synchronise_receipts()
+        except Exception as exc:
+            errors.append(f"receipt registry mismatch: {exc}")
+        if self.ceg is not None:
+            valid, graph_errors = self.ceg.validate_graph()
+            if not valid:
+                errors.extend(f"CEG: {error}" for error in graph_errors)
+        if self.ledger is not None:
+            valid, ledger_errors = self.ledger.validate_ledger()
+            if not valid:
+                errors.extend(f"Ledger: {error}" for error in ledger_errors)
+        try:
+            normalised = [_normalise_uncertainty(value) for value in self.uncertainties]
+            ids = [value["item_id"] for value in normalised]
+            if len(ids) != len(set(ids)):
+                errors.append("Kernel uncertainty item_id values must be unique")
+        except Exception as exc:
+            errors.append(f"Uncertainty state: {exc}")
+        for artifact_id, payload_sha in self.ingested_artifacts.items():
+            if not ARTIFACT_ID_RE.fullmatch(artifact_id) or not SHA256_RE.fullmatch(payload_sha):
+                errors.append(f"Invalid ingested artifact identity {artifact_id!r}")
+        for cache_key, receipt in self.ingestion_receipts.items():
+            expected_sha = self.ingested_artifacts.get(receipt.source_artifact_id)
+            if expected_sha is None:
+                errors.append(
+                    f"Ingestion receipt cache {cache_key!r} references unregistered artifact "
+                    f"{receipt.source_artifact_id!r}"
+                )
+            elif expected_sha != receipt.source_artifact_sha256:
+                errors.append(
+                    f"Ingestion receipt cache {cache_key!r} payload SHA conflicts with artifact registry"
+                )
+        return not errors, errors
+
     def compute_digests(self) -> Dict[str, str]:
-        """Compute cryptographic state digests across active kernel primitives."""
-        digests: Dict[str, str] = {}
-        if self.objects:
-            obj_bytes = canonical_json_bytes(
-                [self.objects[k] for k in sorted(self.objects.keys())]
-            )
-            digests["object_registry_digest"] = compute_sha256(obj_bytes)
+        """Digest every first-class, non-circular kernel content registry."""
+        object_entries = [
+            {"registry_key": key, "value": _thaw_val(self.objects[key])}
+            for key in sorted(self.objects)
+        ]
+        receipt_entries = [
+            {"registry_key": key, "value": _thaw_val(self.receipts[key])}
+            for key in sorted(self.receipts)
+        ]
+        uncertainty_entries = sorted(
+            (_thaw_val(value) for value in self.uncertainties),
+            key=lambda value: canonical_json_bytes(value),
+        )
+        artifact_entries = [
+            {"artifact_id": key, "payload_sha256": self.ingested_artifacts[key]}
+            for key in sorted(self.ingested_artifacts)
+        ]
+        digests: Dict[str, str] = {
+            "object_registry_digest": compute_sha256(canonical_json_bytes(object_entries)),
+            "receipt_registry_digest": compute_sha256(canonical_json_bytes(receipt_entries)),
+            "uncertainty_state_digest": compute_sha256(canonical_json_bytes(uncertainty_entries)),
+            "ingested_artifact_digest": compute_sha256(canonical_json_bytes(artifact_entries)),
+        }
         if self.ceg is not None:
             digests["ceg_digest"] = self.ceg.graph_digest()
         if self.ledger is not None:
             digests["ledger_digest"] = self.ledger.ledger_digest()
+        digests["kernel_content_digest"] = compute_sha256(
+            canonical_json_bytes(dict(sorted(digests.items())))
+        )
         return digests
+
+    def _snapshot_payload(self) -> Dict[str, Any]:
+        return {
+            "protocol": "ingestion-kernel-state-1.0",
+            "ceg": self.ceg.to_dict() if self.ceg is not None else None,
+            "ledger": self.ledger.to_dict() if self.ledger is not None else None,
+            "objects": {key: _thaw_val(self.objects[key]) for key in sorted(self.objects)},
+            "receipts": {key: _thaw_val(self.receipts[key]) for key in sorted(self.receipts)},
+            "uncertainties": [
+                _thaw_val(value)
+                for value in sorted(self.uncertainties, key=lambda item: item["item_id"])
+            ],
+            "ingested_artifacts": dict(sorted(self.ingested_artifacts.items())),
+            "ingestion_receipts": {
+                key: self.ingestion_receipts[key].to_dict()
+                for key in sorted(self.ingestion_receipts)
+            },
+            "content_digests": self.compute_digests(),
+        }
+
+    def to_dict(self) -> Dict[str, Any]:
+        payload = self._snapshot_payload()
+        payload["snapshot_digest"] = compute_sha256(canonical_json_bytes(payload))
+        _raise_schema_errors("IngestionKernelState", validate_kernel_state_dict(payload))
+        return payload
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        *,
+        ceg_cls: Type[Any],
+        ledger_cls: Type[Any],
+    ) -> "IngestionKernelState":
+        if not isinstance(data, collections.abc.Mapping):
+            raise TypeError("IngestionKernelState.from_dict expects a mapping")
+        _raise_schema_errors("IngestionKernelState", validate_kernel_state_dict(data))
+        raw = _thaw_val(data)
+        declared = raw.pop("snapshot_digest")
+        actual = compute_sha256(canonical_json_bytes(raw))
+        if declared != actual:
+            raise ValueError(
+                f"Kernel snapshot tampering detected: declared {declared}, recomputed {actual}"
+            )
+        receipts = copy.deepcopy(raw["receipts"])
+        ceg = ceg_cls.from_dict(raw["ceg"], receipt_registry=receipts) if raw["ceg"] else None
+        ledger = (
+            ledger_cls.from_dict(raw["ledger"], receipt_registry=receipts)
+            if raw["ledger"]
+            else None
+        )
+        state = cls(
+            ceg=ceg,
+            ledger=ledger,
+            objects=raw["objects"],
+            receipts=receipts,
+            uncertainties=raw["uncertainties"],
+            ingested_artifacts=raw["ingested_artifacts"],
+            ingestion_receipts={
+                key: IngestionReceipt.from_dict(value)
+                for key, value in raw["ingestion_receipts"].items()
+            },
+        )
+        if state.compute_digests() != raw["content_digests"]:
+            raise ValueError("Kernel snapshot content digests do not match replayed state")
+        valid, errors = state.validate_invariants()
+        if not valid:
+            raise ValueError(f"Kernel snapshot invariant failure: {'; '.join(errors)}")
+        return state

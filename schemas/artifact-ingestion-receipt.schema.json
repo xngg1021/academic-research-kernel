@@ -13,6 +13,7 @@
     "adapter_id",
     "adapter_version",
     "status",
+    "validation_state",
     "output_digests"
   ],
   "properties": {
@@ -115,6 +116,13 @@
     "output_digests": {
       "type": "object",
       "additionalProperties": false,
+      "required": [
+        "object_registry_digest",
+        "receipt_registry_digest",
+        "uncertainty_state_digest",
+        "ingested_artifact_digest",
+        "kernel_content_digest"
+      ],
       "properties": {
         "object_registry_digest": {
           "type": "string",
@@ -125,6 +133,22 @@
           "pattern": "^[0-9a-f]{64}$"
         },
         "ledger_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "receipt_registry_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "uncertainty_state_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "ingested_artifact_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "kernel_content_digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
         }

@@ -588,6 +588,20 @@ def test_nested_metadata_deep_mutation_is_forbidden():
     with pytest.raises(TypeError, match="does not support item assignment"):
         claim.metadata["tags"] = ["c"]
 
+    # The internal backing mapping is read-only as well; mutation cannot bypass
+    # the public Mapping API and desynchronise edge identity from graph digests.
+    with pytest.raises(TypeError):
+        edge.metadata._store["stage"] = 3
+
+
+def test_ceg_metadata_rejects_values_outside_the_json_domain():
+    with pytest.raises(ValueError, match="finite"):
+        ceg.Claim(id="nan", text="Text", metadata={"value": float("nan")})
+    with pytest.raises(TypeError, match="JSON-domain"):
+        ceg.Claim(id="set", text="Text", metadata={"value": {1, 2}})
+    with pytest.raises(TypeError, match="key must be str"):
+        ceg.Claim(id="key", text="Text", metadata={1: "value"})
+
 
 def test_trace_claim_provenance_rejects_conflicting_external_registry():
     """trace_claim_provenance rejects external receipt_registry entries that conflict with internal verified receipts."""

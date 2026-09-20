@@ -60,12 +60,15 @@ def test_cross_state_cache_isolation():
         payload={
             "schema_version": "1.0",
             "query": "DOI:10.1000/1",
+            "identifiers": {"doi": "10.1000/1"},
+            "sources": [],
             "claims": [{
                 "claim": "Finding in A",
                 "evidence_type": "computed",
                 "source": "DOI:10.1000/1",
                 "support_status": "supported",
             }],
+            "generated_at": "2026-09-20T00:00:00Z",
         },
         producer_skill="academic-source-verification",
         producer_version="1.0.0",
@@ -99,12 +102,15 @@ def test_binding_sensitivity_cache():
         payload={
             "schema_version": "1.0",
             "query": "DOI:10.1000/1",
+            "identifiers": {"doi": "10.1000/1"},
+            "sources": [],
             "claims": [{
                 "claim": "Dual bound claim",
                 "evidence_type": "computed",
                 "source": "DOI:10.1000/1",
                 "support_status": "supported",
             }],
+            "generated_at": "2026-09-20T00:00:00Z",
         },
         producer_skill="academic-source-verification",
         producer_version="1.0.0",
@@ -129,7 +135,17 @@ def test_research_object_collision_defense_fail_closed():
     state = IngestionKernelState()
 
     env1 = ArtifactEnvelope.create(
-        payload={"object_id": "obj-dataset-1", "object_type": "dataset", "title": "Version 1"},
+        payload={
+            "object_id": "obj-dataset-1",
+            "object_type": "Dataset",
+            "title": "Version 1",
+            "identifiers": [],
+            "manifestations": [],
+            "relations": [],
+            "lineage": [],
+            "source_observations": [],
+            "uncertainty": [],
+        },
         producer_skill="research-object-identity",
         producer_version="1.0.0",
         artifact_kind="research_object",
@@ -140,14 +156,25 @@ def test_research_object_collision_defense_fail_closed():
 
     # Conflicting payload for same object_id
     env2 = ArtifactEnvelope.create(
-        payload={"object_id": "obj-dataset-1", "object_type": "dataset", "title": "Conflicting Version 2"},
+        payload={
+            "object_id": "obj-dataset-1",
+            "object_type": "Dataset",
+            "title": "Conflicting Version 2",
+            "identifiers": [],
+            "manifestations": [],
+            "relations": [],
+            "lineage": [],
+            "source_observations": [],
+            "uncertainty": [],
+        },
         producer_skill="research-object-identity",
         producer_version="1.0.0",
         artifact_kind="research_object",
         payload_schema="research-object-1.0",
     )
-    with pytest.raises(ValueError, match="ResearchObject ID collision"):
-        engine.ingest(env2, state=state)
+    r2 = engine.ingest(env2, state=state)
+    assert r2.status == "rejected"
+    assert "ResearchObject ID collision" in r2.failure_reason
 
 
 def test_ceg_snapshot_lossless_round_trip():
@@ -186,6 +213,7 @@ def test_ledger_snapshot_lossless_round_trip():
     ledger = ledger_mod.DecisionLedger(ledger_id="source-ledger")
     ledger.add_decision("dec-1", "Root Decision", decision_action="explore")
     ledger.add_decision("dec-2", "Child Decision", decision_action="commit")
+    ledger.add_decision("alt-a", "Alternative A", decision_action="explore")
     ledger.add_basis("dec-2", "decision", "dec-1")
     ledger.add_fork("dec-1", "alt-a", "considered")
     ledger.add_state_event("dec-1", "active")

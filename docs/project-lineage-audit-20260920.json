@@ -1,0 +1,50 @@
+{
+  "protocol": "project-lineage-audit-1.0",
+  "as_of": "2026-09-20T00:00:00Z",
+  "repository": "xngg1021/academic-research-kernel",
+  "summary": {
+    "pull_requests_total": 12,
+    "pull_requests_merged": 11,
+    "pull_requests_open": 1,
+    "exact_head_workflow_runs_successful": 12,
+    "exact_head_workflow_runs_failed": 0,
+    "standalone_issues": 0,
+    "pr12_review_threads_unresolved_at_start": 31,
+    "pr12_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 30,
+      "P2": 1,
+      "P3": 0
+    },
+    "local_tests_after_remediation": {
+      "passed": 691,
+      "skipped": 3,
+      "failed": 0
+    }
+  },
+  "pull_requests": [
+    {"number": 1, "status": "merged", "head_sha": "447f88c2263070b4a9321d42b74691a15d9d0b90", "commits": 5, "workflow_run_id": 34011128209, "workflow_conclusion": "success", "successful_jobs": 1, "skipped_jobs": []},
+    {"number": 2, "status": "merged", "head_sha": "0f63f115a468e4d184917e966b06cb3f8a889f43", "commits": 2, "workflow_run_id": 34901160163, "workflow_conclusion": "success", "successful_jobs": 1, "skipped_jobs": []},
+    {"number": 3, "status": "merged", "head_sha": "69e58ad09d3d313f327aa87c25b6fc76ad3a56a4", "commits": 5, "workflow_run_id": 35117139533, "workflow_conclusion": "success", "successful_jobs": 1, "skipped_jobs": []},
+    {"number": 4, "status": "merged", "head_sha": "ee223b9b02dcb1e7861bc71a9c7a8e566ee42446", "commits": 17, "workflow_run_id": 35248822907, "workflow_conclusion": "success", "successful_jobs": 6, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 5, "status": "merged", "head_sha": "ca2e9d2d75f4b3c2e9f636f896c7d32c84786cb0", "commits": 12, "workflow_run_id": 35274317969, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 6, "status": "merged", "head_sha": "6470af3d26667e95590c2fd2dd3e3554b46b6402", "commits": 4, "workflow_run_id": 35346581800, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 7, "status": "merged", "head_sha": "c3a960f38868761e7f9a7dc55358beefeb5182e6", "commits": 1, "workflow_run_id": 35347905575, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 8, "status": "merged", "head_sha": "daa6d4c55d7860d5103155bebad35e6586be61c1", "commits": 1, "workflow_run_id": 35351378790, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 9, "status": "merged", "head_sha": "3cde7e018e63cb2d5faedd0dbe8325dd2c3042b9", "commits": 4, "workflow_run_id": 35359362517, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 10, "status": "merged", "head_sha": "689b076c036c937cf2613f1d39a656b327e96eb6", "commits": 2, "workflow_run_id": 35366683037, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 11, "status": "merged", "head_sha": "4a7e8738d23c016b343186b982dbd5d41ed38676", "commits": 16, "workflow_run_id": 35448287394, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 12, "status": "open_pre_remediation_snapshot", "head_sha": "51c2881442982ef2c1474a1f2cd71a322ea327ae", "commits": 2, "workflow_run_id": 35488732107, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"]}
+  ],
+  "open_register": [
+    {"id": "OPS-01", "severity": "P2", "category": "ci_coverage", "status": "accepted_operational_limitation"},
+    {"id": "EXT-01", "severity": "P2", "category": "external_verification", "status": "open_credential_bound"},
+    {"id": "GOV-01", "severity": "P2", "category": "historical_provenance", "status": "grandfathered_missing"},
+    {"id": "DIST-01", "severity": "P3", "category": "distribution", "status": "planned_pr13"},
+    {"id": "I18N-01", "severity": "P3", "category": "localization", "status": "queued", "canonical_current": 55, "localized_current": 22, "queued_for_generation": 1078},
+    {"id": "GOV-02", "severity": "P3", "category": "independent_agenda_validation", "status": "open"},
+    {"id": "GOV-03", "severity": "P3", "category": "portfolio_review", "status": "open"},
+    {"id": "SCF-01", "severity": "P3", "category": "experimental_compute_scope", "status": "open"},
+    {"id": "ROADMAP-01", "severity": "P3", "category": "product_direction", "status": "deferred"}
+  ]
+}

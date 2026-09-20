@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [简体中文](../../README.zh-Hans.md) · [繁體中文](../../README.zh-Hant.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
 
-Çatı-bağımsız akademik araştırma çekirdeği ve çoklu ajan müzakere paketi. Taşınabilir Agent Plugins v1 ve MCP (Model Context Protocol) giriş noktaları ile 13 akademik yetenek ve doğrulama aracı, ayrıca Hermes Agent, Claude Code, Cursor ve özel CLI alt ajanları için yerel entegrasyon sağlar. Kaynak doğrulama, literatür analizi, akademik yazım, sayısal hesaplama, nicel makale denetimi, tekrarlanabilirlik denetimleri, sistematik derleme ve meta-analiz, araştırma nesnesi kimliği ve kökeni, dinamik modeller arası çapraz hakemlik orkestrasyonu ve iki haftalık izleme otomasyonunu kapsar. Depo çalıştırılabilir örnek kontroller içerir; doğrulama kapsamı ve harici hizmet sınırlamaları [denetim raporunda](../../docs/audit-20260906.md) kayıtlıdır.
+Çatı-bağımsız akademik araştırma çekirdeği ve çoklu ajan müzakere paketi. Taşınabilir Agent Plugins v1 ve MCP (Model Context Protocol) giriş noktaları ile 13 akademik yetenek ve doğrulama aracı, ayrıca Hermes Agent, Claude Code, Cursor ve özel CLI alt ajanları için yerel entegrasyon sağlar. Kaynak doğrulama, literatür analizi, akademik yazım, sayısal hesaplama, nicel makale denetimi, tekrarlanabilirlik denetimleri, sistematik derleme ve meta-analiz, araştırma nesnesi kimliği ve kökeni, dinamik modeller arası çapraz hakemlik orkestrasyonu ve iki haftalık izleme otomasyonunu kapsar. Depo çalıştırılabilir örnek kontroller içerir; doğrulama kapsamı ve harici hizmet sınırlamaları [denetim raporunda](../../docs/project-lineage-audit-20260920.md) kayıtlıdır.
 
 Yazar: Junfu Shi (SJF, xngg1021), Hermes Agent. Geçerli kapsamlı lisans teklifi: [Source Lineage License 1.0](../../LICENSE).
 
@@ -81,7 +81,7 @@ git diff --check
 
 QA; meta verileri, referansları, kişisel yol/gizli bilgi kalıplarını, Python sözdizimini ve işaretli kod bloklarını doğrular. Başarılı kontrollerde 0, kod/şema/kimlik hatalarında 1, aktarım/kimlik doğrulama/kota yetersizliğinde 2 döndürür.
 
-CI; Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 ve macOS Intel genelinde tam QA paketini çalıştırır. 666 birim testi geçer ve 40 çalıştırılabilir kod bloğu doğrulanır.
+CI; Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 ve macOS Intel genelinde tam QA paketini çalıştırır. 691 birim testi geçer ve 40 çalıştırılabilir kod bloğu doğrulanır.
 
 tools/longtail/ ayrık faktör eksenleri üzerinde 4096 SHA256 tohumlu aday kombinasyonu, açgözlü kapsam seçimi ve generated-scenarios.json içindeki kapsam raporunu içeren deterministik aşırı uzun kuyruk senaryo üretecini barındırır.
 

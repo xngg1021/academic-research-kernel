@@ -73,7 +73,14 @@ def test_mcp_tools_list():
 
 def test_mcp_call_research_artifact_validate():
     env = ArtifactEnvelope.create(
-        payload={"schema_version": "1.0", "claims": []},
+        payload={
+            "schema_version": "1.0",
+            "query": "validation test",
+            "identifiers": {},
+            "sources": [],
+            "claims": [],
+            "generated_at": "2026-09-20T00:00:00Z",
+        },
         producer_skill="academic-source-verification",
         producer_version="1.0.0",
         artifact_kind="evidence_receipt",
@@ -89,12 +96,15 @@ def test_mcp_call_research_artifact_ingest():
         payload={
             "schema_version": "1.0",
             "query": "DOI:10.1000/1",
+            "identifiers": {"doi": "10.1000/1"},
+            "sources": [],
             "claims": [{
                 "claim": "Ingest test claim",
                 "evidence_type": "computed",
                 "source": "DOI:10.1000/1",
                 "support_status": "supported",
             }],
+            "generated_at": "2026-09-20T00:00:00Z",
         },
         producer_skill="academic-source-verification",
         producer_version="1.0.0",
@@ -111,12 +121,17 @@ def test_mcp_call_research_artifact_ingest():
 def test_mcp_call_research_receipt_verify():
     payload = {
         "schema_version": "1.0",
+        "query": "DOI:10.1037/bul0000209",
+        "identifiers": {"doi": "10.1037/bul0000209"},
+        "sources": [],
         "claims": [{
             "claim": "Interleaving enhances retention",
             "evidence_type": "computed",
             "locator": "p. 1042",
             "source": "DOI:10.1037/bul0000209",
+            "support_status": "supported",
         }],
+        "generated_at": "2026-09-20T00:00:00Z",
     }
     p_bytes = canonical_json_bytes(payload)
     p_sha = compute_sha256(p_bytes)
@@ -152,8 +167,8 @@ def test_mcp_call_research_lineage_trace():
             {"id": "eval-run-1", "type": "statistical_analysis"},
         ],
         "edges": [
-            {"source_id": "data-snapshot-1", "target_id": "eval-run-1", "relation": "used"},
-            {"source_id": "eval-run-1", "target_id": "model-eval-1", "relation": "wasGeneratedBy"},
+            {"source_id": "eval-run-1", "target_id": "data-snapshot-1", "type": "used"},
+            {"source_id": "eval-run-1", "target_id": "model-eval-1", "type": "generated"},
         ],
     }
     data = _call_tool("research_lineage_trace", {"lineage_graph": lineage_graph, "target_entity_id": "model-eval-1"}, call_id=7)

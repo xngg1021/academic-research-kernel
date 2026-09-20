@@ -12,11 +12,84 @@ from dataclasses import dataclass
 import hashlib
 import json
 import re
-from typing import Any, Dict, Mapping, Optional, Tuple, Union
+from types import MappingProxyType
+from typing import Any, Dict, Iterator, Mapping, Optional, Tuple, Union
 
 VALID_RECEIPT_KINDS = frozenset({"lineage", "academic_evidence"})
 VALID_EVIDENCE_TYPES = frozenset({"metadata", "citation_count", "update_signal", "full_text", "computed"})
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
+
+
+class FrozenJSONMap(collections.abc.Mapping):
+    """Deeply immutable mapping restricted to the canonical JSON value domain.
+
+    ``dataclass(frozen=True)`` only prevents rebinding an attribute; a nested
+    ``dict`` or ``list`` would otherwise remain mutable after its identity was
+    verified.  This container recursively freezes mappings and sequences while
+    retaining a lossless ``to_dict`` representation for schemas and hashing.
+    """
+
+    __slots__ = ("_data",)
+
+    def __init__(self, value: Optional[Mapping[str, Any]] = None):
+        if value is None:
+            value = {}
+        if not isinstance(value, collections.abc.Mapping):
+            raise TypeError("FrozenJSONMap requires a mapping")
+        frozen: Dict[str, Any] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError(f"JSON object keys must be strings, got {type(key).__name__}")
+            frozen[key] = freeze_json(item)
+        # Canonical serialization is also the fail-closed check for NaN/Inf.
+        canonical_json_bytes({k: _thaw_val(v) for k, v in frozen.items()})
+        object.__setattr__(self, "_data", MappingProxyType(frozen))
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        raise TypeError("FrozenJSONMap does not support attribute mutation")
+
+    def __delattr__(self, key: str) -> None:
+        raise TypeError("FrozenJSONMap does not support attribute mutation")
+
+    def __getitem__(self, key: str) -> Any:
+        return self._data[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "FrozenJSONMap":
+        return self
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, collections.abc.Mapping):
+            return False
+        return self.to_dict() == _thaw_val(other)
+
+    def __repr__(self) -> str:
+        return f"FrozenJSONMap({self.to_dict()!r})"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {key: _thaw_val(value) for key, value in self._data.items()}
+
+
+def freeze_json(value: Any) -> Any:
+    """Recursively freeze a JSON-domain value and reject custom mutable objects."""
+    if isinstance(value, FrozenJSONMap):
+        return value
+    if hasattr(value, "to_dict"):
+        return freeze_json(value.to_dict())
+    if isinstance(value, collections.abc.Mapping):
+        return FrozenJSONMap(value)
+    if isinstance(value, (list, tuple)):
+        return tuple(freeze_json(item) for item in value)
+    if value is None or isinstance(value, (str, int, float, bool)):
+        # Reject non-finite floats through the canonical serializer.
+        canonical_json_bytes(value)
+        return value
+    raise TypeError(f"Value of type {type(value).__name__!r} is outside the JSON domain")
 
 
 def canonical_text(text: str) -> str:
@@ -173,6 +246,67 @@ def canonical_evidence_claim_digest(claim_item: Mapping[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(payload)).hexdigest().lower()
 
 
+def validate_lineage_receipt_integrity(receipt_obj: Any) -> Tuple[bool, Optional[str]]:
+    """Recompute both identities of a serialized LineageReceipt.
+
+    Historical v1 receipts did not serialize ``check_on_disk_hashes`` even
+    though it participates in ``receipt_digest``.  Verification therefore
+    tries both legitimate boolean modes and still rejects every other digest.
+    """
+    value = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
+    if not isinstance(value, collections.abc.Mapping):
+        return False, "Lineage receipt must be an object/mapping"
+    data = _thaw_val(value)
+    try:
+        edge_key = lambda edge: (
+            edge.get("type", ""),
+            edge.get("source_id", ""),
+            edge.get("target_id", ""),
+            edge.get("activity_id") or "",
+            canonical_json_bytes(edge.get("metadata", {})),
+        )
+        lineage_payload = {
+            "protocol": "lineage-receipt-1.0",
+            "target_id": data["target_id"],
+            "root_ancestors": sorted(data["root_ancestors"]),
+            "entities": sorted(data["entities"], key=lambda item: item["id"]),
+            "activities": sorted(data["activities"], key=lambda item: item["id"]),
+            "edges": sorted(data["edges"], key=edge_key),
+            "trace_steps": data.get("trace_steps", []),
+        }
+        lineage_digest = compute_sha256(canonical_json_bytes(lineage_payload))
+    except (KeyError, TypeError, ValueError) as exc:
+        return False, f"Lineage receipt cannot be canonically replayed: {exc}"
+
+    declared_lineage = str(data.get("lineage_digest", "")).lower()
+    if declared_lineage != lineage_digest:
+        return False, (
+            f"Lineage content digest mismatch: declared {declared_lineage!r}, "
+            f"recomputed {lineage_digest!r}"
+        )
+    if data.get("content_digest") is not None and str(data["content_digest"]).lower() != lineage_digest:
+        return False, "Lineage content_digest alias does not match lineage_digest"
+
+    receipt_base = {
+        "lineage_digest": lineage_digest,
+        "target_id": data["target_id"],
+        "verification_status": data["verification_status"],
+        "topology_status": data["topology_status"],
+        "content_verification": data["content_verification"],
+        "error_detail": data.get("error_detail") or "",
+    }
+    possible = {
+        compute_sha256(canonical_json_bytes(dict(receipt_base, check_on_disk_hashes=mode)))
+        for mode in (False, True)
+    }
+    declared_receipt = str(data.get("receipt_digest", "")).lower()
+    if declared_receipt not in possible:
+        return False, "Lineage verification receipt_digest does not match either valid verification mode"
+    if data.get("receipt_id") != f"rec-{declared_receipt[:32]}":
+        return False, "Lineage receipt_id is not derived from receipt_digest"
+    return True, None
+
+
 def validate_lineage_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tuple[bool, Optional[str]]:
     """Strictly assert lineage-receipt-1.0 protocol, exact receipt_id, and exact receipt_digest."""
     r_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
@@ -182,7 +316,7 @@ def validate_lineage_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tupl
         return False, f"Lineage receipt ID mismatch: expected {ref.receipt_id!r}, got {r_dict.get('receipt_id')!r}"
     if str(r_dict.get("receipt_digest", "")).lower() != str(ref.receipt_digest).lower():
         return False, f"Lineage receipt digest mismatch: expected {ref.receipt_digest!r}, got {r_dict.get('receipt_digest')!r}"
-    return True, None
+    return validate_lineage_receipt_integrity(r_dict)
 
 
 def validate_academic_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tuple[bool, Optional[str]]:

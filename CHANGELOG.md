@@ -26,7 +26,18 @@
   - 由原有的 3 个外围统计与硬件探测工具，全面扩展为 12 个确定性无状态科研内核工具（新增 `research_artifact_validate`、`research_artifact_ingest`、`research_receipt_verify`、`research_object_resolve`、`research_lineage_trace`、`claim_evidence_validate`、`claim_evidence_trace`、`decision_ledger_validate`、`decision_trace`）；
 - **端到端完整生命周期与对抗性用例**：
   - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
-  - 单测基线由 632 项扩充至 **666 passed**（40 independent executable smoke fences PASS）。
+  - 新增 `tests/test_ingestion_hardening.py`，覆盖深不可变、运行时 schema、真实生产者契约、原子回滚、语义幂等、完整状态回放、防篡改摘要、三态证据语义与真实 stdio MCP 握手；
+  - 单测基线由 632 项扩充至 **691 passed, 3 intentionally skipped**（40 independent executable smoke fences PASS）。
+
+### PR #12 合并前完整性加固与历史对账
+
+- **[P1] 运行时契约与防篡改**：21 个结构化 payload schema 进入 Draft 2020-12 运行时门禁；信封、CEG、谱系收据与内核快照均重算声明摘要，非法枚举、未知字段、版本漂移、超限载荷与篡改状态 fail closed。
+- **[P1] 事务、幂等与状态本真**：缓存键绑定全部变异上下文并限定于目标状态；原子批次只在最终提交后发布缓存；CEG、Ledger、收据注册表、不确定性与入库记录完整克隆/回放，冲突对象和悬空边拒绝写入。
+- **[P1] 真实生产者契约闭环**：修正 reproduction `status`、ResearchObject 标准字段、cross-review 2.x registry、lineage edge `type`、直接 `CanonicalWork`、meta-analysis-only、screening-only 与 citation-only payload；定量审计覆盖真实返回字段，缺失或 `null` 的数学/定量核验结果进入 `unverifiable`，不再伪装为支持或反驳。
+- **[P1] MCP 公共面闭环**：严格工具入参 schema、统一 `isError`、完整 kernel state 输入输出、实际 lineage/ledger API、物理收据复核，并以真实 stdio 子进程覆盖 initialize/list/call。
+- **[P1] 深不可变**：信封、入库收据、LineageReceipt、CEG 与 Ledger 的全部嵌套 JSON 数据递归冻结；对 `to_dict()` 结果和底层映射的外部变异均不影响域对象。
+- **[P2] 审计上下文**：caller metadata 完整传递但不污染内容寻址 receipt ID；对象、物理收据、不确定性、已入库产物与总内核内容均有独立摘要。
+- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、31 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
 
 ---
 

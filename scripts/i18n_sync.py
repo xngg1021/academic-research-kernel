@@ -388,7 +388,7 @@ def build_manifest(certify_paths: Optional[List[str]] = None, certify_all_existi
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "version": "2.1.0",
         "title": "Multilingual Scholarly Documentation Synchronization Manifest",
-        "description": "Cryptographically authenticated synchronization manifest tracking whole-file SHA-256 and section-level hashes for all 53 canonical documents across 21 locales.",
+        "description": "Cryptographically authenticated synchronization manifest tracking whole-file SHA-256 and section-level hashes for all canonical documents across 21 locales.",
         "governing_registries": {
             "standards_registry_version": "1.1.0",
             "terminology_registry_version": "2.0.0",

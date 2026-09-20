@@ -45,6 +45,8 @@ def test_full_research_state_lifecycle_e2e():
     source_receipt = {
         "schema_version": "1.0",
         "query": "DOI:10.1037/bul0000209",
+        "identifiers": {"doi": "10.1037/bul0000209"},
+        "sources": [],
         "claims": [{
             "claim": "Interleaving practice boosts test retention by 42%",
             "evidence_type": "computed",
@@ -52,6 +54,7 @@ def test_full_research_state_lifecycle_e2e():
             "source": "DOI:10.1037/bul0000209",
             "support_status": "supported",
         }],
+        "generated_at": "2026-09-20T00:00:00Z",
     }
     env1 = ArtifactEnvelope.create(
         payload=source_receipt,
