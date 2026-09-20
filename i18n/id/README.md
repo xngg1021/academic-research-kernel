@@ -81,7 +81,7 @@ git diff --check
 
 QA memvalidasi metadata, referensi, pola jalur pribadi/rahasia yang diketahui, sintaksis Python, dan blok kode yang ditandai. Mengembalikan 0 jika berhasil, 1 jika gagal kode/skema/identitas, dan 2 jika transportasi/autentikasi/kuota tidak tersedia.
 
-CI menjalankan rangkaian pengujian lengkap di Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64, dan macOS Intel, dengan 632 pengujian unit yang lulus dan 40 blok kode yang dapat dieksekusi divalidasi.
+CI menjalankan rangkaian pengujian lengkap di Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64, dan macOS Intel, dengan 654 pengujian unit yang lulus dan 40 blok kode yang dapat dieksekusi divalidasi.
 
 tools/longtail/ menyimpan generator skenario ekstrim long-tail deterministik: 4096 kombinasi kandidat dengan benih SHA256 pada sumbu faktor terpisah, pemilihan cakupan serakah, dan laporan cakupan di generated-scenarios.json.
 

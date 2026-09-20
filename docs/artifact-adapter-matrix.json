@@ -1,0 +1,178 @@
+{
+  "protocol": "artifact-adapter-matrix-1.0",
+  "total_adapters": 14,
+  "adapters": [
+    {
+      "adapter_id": "adapter-academic-source-verification",
+      "adapter_version": "1.0.0",
+      "tier": 1,
+      "is_lossless": true,
+      "accepted_producers": [
+        "academic-source-verification"
+      ],
+      "accepted_schemas": [
+        "academic-evidence-1.0",
+        "evidence-receipt-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-research-object-identity",
+      "adapter_version": "1.0.0",
+      "tier": 1,
+      "is_lossless": true,
+      "accepted_producers": [
+        "research-object-identity"
+      ],
+      "accepted_schemas": [
+        "lineage-receipt-1.0",
+        "research-object-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-claim-evidence-graph",
+      "adapter_version": "1.0.0",
+      "tier": 1,
+      "is_lossless": true,
+      "accepted_producers": [
+        "claim-evidence-graph"
+      ],
+      "accepted_schemas": [
+        "ceg-snapshot-1.0",
+        "claim-evidence-graph-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-decision-ledger",
+      "adapter_version": "1.0.0",
+      "tier": 1,
+      "is_lossless": true,
+      "accepted_producers": [
+        "decision-ledger"
+      ],
+      "accepted_schemas": [
+        "decision-ledger-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-quantitative-paper-audit",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "quantitative-paper-audit"
+      ],
+      "accepted_schemas": [
+        "quantitative-audit-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-research-reproducibility",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "research-reproducibility"
+      ],
+      "accepted_schemas": [
+        "reproduction-receipt-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-cross-review-five",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "cross-review-five"
+      ],
+      "accepted_schemas": [
+        "cross-review-2.0",
+        "cross-review-finding-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-systematic-review",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "systematic-review-meta-analysis"
+      ],
+      "accepted_schemas": [
+        "meta-analysis-1.0",
+        "screening-matrix-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-literature-analysis",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "literature-analysis"
+      ],
+      "accepted_schemas": [
+        "canonical-work-1.0",
+        "corpus-matrix-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-literature-watch",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "literature-watch"
+      ],
+      "accepted_schemas": [
+        "literature-delta-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-retraction-watch",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "retraction-watch"
+      ],
+      "accepted_schemas": [
+        "retraction-alert-1.0",
+        "retraction-delta-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-math-computation",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": false,
+      "accepted_producers": [
+        "math-computation"
+      ],
+      "accepted_schemas": [
+        "computation-receipt-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-academic-writing",
+      "adapter_version": "1.0.0",
+      "tier": 3,
+      "is_lossless": false,
+      "accepted_producers": [
+        "academic-writing"
+      ],
+      "accepted_schemas": [
+        "manuscript-opaque-1.0",
+        "submission-package-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-opaque-fallback",
+      "adapter_version": "1.0.0",
+      "tier": 3,
+      "is_lossless": false,
+      "accepted_producers": [],
+      "accepted_schemas": []
+    }
+  ]
+}

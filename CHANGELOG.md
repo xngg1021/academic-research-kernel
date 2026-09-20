@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）
+
+### 统一科研产物入库桥接与确定性内核公开界面 (Research Artifact Ingestion Bridge v1 / 协议：ingestion-receipt-1.0)
+
+按战略路线图全面打通 13 项技能产物沉淀至确定性科研状态内核的入口，消解界面债务（Surface Debt）：
+
+- **共享证据契约 (`scripts/shared_contracts/evidence.py`)**：
+  - 抽取并统一维护 `ReceiptRef`、`canonical_json_bytes`、学术证据物理载荷 SHA-256 校验以及谱系收据契约验证；
+  - 消除 CEG 与 Decision Ledger 之间的内部重复代码，全仓实现 100% 逐字节序列化与哈希恒等；
+- **产物信封与入库凭证模式 (`schemas/`)**：
+  - `research-artifact-envelope.schema.json`（协议 `artifact-envelope-1.0`）：强制内容寻址派生 `artifact_id`（`art-` + 32 位 hex），将内容身份与环境元数据严格隔离；
+  - `artifact-ingestion-receipt.schema.json`（协议 `ingestion-receipt-1.0`）：强制确定性生成 `receipt_id`（`ingest-` + 32 位 hex），记录命中的适配器、输入校验状态、生成的对象标识与输出状态摘要；
+- **确定性适配器注册表与入库引擎 (`scripts/ingestion/`)**：
+  - 机器可读注册表 (`docs/artifact-adapter-matrix.json`) 覆盖全仓 13 项技能的 3 档适配器：
+    - Tier 1（原生凭证）：`academic-source-verification`、`research-object-identity`、`claim-evidence-graph`、`decision-ledger`；
+    - Tier 2（结构化分析）：`quantitative-paper-audit`、`research-reproducibility`、`cross-review-five`、`systematic-review-meta-analysis`、`literature-analysis`、`literature-watch`、`retraction-watch`、`math-computation`；
+    - Tier 3（非结构化存证）：`academic-writing` 严格遵循“非结构化保持不透明（Opaque stays opaque）、绝不替研究者代做决策”的安全红线；
+  - 事务性与幂等性：基于 `IngestionKernelState.clone()` 机制实现全批次原子提交与回滚（`atomic=True`），重复入库幂等命中；
+- **通用 MCP 服务能力升级 (`scripts/mcp_server.py`)**：
+  - 由原有的 3 个外围统计与硬件探测工具，全面扩展为 12 个确定性无状态科研内核工具（新增 `research_artifact_validate`、`research_artifact_ingest`、`research_receipt_verify`、`research_object_resolve`、`research_lineage_trace`、`claim_evidence_validate`、`claim_evidence_trace`、`decision_ledger_validate`、`decision_trace`）；
+- **端到端完整生命周期与对抗性用例**：
+  - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
+  - 单测基线由 632 项扩充至 **654 passed**（40 independent executable smoke fences PASS）。
+
+---
+
 ## 2026-09-19（PR #11 / Research Decision Log v1，分支 work/decision-ledger-v1）
 
 ### 研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)

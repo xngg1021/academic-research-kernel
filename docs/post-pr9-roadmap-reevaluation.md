@@ -103,3 +103,21 @@ Method / Supplement Miner vs Constraint Compiler
 1. **正式核准 PR #11 的立项方向为：`Decision & Negative Result Ledger v1`（决策与负结果台账内核 v1）**；
 2. PR #11 严禁引入外部非结构化重型依赖，继续严格遵循零 LLM、纯离线、确定性 Python 与三态证据纪律；
 3. 将跨产物统一桥接规划为 PR #12，使 Ledger 与 CEG 能协同消费全仓 12 技能的沉淀资产。
+
+---
+
+## 6. Post-PR11 执行备忘与 PR #12 全面启动 (PR #12 Execution Memo)
+
+PR #11 于 2026-09-19 14:30 UTC 顺利合入 `main`（merge commit `ad80729`），全仓落地 Primitive 3 决策账本内核、53 篇规范源文档增量同步清册与 21 语种 Profile 门禁体系。
+
+经维护团队与战略评审评估，PR #11 合并后，仓库的主要矛盾已由“内核能力有无”转向“外部 Agent 发现、安装与直接调用核心能力的界面债务（Surface Debt）”。
+
+因此，PR #12 正式立项为：
+`feat(kernel): Research Artifact Ingestion Bridge v1 and deterministic public kernel surface`
+
+核心目标：
+1. 建立 `ResearchArtifactEnvelope v1` 与 `ArtifactIngestionReceipt v1` 统一标准；
+2. 落地全仓 13 项技能的确定性适配器注册表（按原生结构化凭证、结构化分析产物、非结构化存证三档隔离）；
+3. 严格遵循“非结构化保持不透明（Opaque stays opaque）、绝不替研究者代做决策”的安全红线；
+4. 将内核全量能力通过 12 个确定性工具正式暴露为无状态 stdio MCP 接口，彻底消除界面债务；
+5. PyPI / `uvx` 打包分发与官方 MCP Registry 提交明确收敛至 PR #13 执行，确保 PR #12 专注冻结公共内核 API 与数据契约。

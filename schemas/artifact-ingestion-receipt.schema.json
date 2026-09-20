@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/artifact-ingestion-receipt.schema.json",
+  "title": "ArtifactIngestionReceipt",
+  "description": "Deterministic receipt proving ingestion of a research artifact into the kernel state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "receipt_id",
+    "source_artifact_id",
+    "source_artifact_sha256",
+    "adapter_id",
+    "adapter_version",
+    "status",
+    "output_digests"
+  ],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "const": "ingestion-receipt-1.0"
+    },
+    "receipt_id": {
+      "type": "string",
+      "description": "Deterministic identifier derived from canonical ingestion inputs (ingest- + 32 hex chars).",
+      "pattern": "^ingest-[0-9a-f]{32}$"
+    },
+    "source_artifact_id": {
+      "type": "string",
+      "pattern": "^art-[0-9a-f]{32}$"
+    },
+    "source_artifact_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "adapter_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]{1,64}$"
+    },
+    "adapter_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "status": {
+      "type": "string",
+      "enum": ["accepted", "rejected", "partial"]
+    },
+    "validation_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "errors"],
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "created_or_reused_objects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ceg_nodes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ceg_edges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ledger_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decision_id", "binding_kind", "basis_id"],
+        "properties": {
+          "decision_id": {
+            "type": "string"
+          },
+          "binding_kind": {
+            "type": "string",
+            "enum": ["evidence_receipt", "reproduction_receipt", "computed_evidence", "review_finding", "uncertainty"]
+          },
+          "basis_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "ignored_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "output_digests": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "object_registry_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "ceg_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "ledger_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "failure_reason": {
+      "type": "string"
+    },
+    "caller_metadata": {
+      "type": "object"
+    }
+  }
+}

@@ -435,131 +435,30 @@ def _frozen_meta(metadata: Optional[Mapping[str, Any]]) -> FrozenDict:
 # Receipt contracts (byte-compatible with the CEG Kernel)
 # ---------------------------------------------------------------------------
 
-def validate_lineage_receipt_contract(ref: "ReceiptRef", receipt_obj: Any) -> Tuple[bool, Optional[str]]:
-    """Strictly assert lineage-receipt-1.0 protocol, exact receipt_id, and exact receipt_digest."""
-    r_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
-    if not isinstance(r_dict, (dict, collections.abc.Mapping)) or r_dict.get("protocol") != "lineage-receipt-1.0":
-        return False, "Lineage receipt invalid protocol: expected 'lineage-receipt-1.0'"
-    if r_dict.get("receipt_id") != ref.receipt_id:
-        return False, f"Lineage receipt ID mismatch: expected {ref.receipt_id!r}, got {r_dict.get('receipt_id')!r}"
-    if str(r_dict.get("receipt_digest", "")).lower() != str(ref.receipt_digest).lower():
-        return False, f"Lineage receipt digest mismatch: expected {ref.receipt_digest!r}, got {r_dict.get('receipt_digest')!r}"
-    return True, None
-
-
-def validate_academic_receipt_contract(ref: "ReceiptRef", receipt_obj: Any) -> Tuple[bool, Optional[str]]:
-    """Strictly assert schema_version=1.0, physical payload SHA256, and exact claim match.
-
-    The claim must be a legitimate evidence record (evidence_type within the
-    schema's evidence-type vocabulary) whose canonical digest equals the
-    referenced claim_digest. Byte-compatible with Claim-Evidence Graph Kernel v1.
-    """
-    val_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
-    if not isinstance(val_dict, (dict, collections.abc.Mapping)):
-        return False, "AcademicEvidence invalid representation: must be a dict"
-    thawed = val_dict if isinstance(val_dict, dict) else dict(val_dict)
-    actual_sha = canonical_academic_receipt_payload_sha256(thawed)
-    if actual_sha != ref.payload_sha256:
-        return False, f"AcademicEvidence payload SHA256 mismatch: expected {ref.payload_sha256}, got actual hash {actual_sha}"
-    if thawed.get("schema_version") != "1.0" or not isinstance(thawed.get("claims"), (list, tuple)):
-        return False, "AcademicEvidence receipt structural violation: missing schema_version=1.0 or claims list"
-
-    matching_claim = False
-    for c_item in thawed.get("claims", []):
-        if not isinstance(c_item, (dict, collections.abc.Mapping)):
-            continue
-        c_dict = c_item if isinstance(c_item, dict) else dict(c_item)
-        if c_dict.get("evidence_type") not in {"metadata", "citation_count", "update_signal", "full_text", "computed"}:
-            continue
-        if canonical_evidence_claim_digest(c_dict) == ref.claim_digest:
-            matching_claim = True
-            break
-    if not matching_claim:
-        return False, f"AcademicEvidence claim digest mismatch: claim_digest {ref.claim_digest} not found in legitimate receipt claims"
-    return True, None
-
-
-@dataclass(frozen=True)
-class ReceiptRef:
-    """Strongly typed receipt reference with strict kind-field mutual exclusivity."""
-
-    kind: str
-    schema_version: str
-    receipt_id: Optional[str] = None
-    receipt_digest: Optional[str] = None
-    claim_digest: Optional[str] = None
-    payload_sha256: Optional[str] = None
-    locator: Optional[str] = None
-
-    def __post_init__(self):
-        if self.kind not in VALID_RECEIPT_KINDS:
-            raise ValueError(f"Invalid receipt kind: {self.kind!r}. Must be one of {sorted(VALID_RECEIPT_KINDS)}")
-
-        if self.kind == "lineage":
-            if self.schema_version != "lineage-receipt-1.0":
-                raise ValueError(f"Invalid schema_version for lineage receipt: {self.schema_version!r}. Must be 'lineage-receipt-1.0'.")
-            if not self.receipt_id:
-                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_id'.")
-            if not self.receipt_digest:
-                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_digest'.")
-            r_dig = self.receipt_digest.strip().lower()
-            if not SHA256_REGEX.match(r_dig):
-                raise ValueError(f"Invalid receipt_digest format: {self.receipt_digest!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "receipt_digest", r_dig)
-            if self.claim_digest is not None or self.payload_sha256 is not None:
-                raise ValueError("Lineage ReceiptRef must not contain academic_evidence fields (claim_digest or payload_sha256).")
-
-        elif self.kind == "academic_evidence":
-            if self.schema_version != "1.0":
-                raise ValueError(f"Invalid schema_version for academic_evidence receipt: {self.schema_version!r}. Must be '1.0'.")
-            if not self.claim_digest:
-                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'claim_digest'.")
-            if not self.payload_sha256:
-                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'payload_sha256'.")
-            c_dig = self.claim_digest.strip().lower()
-            if not SHA256_REGEX.match(c_dig):
-                raise ValueError(f"Invalid claim_digest format: {self.claim_digest!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "claim_digest", c_dig)
-            p_dig = self.payload_sha256.strip().lower()
-            if not SHA256_REGEX.match(p_dig):
-                raise ValueError(f"Invalid payload_sha256 format: {self.payload_sha256!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "payload_sha256", p_dig)
-            if self.receipt_id is not None or self.receipt_digest is not None:
-                raise ValueError("AcademicEvidence ReceiptRef must not contain lineage fields (receipt_id or receipt_digest).")
-
-        if self.locator is not None:
-            if not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048):
-                raise ValueError("locator must be a non-empty string of at most 2048 characters.")
-
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
-            "kind": self.kind,
-            "schema_version": self.schema_version,
-        }
-        if self.receipt_id:
-            d["receipt_id"] = self.receipt_id
-        if self.receipt_digest:
-            d["receipt_digest"] = self.receipt_digest
-        if self.claim_digest:
-            d["claim_digest"] = self.claim_digest
-        if self.payload_sha256:
-            d["payload_sha256"] = self.payload_sha256
-        if self.locator:
-            d["locator"] = self.locator
-        return d
-
-
-def canonical_receipt_ref_tuple(ref: Optional[ReceiptRef]) -> Tuple[str, ...]:
-    if not ref:
-        return ()
-    return (
-        ref.kind,
-        ref.schema_version,
-        ref.receipt_id or "",
-        ref.receipt_digest or "",
-        ref.claim_digest or "",
-        ref.payload_sha256 or "",
-        ref.locator or "",
+try:
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        canonical_receipt_ref_tuple,
+        canonical_academic_receipt_payload_sha256,
+        canonical_evidence_claim_digest,
+        validate_lineage_receipt_contract,
+        validate_academic_receipt_contract,
+        verify_receipt_reference,
+    )
+except ImportError:
+    import sys
+    from pathlib import Path
+    _repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(_repo_root / "scripts") not in sys.path:
+        sys.path.insert(0, str(_repo_root / "scripts"))
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        canonical_receipt_ref_tuple,
+        canonical_academic_receipt_payload_sha256,
+        canonical_evidence_claim_digest,
+        validate_lineage_receipt_contract,
+        validate_academic_receipt_contract,
+        verify_receipt_reference,
     )
 
 
