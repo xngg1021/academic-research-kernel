@@ -1,7 +1,8 @@
 {
-  "version": "extreme-academic-longtail-v2",
+  "version": "extreme-academic-longtail-v3",
   "seed": 20260917,
-  "hard_coverage_axes": ["C02_primary_object_type"],
+  "coverage_quotas": {"min_skill_usage": 2, "min_skill_task_goals": 2, "min_capability_usage": 1},
+  "hard_coverage_axes": ["C02_primary_object_type", "E04_correct_terminal_state"],
   "axes": {
     "A01_role": {"levels": ["undergraduate_student", "master_student", "phd_student", "delayed_phd", "postdoc", "principal_investigator", "independent_researcher", "clinician_researcher", "nurse_researcher", "librarian", "archivist", "journal_editor", "peer_reviewer", "government_researcher", "NGO_researcher", "industry_researcher", "retired_professor", "secondary_school_teacher", "community_researcher", "farmer_cooperative_researcher", "museum_curator", "translator", "citizen_scientist"], "tags": {}},
     "A02_responsibility": {"levels": ["learning_only", "literature_search", "manuscript_author", "data_extractor", "statistical_reviewer", "reproducibility_checker", "systematic_review_screener", "corresponding_author", "grant_writer", "journal_gatekeeper", "evidence_synthesizer", "archive_cataloguer", "research_assistant", "project_handoff_receiver"], "tags": {}},
@@ -70,8 +71,9 @@
     "D13_study_report_topology": {"levels": ["one_study_one_report", "one_study_multiple_articles", "trial_registry_plus_article", "trial_registry_plus_abstract_plus_article", "conference_abstract_then_full_article", "several_followup_timepoints", "subgroup_report", "secondary_analysis_same_cohort", "duplicate_publication", "reports_have_different_sample_sizes", "reports_have_conflicting_outcomes", "one_report_contains_multiple_studies"], "tags": {"one_study_multiple_articles": ["study_report_topology"], "trial_registry_plus_article": ["study_report_topology"], "trial_registry_plus_abstract_plus_article": ["study_report_topology"], "conference_abstract_then_full_article": ["study_report_topology"], "several_followup_timepoints": ["study_report_topology"], "subgroup_report": ["study_report_topology"], "secondary_analysis_same_cohort": ["study_report_topology"], "duplicate_publication": ["study_report_topology"], "reports_have_different_sample_sizes": ["study_report_topology"], "reports_have_conflicting_outcomes": ["study_report_topology"], "one_report_contains_multiple_studies": ["study_report_topology"]}},
     "D14_ground_truth_availability": {"levels": ["exact_machine_ground_truth", "authoritative_metadata", "two_sources_agree", "sources_conflict", "human_annotation_available", "only_partial_oracle", "no_external_ground_truth"], "tags": {}},
     "D15_temporal_mutability": {"levels": ["static", "metadata_updated", "correction_added", "retraction_added", "dataset_new_version", "repository_new_release", "API_schema_deprecated", "URL_rotted", "affiliation_changed", "author_name_changed", "living_review_updated"], "tags": {}},
-    "E01_primary_capability": {"levels": ["source_verification", "quantitative_audit", "reproducibility_audit", "systematic_review", "literature_monitoring", "retraction_monitoring", "research_object_identity"], "tags": {}, "multi": true, "min_choice": 1, "max_choice": 3},
-    "E03_task_goal": {"levels": ["verify_identity", "resolve_duplicates", "reconstruct_lineage", "verify_update_status", "locate_best_available_fulltext", "recompute_statistic", "detect_numeric_inconsistency", "audit_reproduction", "link_reports_to_study", "deduplicate_review_corpus", "monitor_new_work", "detect_status_change", "recover_from_partial_failure", "produce_machine_readable_receipt"], "tags": {}},
+    "E01_primary_capability": {"levels": ["source_verification", "quantitative_audit", "reproducibility_audit", "systematic_review", "literature_monitoring", "retraction_monitoring", "research_object_identity", "provenance_tracking", "literature_analysis", "evidence_synthesis", "peer_review", "bibliography_interop", "academic_writing", "mathematical_computation", "evidence_linking", "decision_tracking"], "tags": {}, "multi": true, "min_choice": 1, "max_choice": 3, "description": "Capability families exercised by the selected primary skill and task goal; 1..3 distinct supported families, not skill identities."},
+    "E02_skill_under_test": {"levels": ["academic-source-verification", "literature-analysis", "academic-writing", "math-computation", "quantitative-paper-audit", "research-reproducibility", "systematic-review-meta-analysis", "literature-watch", "retraction-watch", "research-object-identity", "claim-evidence-graph", "decision-ledger", "cross-review-five"], "multi": false, "description": "Exactly one primary repository skill per scenario. No implicit secondary skills or multi-skill workflow coverage.", "tags": {}},
+    "E03_task_goal": {"levels": ["verify_identity", "resolve_duplicates", "reconstruct_lineage", "verify_update_status", "locate_best_available_fulltext", "recompute_statistic", "detect_numeric_inconsistency", "audit_reproduction", "link_reports_to_study", "deduplicate_review_corpus", "monitor_new_work", "detect_status_change", "recover_from_partial_failure", "produce_machine_readable_receipt", "compare_literature", "identify_counter_evidence", "build_review_matrix", "analyze_research_gaps", "export_bibliography", "adversarial_challenge", "revise_manuscript", "prepare_citation_style", "prepare_submission_materials", "symbolic_computation", "numerical_computation", "verify_mathematics", "link_evidence_to_claim", "trace_supporting_refuting_evidence", "validate_contradiction_provenance", "record_decision", "record_negative_result", "prune_route", "reopen_route", "record_outcome_correction", "multi_review", "reconcile_disagreements"], "tags": {}, "description": "One concrete task goal admitted by the primary skill semantics mapping. All goals are reported; the 30-scenario budget does not promise complete goal coverage."},
     "E04_correct_terminal_state": {"levels": ["SUCCESS", "PARTIAL", "BLOCKED", "UNRESOLVED", "NEEDS_HUMAN", "CONFLICT"], "tags": {"BLOCKED": ["non_success_terminal"], "UNRESOLVED": ["non_success_terminal"], "NEEDS_HUMAN": ["non_success_terminal"]}}
   },
   "events": {
@@ -83,15 +85,432 @@
     "workflow": ["user_changes_target_midway", "reviewer_comment_arrives", "collaborator_edits_source_file", "dataset_new_version_published", "repository_HEAD_moves", "task_interrupted_and_resumed", "input_modality_changes", "only_two_minutes_remaining"],
     "state_concurrency": ["two_processes_write_same_state", "stale_cache", "state_file_truncated", "duplicate_event_delivered", "event_arrives_out_of_order", "replay_same_event_twice"]
   },
-  "pairwise_axes": [
-    ["A10_accessibility_need", "A11_primary_input_mode"],
-    ["C02_primary_object_type", "C06_identifier_topology"],
-    ["C07_language", "C08_script_system"],
-    ["B09_network_quality", "B10_database_reachability"],
-    ["D08_governance", "C23_access_license_state"],
-    ["E01_primary_capability", "C02_primary_object_type"],
-    ["C04_era", "C06_identifier_topology"],
-    ["A08_native_language", "C07_language"]
-  ],
+  "skill_semantics": {
+    "academic-source-verification": {
+      "source": "skills/academic-source-verification/SKILL.md",
+      "capability_families": [
+        "source_verification",
+        "research_object_identity",
+        "retraction_monitoring",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "verify_identity": [
+          "source_verification",
+          "research_object_identity"
+        ],
+        "verify_update_status": [
+          "source_verification",
+          "retraction_monitoring"
+        ],
+        "locate_best_available_fulltext": [
+          "source_verification"
+        ],
+        "produce_machine_readable_receipt": [
+          "source_verification",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "source evidence producer",
+      "event_categories": [
+        "network_API",
+        "artifact",
+        "metadata",
+        "auth_governance"
+      ],
+      "coverage_anchor_goal": "verify_identity"
+    },
+    "literature-analysis": {
+      "source": "skills/literature-analysis/SKILL.md",
+      "capability_families": [
+        "literature_analysis",
+        "evidence_synthesis",
+        "peer_review",
+        "bibliography_interop"
+      ],
+      "task_goals": {
+        "compare_literature": [
+          "literature_analysis",
+          "evidence_synthesis"
+        ],
+        "identify_counter_evidence": [
+          "literature_analysis",
+          "evidence_synthesis",
+          "peer_review"
+        ],
+        "build_review_matrix": [
+          "literature_analysis",
+          "evidence_synthesis"
+        ],
+        "analyze_research_gaps": [
+          "literature_analysis",
+          "evidence_synthesis"
+        ],
+        "export_bibliography": [
+          "literature_analysis",
+          "bibliography_interop"
+        ],
+        "adversarial_challenge": [
+          "literature_analysis",
+          "peer_review"
+        ]
+      },
+      "workflow_role": "literature comparison and synthesis",
+      "event_categories": [
+        "network_API",
+        "artifact",
+        "metadata",
+        "workflow"
+      ],
+      "coverage_anchor_goal": "compare_literature"
+    },
+    "academic-writing": {
+      "source": "skills/academic-writing/SKILL.md",
+      "capability_families": [
+        "academic_writing",
+        "bibliography_interop",
+        "peer_review"
+      ],
+      "task_goals": {
+        "revise_manuscript": [
+          "academic_writing"
+        ],
+        "prepare_citation_style": [
+          "academic_writing",
+          "bibliography_interop"
+        ],
+        "prepare_submission_materials": [
+          "academic_writing",
+          "peer_review"
+        ]
+      },
+      "workflow_role": "manuscript and submission preparation",
+      "event_categories": [
+        "artifact",
+        "metadata",
+        "workflow",
+        "local_environment"
+      ],
+      "coverage_anchor_goal": "revise_manuscript"
+    },
+    "math-computation": {
+      "source": "skills/math-computation/SKILL.md",
+      "capability_families": [
+        "mathematical_computation",
+        "quantitative_audit",
+        "reproducibility_audit",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "symbolic_computation": [
+          "mathematical_computation"
+        ],
+        "numerical_computation": [
+          "mathematical_computation"
+        ],
+        "verify_mathematics": [
+          "mathematical_computation",
+          "quantitative_audit"
+        ],
+        "recompute_statistic": [
+          "mathematical_computation",
+          "quantitative_audit"
+        ],
+        "produce_machine_readable_receipt": [
+          "mathematical_computation",
+          "reproducibility_audit",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "symbolic and numeric computation with verification",
+      "event_categories": [
+        "artifact",
+        "local_environment",
+        "workflow"
+      ],
+      "coverage_anchor_goal": "symbolic_computation"
+    },
+    "quantitative-paper-audit": {
+      "source": "skills/quantitative-paper-audit/SKILL.md",
+      "capability_families": [
+        "quantitative_audit",
+        "mathematical_computation",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "recompute_statistic": [
+          "quantitative_audit",
+          "mathematical_computation"
+        ],
+        "detect_numeric_inconsistency": [
+          "quantitative_audit"
+        ],
+        "produce_machine_readable_receipt": [
+          "quantitative_audit",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "independent numeric claim checker",
+      "event_categories": [
+        "artifact",
+        "metadata",
+        "local_environment"
+      ],
+      "coverage_anchor_goal": "recompute_statistic"
+    },
+    "research-reproducibility": {
+      "source": "skills/research-reproducibility/SKILL.md",
+      "capability_families": [
+        "reproducibility_audit",
+        "research_object_identity",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "audit_reproduction": [
+          "reproducibility_audit"
+        ],
+        "verify_identity": [
+          "reproducibility_audit",
+          "research_object_identity"
+        ],
+        "produce_machine_readable_receipt": [
+          "reproducibility_audit",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "reproduction audit and receipt producer",
+      "event_categories": [
+        "artifact",
+        "local_environment",
+        "auth_governance",
+        "workflow"
+      ],
+      "coverage_anchor_goal": "audit_reproduction"
+    },
+    "systematic-review-meta-analysis": {
+      "source": "skills/systematic-review-meta-analysis/SKILL.md",
+      "capability_families": [
+        "systematic_review",
+        "research_object_identity",
+        "quantitative_audit",
+        "evidence_synthesis"
+      ],
+      "task_goals": {
+        "link_reports_to_study": [
+          "systematic_review",
+          "research_object_identity"
+        ],
+        "deduplicate_review_corpus": [
+          "systematic_review",
+          "research_object_identity"
+        ],
+        "recompute_statistic": [
+          "systematic_review",
+          "quantitative_audit",
+          "evidence_synthesis"
+        ],
+        "build_review_matrix": [
+          "systematic_review",
+          "evidence_synthesis"
+        ]
+      },
+      "workflow_role": "review corpus screening and effect synthesis",
+      "event_categories": [
+        "network_API",
+        "metadata",
+        "artifact",
+        "workflow"
+      ],
+      "coverage_anchor_goal": "link_reports_to_study"
+    },
+    "literature-watch": {
+      "source": "skills/literature-watch/SKILL.md",
+      "capability_families": [
+        "literature_monitoring",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "monitor_new_work": [
+          "literature_monitoring"
+        ],
+        "recover_from_partial_failure": [
+          "literature_monitoring"
+        ],
+        "produce_machine_readable_receipt": [
+          "literature_monitoring",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "persistent new literature delta monitor",
+      "event_categories": [
+        "network_API",
+        "metadata",
+        "auth_governance",
+        "state_concurrency"
+      ],
+      "coverage_anchor_goal": "monitor_new_work"
+    },
+    "retraction-watch": {
+      "source": "skills/retraction-watch/SKILL.md",
+      "capability_families": [
+        "retraction_monitoring",
+        "source_verification",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "detect_status_change": [
+          "retraction_monitoring"
+        ],
+        "verify_update_status": [
+          "retraction_monitoring",
+          "source_verification"
+        ],
+        "recover_from_partial_failure": [
+          "retraction_monitoring"
+        ],
+        "produce_machine_readable_receipt": [
+          "retraction_monitoring",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "persistent publication status delta monitor",
+      "event_categories": [
+        "network_API",
+        "metadata",
+        "auth_governance",
+        "state_concurrency"
+      ],
+      "coverage_anchor_goal": "detect_status_change"
+    },
+    "research-object-identity": {
+      "source": "skills/research-object-identity/SKILL.md",
+      "capability_families": [
+        "research_object_identity",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "verify_identity": [
+          "research_object_identity"
+        ],
+        "resolve_duplicates": [
+          "research_object_identity"
+        ],
+        "reconstruct_lineage": [
+          "research_object_identity",
+          "provenance_tracking"
+        ],
+        "produce_machine_readable_receipt": [
+          "research_object_identity",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "identity resolver and production lineage provider",
+      "event_categories": [
+        "metadata",
+        "artifact",
+        "state_concurrency",
+        "local_environment"
+      ],
+      "coverage_anchor_goal": "reconstruct_lineage"
+    },
+    "claim-evidence-graph": {
+      "source": "skills/claim-evidence-graph/SKILL.md",
+      "capability_families": [
+        "evidence_linking",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "link_evidence_to_claim": [
+          "evidence_linking"
+        ],
+        "trace_supporting_refuting_evidence": [
+          "evidence_linking",
+          "provenance_tracking"
+        ],
+        "validate_contradiction_provenance": [
+          "evidence_linking",
+          "provenance_tracking"
+        ],
+        "produce_machine_readable_receipt": [
+          "evidence_linking",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "typed evidence linking and claim trace provider",
+      "event_categories": [
+        "artifact",
+        "metadata",
+        "state_concurrency",
+        "workflow"
+      ],
+      "coverage_anchor_goal": "link_evidence_to_claim"
+    },
+    "decision-ledger": {
+      "source": "skills/decision-ledger/SKILL.md",
+      "capability_families": [
+        "decision_tracking",
+        "evidence_linking",
+        "provenance_tracking"
+      ],
+      "task_goals": {
+        "record_decision": [
+          "decision_tracking"
+        ],
+        "record_negative_result": [
+          "decision_tracking",
+          "evidence_linking"
+        ],
+        "prune_route": [
+          "decision_tracking",
+          "provenance_tracking"
+        ],
+        "reopen_route": [
+          "decision_tracking",
+          "provenance_tracking"
+        ],
+        "record_outcome_correction": [
+          "decision_tracking",
+          "provenance_tracking"
+        ]
+      },
+      "workflow_role": "append-only research decision and negative-result recorder",
+      "event_categories": [
+        "artifact",
+        "state_concurrency",
+        "workflow",
+        "local_environment"
+      ],
+      "coverage_anchor_goal": "record_decision"
+    },
+    "cross-review-five": {
+      "source": "skills/cross-review-five/SKILL.md",
+      "capability_families": [
+        "peer_review",
+        "evidence_synthesis"
+      ],
+      "task_goals": {
+        "multi_review": [
+          "peer_review"
+        ],
+        "adversarial_challenge": [
+          "peer_review",
+          "evidence_synthesis"
+        ],
+        "reconcile_disagreements": [
+          "peer_review",
+          "evidence_synthesis"
+        ]
+      },
+      "workflow_role": "heterogeneous review and disagreement coordinator",
+      "event_categories": [
+        "workflow",
+        "network_API",
+        "artifact",
+        "auth_governance"
+      ],
+      "coverage_anchor_goal": "multi_review"
+    }
+  },
+  "pairwise_axes": [["A10_accessibility_need", "A11_primary_input_mode"], ["C02_primary_object_type", "C06_identifier_topology"], ["C07_language", "C08_script_system"], ["B09_network_quality", "B10_database_reachability"], ["D08_governance", "C23_access_license_state"], ["E01_primary_capability", "C02_primary_object_type"], ["C04_era", "C06_identifier_topology"], ["A08_native_language", "C07_language"], ["E02_skill_under_test", "E03_task_goal"], ["E02_skill_under_test", "E01_primary_capability"]],
   "critical_tuple": ["A01_role", "B01_jurisdiction", "C02_primary_object_type", "C04_era", "C06_identifier_topology", "C07_language", "B09_network_quality", "E01_primary_capability"]
 }

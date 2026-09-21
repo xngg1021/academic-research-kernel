@@ -333,8 +333,17 @@ def test_rp02_receipt_keeps_evidence_fields():
 MINI_CATALOG = {
     'axes': {
         'A': {'levels': ['a1', 'a2', 'a3']},
-        'E01_primary_capability': {'levels': ['s1', 's2'], 'multi': True},
+        'E01_primary_capability': {'levels': ['cap1', 'cap2'], 'multi': True, 'min_choice': 1, 'max_choice': 3},
+        'E02_skill_under_test': {'levels': ['s1', 's2']},
+        'E03_task_goal': {'levels': ['g1', 'g2']},
         'E04_correct_terminal_state': {'levels': ['ok']},
+    },
+    'seed': 20260917,
+    'hard_coverage_axes': [],
+    'coverage_quotas': {'min_skill_usage': 2, 'min_skill_task_goals': 2, 'min_capability_usage': 1},
+    'skill_semantics': {
+        's1': {'coverage_anchor_goal': 'g1', 'task_goals': {'g1': ['cap1']}, 'event_categories': ['ev1', 'ev2']},
+        's2': {'coverage_anchor_goal': 'g2', 'task_goals': {'g2': ['cap2']}, 'event_categories': ['ev1', 'ev2']},
     },
     'pairwise_axes': [],
     'critical_tuple': ['A'],
@@ -343,9 +352,11 @@ MINI_CATALOG = {
 
 
 def test_fw01_inverse_keeps_shared_levels():
-    combo1 = {'A': 'a1', 'E01_primary_capability': ['s1'],
+    combo1 = {'A': 'a1', 'E01_primary_capability': ['cap1'],
+              'E02_skill_under_test': 's1', 'E03_task_goal': 'g1',
               'E04_correct_terminal_state': 'ok', '_ci': 1}
-    combo2 = {'A': 'a1', 'E01_primary_capability': ['s2'],
+    combo2 = {'A': 'a1', 'E01_primary_capability': ['cap2'],
+              'E02_skill_under_test': 's2', 'E03_task_goal': 'g2',
               'E04_correct_terminal_state': 'ok', '_ci': 2}
     state = longtail.coverage_state(MINI_CATALOG)
     longtail.apply_combo(MINI_CATALOG, combo1, state)
@@ -354,6 +365,8 @@ def test_fw01_inverse_keeps_shared_levels():
     longtail.apply_combo_inverse(MINI_CATALOG, combo1, state, [combo2])
     assert 'a1' in state['levels']['A'], '共享 level 被其他场景覆盖时不得误删'
     assert state['skills']['s2'] == 1
+    assert state['capabilities']['cap2'] == 1
+    assert state['task_goals']['g2'] == 1
 
 
 # ---------- FW-02 ----------
@@ -361,7 +374,7 @@ def test_fw01_inverse_keeps_shared_levels():
 def test_fw02_absent_skill_flagged():
     state = longtail.coverage_state(MINI_CATALOG)
     problems = longtail.verify_quotas(state, [], MINI_CATALOG)
-    assert any(p.startswith('skill s1:') and '0 < 8' in p for p in problems)
+    assert any(p.startswith('skill s1:') and '0 < 2' in p for p in problems)
     assert any(p.startswith('skill s2:') for p in problems)
 
 

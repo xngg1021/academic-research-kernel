@@ -163,7 +163,7 @@ QA 校验元数据、参考文件、个人路径与已知密钥模式、Python �
 
 CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。最终候选本地测试为 974 passed、零跳过；精确 HEAD 的远端结果单独记录于收尾账本。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
-tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
+[tools/longtail/](tools/longtail/README.md) 存放确定性长尾因子生成器：4096 个 SHA256 种子候选，选取 30 个场景并输出机器计算的覆盖报告。v3 分别统计能力族（E01）、仓库实际的 13 个技能（E02）与任务目标（E03）。每个场景只绑定一个主要技能、一个受支持的任务目标及兼容能力；每个技能至少出现 2 次、覆盖 2 个不同目标，其中包含其声明的核心目标。技能目录与因子目录不一致时验证失败。语义展开（任务链、判据与实际事件注入）仍是独立阶段；因子覆盖不代表工作流已经执行验证。
 
 scripts/scfabric/ 是科学计算执行层：硬件探针、带 dtype 门禁的后端目录、五个工作负载画像、带数值等价检查的配对基准与 ComputeReceipt。本机首轮实测见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；经验规则是默认 CPU，加速器只凭 receipt 启用。
 

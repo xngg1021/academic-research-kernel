@@ -131,7 +131,7 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
+      "source_sha256": "dd43b302a925a5c63131cdc5f536ded7e8e0e2f6b27fc9cb091848d348e20b4e",
       "section_hashes": {
         "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
         "Quick start": "2ce6f833be8b7d7ca4a3060bc465277d090e862a4e8c889917cf2ba1a97ddbf9",
@@ -147,7 +147,7 @@
         "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
         "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
         "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
-        "Validation": "d9117d9444fc5040c4bbc9df3bd5f5e5f3ceaa0f0f22bc5ea92f71d7838be982",
+        "Validation": "f18a54838e03908c3c56bd962fd82702bc39ca8008850891fe7e2a8d01013dcc",
         "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
       },
       "genre": "user_facing_documentation",
@@ -156,8 +156,8 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
-          "translated_from_source_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
+          "localized_file_sha256": "dd43b302a925a5c63131cdc5f536ded7e8e0e2f6b27fc9cb091848d348e20b4e",
+          "translated_from_source_sha256": "dd43b302a925a5c63131cdc5f536ded7e8e0e2f6b27fc9cb091848d348e20b4e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
             "Quick start": "2ce6f833be8b7d7ca4a3060bc465277d090e862a4e8c889917cf2ba1a97ddbf9",
@@ -173,7 +173,7 @@
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
             "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
-            "Validation": "d9117d9444fc5040c4bbc9df3bd5f5e5f3ceaa0f0f22bc5ea92f71d7838be982",
+            "Validation": "f18a54838e03908c3c56bd962fd82702bc39ca8008850891fe7e2a8d01013dcc",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -182,8 +182,8 @@
         "zh-Hans": {
           "path": "README.zh-Hans.md",
           "status": "localized_current",
-          "localized_file_sha256": "93a6a635e340f43cd2ec65019a1eb8d0ec8fd6b08065757a8acd9784b74b9728",
-          "translated_from_source_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
+          "localized_file_sha256": "6231d792a2af27c2e6ab5e1c2b949c4c606f0c0542362fe9a53c49cdfaa2ec24",
+          "translated_from_source_sha256": "dd43b302a925a5c63131cdc5f536ded7e8e0e2f6b27fc9cb091848d348e20b4e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
             "Quick start": "2ce6f833be8b7d7ca4a3060bc465277d090e862a4e8c889917cf2ba1a97ddbf9",
@@ -199,7 +199,7 @@
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
             "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
-            "Validation": "d9117d9444fc5040c4bbc9df3bd5f5e5f3ceaa0f0f22bc5ea92f71d7838be982",
+            "Validation": "f18a54838e03908c3c56bd962fd82702bc39ca8008850891fe7e2a8d01013dcc",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
@@ -234,7 +234,7 @@
             "Deterministic ingestion and public kernel",
             "Validation",
             "admission_deficit: code fence count deficit: expected at least 16, got 6",
-            "admission_deficit: insufficient content length: 6880 bytes vs 18504 bytes"
+            "admission_deficit: insufficient content length: 6880 bytes vs 18814 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -427,7 +427,7 @@
             "Deterministic ingestion and public kernel",
             "Validation",
             "admission_deficit: code fence count deficit: expected at least 16, got 6",
-            "admission_deficit: insufficient content length: 7736 bytes vs 18504 bytes"
+            "admission_deficit: insufficient content length: 7736 bytes vs 18814 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -459,7 +459,8 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
-            "admission_deficit: code fence count deficit: expected at least 16, got 6"
+            "admission_deficit: code fence count deficit: expected at least 16, got 6",
+            "admission_deficit: insufficient content length: 8371 bytes vs 18814 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -747,7 +748,8 @@
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
-            "admission_deficit: code fence count deficit: expected at least 16, got 6"
+            "admission_deficit: code fence count deficit: expected at least 16, got 6",
+            "admission_deficit: insufficient content length: 8337 bytes vs 18814 bytes"
           ],
           "last_verified": "2026-09-19"
         },
