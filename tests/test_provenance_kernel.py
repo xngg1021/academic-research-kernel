@@ -265,6 +265,12 @@ def test_immutable_receipt_and_deep_isolation():
     d["entities"][0]["metadata"]["version"] = 888
     assert receipt.entities[0]["metadata"]["version"] == 1
 
+    # The receipt itself has no reachable mutable mapping/list path.
+    with pytest.raises(TypeError, match="do not support mutation|item assignment"):
+        receipt.entities[0]["metadata"]["version"] = 777
+    with pytest.raises(AttributeError):
+        receipt.trace_steps.append({"step_number": 99})
+
 
 def test_verification_coverage_states_not_collapsed():
     """P1-05: check_on_disk_hashes=False or unhashed entities must report 'unchecked', not 'intact'."""

@@ -1,0 +1,251 @@
+{
+  "protocol": "project-lineage-audit-1.0",
+  "as_of": "2026-09-20T12:00:24Z",
+  "repository": "xngg1021/academic-research-kernel",
+  "summary": {
+    "pull_requests_total": 12,
+    "pull_requests_merged": 11,
+    "pull_requests_open": 1,
+    "exact_head_workflow_runs_successful": 12,
+    "exact_head_workflow_runs_failed": 0,
+    "verified_remediation_workflow_runs_successful": 11,
+    "standalone_issues": 0,
+    "pr12_review_threads_unresolved_at_start": 31,
+    "pr12_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 30,
+      "P2": 1,
+      "P3": 0
+    },
+    "pr12_review_threads_observed_total": 117,
+    "pr12_review_threads_resolved_current": 31,
+    "pr12_review_threads_unresolved_current": 86,
+    "pr12_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 7,
+      "P2": 0,
+      "P3": 0
+    },
+    "pr12_followup_findings_remediated_locally": 7,
+    "pr12_second_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 6,
+      "P2": 1,
+      "P3": 0
+    },
+    "pr12_second_followup_findings_remediated_locally": 7,
+    "pr12_third_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 5,
+      "P2": 3,
+      "P3": 0
+    },
+    "pr12_third_followup_findings_remediated_locally": 8,
+    "pr12_fourth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 5,
+      "P2": 0,
+      "P3": 0
+    },
+    "pr12_fourth_followup_findings_remediated_locally": 5,
+    "pr12_fifth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 8,
+      "P2": 1,
+      "P3": 0
+    },
+    "pr12_fifth_followup_findings_remediated_locally": 9,
+    "pr12_sixth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 5,
+      "P2": 3,
+      "P3": 0
+    },
+    "pr12_sixth_followup_findings_remediated_locally": 8,
+    "pr12_seventh_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 4,
+      "P2": 4,
+      "P3": 0
+    },
+    "pr12_seventh_followup_findings_remediated_locally": 8,
+    "pr12_eighth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 2,
+      "P2": 2,
+      "P3": 0
+    },
+    "pr12_eighth_followup_findings_remediated_locally": 4,
+    "pr12_ninth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 4,
+      "P2": 1,
+      "P3": 0
+    },
+    "pr12_ninth_followup_findings_remediated_locally": 5,
+    "pr12_tenth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 4,
+      "P2": 0,
+      "P3": 0
+    },
+    "pr12_tenth_followup_findings_remediated_locally": 4,
+    "pr12_eleventh_followup_review_head": "6228fb5ad48cfaeb223bb1754406cde458710ebc",
+    "pr12_eleventh_followup_exact_head_ci": "not_enqueued",
+    "pr12_eleventh_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 6,
+      "P2": 0,
+      "P3": 0
+    },
+    "pr12_eleventh_followup_findings_remediated_locally": 6,
+    "pr12_twelfth_followup_review_head": "1a8ad3ac30941336c23c455238fe9979ea15bea2",
+    "pr12_twelfth_followup_exact_head_ci": {
+      "workflow_run_id": 35507956889,
+      "workflow_conclusion": "success",
+      "successful_jobs": 13,
+      "skipped_jobs": ["tap-lifecycle"]
+    },
+    "pr12_twelfth_followup_review_findings_by_severity": {
+      "P0": 0,
+      "P1": 4,
+      "P2": 3,
+      "P3": 0
+    },
+    "pr12_twelfth_followup_findings_remediated_locally": 7,
+    "review_counts_scope": "historical_final_wave_intake; four_blocker_successor records current continuation",
+    "local_tests_after_remediation": {
+      "passed": 974,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "pull_requests": [
+    {"number": 1, "status": "merged", "head_sha": "447f88c2263070b4a9321d42b74691a15d9d0b90", "commits": 5, "workflow_run_id": 34011128209, "workflow_conclusion": "success", "successful_jobs": 1, "skipped_jobs": []},
+    {"number": 2, "status": "merged", "head_sha": "0f63f115a468e4d184917e966b06cb3f8a889f43", "commits": 2, "workflow_run_id": 34901160163, "workflow_conclusion": "success", "successful_jobs": 1, "skipped_jobs": []},
+    {"number": 3, "status": "merged", "head_sha": "69e58ad09d3d313f327aa87c25b6fc76ad3a56a4", "commits": 5, "workflow_run_id": 35117139533, "workflow_conclusion": "success", "successful_jobs": 1, "skipped_jobs": []},
+    {"number": 4, "status": "merged", "head_sha": "ee223b9b02dcb1e7861bc71a9c7a8e566ee42446", "commits": 17, "workflow_run_id": 35248822907, "workflow_conclusion": "success", "successful_jobs": 6, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 5, "status": "merged", "head_sha": "ca2e9d2d75f4b3c2e9f636f896c7d32c84786cb0", "commits": 12, "workflow_run_id": 35274317969, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 6, "status": "merged", "head_sha": "6470af3d26667e95590c2fd2dd3e3554b46b6402", "commits": 4, "workflow_run_id": 35346581800, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 7, "status": "merged", "head_sha": "c3a960f38868761e7f9a7dc55358beefeb5182e6", "commits": 1, "workflow_run_id": 35347905575, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 8, "status": "merged", "head_sha": "daa6d4c55d7860d5103155bebad35e6586be61c1", "commits": 1, "workflow_run_id": 35351378790, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 9, "status": "merged", "head_sha": "3cde7e018e63cb2d5faedd0dbe8325dd2c3042b9", "commits": 4, "workflow_run_id": 35359362517, "workflow_conclusion": "success", "successful_jobs": 11, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 10, "status": "merged", "head_sha": "689b076c036c937cf2613f1d39a656b327e96eb6", "commits": 2, "workflow_run_id": 35366683037, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 11, "status": "merged", "head_sha": "4a7e8738d23c016b343186b982dbd5d41ed38676", "commits": 16, "workflow_run_id": 35448287394, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"]},
+    {"number": 12, "status": "open_pre_remediation_snapshot", "head_sha": "51c2881442982ef2c1474a1f2cd71a322ea327ae", "commits": 2, "workflow_run_id": 35488732107, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"]}
+  ],
+  "remediation_checkpoints": [
+    {"pull_request": 12, "head_sha": "24469778b15bd8cba136d4494d8da9c69c7fc1d9", "workflow_run_id": 35494388854, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 7}},
+    {"pull_request": 12, "head_sha": "5e9a802c1bbd21a697cb6859eefc5ed54112dc39", "workflow_run_id": 35495732974, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 6, "P2": 1}},
+    {"pull_request": 12, "head_sha": "9bb8726b5b0ef4b3df02083a5e4c24b52b317fd9", "workflow_run_id": 35496991058, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5, "P2": 3}},
+    {"pull_request": 12, "head_sha": "73f57fdc64c77de3b7befaf648b5104df0881218", "workflow_run_id": 35497895958, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5}},
+    {"pull_request": 12, "head_sha": "d388fa11fefee62e2e37d8f9e3e5208ff1706776", "workflow_run_id": 35498961191, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 8, "P2": 1}},
+    {"pull_request": 12, "head_sha": "8af81dd29ce1a2e20764c3b8d1191d1293931a34", "workflow_run_id": 35500414450, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 5, "P2": 3}},
+    {"pull_request": 12, "head_sha": "21fa30065f9285d7edb824ca6a100630da4a53b4", "workflow_run_id": 35501417685, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 4}},
+    {"pull_request": 12, "head_sha": "659fa48466fe866ce577b90ab3fef9d73b62ca5e", "workflow_run_id": 35503474068, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 2, "P2": 2}},
+    {"pull_request": 12, "head_sha": "6b4265036dd9883ecf6d1a6865760bdbf39a3e94", "same_tree_parent_sha": "685f7cbb36bf8a46ca032a3815455aed5c814d0c", "workflow_run_id": 35503922950, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 1}},
+    {"pull_request": 12, "head_sha": "2f322d96a8e4eef8fa053bb02ae06389fa8aaa36", "same_tree_parent_sha": "14770943253d6caf5415ef297e25abf00abe1e77", "workflow_run_id": 35504757502, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4}},
+    {"pull_request": 12, "head_sha": "1a8ad3ac30941336c23c455238fe9979ea15bea2", "same_tree_parent_sha": "078bdb27ba203f3565671dd63e43e5af0bf9eef6", "workflow_run_id": 35507956889, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "review_findings_after_run": {"P1": 4, "P2": 3}},
+    {"pull_request": 12, "head_sha": "f4709c9d597e4e1a61215530af7bcb85e1dd1d06", "workflow_run_id": 35510083160, "workflow_conclusion": "success", "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "pytest_passed": 768, "review_findings_after_run": {"P1": 6, "P2": 2}}
+  ],
+  "open_register": [
+    {"id": "OPS-01", "severity": "P2", "category": "ci_coverage", "status": "accepted_operational_limitation"},
+    {"id": "EXT-01", "severity": "P2", "category": "external_verification", "status": "open_credential_bound"},
+    {"id": "GOV-01", "severity": "P2", "category": "historical_provenance", "status": "grandfathered_missing"},
+    {"id": "DIST-01", "severity": "P3", "category": "distribution", "status": "planned_pr13"},
+    {"id": "I18N-01", "severity": "P3", "category": "localization", "status": "queued", "canonical_current": 55, "localized_current": 3, "localized_stale": 19, "queued_for_generation": 1078},
+    {"id": "GOV-02", "severity": "P3", "category": "independent_agenda_validation", "status": "open"},
+    {"id": "GOV-03", "severity": "P3", "category": "portfolio_review", "status": "open"},
+    {"id": "SCF-01", "severity": "P3", "category": "experimental_compute_scope", "status": "open"},
+    {"id": "ROADMAP-01", "severity": "P3", "category": "product_direction", "status": "deferred"}
+  ],
+  "closeout_evidence": {"url": "https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342", "candidate_identity": "containing_commit_and_tree", "parent_sha": "62d408e227e3e3bb672323cec9d7721661d20b48", "branch": "work/research-artifact-ingestion-bridge-v1", "latest_findings_repaired_locally": {"P1": 6, "P2": 2}, "remote_gates": "recorded_in_linked_annex_after_publication", "max_final_review_rounds": 2, "executable_fences": 40, "historical_cancelled_run_preserved": 35510061300, "round1_candidate": {"sha": "304f016d008f8d526f3eef4f264ddd66885ede12", "tree": "22108290a861fbdd41af254e5b8a12df78fcde0b", "workflow_run_id": 35516780578, "successful_jobs": 13, "skipped_jobs": ["tap-lifecycle"], "local_tests_passed": 819, "review_id": 5260863339, "actionable_findings": {"P1": 1, "P2": 2}}, "closure_intake_threads": {"total": 120, "resolved": 31, "unresolved": 89}, "closure_local_tests_passed": 873, "closure_regression_cases": 54, "closure_review_gate": "maximum_round_2; no third automatic review"},
+  "four_blocker_successor": {
+    "as_of": "2026-09-21",
+    "parent_sha": "62d408e227e3e3bb672323cec9d7721661d20b48",
+    "intake_threads": {
+      "total": 124,
+      "resolved": 120,
+      "active": 4
+    },
+    "prior_candidate_ci": 35518666564,
+    "prior_candidate_review": 5260930442,
+    "local_tests": {
+      "passed": 965,
+      "skipped": 0,
+      "failed": 0
+    },
+    "new_regression_cases": 92,
+    "blockers": {
+      "doi_identity": "fixed",
+      "cache_completeness": "fixed_source_derived_inventory",
+      "quantitative_flags": "fixed",
+      "receipt_uncertainty": "fixed_shared_contract"
+    },
+    "local_actionable_census": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0,
+      "blocking_P3": 0
+    },
+    "publication": "one_forward_successor",
+    "remote_ci_budget": 1,
+    "additional_codex_reviews": 0,
+    "remote_ci_and_thread_resolution": "recorded_in_linked_annex_after_publication",
+    "merge_method": "merge",
+    "deferred": [
+      "PR13_distribution",
+      "translation_backlog",
+      "external_credentials",
+      "independent_roadmap_validation",
+      "SCFabric_future_direction"
+    ]
+  },
+  "necessary_adjacent_followup": {
+    "as_of": "2026-09-21",
+    "parent_sha": "6ad401b9d582d1813cff60238481de8da2599098",
+    "first_successor": {
+      "sha": "6ad401b9d582d1813cff60238481de8da2599098",
+      "tree": "723cd24eee3cebc7a02fe9210b4f5dd4bbcf0a68",
+      "ci_run_id": 35555635942,
+      "conclusion": "success",
+      "successful_jobs": 13,
+      "expected_skips": [
+        "tap-lifecycle"
+      ],
+      "original_four_threads_resolved": true
+    },
+    "unexpected_automatic_review": {
+      "requested": false,
+      "new_P1_findings": 3,
+      "intake_threads": {
+        "total": 127,
+        "resolved": 124,
+        "active": 3
+      }
+    },
+    "fixes": [
+      "reject_public_domain_receipt_registry_drift",
+      "no_query_derived_publication_identity",
+      "full_bibliographic_fallback_identity"
+    ],
+    "local_tests": {
+      "passed": 974,
+      "skipped": 0,
+      "failed": 0
+    },
+    "additional_regression_cases": 9,
+    "final_blocker_file_cases": 101,
+    "original_ci_budget": 1,
+    "necessary_followup_ci_waves": 1,
+    "additional_review_requests": 0,
+    "publication": "one_consolidated_forward_successor_for_reproduced_adjacent_failures",
+    "local_actionable_census": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0,
+      "blocking_P3": 0
+    },
+    "final_remote_gates_and_merge": "recorded_in_linked_annex_after_publication"
+  }
+}

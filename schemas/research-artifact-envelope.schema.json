@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/research-artifact-envelope.schema.json",
+  "title": "ResearchArtifactEnvelope",
+  "description": "Standard envelope for wrapping scholarly artifacts from any skill or external tool into the deterministic research-state kernel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "artifact_id",
+    "artifact_kind",
+    "producer",
+    "payload_schema",
+    "payload_sha256",
+    "payload"
+  ],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "const": "artifact-envelope-1.0"
+    },
+    "artifact_id": {
+      "type": "string",
+      "description": "Deterministic content-addressed identifier (art- + 32 lowercase hex chars of canonical payload).",
+      "pattern": "^art-[0-9a-f]{32}$"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "description": "Categorical classifier for the artifact payload.",
+      "pattern": "^[a-z0-9_.-]{1,64}$"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill", "version"],
+      "properties": {
+        "skill": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "payload_schema": {
+      "type": "string",
+      "description": "Schema or protocol identifier of the contained payload.",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "payload_sha256": {
+      "type": "string",
+      "description": "Canonical SHA-256 digest of the payload object.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "payload": {
+      "type": "object",
+      "description": "The structured or opaque artifact payload."
+    },
+    "subject_refs": {
+      "type": "array",
+      "description": "Optional list of subject identifiers (e.g. work IDs, DOIs, corpus IDs).",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "lineage_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "schema_version", "receipt_id", "receipt_digest"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "lineage"
+        },
+        "schema_version": {
+          "type": "string",
+          "const": "lineage-receipt-1.0"
+        },
+        "receipt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "receipt_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "locator": {
+      "type": "string",
+      "description": "External locator reference (URL, URI, canonical path).",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "caller_metadata": {
+      "type": "object",
+      "description": "Caller-supplied metadata (timestamps, run tags, host details). Never affects content identity."
+    }
+  }
+}

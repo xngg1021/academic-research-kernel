@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [简体中文](../../README.zh-Hans.md) · [繁體中文](../../README.zh-Hant.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
 
-Msingi wa utafiti wa kitaaluma usiofungamana na mfumo mahususi na seti ya majadiliano ya maajenti wengi. Hutoa ujuzi 13 wa kitaaluma na zana za uthibitishaji zenye sehemu za kuingilia zinazobebeka za Agent Plugins v1 na MCP (Model Context Protocol), pamoja na muunganisho asilia wa Hermes Agent, Claude Code, Cursor na maajenti wadogo wa CLI. Inajumuisha uthibitishaji wa vyanzo, uchambuzi wa maandiko, uhariri wa kitaaluma, ukokotoaji wa namba, ukaguzi wa machapisho ya kiasi, ukaguzi wa uwezo wa kurudia matokeo, mapitio ya kimfumo na uchambuzi meta, utambulisho na asili ya vitu vya utafiti, uratibu thabiti wa ukaguzi mtambuka kati ya mifano tofauti, na mifumo miwili ya ufuatiliaji wa kila wiki. Hifadhi ina mifano inayoweza kutekelezwa; upeo wa uthibitishaji na vikwazo vya huduma za nje vimerekodiwa katika [ripoti ya ukaguzi](../../docs/audit-20260906.md).
+Msingi wa utafiti wa kitaaluma usiofungamana na mfumo mahususi na seti ya majadiliano ya maajenti wengi. Hutoa ujuzi 13 wa kitaaluma na zana za uthibitishaji zenye sehemu za kuingilia zinazobebeka za Agent Plugins v1 na MCP (Model Context Protocol), pamoja na muunganisho asilia wa Hermes Agent, Claude Code, Cursor na maajenti wadogo wa CLI. Inajumuisha uthibitishaji wa vyanzo, uchambuzi wa maandiko, uhariri wa kitaaluma, ukokotoaji wa namba, ukaguzi wa machapisho ya kiasi, ukaguzi wa uwezo wa kurudia matokeo, mapitio ya kimfumo na uchambuzi meta, utambulisho na asili ya vitu vya utafiti, uratibu thabiti wa ukaguzi mtambuka kati ya mifano tofauti, na mifumo miwili ya ufuatiliaji wa kila wiki. Hifadhi ina mifano inayoweza kutekelezwa; upeo wa uthibitishaji na vikwazo vya huduma za nje vimerekodiwa katika [ripoti ya ukaguzi](../../docs/project-lineage-audit-20260920.md).
 
 Mwandishi: Junfu Shi (SJF, xngg1021), Hermes Agent. Leseni ya sasa: [Source Lineage License 1.0](../../LICENSE).
 
@@ -81,7 +81,7 @@ git diff --check
 
 QA inathibitisha metadata, marejeleo, mifumo ya njia za kibinafsi/siri, sintaksia ya Python na vizuizi vya msimbo vilivyowekwa alama. Hutoa 0 kwa mafanikio, 1 kwa hitilafu ya msimbo/schema/utambulisho na 2 kwa kutopatikana kwa mtandao/uthibitishaji/kiwango.
 
-CI huendesha majaribio kamili kwenye Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 na macOS Intel, huku majaribio 632 ya vitengo yakifaulu na vizuizi 40 vya msimbo vinavyotekelezeka vikiwa vimethibitishwa.
+CI huendesha majaribio kamili kwenye Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 na macOS Intel, huku majaribio 717 ya vitengo yakifaulu na vizuizi 40 vya msimbo vinavyotekelezeka vikiwa vimethibitishwa.
 
 tools/longtail/ inashikilia jenereta ya hali ngumu: michanganyiko 4096 ya wagombea yenye mbegu ya SHA256 na ripoti ya chanjo katika generated-scenarios.json.
 

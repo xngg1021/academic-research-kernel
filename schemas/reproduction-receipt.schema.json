@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/reproduction-receipt.schema.json",
+  "title": "ReproductionReceipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schema_version", "status", "tier", "paper", "repository", "stages", "contradictions", "blocking", "gaps", "generated_at"],
+  "properties": {
+    "kind": {"const": "ReproductionReceipt"},
+    "schema_version": {"const": "1.0"},
+    "status": {"enum": ["reproducible", "partially-reproducible", "blocked", "inconsistent"]},
+    "tier": {"type": ["string", "null"]},
+    "paper": {"type": "object"},
+    "repository": {"type": ["object", "string", "null"]},
+    "stages": {"type": "array", "items": {"type": "object"}},
+    "contradictions": {"type": "array", "items": {"type": "string"}},
+    "blocking": {"type": "array", "items": {"type": "string"}},
+    "gaps": {"type": "array", "items": {"type": "string"}},
+    "generated_at": {"type": "string", "format": "date-time"}
+  }
+}

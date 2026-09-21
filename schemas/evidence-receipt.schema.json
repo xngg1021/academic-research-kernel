@@ -4,6 +4,7 @@
   "title": "AcademicEvidenceReceipt",
   "description": "Machine-readable evidence record produced by academic-source-verification and consumed by downstream skills (literature-analysis, academic-writing, math-computation).",
   "type": "object",
+  "additionalProperties": false,
   "required": ["schema_version", "query", "identifiers", "sources", "claims", "generated_at"],
   "properties": {
     "schema_version": {
@@ -15,6 +16,7 @@
     },
     "identifiers": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "doi": { "type": ["string", "null"] },
         "arxiv_id": { "type": ["string", "null"] },
@@ -26,6 +28,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["source", "queried_at", "status"],
         "properties": {
           "source": { "type": "string" },
@@ -40,9 +43,10 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["claim", "evidence_type", "source", "support_status"],
         "properties": {
-          "claim": { "type": "string" },
+          "claim": { "type": "string", "minLength": 1 },
           "evidence_type": {
             "enum": ["metadata", "citation_count", "update_signal", "full_text", "computed"]
           },

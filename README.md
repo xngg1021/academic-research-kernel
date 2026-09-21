@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-Harness-neutral academic research core and multi-agent deliberation suite. It provides 13 academic skills and verification tools with portable Agent Plugins v1 and MCP (Model Context Protocol) entrypoints, as well as native integration for Hermes Agent, Claude Code, Cursor, and custom CLI subagents. They cover source verification, literature analysis, academic writing, numerical computation, quantitative paper audit, reproduction audits, systematic review and meta-analysis, research-object identity and lineage, dynamic cross-model review orchestration, plus two weekly monitoring automations. The repository includes executable example checks; validation scope and external-service limitations are recorded in [the audit](docs/audit-20260906.md).
+Harness-neutral deterministic research-state kernel for agentic research workflows. It unifies research object identity, empirical evidence receipts, tripartite claim-evidence graphs (CEG), and append-only research decision logs through a deterministic ingestion bridge and universal Model Context Protocol (MCP) server. 13 specialized scholarly skills act as producers and consumers of verified research state, with native support for Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external-service limitations are recorded in [the audit](docs/project-lineage-audit-20260920.md).
 
 Author: Junfu Shi (SJF, xngg1021), Hermes Agent. Current scoped offer: [Source Lineage License 1.0](LICENSE).
 
@@ -38,6 +38,8 @@ There are 21 Markdown reference files across the thirteen skills. References loa
 
 Citation styles, reporting criteria, and metadata contracts depend on the target journal, institution, funder, discipline, and jurisdiction. The repository establishes **ISO 690:2021** (Bibliographic references), **ISO 5127:2017** (Information and documentation vocabulary), and **W3C PROV** (Provenance data model) as international baselines, alongside regional profiles (e.g., GB/T 7714-2025 in Mainland China, UNE-ISO 690:2024 in Spain, DIN ISO 690:2021 in Germany) and disciplinary standards (APA 7th, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Target venue requirements take precedence over default profiles. See the [Scholarly Standards Architecture](docs/standards/README.md) and [Natural Terminology Guide](docs/terminology/README.md).
 
+The final PR #12 repair validates DOI/identifier coherence, inverse quantitative verdict flags, and the shared kernel/receipt uncertainty contract. Cache completeness is reconstructed from retained source envelopes and normalized bindings, independently of the receipt's mutation lists; removing both a record and its cache declaration cannot produce an accepted replay. See the [four-blocker closeout](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21).
+
 ## Integration & Portable Usage
 
 ### 1. Universal Agent Plugins v1 & Model Context Protocol (MCP)
@@ -71,6 +73,14 @@ Bundled related skills checked at upstream `245e48008fa814b3251f50755eb656bd9fb8
 
 See [OpenAlex authentication](https://help.openalex.org/api/authentication/), [budgets/query costs](https://help.openalex.org/api/llm-quick-reference/), and [Crossref update filters](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/).
 
+## Deterministic ingestion and public kernel
+
+PR #12 provides `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 14 adapters (the 13 skills plus opaque fallback), and 12 stateless stdio MCP tools. Accepted ingestion receipts bind each retained semantic mutation by kind, identity and canonical SHA-256: objects, CEG records, ledger records, uncertainties, physical receipts and artifact registrations. Cache replay checks those commitments independently of transport snapshot hashes. Empty ledgers are valid; failed atomic batches leave no partial state.
+
+Lineage content authority is explicit and out of band. Trusted Python callers pass `LineageVerificationContext` when replaying serialized receipts or snapshots; MCP callers may supply bounded content bytes, never a host filesystem root. The default content budget is 10 MiB; a trusted host may explicitly authorize larger artifacts under the same producer/verifier policy. Without content authority, a `fully_verified` claim cannot be independently reproduced and returns a structured invalid verification result. Opaque prose stays opaque, dissent stays visible, and researchers retain control of commits, pruning, reopening, routing and truth judgments.
+
+See [the architecture](docs/kernel-architecture.md) for contracts and compatibility. PyPI, `uvx`, console packaging and official MCP Registry publication remain PR #13 scope. English and Simplified Chinese README are current; other translation states remain explicit in [the manifest](docs/i18n/manifest.json). Final candidate identity, exact-head CI, cumulative review and merge evidence are recorded in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342).
+
 ## Validation
 
 Use a dedicated Python environment. Runtime libraries are task-specific, not guaranteed installed in Hermes. QA dependencies are broader so all marked examples can run:
@@ -88,7 +98,7 @@ QA validates metadata, references, personal-path/known-secret patterns, Python s
 
 Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks thirteen skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
-CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with 632 passed unit tests and live upstream canary validation. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/audit-20260906.md).
+CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with live upstream canary validation. The final candidate passed 974 local tests with zero skips; exact-head remote results are recorded separately in the closeout ledger. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/project-lineage-audit-20260920.md).
 
 tools/longtail/ holds the deterministic extreme long-tail scenario generator: 4096 SHA256-seeded candidate combinations over the decoupled factor axes, greedy coverage selection, and the machine-computed coverage report in generated-scenarios.json. It is the input layer for stress-testing the skills; semantic expansion (task chains, oracles, injected events) is a separate stage.
 

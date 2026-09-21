@@ -200,8 +200,24 @@ def compute_outcome_digest(
 
 
 def canonical_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
-    """Canonical SHA256 of an arbitrary JSON-able ledger payload (sorted keys)."""
-    return hashlib.sha256(_canonical_json_bytes(payload_dict)).hexdigest().lower()
+    """Canonical SHA256 of a receipt payload used by the verification manifest.
+
+    Lineage receipt timestamps are emission metadata and participate in neither
+    ``receipt_id`` nor ``receipt_digest``. Excluding them here gives the ledger
+    the same timestamp-equivalence rule as the ingestion receipt registry.
+    """
+    payload = _jsonable(payload_dict)
+    if isinstance(payload, dict) and payload.get("protocol") == "lineage-receipt-1.0":
+        payload = dict(payload)
+        payload.pop("timestamp", None)
+    return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest().lower()
+
+
+def _legacy_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
+    """Canonical SHA256 used by early v1 exports before timestamp normalisation."""
+    return hashlib.sha256(
+        _canonical_json_bytes(_jsonable(payload_dict))
+    ).hexdigest().lower()
 
 
 def _jsonable(obj: Any, _seen: Optional[set] = None) -> Any:
@@ -385,6 +401,12 @@ class FrozenDict(collections.abc.Mapping):
     def __hash__(self) -> int:
         return hash(frozenset(self._data.items()))
 
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "FrozenDict":
+        # Every reachable child is already recursively frozen, so sharing the
+        # value across transactional clones is safe and avoids MappingProxyType
+        # pickle failures.
+        return self
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, collections.abc.Mapping):
             return NotImplemented
@@ -435,131 +457,34 @@ def _frozen_meta(metadata: Optional[Mapping[str, Any]]) -> FrozenDict:
 # Receipt contracts (byte-compatible with the CEG Kernel)
 # ---------------------------------------------------------------------------
 
-def validate_lineage_receipt_contract(ref: "ReceiptRef", receipt_obj: Any) -> Tuple[bool, Optional[str]]:
-    """Strictly assert lineage-receipt-1.0 protocol, exact receipt_id, and exact receipt_digest."""
-    r_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
-    if not isinstance(r_dict, (dict, collections.abc.Mapping)) or r_dict.get("protocol") != "lineage-receipt-1.0":
-        return False, "Lineage receipt invalid protocol: expected 'lineage-receipt-1.0'"
-    if r_dict.get("receipt_id") != ref.receipt_id:
-        return False, f"Lineage receipt ID mismatch: expected {ref.receipt_id!r}, got {r_dict.get('receipt_id')!r}"
-    if str(r_dict.get("receipt_digest", "")).lower() != str(ref.receipt_digest).lower():
-        return False, f"Lineage receipt digest mismatch: expected {ref.receipt_digest!r}, got {r_dict.get('receipt_digest')!r}"
-    return True, None
-
-
-def validate_academic_receipt_contract(ref: "ReceiptRef", receipt_obj: Any) -> Tuple[bool, Optional[str]]:
-    """Strictly assert schema_version=1.0, physical payload SHA256, and exact claim match.
-
-    The claim must be a legitimate evidence record (evidence_type within the
-    schema's evidence-type vocabulary) whose canonical digest equals the
-    referenced claim_digest. Byte-compatible with Claim-Evidence Graph Kernel v1.
-    """
-    val_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
-    if not isinstance(val_dict, (dict, collections.abc.Mapping)):
-        return False, "AcademicEvidence invalid representation: must be a dict"
-    thawed = val_dict if isinstance(val_dict, dict) else dict(val_dict)
-    actual_sha = canonical_academic_receipt_payload_sha256(thawed)
-    if actual_sha != ref.payload_sha256:
-        return False, f"AcademicEvidence payload SHA256 mismatch: expected {ref.payload_sha256}, got actual hash {actual_sha}"
-    if thawed.get("schema_version") != "1.0" or not isinstance(thawed.get("claims"), (list, tuple)):
-        return False, "AcademicEvidence receipt structural violation: missing schema_version=1.0 or claims list"
-
-    matching_claim = False
-    for c_item in thawed.get("claims", []):
-        if not isinstance(c_item, (dict, collections.abc.Mapping)):
-            continue
-        c_dict = c_item if isinstance(c_item, dict) else dict(c_item)
-        if c_dict.get("evidence_type") not in {"metadata", "citation_count", "update_signal", "full_text", "computed"}:
-            continue
-        if canonical_evidence_claim_digest(c_dict) == ref.claim_digest:
-            matching_claim = True
-            break
-    if not matching_claim:
-        return False, f"AcademicEvidence claim digest mismatch: claim_digest {ref.claim_digest} not found in legitimate receipt claims"
-    return True, None
-
-
-@dataclass(frozen=True)
-class ReceiptRef:
-    """Strongly typed receipt reference with strict kind-field mutual exclusivity."""
-
-    kind: str
-    schema_version: str
-    receipt_id: Optional[str] = None
-    receipt_digest: Optional[str] = None
-    claim_digest: Optional[str] = None
-    payload_sha256: Optional[str] = None
-    locator: Optional[str] = None
-
-    def __post_init__(self):
-        if self.kind not in VALID_RECEIPT_KINDS:
-            raise ValueError(f"Invalid receipt kind: {self.kind!r}. Must be one of {sorted(VALID_RECEIPT_KINDS)}")
-
-        if self.kind == "lineage":
-            if self.schema_version != "lineage-receipt-1.0":
-                raise ValueError(f"Invalid schema_version for lineage receipt: {self.schema_version!r}. Must be 'lineage-receipt-1.0'.")
-            if not self.receipt_id:
-                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_id'.")
-            if not self.receipt_digest:
-                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_digest'.")
-            r_dig = self.receipt_digest.strip().lower()
-            if not SHA256_REGEX.match(r_dig):
-                raise ValueError(f"Invalid receipt_digest format: {self.receipt_digest!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "receipt_digest", r_dig)
-            if self.claim_digest is not None or self.payload_sha256 is not None:
-                raise ValueError("Lineage ReceiptRef must not contain academic_evidence fields (claim_digest or payload_sha256).")
-
-        elif self.kind == "academic_evidence":
-            if self.schema_version != "1.0":
-                raise ValueError(f"Invalid schema_version for academic_evidence receipt: {self.schema_version!r}. Must be '1.0'.")
-            if not self.claim_digest:
-                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'claim_digest'.")
-            if not self.payload_sha256:
-                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'payload_sha256'.")
-            c_dig = self.claim_digest.strip().lower()
-            if not SHA256_REGEX.match(c_dig):
-                raise ValueError(f"Invalid claim_digest format: {self.claim_digest!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "claim_digest", c_dig)
-            p_dig = self.payload_sha256.strip().lower()
-            if not SHA256_REGEX.match(p_dig):
-                raise ValueError(f"Invalid payload_sha256 format: {self.payload_sha256!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "payload_sha256", p_dig)
-            if self.receipt_id is not None or self.receipt_digest is not None:
-                raise ValueError("AcademicEvidence ReceiptRef must not contain lineage fields (receipt_id or receipt_digest).")
-
-        if self.locator is not None:
-            if not isinstance(self.locator, str) or not (1 <= len(self.locator) <= 2048):
-                raise ValueError("locator must be a non-empty string of at most 2048 characters.")
-
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
-            "kind": self.kind,
-            "schema_version": self.schema_version,
-        }
-        if self.receipt_id:
-            d["receipt_id"] = self.receipt_id
-        if self.receipt_digest:
-            d["receipt_digest"] = self.receipt_digest
-        if self.claim_digest:
-            d["claim_digest"] = self.claim_digest
-        if self.payload_sha256:
-            d["payload_sha256"] = self.payload_sha256
-        if self.locator:
-            d["locator"] = self.locator
-        return d
-
-
-def canonical_receipt_ref_tuple(ref: Optional[ReceiptRef]) -> Tuple[str, ...]:
-    if not ref:
-        return ()
-    return (
-        ref.kind,
-        ref.schema_version,
-        ref.receipt_id or "",
-        ref.receipt_digest or "",
-        ref.claim_digest or "",
-        ref.payload_sha256 or "",
-        ref.locator or "",
+try:
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        canonical_receipt_ref_tuple,
+        canonical_academic_receipt_payload_sha256,
+        canonical_evidence_claim_digest,
+        LineageVerificationContext,
+        require_unique_snapshot_records,
+        validate_lineage_receipt_contract,
+        validate_academic_receipt_contract,
+        verify_receipt_reference,
+    )
+except ImportError:
+    import sys
+    from pathlib import Path
+    _repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(_repo_root / "scripts") not in sys.path:
+        sys.path.insert(0, str(_repo_root / "scripts"))
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        canonical_receipt_ref_tuple,
+        canonical_academic_receipt_payload_sha256,
+        canonical_evidence_claim_digest,
+        LineageVerificationContext,
+        require_unique_snapshot_records,
+        validate_lineage_receipt_contract,
+        validate_academic_receipt_contract,
+        verify_receipt_reference,
     )
 
 
@@ -1173,7 +1098,8 @@ class DecisionLedger:
     order-invariant.
     """
 
-    def __init__(self, ledger_id: str = "default-ledger"):
+    def __init__(self, ledger_id: str = "default-ledger", *, verification_context: Optional[LineageVerificationContext] = None):
+        self.verification_context = verification_context
         if not isinstance(ledger_id, str) or not ledger_id.strip():
             raise ValueError("ledger_id must be a non-empty string.")
         self.ledger_id = ledger_id
@@ -1183,6 +1109,12 @@ class DecisionLedger:
         self._state_events: List[DecisionStateEvent] = []
         self._corrections: Dict[str, OutcomeCorrection] = {}
         self._receipts: Dict[str, Any] = {}
+        # Early decision-ledger-1.0 exports included the emission timestamp in
+        # lineage receipt manifest hashes. Keep that wire identity when such a
+        # snapshot is replayed, while all newly registered receipts use the
+        # timestamp-normalised canonical form.
+        self._receipt_manifest_modes: Dict[str, str] = {}
+        self._receipt_manifest_legacy_hashes: Dict[str, str] = {}
         self._next_correction_sequence = 1
         self._next_state_sequence = 1
         self._bases_by_decision: Dict[str, List[DecisionBasisEdge]] = collections.defaultdict(list)
@@ -1211,10 +1143,20 @@ class DecisionLedger:
             existing = self._receipts[rid]
             ex_dict = existing.to_dict() if hasattr(existing, "to_dict") else existing
             new_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
-            if _canonical_json_bytes(_jsonable(ex_dict)) != _canonical_json_bytes(_jsonable(new_dict)):
+            ex_payload = _jsonable(ex_dict)
+            new_payload = _jsonable(new_dict)
+            if isinstance(ex_payload, dict) and ex_payload.get("protocol") == "lineage-receipt-1.0":
+                ex_payload = dict(ex_payload)
+                ex_payload.pop("timestamp", None)
+            if isinstance(new_payload, dict) and new_payload.get("protocol") == "lineage-receipt-1.0":
+                new_payload = dict(new_payload)
+                new_payload.pop("timestamp", None)
+            if _canonical_json_bytes(ex_payload) != _canonical_json_bytes(new_payload):
                 raise ValueError(f"Conflicting receipt registration for {rid!r}: existing data differs from new registration.")
             return
         self._receipts[rid] = snapshot
+        self._receipt_manifest_modes[rid] = "canonical"
+        self._receipt_manifest_legacy_hashes.pop(rid, None)
         snap_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
         if isinstance(snap_dict, dict):
             try:
@@ -1558,6 +1500,14 @@ class DecisionLedger:
             "latest_verdict": related[-1].verdict if related else None,
         }
 
+    def get_corrections(self, decision_id: str) -> List[OutcomeCorrection]:
+        """All outcome corrections recorded for a decision, in sequence order."""
+        return list(self._corrections_by_decision.get(decision_id, []))
+
+    def get_state_history(self, decision_id: str) -> List[Dict[str, Any]]:
+        """All state events for a decision, matching state_history()."""
+        return self.state_history(decision_id)
+
     def find_negative_results(self) -> List[Dict[str, Any]]:
         """All negative_result decisions with their outcome summaries, sorted by id."""
         out = []
@@ -1578,6 +1528,16 @@ class DecisionLedger:
                 continue
             out.append(edge.to_dict())
         return out
+
+    def bases_of(self, decision_id: str) -> List[Dict[str, Any]]:
+        """All upstream basis edges owned by ``decision_id``, sorted deterministically."""
+        return [
+            edge.to_dict()
+            for edge in sorted(
+                self._bases_by_decision.get(decision_id, []),
+                key=canonical_basis_tuple,
+            )
+        ]
 
     def _current_prune_graph(self) -> Dict[str, RouteStatus]:
         """Derived map of currently stopped/pruned decisions to their derived state views."""
@@ -1756,7 +1716,7 @@ class DecisionLedger:
         if receipt_obj is None:
             return  # not resolvable here; surfaces as missing_receipt uncertainty
         if ref.kind == "lineage":
-            ok, err = validate_lineage_receipt_contract(ref, receipt_obj)
+            ok, err = validate_lineage_receipt_contract(ref, receipt_obj, verification_context=self.verification_context)
         else:
             ok, err = validate_academic_receipt_contract(ref, receipt_obj)
         if not ok:
@@ -2014,7 +1974,14 @@ class DecisionLedger:
     def _compute_verification_manifest(self) -> Dict[str, str]:
         """Compute the canonical verification manifest (receipt_id -> payload_sha256)."""
         return {
-            rid: canonical_ledger_payload_sha256(_jsonable(r))
+            rid: (
+                self._receipt_manifest_legacy_hashes.get(
+                    rid,
+                    _legacy_ledger_payload_sha256(_jsonable(r)),
+                )
+                if self._receipt_manifest_modes.get(rid) == "legacy_v1"
+                else canonical_ledger_payload_sha256(_jsonable(r))
+            )
             for rid, r in sorted(self._receipts.items())
         }
 
@@ -2056,6 +2023,7 @@ class DecisionLedger:
         cls,
         data: Mapping[str, Any],
         receipt_registry: Optional[Mapping[str, Any]] = None,
+        *, verification_context: Optional[LineageVerificationContext] = None,
     ) -> "DecisionLedger":
         """Strict replay loader: rebuild a ledger from a to_dict() export.
 
@@ -2100,6 +2068,12 @@ class DecisionLedger:
         if data["protocol"] != PROTOCOL:
             raise ValueError(f"Export protocol mismatch: expected {PROTOCOL!r}, got {data['protocol']!r}.")
 
+        require_unique_snapshot_records(data, {
+            "decisions": "id", "bases": None, "forks": None,
+            "state_events": "event_id", "corrections": "correction_id",
+            "uncertainties": "item_id",
+        })
+
         # Gate 1: raw content digest over declared records
         raw_payload = canonical_payload_from_export(data)
         raw_digest = hashlib.sha256(_canonical_json_bytes(raw_payload)).hexdigest().lower()
@@ -2124,7 +2098,7 @@ class DecisionLedger:
                 f"does not match declared verification_digest {data['verification_digest']!r}."
             )
 
-        ledger = cls(ledger_id=data["ledger_id"])
+        ledger = cls(ledger_id=data["ledger_id"], verification_context=verification_context)
 
         def _ref(d: Any) -> Optional[ReceiptRef]:
             if d is None:
@@ -2253,8 +2227,70 @@ class DecisionLedger:
 
         # Optional receipt registry population
         if receipt_registry is not None:
+            declared_ids = set(v_manifest)
+            provided_ids = set(receipt_registry)
+            if provided_ids != declared_ids:
+                raise ValueError(
+                    "Provided receipt_registry keys do not match the verification_manifest: "
+                    f"missing={sorted(declared_ids - provided_ids)}, "
+                    f"unexpected={sorted(provided_ids - declared_ids)}."
+                )
             for rid, r in sorted(receipt_registry.items()):
+                payload = _jsonable(r)
+                declared_hash = str(v_manifest[rid]).lower()
+                canonical_hash = canonical_ledger_payload_sha256(payload)
+                manifest_mode = "canonical"
+                if declared_hash != canonical_hash:
+                    is_lineage = (
+                        isinstance(payload, dict)
+                        and payload.get("protocol") == "lineage-receipt-1.0"
+                    )
+                    legacy_hash = (
+                        _legacy_ledger_payload_sha256(payload)
+                        if is_lineage
+                        else None
+                    )
+                    if declared_hash != legacy_hash:
+                        # The legacy hash covered emission-only ``timestamp``.
+                        # A registry may already retain a byte-different but
+                        # timestamp-equivalent emission, so the historical hash
+                        # cannot be recomputed from those bytes.  In that case
+                        # the lineage receipt's own independently verified
+                        # receipt_id/receipt_digest binds every substantive
+                        # field; retain the declared legacy wire hash verbatim.
+                        equivalent_legacy_lineage = False
+                        if (
+                            is_lineage
+                            and payload.get("timestamp") is not None
+                            and payload.get("receipt_id") == rid
+                            and SHA256_REGEX.fullmatch(declared_hash)
+                        ):
+                            try:
+                                lineage_ref = ReceiptRef(
+                                    kind="lineage",
+                                    schema_version="lineage-receipt-1.0",
+                                    receipt_id=rid,
+                                    receipt_digest=payload.get("receipt_digest"),
+                                )
+                                equivalent_legacy_lineage, _ = (
+                                    validate_lineage_receipt_contract(
+                                        lineage_ref,
+                                        payload,
+                                        verification_context=verification_context,
+                                    )
+                                )
+                            except (KeyError, TypeError, ValueError):
+                                equivalent_legacy_lineage = False
+                        if not equivalent_legacy_lineage:
+                            raise ValueError(
+                                f"Provided receipt_registry payload hash mismatch for {rid!r}: "
+                                f"declared {declared_hash!r}, recomputed {canonical_hash!r}."
+                            )
+                    manifest_mode = "legacy_v1"
                 ledger.register_receipt(rid, r)
+                ledger._receipt_manifest_modes[rid] = manifest_mode
+                if manifest_mode == "legacy_v1":
+                    ledger._receipt_manifest_legacy_hashes[rid] = declared_hash
             if ledger.verification_digest() != str(data["verification_digest"]).lower():
                 raise ValueError(
                     f"Provided receipt_registry verification digest mismatch: recomputed {ledger.verification_digest()!r} "

@@ -25,11 +25,20 @@ import collections
 import copy
 import hashlib
 import json
+import math
 import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from types import MappingProxyType
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
+
+try:
+    from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+    from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
 
 __all__ = [
     "Entity",
@@ -215,6 +224,67 @@ def edge_dict_sort_key(d: Dict[str, Any]) -> Tuple[str, str, str, str, str]:
     )
 
 
+def _freeze_receipt_json(value: Any) -> Any:
+    if isinstance(value, _FrozenReceiptMap):
+        return value
+    if isinstance(value, collections.abc.Mapping):
+        return _FrozenReceiptMap(value)
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_receipt_json(item) for item in value)
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("Lineage receipt values must be finite JSON numbers")
+        return value
+    raise TypeError(
+        f"Lineage receipt value {type(value).__name__!r} is outside the JSON domain"
+    )
+
+
+def _thaw_receipt_json(value: Any) -> Any:
+    if isinstance(value, _FrozenReceiptMap):
+        return value.to_dict()
+    if isinstance(value, tuple):
+        return [_thaw_receipt_json(item) for item in value]
+    return value
+
+
+class _FrozenReceiptMap(collections.abc.Mapping):
+    """Recursively immutable JSON mapping used inside LineageReceipt."""
+
+    __slots__ = ("_data",)
+
+    def __init__(self, value: Mapping[str, Any]):
+        frozen: Dict[str, Any] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError("Lineage receipt object keys must be strings")
+            frozen[key] = _freeze_receipt_json(item)
+        object.__setattr__(self, "_data", MappingProxyType(frozen))
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        raise TypeError("Lineage receipt mappings do not support mutation")
+
+    def __delattr__(self, key: str) -> None:
+        raise TypeError("Lineage receipt mappings do not support mutation")
+
+    def __getitem__(self, key: str) -> Any:
+        return self._data[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "_FrozenReceiptMap":
+        return self
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {key: _thaw_receipt_json(value) for key, value in self._data.items()}
+
+
 class LineageGraph:
     """In-memory causal derivation graph container enforcing disjoint namespaces and referential integrity."""
 
@@ -370,6 +440,18 @@ class LineageReceipt:
     activities: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
     edges: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
     trace_steps: Tuple[Dict[str, Any], ...] = field(default_factory=tuple)
+    _content_root: Optional[str] = field(default=None, repr=False, compare=False)
+    _verification_context: Optional[LineageVerificationContext] = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "root_ancestors", tuple(self.root_ancestors))
+        for field_name in ("entities", "activities", "edges", "trace_steps"):
+            values = getattr(self, field_name)
+            object.__setattr__(
+                self,
+                field_name,
+                tuple(_FrozenReceiptMap(value) for value in values),
+            )
 
     @property
     def content_digest(self) -> str:
@@ -390,14 +472,14 @@ class LineageReceipt:
             "topology_status": self.topology_status,
             "content_verification": self.content_verification,
             "root_ancestors": list(self.root_ancestors),
-            "entities": [copy.deepcopy(e) for e in self.entities],
-            "activities": [copy.deepcopy(a) for a in self.activities],
-            "edges": [copy.deepcopy(ed) for ed in self.edges],
+            "entities": [_thaw_receipt_json(e) for e in self.entities],
+            "activities": [_thaw_receipt_json(a) for a in self.activities],
+            "edges": [_thaw_receipt_json(ed) for ed in self.edges],
         }
         if self.error_detail is not None:
             d["error_detail"] = self.error_detail
         if self.trace_steps:
-            d["trace_steps"] = [copy.deepcopy(s) for s in self.trace_steps]
+            d["trace_steps"] = [_thaw_receipt_json(s) for s in self.trace_steps]
         return copy.deepcopy(d)
 
 
@@ -431,10 +513,23 @@ def _resolve_locator_path(locator: str, root_dir: Optional[Path] = None) -> Tupl
     return p.resolve(), False
 
 
+def _graph_verification_context(graph: LineageGraph) -> LineageVerificationContext:
+    """Preserve trusted Python absolute-file API without ambient wire authority."""
+    paths = []
+    if graph.root_dir is None:
+        for entity in graph.entities.values():
+            if entity.locator:
+                path, _ = _resolve_locator_path(entity.locator)
+                if path is not None:
+                    paths.append(path)
+    return LineageVerificationContext(content_root=graph.root_dir, authorized_paths=tuple(paths))
+
+
 def validate_lineage(
     graph: LineageGraph,
     check_on_disk_hashes: bool = True,
     target_scope: Optional[Set[str]] = None,
+    *, verification_context: Optional[LineageVerificationContext] = None,
 ) -> Tuple[str, str, str, Optional[str]]:
     """Strict deterministic topological DAG validation, referential integrity, and content hash checks.
 
@@ -444,15 +539,23 @@ def validate_lineage(
     """
     scoped_entities = graph.entities
     scoped_activities = graph.activities
-    scoped_edges = graph.edges
+    scoped_edges = sorted(graph.edges, key=canonical_edge_tuple)
 
     if target_scope is not None:
         scoped_entities = {k: v for k, v in graph.entities.items() if k in target_scope}
         scoped_activities = {k: v for k, v in graph.activities.items() if k in target_scope}
-        scoped_edges = [
+        scoped_edges = sorted((
             e for e in graph.edges
             if e.source_id in target_scope and e.target_id in target_scope
-        ]
+        ), key=canonical_edge_tuple)
+
+    activity_inputs: Dict[str, Set[str]] = collections.defaultdict(set)
+    activity_outputs: Dict[str, Set[str]] = collections.defaultdict(set)
+    for edge in scoped_edges:
+        if edge.type == "used":
+            activity_inputs[edge.source_id].add(edge.target_id)
+        elif edge.type == "generated":
+            activity_outputs[edge.source_id].add(edge.target_id)
 
     # 1. Referential integrity on edges
     for edge in scoped_edges:
@@ -477,8 +580,8 @@ def validate_lineage(
             if edge.activity_id:
                 if edge.activity_id not in graph.activities:
                     return "broken_chain", "broken_chain", "unchecked", f"Derivation activity {edge.activity_id!r} does not exist in activities"
-                act_inputs = {e.target_id for e in scoped_edges if e.source_id == edge.activity_id and e.type == "used"}
-                act_outputs = {e.target_id for e in scoped_edges if e.source_id == edge.activity_id and e.type == "generated"}
+                act_inputs = activity_inputs.get(edge.activity_id, set())
+                act_outputs = activity_outputs.get(edge.activity_id, set())
                 if edge.target_id not in act_inputs and edge.source_id not in act_outputs:
                     return (
                         "broken_chain",
@@ -488,7 +591,8 @@ def validate_lineage(
                     )
 
     # 1b. Activity script_id referential integrity
-    for aid, act in scoped_activities.items():
+    for aid in sorted(scoped_activities):
+        act = scoped_activities[aid]
         if act.script_id:
             if act.script_id not in graph.entities:
                 return "missing_input", "missing_input", "unchecked", f"Activity {aid!r} references missing script entity {act.script_id!r}"
@@ -526,65 +630,14 @@ def validate_lineage(
     if visited_count < len(nodes):
         return "cycle_detected", "cycle_detected", "unchecked", "Causal dependency cycle detected in graph"
 
-    # 3. Content verification on disk
-    if not check_on_disk_hashes:
-        return "unchecked", "valid_dag", "unchecked", None
-
-    total_hashed = 0
-    verified_hashed = 0
-    unanchored_relatives = 0
-    for eid, ent in scoped_entities.items():
-        if ent.sha256 and ent.locator:
-            total_hashed += 1
-            loc_path, is_unanchored = _resolve_locator_path(ent.locator, graph.root_dir)
-            if is_unanchored:
-                unanchored_relatives += 1
-                continue
-            if loc_path is None:
-                continue
-            if not loc_path.is_file():
-                return (
-                    "missing_artifact",
-                    "valid_dag",
-                    "missing_artifact",
-                    f"Entity {eid!r} declared SHA256 and local locator {ent.locator!r}, but file does not exist on disk.",
-                )
-            computed = compute_file_sha256(loc_path)
-            if computed.lower() != ent.sha256.lower():
-                return (
-                    "hash_mismatch",
-                    "valid_dag",
-                    "hash_mismatch",
-                    f"Content hash mismatch on entity {eid!r}: expected {ent.sha256}, got {computed}",
-                )
-            verified_hashed += 1
-
-    if total_hashed == 0:
-        content_status = "unchecked"
-        overall_status = "unchecked"
-        error_detail = None
-    elif verified_hashed == total_hashed and total_hashed > 0:
-        content_status = "fully_verified"
-        overall_status = "intact"
-        error_detail = None
-    elif verified_hashed > 0:
-        content_status = "partially_verified"
-        overall_status = "partial"
-        error_detail = (
-            "Relative local locator requires explicit root_dir for on-disk verification"
-            if unanchored_relatives > 0
-            else None
-        )
-    else:
-        content_status = "unverified"
-        overall_status = "unchecked"
-        error_detail = (
-            "Relative local locator requires explicit root_dir for on-disk verification"
-            if unanchored_relatives > 0
-            else None
-        )
-
-    return overall_status, "valid_dag", content_status, error_detail
+    # Producer and verifier share authority, containment and cumulative budget.
+    context = verification_context or _graph_verification_context(graph)
+    overall, content, detail = _replay_lineage_content_verification(
+        [scoped_entities[eid].to_dict() for eid in sorted(scoped_entities)],
+        check_on_disk_hashes=check_on_disk_hashes,
+        **context.content_options(),
+    )
+    return overall, "valid_dag", content, detail
 
 
 def _canonical_lineage_digest(
@@ -648,8 +701,10 @@ def trace_origin(
     graph: LineageGraph,
     target_id: str,
     check_on_disk_hashes: bool = True,
+    *, verification_context: Optional[LineageVerificationContext] = None,
 ) -> LineageReceipt:
     """Deterministically trace the provenance lineage of target_id back to root inputs."""
+    verification_context = verification_context or _graph_verification_context(graph)
     now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     tid = str(target_id).strip()
 
@@ -673,6 +728,8 @@ def trace_origin(
             topology_status="missing_input",
             content_verification="unchecked",
             error_detail=f"Target {tid!r} not found in provenance graph",
+            _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
+            _verification_context=verification_context,
         )
 
     # 1. Reverse graph traversal to isolate target's causal dependency closure
@@ -715,6 +772,7 @@ def trace_origin(
         graph,
         check_on_disk_hashes=check_on_disk_hashes,
         target_scope=visited_nodes,
+        verification_context=verification_context,
     )
 
     relevant_entities = sorted(
@@ -764,6 +822,8 @@ def trace_origin(
             entities=tuple(relevant_entities),
             activities=tuple(relevant_activities),
             edges=tuple(canonical_edges),
+            _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
+            _verification_context=verification_context,
         )
 
     # 3. Identify root ancestor entities in causal subgraph
@@ -864,9 +924,12 @@ def trace_origin(
         verification_status=v_stat,
         topology_status=topo_stat,
         content_verification=cont_stat,
+        error_detail=err_msg,
         root_ancestors=tuple(root_ancestors),
         entities=tuple(relevant_entities),
         activities=tuple(relevant_activities),
         edges=tuple(canonical_edges),
         trace_steps=tuple(trace_steps),
+        _content_root=str(graph.root_dir) if graph.root_dir is not None else None,
+        _verification_context=verification_context,
     )

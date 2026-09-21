@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/literature-analysis-artifact.schema.json",
+  "title": "LiteratureAnalysisArtifact",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_work"],
+      "properties": {
+        "canonical_work": {"$ref": "#/$defs/canonicalWork"},
+        "matrix_metadata": {"type": "object"}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["works"],
+      "properties": {
+        "works": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/canonicalWork"}},
+        "matrix_metadata": {"type": "object"}
+      }
+    },
+    {"$ref": "#/$defs/canonicalWork"}
+  ],
+  "$defs": {
+    "canonicalWork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["work_type", "title", "authors"],
+      "properties": {
+        "work_id": {"type": "string"},
+        "work_type": {"type": "string"},
+        "title": {"type": "string"},
+        "authors": {"type": "array"},
+        "year": {"type": ["integer", "null"]},
+        "container": {"type": "string"},
+        "doi": {"type": "string"},
+        "url": {"type": "string"},
+        "volume": {"type": "string"},
+        "issue": {"type": "string"},
+        "pages": {"type": "string"},
+        "publisher": {"type": "string"},
+        "extra": {"type": "object"}
+      }
+    }
+  }
+}

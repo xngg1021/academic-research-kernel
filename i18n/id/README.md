@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [简体中文](../../README.zh-Hans.md) · [繁體中文](../../README.zh-Hant.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
 
-Inti penelitian akademis netral-harness dan rangkaian musyawarah multi-agen. Menyediakan 13 keahlian akademis dan alat verifikasi dengan titik masuk portabel Agent Plugins v1 dan MCP (Model Context Protocol), serta integrasi bawaan untuk Hermes Agent, Claude Code, Cursor, dan sub-agen CLI kustom. Meliputi verifikasi sumber, analisis literatur, penulisan akademis, komputasi numerik, audit makalah kuantitatif, audit reproduktibilitas, tinjauan sistematis dan meta-analisis, identitas dan silsilah objek penelitian, orkestrasi peninjauan silang antar-model yang dinamis, serta dua otomatisasi pemantauan mingguan. Repositori mencakup pemeriksaan contoh yang dapat dieksekusi; cakupan validasi dan batasan layanan eksternal dicatat dalam [audit](../../docs/audit-20260906.md).
+Inti penelitian akademis netral-harness dan rangkaian musyawarah multi-agen. Menyediakan 13 keahlian akademis dan alat verifikasi dengan titik masuk portabel Agent Plugins v1 dan MCP (Model Context Protocol), serta integrasi bawaan untuk Hermes Agent, Claude Code, Cursor, dan sub-agen CLI kustom. Meliputi verifikasi sumber, analisis literatur, penulisan akademis, komputasi numerik, audit makalah kuantitatif, audit reproduktibilitas, tinjauan sistematis dan meta-analisis, identitas dan silsilah objek penelitian, orkestrasi peninjauan silang antar-model yang dinamis, serta dua otomatisasi pemantauan mingguan. Repositori mencakup pemeriksaan contoh yang dapat dieksekusi; cakupan validasi dan batasan layanan eksternal dicatat dalam [audit](../../docs/project-lineage-audit-20260920.md).
 
 Penulis: Junfu Shi (SJF, xngg1021), Hermes Agent. Penawaran cakupan saat ini: [Source Lineage License 1.0](../../LICENSE).
 
@@ -81,7 +81,7 @@ git diff --check
 
 QA memvalidasi metadata, referensi, pola jalur pribadi/rahasia yang diketahui, sintaksis Python, dan blok kode yang ditandai. Mengembalikan 0 jika berhasil, 1 jika gagal kode/skema/identitas, dan 2 jika transportasi/autentikasi/kuota tidak tersedia.
 
-CI menjalankan rangkaian pengujian lengkap di Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64, dan macOS Intel, dengan 632 pengujian unit yang lulus dan 40 blok kode yang dapat dieksekusi divalidasi.
+CI menjalankan rangkaian pengujian lengkap di Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64, dan macOS Intel, dengan 717 pengujian unit yang lulus dan 40 blok kode yang dapat dieksekusi divalidasi.
 
 tools/longtail/ menyimpan generator skenario ekstrim long-tail deterministik: 4096 kombinasi kandidat dengan benih SHA256 pada sumbu faktor terpisah, pemilihan cakupan serakah, dan laporan cakupan di generated-scenarios.json.
 

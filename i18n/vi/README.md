@@ -2,7 +2,7 @@
 
 [English](../../README.md) · [简体中文](../../README.zh-Hans.md) · [繁體中文](../../README.zh-Hant.md) · [日本語](../../README.ja.md) · [한국어](../../README.ko.md) · [Deutsch](../../README.de.md) · [Français](../../README.fr.md) · [Español](../../README.es.md) · [Português](../pt/README.md) · [Русский](../ru/README.md) · [Bahasa Indonesia](../id/README.md) · [Italiano](../it/README.md) · [हिन्दी](../hi/README.md) · [العربية](../ar/README.md) · [বাংলা](../bn/README.md) · [اردو](../ur/README.md) · [Tiếng Việt](../vi/README.md) · [Türkçe](../tr/README.md) · [فارسی](../fa/README.md) · [Kiswahili](../sw/README.md) · [Polski](../pl/README.md)
 
-Nhân nghiên cứu học thuật trung lập với nền tảng và bộ công cụ thảo luận đa tác tử. Cung cấp 13 kỹ năng học thuật và công cụ xác thực với các điểm nhập Agent Plugins v1 và MCP (Model Context Protocol), cũng như tích hợp gốc cho Hermes Agent, Claude Code, Cursor và các tác tử phụ CLI tùy chỉnh. Bao gồm xác minh nguồn, phân tích tài liệu, biên tập học thuật, tính toán số học, kiểm toán bài báo định lượng, kiểm toán khả năng tái lập, tổng quan hệ thống và phân tích tổng hợp, danh tính và nguồn gốc đối tượng nghiên cứu, điều phối phản biện chéo đa mô hình động và hai dịch vụ giám sát tự động hàng tuần. Kho lưu trữ bao gồm các kiểm tra ví dụ có thể thực thi; phạm vi xác thực và giới hạn dịch vụ bên ngoài được ghi lại trong [kiểm toán](../../docs/audit-20260906.md).
+Nhân nghiên cứu học thuật trung lập với nền tảng và bộ công cụ thảo luận đa tác tử. Cung cấp 13 kỹ năng học thuật và công cụ xác thực với các điểm nhập Agent Plugins v1 và MCP (Model Context Protocol), cũng như tích hợp gốc cho Hermes Agent, Claude Code, Cursor và các tác tử phụ CLI tùy chỉnh. Bao gồm xác minh nguồn, phân tích tài liệu, biên tập học thuật, tính toán số học, kiểm toán bài báo định lượng, kiểm toán khả năng tái lập, tổng quan hệ thống và phân tích tổng hợp, danh tính và nguồn gốc đối tượng nghiên cứu, điều phối phản biện chéo đa mô hình động và hai dịch vụ giám sát tự động hàng tuần. Kho lưu trữ bao gồm các kiểm tra ví dụ có thể thực thi; phạm vi xác thực và giới hạn dịch vụ bên ngoài được ghi lại trong [kiểm toán](../../docs/project-lineage-audit-20260920.md).
 
 Tác giả: Junfu Shi (SJF, xngg1021), Hermes Agent. Cung cấp cấp phép hiện tại: [Source Lineage License 1.0](../../LICENSE).
 
@@ -81,7 +81,7 @@ git diff --check
 
 QA xác thực siêu dữ liệu, tài liệu tham khảo, đường dẫn cá nhân/mô hình bí mật, cú pháp Python và các khối mã được đánh dấu. Trả về 0 khi thành công, 1 khi lỗi mã/lược đồ/danh tính và 2 khi không thể truy cập truyền tải/xác thực/hạn ngạch.
 
-CI chạy bộ thử nghiệm đầy đủ trên Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 và macOS Intel, với 632 bài kiểm tra đơn vị đã qua và 40 khối mã thực thi được xác thực.
+CI chạy bộ thử nghiệm đầy đủ trên Linux x86_64 (Python 3.10-3.14), Linux ARM64, Ubuntu 26.04 Preview, Windows x86_64, Windows ARM64, macOS ARM64 và macOS Intel, với 717 bài kiểm tra đơn vị đã qua và 40 khối mã thực thi được xác thực.
 
 tools/longtail/ chứa bộ tạo kịch bản đuôi dài cực đoan tất định: 4096 kết hợp ứng viên hạt giống SHA256 trên các trục nhân tố tách rời, lựa chọn độ bao phủ tham lam và báo cáo độ bao phủ trong generated-scenarios.json.
 

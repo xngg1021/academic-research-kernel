@@ -87,7 +87,7 @@ QA はメタデータ、リファレンス、個人パス・既知シークレ�
 
 固定された Hermes オーサリングテストは、スキルごとの規則を変えずに再利用される。上流の全配布個体数チェックはこの tap には適用されず、本リポジトリのハーネスは 13 のスキルすべてを検査し、固定されたバンドル・任意カタログに対してリファレンスを解決する。これは完全な Hermes インストールテストではない。CI は依存のインストールにのみネットワークを使用し、通常の PR テストは学術 API を呼び出さない。
 
-CI は GitHub Actions により Linux x86_64 (Python 3.10-3.14)、Linux ARM64 (ubuntu-24.04-arm)、Ubuntu 26.04 プレビュー Canary (ubuntu-26.04 および ubuntu-26.04-arm)、Windows x86_64、Windows ARM64 (windows-11-arm)、macOS ARM64 (macos-latest)、macOS Intel (macos-15-intel) の全プラットフォーム・全アーキテクチャを網羅し、632 件の単体テストがすべて合格、上流 main 最新ブランチに対するリアルタイム Canary 検証も含めて実行される。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、このリポジトリに対して tap add、search、install、list を実行する。正確なバージョン、チェック項目、制約は[監査文書](docs/audit-20260906.md)にある。
+CI は GitHub Actions により Linux x86_64 (Python 3.10-3.14)、Linux ARM64 (ubuntu-24.04-arm)、Ubuntu 26.04 プレビュー Canary (ubuntu-26.04 および ubuntu-26.04-arm)、Windows x86_64、Windows ARM64 (windows-11-arm)、macOS ARM64 (macos-latest)、macOS Intel (macos-15-intel) の全プラットフォーム・全アーキテクチャを網羅し、717 件の単体テストがすべて合格、上流 main 最新ブランチに対するリアルタイム Canary 検証も含めて実行される。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、このリポジトリに対して tap add、search、install、list を実行する。正確なバージョン、チェック項目、制約は[監査文書](docs/project-lineage-audit-20260920.md)にある。
 
 tools/longtail/ は確定的な極端長尾シナリオ生成器を保持します: 解結合された因子軸上に 4096 個の SHA256 シード候補を生成し、貪欲法で網羅を選択し、generated-scenarios.json に網羅性レポートを出力します。これはスキルのストレステスト入力層であり、セマンティック展開は別段階です。
 

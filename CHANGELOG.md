@@ -4,6 +4,68 @@
 
 ---
 
+## 2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）
+
+### 唯一闭环修复（最终评审第 1 轮后）
+
+- 首个候选 `304f016d008f` 的完整 CI（35516780578）通过；累计评审新增 1 P1 + 2 P2，均复现并在本批次修复：撤稿观察冲突、非字符串监控 ID、重复 CEG 快照记录。
+- 同类路径一并补齐：kernel 不确定项重复拒绝、所有注册键类型、冻结 JSON 的缺省 ID 哈希；54 项新回归验证合法数值元数据、追加与保留历史例外。
+- 闭环候选本地 873 passed、零跳过；仅允许一次闭环 CI 与第 2 轮最终评审。具体 SHA、远端结果与合并状态仍由收尾证据账本记录。
+
+### 最终集中收尾候选
+
+- 修复最新 6 P1 + 2 P2：所有语义变异绑定规范内容摘要，可信谱系内容权限带外传递，生产/验证字节策略一致，空 Ledger 与错误 MCP 输入可稳定重放/预检。
+- 同类审计补齐生产者诊断字段、严格不确定项碰撞、历史学术凭证兼容 schema 与 dry-run 预检；完整回归保留。无绑定的合并前实验缓存须重新入库，不能静默升级为可信。
+- 英文及简体中文 README 同步，其他译文仍如实标记 stale/queued。40 个独立代码围栏与本地 873 项测试构成发布前门禁；最终 SHA、CI、累计评审及合并结果见[收尾证据](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151)。
+- 构建期保持 Draft，完整 CI 在 `full-ci` 标签下运行；同一候选转 Ready 仅触发最终评审，避免重复矩阵。PR #13 分发范围及 LICENSE/SLL 历史不变。
+
+### 统一科研产物入库桥接与确定性内核公开界面 (Research Artifact Ingestion Bridge v1 / 协议：ingestion-receipt-1.0)
+
+按战略路线图全面打通 13 项技能产物沉淀至确定性科研状态内核的入口，消解界面债务（Surface Debt）：
+
+- **共享证据契约 (`scripts/shared_contracts/evidence.py`)**：
+  - 抽取并统一维护 `ReceiptRef`、`canonical_json_bytes`、学术证据物理载荷 SHA-256 校验以及谱系收据契约验证；
+  - 消除 CEG 与 Decision Ledger 之间的内部重复代码，全仓实现 100% 逐字节序列化与哈希恒等；
+- **产物信封与入库凭证模式 (`schemas/`)**：
+  - `research-artifact-envelope.schema.json`（协议 `artifact-envelope-1.0`）：强制内容寻址派生 `artifact_id`（`art-` + 32 位 hex），将内容身份与环境元数据严格隔离；
+  - `artifact-ingestion-receipt.schema.json`（协议 `ingestion-receipt-1.0`）：强制确定性生成 `receipt_id`（`ingest-` + 32 位 hex），记录命中的适配器、输入校验状态、生成的对象标识与输出状态摘要；
+- **确定性适配器注册表与入库引擎 (`scripts/ingestion/`)**：
+  - 机器可读注册表 (`docs/artifact-adapter-matrix.json`) 覆盖全仓 13 项技能的 3 档适配器：
+    - Tier 1（原生凭证）：`academic-source-verification`、`research-object-identity`、`claim-evidence-graph`、`decision-ledger`；
+    - Tier 2（结构化分析）：`quantitative-paper-audit`、`research-reproducibility`、`cross-review-five`、`systematic-review-meta-analysis`、`literature-analysis`、`literature-watch`、`retraction-watch`、`math-computation`；
+    - Tier 3（非结构化存证）：`academic-writing` 严格遵循“非结构化保持不透明（Opaque stays opaque）、绝不替研究者代做决策”的安全红线；
+  - 事务性与幂等性：基于 `IngestionKernelState.clone()` 机制实现全批次原子提交与回滚（`atomic=True`），重复入库幂等命中；
+- **通用 MCP 服务能力升级 (`scripts/mcp_server.py`)**：
+  - 由原有的 3 个外围统计与硬件探测工具，全面扩展为 12 个确定性无状态科研内核工具（新增 `research_artifact_validate`、`research_artifact_ingest`、`research_receipt_verify`、`research_object_resolve`、`research_lineage_trace`、`claim_evidence_validate`、`claim_evidence_trace`、`decision_ledger_validate`、`decision_trace`）；
+- **端到端完整生命周期与对抗性用例**：
+  - 新增 `tests/test_evidence_contract.py`、`tests/test_artifact_envelope.py`、`tests/test_ingestion_bridge.py`、`tests/test_ingestion_adversarial.py`、`tests/test_mcp_surface.py` 与 `tests/test_research_lifecycle_e2e.py`；
+  - 新增 `tests/test_ingestion_hardening.py`，覆盖深不可变、运行时 schema、真实生产者契约、原子回滚、语义幂等、完整状态回放、防篡改摘要、三态证据语义与真实 stdio MCP 握手；
+  - 单测基线由 632 项扩充至 **873 passed, zero skipped**（40 independent executable smoke fences PASS）。
+
+### PR #12 合并前完整性加固与历史对账
+
+- **[P1] 运行时契约与防篡改**：21 个结构化 payload schema 进入 Draft 2020-12 运行时门禁；信封、CEG、谱系收据与内核快照均重算声明摘要，非法枚举、未知字段、版本漂移、超限载荷与篡改状态 fail closed。
+- **[P1] 事务、幂等与状态本真**：缓存键绑定全部变异上下文并限定于目标状态；原子批次只在最终提交后发布缓存；CEG、Ledger、收据注册表、不确定性与入库记录完整克隆/回放，冲突对象和悬空边拒绝写入。
+- **[P1] 真实生产者契约闭环**：修正 reproduction `status`、ResearchObject 标准字段、cross-review 2.x registry、lineage edge `type`、直接 `CanonicalWork`、meta-analysis-only、screening-only 与 citation-only payload；定量审计覆盖真实返回字段，缺失或 `null` 的数学/定量核验结果进入 `unverifiable`，不再伪装为支持或反驳。
+- **[P1] MCP 公共面闭环**：严格工具入参 schema、统一 `isError`、完整 kernel state 输入输出、实际 lineage/ledger API、物理收据复核，并以真实 stdio 子进程覆盖 initialize/list/call。
+- **[P1] 深不可变**：信封、入库收据、LineageReceipt、CEG 与 Ledger 的全部嵌套 JSON 数据递归冻结；对 `to_dict()` 结果和底层映射的外部变异均不影响域对象。
+- **[P2] 审计上下文**：caller metadata 完整传递但不污染内容寻址 receipt ID；对象、物理收据、不确定性、已入库产物与总内核内容均有独立摘要。
+- **[P1] 二次复审闭环**：继续修复 7 个新发现的边界条件：CEG ID 绑定目标 work、MCP 快照校验接收物理收据、筛选/纳入研究对象隔离、caller metadata 不触发重复变异、回执引用真实 correction ID、`missing_input` 谱系收据可验证、时间戳变体不冲突。
+- **[P1/P2] 三次复审闭环**：修复后续 6 个 P1 与 1 个 P2：稳定 work 身份与检索元数据解耦、CEG claim/evidence 分层绑定 locator 与物理回执、筛选记录优先 `record_id`、撤稿 retained-prior 状态进入不确定性、预检重算 lineage 身份、MCP lineage 活动强制显式时间戳、Ledger 快照仅按声明 manifest 重放。
+- **[P1/P2] 四次复审闭环**：修复后续 5 个 P1 与 3 个 P2：lineage locator 与撤稿 target 进入身份、CEG 校验错误保持验证契约、claim trace 返回支持/反驳锚点、截断撤稿进入覆盖不确定性、筛选决策闭集、增量与快照不确定性同步、适配器内容 ID 统一为 128-bit；同时将同类约束扩展到相邻适配器并复用已有丰富 work 对象。
+- **[P1] 五次复审闭环**：修复后续 5 个 P1：派生不确定性随因果状态同步清退、系统综述抽取与筛选决策按 review artifact 命名空间隔离、成功的 receipt verify 不再误标 MCP `isError`、适配器 bindings 先归一化并拒绝未知字段、同一命题的支持与反驳证据汇聚至同一语义 claim 节点。
+- **[P1/P2] 六次复审闭环**：修复后续 8 个 P1 与 1 个 P2：缓存命中绑定完整入库上下文、信封 `lineage_ref` 被持久化并核验、物理回执递归冻结、CEG 快照按声明的回执可用性重放、仅清退内核拥有的不确定性、筛选决策按评审实例隔离、空白 claim fail closed、wrapped canonical work 复用完整 schema、确认撤稿在结果截断时同时保留告警与覆盖不确定性。
+- **[P1/P2] 七次复审闭环**：修复后续 5 个 P1 与 3 个 P2：CEG 快照按每个引用精确投影回执缺失状态、预检与实际入库统一核验 `lineage_ref`、retained-prior 的既有撤稿告警不再丢失、手稿对象按信封上下文隔离、计算证据保留并绑定有效 locator、一次显式 binding 只追加一次 correction、多 work 产物拒绝冲突身份、MCP lineage 的畸形实体与边归入参数错误。
+- **[P1/P2] 八次复审闭环**：修复后续 4 个 P1 与 4 个 P2：计划内 ResearchObject 身份冲突统一 fail closed、cross-review 证据按完整入库上下文隔离并保留 locator、lineage 实体/活动类型在 MCP dispatch 前按闭集拒绝、无标题评审意见使用规范 JSON 原因、残缺 lineage receipt 返回普通 invalid、falsy 物理回执不再伪装成缺失、canonical work 可确定性升级临时占位对象、opaque fallback 对象按完整信封上下文隔离。
+- **[P1/P2] 九次复审闭环**：修复后续 2 个 P1 与 2 个 P2：异议意见的非字符串原因统一为规范 JSON、预检将适配器计划碰撞返回为普通 invalid、手稿对象始终绑定完整生产者上下文、DOI-only 撤稿目标统一到规范 work 身份。
+- **[P1/P2] 十次复审闭环**：修复后续 4 个 P1 与 1 个 P2：跨产物对象碰撞使用规范 JSON 字节比较、缓存收据强制核验其记录的对象/CEG/Ledger 变异仍被保留、Ledger 验证清单统一 lineage 时间戳等价、学术证据优先解析 DOI/arXiv/PMID/OpenAlex 稳定身份、学术凭证仅接受完整 canonical evidence-claim digest。
+- **[P1] 十一次复审闭环**：修复后续 4 个 P1：兼容并原样保留旧版含时间戳 Ledger 清单身份、缓存收据覆盖 Ledger 快照中的决策/分支/状态事件/依据/修正、各学术适配器共用 DOI 解析器、谱系收据独立重放拓扑/闭包/根节点/步骤与验证状态。
+- **[P1] 十二次复审闭环**：修复后续 6 个 P1：所有拓扑状态返回前先验证目标闭包、物理内容状态必须可独立重放、缓存决策引用绑定完整记录摘要、旧版 Ledger 清单接受时间戳等价发射、DOI 保留不透明后缀标点，并将谱系活动输入/输出预索引以消除大图二次复杂度。
+- **[P1/P2] 十三次复审闭环**：修复后续 4 个 P1 与 3 个 P2：谱系内容验证只读取显式授权根目录内的限额字节或调用方提供的内容、相对 locator 保留可信根锚、生产者与验证器统一故障优先级、缓存 CEG 边与全部 Ledger 记录绑定完整摘要、MCP 重复生成器返回结构化无效图、物理谱系节点执行独立闭集字段校验。
+- **历史台账**：新增 `docs/project-lineage-audit-20260920.md` 与机器可读 JSON，逐项核对 PR #1–#12 的精确 head/CI、累计观察到的 109 个 PR #12 评审线程以及仍开放的 P2/P3 运营和治理边界。
+
+---
+
 ## 2026-09-19（PR #11 / Research Decision Log v1，分支 work/decision-ledger-v1）
 
 ### 研究决策与失败记录 (Research Decision Log v1 / 协议：decision-ledger-1.0)

@@ -36,10 +36,12 @@ import collections.abc
 import copy
 import hashlib
 import json
+import math
 import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
 __all__ = [
@@ -114,15 +116,34 @@ VALID_UNCERTAINTY_KINDS: Set[str] = {
     "generic_uncertainty",
 }
 
+CEG_ALLOWED_TOP_LEVEL_KEYS: Set[str] = {
+    "protocol",
+    "graph_id",
+    "graph_digest",
+    "claims",
+    "evidence_anchors",
+    "support_edges",
+    "claim_relations",
+    "uncertainties",
+}
+
 SHA256_REGEX = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _freeze_val(val: Any) -> Any:
-    if isinstance(val, (dict, collections.abc.Mapping)):
+    if isinstance(val, collections.abc.Mapping):
         return FrozenDict(val)
-    if isinstance(val, (list, tuple, set)):
+    if isinstance(val, (list, tuple)):
         return tuple(_freeze_val(item) for item in val)
-    return val
+    if val is None or isinstance(val, (str, bool, int)):
+        return val
+    if isinstance(val, float):
+        if not math.isfinite(val):
+            raise ValueError("Metadata floats must be finite JSON numbers")
+        return val
+    raise TypeError(
+        f"Unsupported metadata value type {type(val).__name__!r}; expected JSON-domain data"
+    )
 
 
 def _thaw_val(val: Any) -> Any:
@@ -136,15 +157,26 @@ def _thaw_val(val: Any) -> Any:
 class FrozenDict(collections.abc.Mapping):
     """Deeply immutable mapping supporting hashing and preventing nested mutation."""
 
+    __slots__ = ("_store",)
+
     def __init__(self, mapping_or_iterable: Any = None):
-        self._store: Dict[str, Any] = {}
+        frozen: Dict[str, Any] = {}
         if mapping_or_iterable:
             if isinstance(mapping_or_iterable, collections.abc.Mapping):
                 items = mapping_or_iterable.items()
             else:
                 items = list(mapping_or_iterable)
             for k, v in items:
-                self._store[str(k)] = _freeze_val(v)
+                if not isinstance(k, str):
+                    raise TypeError(f"FrozenDict key must be str, got {type(k).__name__}")
+                frozen[k] = _freeze_val(v)
+        object.__setattr__(self, "_store", MappingProxyType(frozen))
+
+    def __setattr__(self, key: str, value: Any):
+        raise TypeError(f"'{self.__class__.__name__}' object does not support mutation.")
+
+    def __delattr__(self, key: str):
+        raise TypeError(f"'{self.__class__.__name__}' object does not support mutation.")
 
     def __getitem__(self, key: str) -> Any:
         return self._store[key]
@@ -157,6 +189,9 @@ class FrozenDict(collections.abc.Mapping):
 
     def __hash__(self) -> int:
         return hash(tuple(sorted(self._store.items())))
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "FrozenDict":
+        return self
 
     def __setitem__(self, key: Any, value: Any):
         raise TypeError(f"'{self.__class__.__name__}' object does not support item assignment (deeply frozen record).")
@@ -240,120 +275,32 @@ def canonical_evidence_claim_digest(claim_item: Dict[str, Any]) -> str:
     return hashlib.sha256(canon_bytes).hexdigest().lower()
 
 
-def validate_lineage_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tuple[bool, Optional[str]]:
-    """Strictly assert lineage-receipt-1.0 protocol, exact receipt_id, and exact receipt_digest."""
-    r_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
-    if not isinstance(r_dict, (dict, collections.abc.Mapping)) or r_dict.get("protocol") != "lineage-receipt-1.0":
-        return False, "Lineage receipt invalid protocol: expected 'lineage-receipt-1.0'"
-    if r_dict.get("receipt_id") != ref.receipt_id:
-        return False, f"Lineage receipt ID mismatch: expected {ref.receipt_id!r}, got {r_dict.get('receipt_id')!r}"
-    if str(r_dict.get("receipt_digest", "")).lower() != str(ref.receipt_digest).lower():
-        return False, f"Lineage receipt digest mismatch: expected {ref.receipt_digest!r}, got {r_dict.get('receipt_digest')!r}"
-    return True, None
-
-
-def validate_academic_receipt_contract(ref: ReceiptRef, receipt_obj: Any) -> Tuple[bool, Optional[str]]:
-    """Strictly assert schema_version=1.0, physical payload SHA256, and exact claim_digest match."""
-    val_dict = receipt_obj.to_dict() if hasattr(receipt_obj, "to_dict") else receipt_obj
-    if not isinstance(val_dict, (dict, collections.abc.Mapping)):
-        return False, "AcademicEvidence invalid representation: must be a dict"
-    thawed = val_dict if isinstance(val_dict, dict) else dict(val_dict)
-    actual_sha = canonical_academic_receipt_payload_sha256(thawed)
-    if actual_sha != ref.payload_sha256:
-        return False, f"AcademicEvidence payload SHA256 mismatch: expected {ref.payload_sha256}, got actual hash {actual_sha}"
-    if thawed.get("schema_version") != "1.0" or not isinstance(thawed.get("claims"), (list, tuple)):
-        return False, "AcademicEvidence receipt structural violation: missing schema_version=1.0 or claims list"
-
-    matching_claim = False
-    for c_item in thawed.get("claims", []):
-        if not isinstance(c_item, (dict, collections.abc.Mapping)):
-            continue
-        c_dict = c_item if isinstance(c_item, dict) else dict(c_item)
-        if c_dict.get("evidence_type") not in VALID_EVIDENCE_TYPES:
-            continue
-        if canonical_evidence_claim_digest(c_dict) == ref.claim_digest:
-            matching_claim = True
-            break
-    if not matching_claim:
-        return False, f"AcademicEvidence claim digest mismatch: claim_digest {ref.claim_digest} not found in legitimate receipt claims"
-    return True, None
-
-
-@dataclass(frozen=True)
-class ReceiptRef:
-    kind: str
-    schema_version: str
-    receipt_id: Optional[str] = None
-    receipt_digest: Optional[str] = None
-    claim_digest: Optional[str] = None
-    payload_sha256: Optional[str] = None
-    locator: Optional[str] = None
-
-    def __post_init__(self):
-        if self.kind not in VALID_RECEIPT_KINDS:
-            raise ValueError(f"Invalid receipt kind: {self.kind!r}. Must be one of {sorted(VALID_RECEIPT_KINDS)}")
-
-        if self.kind == "lineage":
-            if self.schema_version != "lineage-receipt-1.0":
-                raise ValueError(f"Invalid schema_version for lineage receipt: {self.schema_version!r}. Must be 'lineage-receipt-1.0'.")
-            if not self.receipt_id:
-                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_id'.")
-            if not self.receipt_digest:
-                raise ValueError("Lineage ReceiptRef requires non-empty 'receipt_digest'.")
-            r_dig = self.receipt_digest.strip().lower()
-            if not SHA256_REGEX.match(r_dig):
-                raise ValueError(f"Invalid receipt_digest format: {self.receipt_digest!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "receipt_digest", r_dig)
-            if self.claim_digest is not None or self.payload_sha256 is not None:
-                raise ValueError("Lineage ReceiptRef must not contain academic_evidence fields (claim_digest or payload_sha256).")
-
-        elif self.kind == "academic_evidence":
-            if self.schema_version != "1.0":
-                raise ValueError(f"Invalid schema_version for academic_evidence receipt: {self.schema_version!r}. Must be '1.0'.")
-            if not self.claim_digest:
-                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'claim_digest'.")
-            if not self.payload_sha256:
-                raise ValueError("AcademicEvidence ReceiptRef requires non-empty 'payload_sha256'.")
-            c_dig = self.claim_digest.strip().lower()
-            if not SHA256_REGEX.match(c_dig):
-                raise ValueError(f"Invalid claim_digest format: {self.claim_digest!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "claim_digest", c_dig)
-            p_sha = self.payload_sha256.strip().lower()
-            if not SHA256_REGEX.match(p_sha):
-                raise ValueError(f"Invalid payload_sha256 format: {self.payload_sha256!r}. Must be 64 lowercase hex digits.")
-            object.__setattr__(self, "payload_sha256", p_sha)
-            if self.receipt_id is not None or self.receipt_digest is not None:
-                raise ValueError("AcademicEvidence ReceiptRef must not contain lineage fields (receipt_id or receipt_digest).")
-
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
-            "kind": self.kind,
-            "schema_version": self.schema_version,
-        }
-        if self.receipt_id:
-            d["receipt_id"] = self.receipt_id
-        if self.receipt_digest:
-            d["receipt_digest"] = self.receipt_digest
-        if self.claim_digest:
-            d["claim_digest"] = self.claim_digest
-        if self.payload_sha256:
-            d["payload_sha256"] = self.payload_sha256
-        if self.locator:
-            d["locator"] = self.locator
-        return d
-
-
-def canonical_receipt_ref_tuple(ref: Optional[ReceiptRef]) -> Tuple[str, ...]:
-    if not ref:
-        return ()
-    return (
-        ref.kind,
-        ref.schema_version,
-        ref.receipt_id or "",
-        ref.receipt_digest or "",
-        ref.claim_digest or "",
-        ref.payload_sha256 or "",
-        ref.locator or "",
+try:
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        canonical_receipt_ref_tuple,
+        canonical_academic_receipt_payload_sha256,
+        LineageVerificationContext,
+        require_unique_snapshot_records,
+        validate_lineage_receipt_contract,
+        validate_academic_receipt_contract,
+        verify_receipt_reference,
+    )
+except ImportError:
+    import sys
+    from pathlib import Path
+    _repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(_repo_root / "scripts") not in sys.path:
+        sys.path.insert(0, str(_repo_root / "scripts"))
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        canonical_receipt_ref_tuple,
+        canonical_academic_receipt_payload_sha256,
+        LineageVerificationContext,
+        require_unique_snapshot_records,
+        validate_lineage_receipt_contract,
+        validate_academic_receipt_contract,
+        verify_receipt_reference,
     )
 
 
@@ -560,7 +507,8 @@ class UncertaintyItem:
 class ClaimEvidenceGraph:
     """Deterministic scientific assertion and evidence graph container."""
 
-    def __init__(self, graph_id: str = "ceg-default"):
+    def __init__(self, graph_id: str = "ceg-default", *, verification_context: Optional[LineageVerificationContext] = None):
+        self.verification_context = verification_context
         self.graph_id: str = str(graph_id).strip()
         self.claims: Dict[str, Claim] = {}
         self.evidence_anchors: Dict[str, EvidenceAnchor] = {}
@@ -643,12 +591,13 @@ class ClaimEvidenceGraph:
         if eid in self._all_node_ids and self._all_node_ids[eid] != "evidence":
             raise ValueError(f"Namespace collision: ID {eid!r} is already registered as a claim.")
 
+        ref_obj = ReceiptRef(**receipt_ref) if isinstance(receipt_ref, collections.abc.Mapping) else receipt_ref
         new_ev = EvidenceAnchor(
             id=eid,
             anchor_type=anchor_type,
             source_work_id=source_work_id,
             locator=locator,
-            receipt_ref=receipt_ref,
+            receipt_ref=ref_obj,
             content_sha256=content_sha256,
             excerpt=excerpt,
             metadata=FrozenDict(metadata or {}),
@@ -687,11 +636,12 @@ class ClaimEvidenceGraph:
     ) -> EvidenceSupportEdge:
         eid = str(evidence_id).strip()
         cid = str(claim_id).strip()
+        ref_obj = ReceiptRef(**receipt_ref) if isinstance(receipt_ref, collections.abc.Mapping) else receipt_ref
         edge = EvidenceSupportEdge(
             evidence_id=eid,
             claim_id=cid,
             support_status=support_status,
-            receipt_ref=receipt_ref,
+            receipt_ref=ref_obj,
             metadata=FrozenDict(metadata or {}),
         )
         k = canonical_support_edge_tuple(edge)
@@ -757,7 +707,7 @@ class ClaimEvidenceGraph:
             if ref.kind == "lineage":
                 if ref.receipt_id in self._receipt_registry:
                     registered = self._receipt_registry[ref.receipt_id]
-                    ok, err_msg = validate_lineage_receipt_contract(ref, registered)
+                    ok, err_msg = validate_lineage_receipt_contract(ref, registered, verification_context=self.verification_context)
                     if not ok:
                         errors.append(f"{err_msg} on {owner_desc}")
             elif ref.kind == "academic_evidence":
@@ -894,7 +844,7 @@ class ClaimEvidenceGraph:
                     continue
 
                 receipt_obj = reg[rid]
-                ok, err_msg = validate_lineage_receipt_contract(ref, receipt_obj)
+                ok, err_msg = validate_lineage_receipt_contract(ref, receipt_obj, verification_context=self.verification_context)
                 if not ok:
                     lineage_traces.append({
                         "evidence_id": edge.evidence_id,
@@ -1093,3 +1043,118 @@ class ClaimEvidenceGraph:
             "claim_relations": [copy.deepcopy(r) for r in canon_relations],
             "uncertainties": [copy.deepcopy(u) for u in canon_uncertainties],
         }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        receipt_registry: Optional[Mapping[str, Any]] = None,
+        *, verification_context: Optional[LineageVerificationContext] = None,
+    ) -> "ClaimEvidenceGraph":
+        """Strictly reconstruct and verify a canonical ``to_dict()`` export.
+
+        The loader validates the declared digest, derived claim identity fields,
+        uncertainty queue, receipt bindings, and graph structure.  It therefore
+        cannot be used to silently "repair" or bless a tampered snapshot.
+        """
+        if not isinstance(data, collections.abc.Mapping):
+            raise TypeError("ClaimEvidenceGraph.from_dict expects a mapping")
+        unexpected = set(data) - CEG_ALLOWED_TOP_LEVEL_KEYS
+        if unexpected:
+            raise ValueError(f"Unexpected top-level fields in CEG export: {sorted(unexpected)}")
+        missing = CEG_ALLOWED_TOP_LEVEL_KEYS - set(data)
+        if missing:
+            raise ValueError(f"CEG export is missing required fields: {sorted(missing)}")
+        if data.get("protocol") != "claim-evidence-graph-1.0":
+            raise ValueError(
+                f"CEG protocol mismatch: expected 'claim-evidence-graph-1.0', got {data.get('protocol')!r}"
+            )
+
+        require_unique_snapshot_records(data, {
+            "claims": "id", "evidence_anchors": "id", "support_edges": None,
+            "claim_relations": None, "uncertainties": "item_id",
+        })
+        g = cls(graph_id=data["graph_id"], verification_context=verification_context)
+        if receipt_registry:
+            for k, v in receipt_registry.items():
+                g.register_receipt(k, v)
+        for c in data.get("claims", []):
+            node = g.add_claim(
+                id=c["id"],
+                text=c["text"],
+                target_work_id=c.get("target_work_id"),
+                locator=c.get("locator"),
+                claim_type=c.get("claim_type", "empirical_finding"),
+                entities=tuple(c.get("entities", ())),
+                metadata=c.get("metadata"),
+            )
+            if node.to_dict() != dict(c):
+                raise ValueError(
+                    f"CEG claim identity mismatch for {c.get('id')!r}: declared derived fields do not replay"
+                )
+        ev_list = data.get("evidence_anchors") or []
+        for ev in ev_list:
+            ref = ReceiptRef(**ev["receipt_ref"]) if ev.get("receipt_ref") else None
+            node = g.add_evidence(
+                id=ev["id"],
+                anchor_type=ev["anchor_type"],
+                source_work_id=ev.get("source_work_id"),
+                locator=ev.get("locator"),
+                receipt_ref=ref,
+                content_sha256=ev.get("content_sha256"),
+                excerpt=ev.get("excerpt"),
+                metadata=ev.get("metadata"),
+            )
+            if node.to_dict() != dict(ev):
+                raise ValueError(f"CEG evidence replay mismatch for {ev.get('id')!r}")
+        for s in data.get("support_edges", []):
+            s_ref = ReceiptRef(**s["receipt_ref"]) if s.get("receipt_ref") else None
+            edge = g.add_support_edge(
+                evidence_id=s["evidence_id"],
+                claim_id=s["claim_id"],
+                support_status=s["support_status"],
+                receipt_ref=s_ref,
+                metadata=s.get("metadata"),
+            )
+            if edge.to_dict() != dict(s):
+                raise ValueError(
+                    f"CEG support edge replay mismatch for {s.get('evidence_id')!r}->{s.get('claim_id')!r}"
+                )
+        for r in data.get("claim_relations", []):
+            edge = g.add_claim_relation(
+                source_claim_id=r["source_claim_id"],
+                target_claim_id=r["target_claim_id"],
+                relation_type=r["relation_type"],
+                evidence_refs=tuple(r.get("evidence_refs", ())),
+                metadata=r.get("metadata"),
+            )
+            if edge.to_dict() != dict(r):
+                raise ValueError(
+                    f"CEG claim relation replay mismatch for {r.get('source_claim_id')!r}->{r.get('target_claim_id')!r}"
+                )
+
+        valid, errors = g.validate_graph()
+        if not valid:
+            raise ValueError(f"Replayed CEG failed structural validation: {'; '.join(errors)}")
+
+        declared_uncertainties = sorted(
+            (dict(item) for item in data["uncertainties"]),
+            key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=False),
+        )
+        actual_uncertainties = sorted(
+            (item.to_dict() for item in g.extract_uncertainties()),
+            key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=False),
+        )
+        if declared_uncertainties != actual_uncertainties:
+            raise ValueError(
+                "CEG uncertainty queue mismatch: declared verification state does not replay "
+                "against the supplied receipt registry"
+            )
+
+        actual_digest = g.graph_digest()
+        if actual_digest != str(data["graph_digest"]).lower():
+            raise ValueError(
+                f"CEG snapshot tampering detected: declared graph_digest {data['graph_digest']!r}, "
+                f"recomputed {actual_digest!r}"
+            )
+        return g
