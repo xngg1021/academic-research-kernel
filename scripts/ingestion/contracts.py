@@ -140,16 +140,10 @@ def _measure_structure(value: Any, depth: int = 0) -> Tuple[int, int]:
 
 def validate_payload_bounds(payload: Mapping[str, Any]) -> List[str]:
     errors: List[str] = []
-    thawed = _thaw_val(payload)
     try:
-        payload_bytes = len(canonical_json_bytes(thawed))
-        maximum_depth, collection_items = _measure_structure(thawed)
+        maximum_depth, collection_items = _measure_structure(payload)
     except (TypeError, ValueError) as exc:
         return [f"Payload is not canonical JSON: {exc}"]
-    if payload_bytes > MAX_PAYLOAD_BYTES:
-        errors.append(
-            f"Payload size {payload_bytes} bytes exceeds maximum {MAX_PAYLOAD_BYTES} bytes"
-        )
     if maximum_depth > MAX_STRUCTURE_DEPTH:
         errors.append(
             f"Payload nesting depth {maximum_depth} exceeds maximum {MAX_STRUCTURE_DEPTH}"
@@ -157,6 +151,16 @@ def validate_payload_bounds(payload: Mapping[str, Any]) -> List[str]:
     if collection_items > MAX_COLLECTION_ITEMS:
         errors.append(
             f"Payload collection size {collection_items} exceeds maximum {MAX_COLLECTION_ITEMS}"
+        )
+    if errors:
+        return errors
+    try:
+        payload_bytes = len(canonical_json_bytes(_thaw_val(payload)))
+    except (TypeError, ValueError) as exc:
+        return [f"Payload is not canonical JSON: {exc}"]
+    if payload_bytes > MAX_PAYLOAD_BYTES:
+        errors.append(
+            f"Payload size {payload_bytes} bytes exceeds maximum {MAX_PAYLOAD_BYTES} bytes"
         )
     return errors
 

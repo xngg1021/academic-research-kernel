@@ -26,6 +26,7 @@
         {"required": ["reported_value", "recomputed_value", "discrepancy_detected"]},
         {"required": ["consistent"]}
       ],
+      "allOf": [{"not":{"required":["discrepancy_detected","consistent"],"properties":{"discrepancy_detected":{"const":true},"consistent":{"const":true}}}},{"not":{"required":["discrepancy_detected","consistent"],"properties":{"discrepancy_detected":{"const":false},"consistent":{"const":false}}}}],
       "properties": {
         "statistic": {"type": "string"},
         "reported": {},

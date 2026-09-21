@@ -26,6 +26,7 @@ from .contracts import (
     validate_envelope_dict,
     validate_kernel_state_dict,
     validate_receipt_dict,
+    validate_payload_bounds,
 )
 
 
@@ -303,10 +304,14 @@ class IngestionReceipt:
         validation = FrozenJSONMap(self.validation_state)
         output = FrozenJSONMap(self.output_digests)
         mutations = tuple(FrozenJSONMap(value) for value in self.mutation_bindings)
+        if any(not all(key in b for key in ("kind", "identity", "canonical_digest")) for b in mutations):
+            raise ValueError("Mutation bindings require kind, identity and canonical_digest")
         if len({(b["kind"], b["identity"]) for b in mutations}) != len(mutations):
             raise ValueError("Mutation binding identities must be unique")
         bindings = tuple(FrozenJSONMap(value) for value in self.ledger_bindings)
-        uncertainties = tuple(FrozenJSONMap(value) for value in self.uncertainties)
+        uncertainties = tuple(_normalise_uncertainty(value) for value in self.uncertainties)
+        if len({value["item_id"] for value in uncertainties}) != len(uncertainties):
+            raise ValueError("Receipt uncertainty item_id values must be unique")
         caller = FrozenJSONMap(self.caller_metadata) if self.caller_metadata is not None else None
         object.__setattr__(self, "validation_state", validation)
         object.__setattr__(self, "output_digests", output)
@@ -542,7 +547,7 @@ def _normalise_uncertainty(value: Mapping[str, Any]) -> FrozenJSONMap:
     for key in ("item_id", "subject_id", "reason"):
         if not isinstance(value[key], str) or not value[key].strip():
             raise ValueError(f"uncertainty.{key} must be a non-empty string")
-    if value["kind"] not in VALID_KERNEL_UNCERTAINTY_KINDS:
+    if not isinstance(value["kind"], str) or value["kind"] not in VALID_KERNEL_UNCERTAINTY_KINDS:
         raise ValueError(
             f"Invalid kernel uncertainty kind {value['kind']!r}; "
             f"expected one of {sorted(VALID_KERNEL_UNCERTAINTY_KINDS)}"
@@ -551,6 +556,7 @@ def _normalise_uncertainty(value: Mapping[str, Any]) -> FrozenJSONMap:
         raise ValueError("uncertainty.needs_human must be a boolean")
     if "metadata" in value and not isinstance(value["metadata"], collections.abc.Mapping):
         raise ValueError("uncertainty.metadata must be an object")
+    _raise_schema_errors("Kernel uncertainty", validate_payload_bounds(value))
     return FrozenJSONMap(value)
 
 
@@ -580,6 +586,7 @@ class IngestionKernelState:
     ingested_artifacts: Dict[str, str] = field(default_factory=dict)
     ingestion_receipts: Dict[str, IngestionReceipt] = field(default_factory=dict)
     verification_context: Optional[LineageVerificationContext] = field(default=None, repr=False, compare=False)
+    ingestion_sources: Dict[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.objects = {
@@ -600,6 +607,10 @@ class IngestionKernelState:
             )
             for key, value in self.ingestion_receipts.items()
         }
+        self.ingestion_sources = {
+            require_registry_key(key): FrozenJSONMap(value)
+            for key, value in self.ingestion_sources.items()
+        }
         self._synchronise_receipts()
 
     def _synchronise_receipts(self) -> None:
@@ -615,6 +626,9 @@ class IngestionKernelState:
     def register_object(self, object_id: str, value: Mapping[str, Any]) -> None:
         object_id = require_registry_key(object_id)
         frozen = FrozenJSONMap(_thaw_val(value))
+        if object_id.lower().startswith("work:doi:"):
+            from .adapters import _require_coherent_dois
+            _require_coherent_dois(frozen.get("doi"), object_id, frozen.get("work_id"))
         existing = self.objects.get(object_id)
         if (
             existing is not None
@@ -681,6 +695,7 @@ class IngestionKernelState:
             uncertainties=copy.deepcopy(self.uncertainties),
             ingested_artifacts=copy.deepcopy(self.ingested_artifacts),
             ingestion_receipts=copy.deepcopy(self.ingestion_receipts),
+            ingestion_sources=copy.deepcopy(self.ingestion_sources),
         )
 
     def validate_invariants(self) -> Tuple[bool, List[str]]:
@@ -924,6 +939,9 @@ class IngestionKernelState:
                 key: self.ingestion_receipts[key].to_dict()
                 for key in sorted(self.ingestion_receipts)
             },
+            "ingestion_sources": {
+                key: _thaw_val(self.ingestion_sources[key]) for key in sorted(self.ingestion_sources)
+            },
             "content_digests": self.compute_digests(),
         }
 
@@ -972,6 +990,7 @@ class IngestionKernelState:
                 key: IngestionReceipt.from_dict(value)
                 for key, value in raw["ingestion_receipts"].items()
             },
+            ingestion_sources=raw.get("ingestion_sources", {}),
         )
         if state.compute_digests() != raw["content_digests"]:
             raise ValueError("Kernel snapshot content digests do not match replayed state")

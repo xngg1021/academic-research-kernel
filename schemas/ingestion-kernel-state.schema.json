@@ -29,14 +29,56 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["item_id", "subject_id", "kind", "reason", "needs_human"],
+        "required": [
+          "item_id",
+          "subject_id",
+          "kind",
+          "reason",
+          "needs_human"
+        ],
         "properties": {
-          "item_id": {"type": "string", "minLength": 1},
-          "subject_id": {"type": "string", "minLength": 1},
-          "kind": {"type": "string", "minLength": 1},
-          "reason": {"type": "string", "minLength": 1},
-          "needs_human": {"type": "boolean"},
-          "metadata": {"type": "object"}
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "kind": {
+            "enum": [
+              "ambiguous_locator",
+              "computation_unverified",
+              "decision_without_basis",
+              "expert_disagreement",
+              "generic_uncertainty",
+              "literature_coverage_gap",
+              "missing_receipt",
+              "publication_status_change",
+              "quantitative_verification_gap",
+              "reproducibility_gap",
+              "retraction_alert",
+              "screening_ambiguity",
+              "unevidenced_claim_basis",
+              "unresolved_contradiction",
+              "unsupported_negative_result",
+              "unsupported_pruning",
+              "unverifiable_claim"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "needs_human": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object"
+          }
         }
       }
     },
@@ -45,6 +87,7 @@
       "propertyNames": {"type": "string", "pattern": "^art-[0-9a-f]{32}$"},
       "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
     },
+    "ingestion_sources": {"type":"object","additionalProperties":{"type":"object","additionalProperties":false,"required":["envelope","bindings"],"properties":{"envelope":{"type":"object"},"bindings":{"type":"object"}}}},
     "ingestion_receipts": {
       "type": "object", "propertyNames": {"type": "string", "minLength": 1},
       "additionalProperties": {"type": "object"}

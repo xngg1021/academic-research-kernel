@@ -104,6 +104,89 @@ def bind_mutations(before: Mapping, state: Any, plan: Any) -> list:
             for kind, identity in sorted(selected)]
 
 
+def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dict:
+    """Reconstruct mandatory records from content-bound source, never cache lists.
+
+    Planning against empty domain containers avoids mistaking later append-only
+    records for mutations of an older artifact. Physical evidence is supplied
+    only for replay verification; it does not define the mutation inventory.
+    The scratch apply has no cache or external writes and uses the same record
+    constructors as admission. Live derived queues are checked separately.
+    """
+    from .models import ArtifactEnvelope, IngestionKernelState
+    from .contracts import validate_adapter_contract
+    from .registry import create_default_registry
+
+    source = state.ingestion_sources.get(cache_key)
+    if source is None or set(source) != {"envelope", "bindings"}:
+        raise ValueError("missing independent ingestion source; reingest the artifact")
+    envelope = ArtifactEnvelope.from_dict(source["envelope"])
+    adapter = create_default_registry().resolve(envelope)
+    bindings = adapter.normalize_bindings(source["bindings"])
+    if (envelope.artifact_id != receipt.source_artifact_id
+        or envelope.payload_sha256 != receipt.source_artifact_sha256
+        or envelope.ingestion_context_digest(bindings) != receipt.ingestion_context_digest
+        or envelope.lineage_ref != receipt.source_lineage_ref
+        or (adapter.adapter_id, adapter.adapter_version) != (receipt.adapter_id, receipt.adapter_version)):
+        raise ValueError("independent source/context/adapter identity mismatch")
+    errors = validate_adapter_contract(envelope, adapter)
+    if errors:
+        raise ValueError("invalid independent source: " + "; ".join(errors))
+    scratch = IngestionKernelState(
+        ceg=state.ceg.__class__(state.ceg.graph_id) if state.ceg is not None else None,
+        ledger=state.ledger.__class__(state.ledger.ledger_id) if state.ledger is not None else None,
+        receipts=state.receipts,
+        verification_context=state.verification_context,
+    )
+    plan = adapter.plan(envelope, scratch, bindings)
+    if not plan.valid:
+        raise ValueError("independent source planning failed: " + "; ".join(plan.errors))
+    # A correction's sequence belongs to the append-only ledger history. Its
+    # required semantics come from the source and accepted caller binding.
+    # Locate that semantic record independently; do not execute a new event at
+    # today's sequence, or use cached ledger_bindings to declare it optional.
+    corrections = list(plan.ledger_outcome_corrections)
+    plan.ledger_outcome_corrections = []
+    scratch.ingested_artifacts[envelope.artifact_id] = envelope.payload_sha256
+    generated = adapter.apply(plan, scratch, receipt.ingestion_context_digest)
+    if generated.status != "accepted":
+        raise ValueError("independent source projection was rejected")
+    projected = mutation_inventory(scratch)
+    expected = {
+        (b["kind"], b["identity"]): projected[(b["kind"], b["identity"])]
+        for b in generated.mutation_bindings
+        if b["kind"] not in {"physical_receipt", "derived_uncertainty"}
+    }
+    for key in plan.registered_receipts:
+        expected[("physical_receipt", key)] = projected[("physical_receipt", key)]
+    # An envelope lineage receipt may legitimately arrive later. Its physical
+    # contents are verified against the source ReceiptRef by kernel invariants;
+    # it was not necessarily an original mutation of this artifact.
+    if corrections:
+        if state.ledger is None:
+            raise ValueError("missing ledger for source-bound corrections")
+        expected[("ledger_container", state.ledger.ledger_id)] = projected[("ledger_container", state.ledger.ledger_id)]
+        live = mutation_inventory(state)
+        for correction in corrections:
+            ref = correction.get("receipt_ref")
+            semantic = {
+                "decision_id": correction["decision_id"], "verdict": correction["verdict"],
+                "rationale": correction["rationale"],
+                "receipt_ref": ref.to_dict() if hasattr(ref, "to_dict") else ref,
+                "locator": correction.get("locator"), "metadata": correction.get("metadata") or {},
+            }
+            matches = [(key, value) for key, value in live.items() if key[0] == "ledger_correction"
+                       and record_digest({k: value.get(k, {} if k == "metadata" else None) for k in semantic})
+                       == record_digest(semantic)]
+            if not matches:
+                raise ValueError("missing source-bound ledger correction")
+            # The first identical semantic observation remains a valid witness
+            # after subsequent corrections append newer history.
+            key, value = min(matches, key=lambda item: item[1]["sequence"])
+            expected[key] = value
+    return expected
+
+
 def commitment_errors(state: Any, inventory: Mapping) -> list:
     """Validate immutable observations and explicitly recomputable projections."""
     from .adapters import _domain_derived_uncertainties
@@ -116,6 +199,13 @@ def commitment_errors(state: Any, inventory: Mapping) -> list:
         for binding in receipt.mutation_bindings if binding["kind"] == "object"
     }
     errors = []
+    # Domain projections are independently recomputable even if a cache edit
+    # removes both the declared uncertainty and its mutation binding.
+    for identity, value in derived.items():
+        if record_digest(inventory.get(("derived_uncertainty", identity))) != record_digest(value):
+            errors.append(f"Missing or altered derived uncertainty commitment {identity!r}")
+    if set(state.ingestion_sources) != set(state.ingestion_receipts):
+        errors.append("Independent ingestion source/cache key sets differ")
     for cache_key, receipt in state.ingestion_receipts.items():
         bindings = receipt.mutation_bindings
         bound_keys = {(b["kind"], b["identity"]) for b in bindings}
@@ -131,6 +221,22 @@ def commitment_errors(state: Any, inventory: Mapping) -> list:
             required.add((kind, value["item_id"]))
         if not required <= bound_keys:
             errors.append(f"Ingestion receipt cache {cache_key!r} lacks complete mutation bindings")
+        try:
+            expected_records = expected_mutation_inventory(state, cache_key, receipt)
+            for key, value in expected_records.items():
+                if key not in bound_keys:
+                    errors.append(f"Ingestion receipt cache {cache_key!r} lacks source-derived mutation commitment: {key}")
+                actual = inventory.get(key)
+                if record_digest(actual) == record_digest(value):
+                    continue
+                if (key[0] == "object" and value == {"id": key[1], "kind": "work"}
+                    and actual is not None and (
+                        (actual.get("id") == key[1] and actual.get("kind") == "work")
+                        or (key[1], record_digest(actual)) in canonical_upgrades)):
+                    continue
+                errors.append(f"Ingestion receipt cache {cache_key!r} source-derived mutation commitment mismatch: {key}")
+        except (KeyError, TypeError, ValueError) as exc:
+            errors.append(f"Ingestion receipt cache {cache_key!r} independent mutation commitment failure: {exc}")
         for binding in bindings:
             kind, identity, expected = binding["kind"], binding["identity"], binding["canonical_digest"]
             actual = inventory.get((kind, identity))

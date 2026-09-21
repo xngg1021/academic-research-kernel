@@ -167,7 +167,59 @@
     "uncertainties": {
       "type": "array",
       "items": {
-        "type": "object"
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item_id",
+          "subject_id",
+          "kind",
+          "reason",
+          "needs_human"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "kind": {
+            "enum": [
+              "ambiguous_locator",
+              "computation_unverified",
+              "decision_without_basis",
+              "expert_disagreement",
+              "generic_uncertainty",
+              "literature_coverage_gap",
+              "missing_receipt",
+              "publication_status_change",
+              "quantitative_verification_gap",
+              "reproducibility_gap",
+              "retraction_alert",
+              "screening_ambiguity",
+              "unevidenced_claim_basis",
+              "unresolved_contradiction",
+              "unsupported_negative_result",
+              "unsupported_pruning",
+              "unverifiable_claim"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "needs_human": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
       }
     },
     "ignored_fields": {

@@ -38,6 +38,8 @@ SLL 广泛允许使用、研究、修改、商用、分发与专有增补，受�
 
 学术引文、元数据与报告规范遵循目标期刊、资助机构、学科与司法辖区规则。仓库确立 **ISO 690:2021**（参考文献与引文指南）、**ISO 5127:2017**（文献与信息概念词汇）与 **W3C PROV**（溯源数据模型）为全球基线，并支持中国大陆 GB/T 7714-2025、西班牙 UNE-ISO 690:2024、德国 DIN ISO 690:2021 等地区 Profile 与 APA、IEEE、PRISMA 2020、ICMJE 等学科规范。目标投稿机构的具体要求优先于默认规则。详见[学术规范架构](docs/standards/README.md)与[自然学术术语指南](docs/terminology/README.md)。
 
+PR #12 最终修补已覆盖 DOI 等外部标识的一致性、定量判定的互斥布尔关系，以及内核与回执共用的不确定项契约。缓存完整性由保留的源产物与归一化绑定独立重建；同时删除状态记录和回执声明也无法取得错误的缓存命中。详见[四项阻塞收尾](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21)。
+
 ## 安装与集成
 
 ### 1. 便携式 Agent Plugins v1 与 MCP 工具服务
@@ -96,7 +98,7 @@ QA 校验元数据、参考文件、个人路径与已知密钥模式、Python �
 
 固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十三个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
 
-CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。最终候选本地测试为 873 passed、零跳过；精确 HEAD 的远端结果单独记录于收尾账本。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。最终候选本地测试为 965 passed、零跳过；精确 HEAD 的远端结果单独记录于收尾账本。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
 tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
 

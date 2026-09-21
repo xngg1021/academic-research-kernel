@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-from shared_contracts.evidence import validate_lineage_receipt_contract
+from shared_contracts.evidence import FrozenJSONMap, validate_lineage_receipt_contract
 
 from .contracts import validate_adapter_contract
 from .models import (
@@ -72,6 +72,7 @@ class IngestionEngine:
         target.uncertainties = source.uncertainties
         target.ingested_artifacts = source.ingested_artifacts
         target.ingestion_receipts = source.ingestion_receipts
+        target.ingestion_sources = source.ingestion_sources
 
     def batch_ingest(
         self,
@@ -192,6 +193,11 @@ class IngestionEngine:
                 if receipt.status != "accepted":
                     raise ValueError(receipt.failure_reason or "Adapter rejected the artifact")
                 staged.ingestion_receipts[cache_key] = receipt
+                source_envelope = env.to_dict()
+                source_envelope.pop("caller_metadata", None)
+                staged.ingestion_sources[cache_key] = FrozenJSONMap({
+                    "envelope": source_envelope, "bindings": bindings or {},
+                })
 
                 valid, invariant_errors = staged.validate_invariants()
                 if not valid:

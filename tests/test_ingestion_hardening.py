@@ -749,7 +749,7 @@ def test_mcp_returns_full_round_trippable_state_even_for_dry_run():
     assert body["success"] is True
     assert set(body["output_state"]) == {
         "protocol", "snapshot_digest", "ceg", "ledger", "objects", "receipts",
-        "uncertainties", "ingested_artifacts", "ingestion_receipts", "content_digests",
+        "uncertainties", "ingested_artifacts", "ingestion_receipts", "ingestion_sources", "content_digests",
     }
     IngestionKernelState.from_dict(
         body["output_state"],

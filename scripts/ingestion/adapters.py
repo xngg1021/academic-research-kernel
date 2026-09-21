@@ -106,15 +106,7 @@ def _canonical_work_id_from_identifiers(
     if not isinstance(values, dict):
         values = {}
 
-    # An explicit canonical work reference remains authoritative. Canonicalize
-    # DOI work references so case and resolver prefixes cannot split identity.
-    for raw_ref in subject_refs:
-        ref = canonical_text(raw_ref)
-        if ref.lower().startswith("work:doi:"):
-            doi = _canonical_doi(ref[len("work:doi:"):])
-            return f"work:doi:{doi}"
-        if ref.lower().startswith("work:"):
-            return ref
+    _require_coherent_dois(values.get("doi"), *subject_refs)
 
     def strip_prefix(raw: Any, prefixes: Tuple[str, ...]) -> str:
         text = canonical_text(raw) if raw is not None else ""
@@ -123,6 +115,36 @@ def _canonical_work_id_from_identifiers(
             if lowered.startswith(prefix):
                 return text[len(prefix):].strip().strip("/")
         return text.strip().strip("/")
+
+    identifier_specs = (
+        ("arxiv_id", "arxiv", ("https://arxiv.org/abs/", "http://arxiv.org/abs/", "arxiv:"), str.lower),
+        ("pmid", "pmid", ("https://pubmed.ncbi.nlm.nih.gov/", "http://pubmed.ncbi.nlm.nih.gov/", "pmid:"), str),
+        ("openalex_id", "openalex", ("https://openalex.org/", "http://openalex.org/", "openalex:"), str.upper),
+    )
+    canonical_refs = [canonical_text(ref) for ref in subject_refs]
+    for field, namespace, prefixes, normalise in identifier_specs:
+        def canonical_identifier(raw: Any) -> str:
+            value = strip_prefix(raw, prefixes)
+            if namespace == "arxiv":
+                value = re.sub(r"\.pdf$", "", value, flags=re.IGNORECASE)
+            return normalise(value)
+
+        prefix = f"work:{namespace}:"
+        candidates = [canonical_identifier(values[field])] if values.get(field) else []
+        for index, ref in enumerate(canonical_refs):
+            if ref.lower().startswith(prefix):
+                value = canonical_identifier(ref[len(prefix):])
+                candidates.append(value)
+                canonical_refs[index] = prefix + value
+        if len(set(candidates)) > 1:
+            raise ValueError(f"Conflicting {namespace} identity representations")
+
+    # Explicit references retain precedence only after identity coherence.
+    for ref in canonical_refs:
+        if ref.lower().startswith("work:doi:"):
+            return "work:doi:" + _canonical_doi(ref[len("work:doi:"):])
+        if ref.lower().startswith("work:"):
+            return ref
 
     doi_candidates: List[str] = []
     if values.get("doi"):
@@ -143,11 +165,6 @@ def _canonical_work_id_from_identifiers(
         if doi:
             return f"work:doi:{doi}"
 
-    identifier_specs = (
-        ("arxiv_id", "arxiv", ("https://arxiv.org/abs/", "http://arxiv.org/abs/", "arxiv:"), str.lower),
-        ("pmid", "pmid", ("https://pubmed.ncbi.nlm.nih.gov/", "http://pubmed.ncbi.nlm.nih.gov/", "pmid:"), str),
-        ("openalex_id", "openalex", ("https://openalex.org/", "http://openalex.org/", "openalex:"), str.upper),
-    )
     for field, namespace, prefixes, normalise in identifier_specs:
         if not values.get(field):
             continue
@@ -157,6 +174,22 @@ def _canonical_work_id_from_identifiers(
         if value:
             return f"work:{namespace}:{normalise(value)}"
     return None
+
+
+def _require_coherent_dois(doi: Any, *references: Any) -> None:
+    """Reject competing DOI identities before applying precedence rules."""
+    candidates = [_canonical_doi(doi)] if doi else []
+    for raw in references:
+        if not isinstance(raw, str):
+            continue
+        ref = canonical_text(raw)
+        if ref.lower().startswith("work:doi:"):
+            candidates.append(_canonical_doi(ref[len("work:doi:"):]))
+        elif ref.lower().startswith(("doi:", "https://doi.org/", "http://doi.org/",
+                                     "https://dx.doi.org/", "http://dx.doi.org/", "10.")):
+            candidates.append(_canonical_doi(ref))
+    if len(set(candidates)) > 1:
+        raise ValueError("Conflicting DOI identity representations")
 
 
 def _domain_derived_uncertainties(
@@ -1169,6 +1202,14 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
             key in p for key in ("reported", "recomputed", "consistent", "discrepancy_detected")
         ):
             errors.append("Quantitative audit payload requires assertions or a direct result")
+        for index, result in enumerate(p.get("assertions", [p])):
+            discrepancy, consistent = result.get("discrepancy_detected"), result.get("consistent")
+            if "discrepancy_detected" in result and not isinstance(discrepancy, bool):
+                errors.append(f"assertions[{index}].discrepancy_detected must be boolean")
+            if consistent is not None and not isinstance(consistent, bool):
+                errors.append(f"assertions[{index}].consistent must be boolean or null")
+            if isinstance(discrepancy, bool) and isinstance(consistent, bool) and discrepancy == consistent:
+                errors.append(f"assertions[{index}] has conflicting quantitative verdict flags")
         return len(errors) == 0, errors
 
     def plan(
@@ -1591,6 +1632,7 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
         else:
             works = [p["canonical_work"]] if "canonical_work" in p else p.get("works", [])
         for w in works:
+            _require_coherent_dois(w.get("doi"), w.get("work_id"), w.get("url"))
             title = canonical_text(w.get("title", ""))
             doi = _canonical_doi(w.get("doi", ""))
             declared_work_id = w.get("work_id")
@@ -1708,6 +1750,7 @@ class RetractionWatchAdapter(BaseArtifactAdapter):
 
         p = envelope.payload
         target = p.get("target_work_id")
+        _require_coherent_dois(p.get("doi"), target, *envelope.subject_refs)
         if isinstance(target, str) and target.lower().startswith("work:doi:"):
             target = "work:doi:" + _canonical_doi(target[len("work:doi:"):])
         if not target:

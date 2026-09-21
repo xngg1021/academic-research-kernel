@@ -131,18 +131,18 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "a7e7a565404fead4e8a6b672b24d0dd866cc4296758f422f22340d4b096373b1",
+      "source_sha256": "03a60760c0f3cebf8f82696a10482e1ef962609a8065078f7f93071d10da4b4b",
       "section_hashes": {
         "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
         "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
         "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
-        "Scholarly Standards & Multi-Profile Baseline": "5d6117e2fdcd16d086020d4749328afd42362dbf10e20fd8ec91f7dc489681a6",
+        "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
         "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
         "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
         "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
         "Deterministic ingestion and public kernel": "ec2de356ec5fd47da9247de72c06c6a1ddf9f026b9dfe7eb0643d823b47f0c04",
-        "Validation": "cb383aeb25b3c4bb39938efa94ec067c283ea656b4304a6ea8933063eefccdad",
+        "Validation": "42d7444f85f03cd2e6139f0b1f18c39468aea3fbab92d7551a4c85220f488e3b",
         "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
       },
       "genre": "user_facing_documentation",
@@ -151,44 +151,44 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "a7e7a565404fead4e8a6b672b24d0dd866cc4296758f422f22340d4b096373b1",
-          "translated_from_source_sha256": "a7e7a565404fead4e8a6b672b24d0dd866cc4296758f422f22340d4b096373b1",
+          "localized_file_sha256": "03a60760c0f3cebf8f82696a10482e1ef962609a8065078f7f93071d10da4b4b",
+          "translated_from_source_sha256": "03a60760c0f3cebf8f82696a10482e1ef962609a8065078f7f93071d10da4b4b",
           "translated_from_section_hashes": {
             "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
             "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
-            "Scholarly Standards & Multi-Profile Baseline": "5d6117e2fdcd16d086020d4749328afd42362dbf10e20fd8ec91f7dc489681a6",
+            "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
             "Deterministic ingestion and public kernel": "ec2de356ec5fd47da9247de72c06c6a1ddf9f026b9dfe7eb0643d823b47f0c04",
-            "Validation": "cb383aeb25b3c4bb39938efa94ec067c283ea656b4304a6ea8933063eefccdad",
+            "Validation": "42d7444f85f03cd2e6139f0b1f18c39468aea3fbab92d7551a4c85220f488e3b",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "README.zh-Hans.md",
           "status": "localized_current",
-          "localized_file_sha256": "d736f6c2eb1cb39ca2a456e75770fe7448031836504050eda6bc5bf175520b02",
-          "translated_from_source_sha256": "a7e7a565404fead4e8a6b672b24d0dd866cc4296758f422f22340d4b096373b1",
+          "localized_file_sha256": "0d59f031075591c56510159034ec69dc5580a3d25a19a6801f8fdc8a543734c5",
+          "translated_from_source_sha256": "03a60760c0f3cebf8f82696a10482e1ef962609a8065078f7f93071d10da4b4b",
           "translated_from_section_hashes": {
             "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
             "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
-            "Scholarly Standards & Multi-Profile Baseline": "5d6117e2fdcd16d086020d4749328afd42362dbf10e20fd8ec91f7dc489681a6",
+            "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
             "Deterministic ingestion and public kernel": "ec2de356ec5fd47da9247de72c06c6a1ddf9f026b9dfe7eb0643d823b47f0c04",
-            "Validation": "cb383aeb25b3c4bb39938efa94ec067c283ea656b4304a6ea8933063eefccdad",
+            "Validation": "42d7444f85f03cd2e6139f0b1f18c39468aea3fbab92d7551a4c85220f488e3b",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "README.zh-Hant.md",
@@ -208,8 +208,10 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: insufficient content length: 6880 bytes vs 15688 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -231,6 +233,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -254,6 +257,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -277,6 +281,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -300,6 +305,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -323,6 +329,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -346,6 +353,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -369,6 +377,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -392,6 +401,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -415,6 +425,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -438,6 +449,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -461,6 +473,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -484,6 +497,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -507,6 +521,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -530,6 +545,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -553,6 +569,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -576,6 +593,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -599,6 +617,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -622,6 +641,7 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "Scholarly Standards & Multi-Profile Baseline",
             "Deterministic ingestion and public kernel",
             "Validation"
           ],
@@ -665,7 +685,7 @@
             "3. 历史法律记录不可篡改性 (Immutability of Historical Legal Boundaries)": "8832a96de2b27677018f7cf34fb5370c00efd697c1d3ea44fe1b3ef0a169167f"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/REPOSITORY-IDENTITY.md",
@@ -912,7 +932,7 @@
             "2. 发布身份清单 (Release Manifest)": "9ecfeeff509c447e321e7a4f2056d2cc9785ad2eb3293e45c6e1397f79ea8533"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/CHANGELOG.md",
@@ -1110,7 +1130,7 @@
             "External proposal intake discipline": "5b1e3167222530fe8e37857a6632934a4b681a177ee7ba156a7a29e662659b0d"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/CONTRIBUTING.md",
@@ -1321,7 +1341,7 @@
             "Text identity": "a51a3c66e6393510e6a073e2ad794def654fd5af14fec7555f12be62e96d1944"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/LICENSE-APPLICATION.md",
@@ -1532,7 +1552,7 @@
             "Prose cleanup after adoption — 2026-09-16": "2e9226b1c5d2d133c55c6ffdacc8edd8044f13059a64ceda955962f6a3d0327e"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/LICENSE-HISTORY.md",
@@ -1739,7 +1759,7 @@
             "Skill body hashes at SLL adoption — historical record": "6c1cb5237d8984de6df4ee26691109ee38e658a828c4ed336c34c19261c04eec"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/SOURCE-LINEAGE.md",
@@ -1979,7 +1999,7 @@
             "Evidence Receipt 输出约定": "aef17eb347e3a51fa56fecc13ff290a5ac35700f4db6389be984d99d2b5e8173"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/academic-source-verification/SKILL.md",
@@ -2206,7 +2226,7 @@
             "Verification": "d4aad2ee4d10fd52b91a9c01a298ecfd1d0013722ff41633d40bf2b948156796"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/academic-writing/SKILL.md",
@@ -2419,7 +2439,7 @@
             "CCF 推荐目录查询": "6392e2838f43cfe5c420de4037beee72c5d3814087ce18f87b87743d3f1059af"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/academic-writing/references/china-academia.md",
@@ -2644,7 +2664,7 @@
             "非英非中文献著录通用规则": "8758aabd979e521eac892324daf0443696fdd662c30f9179c052f8d967f99093"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/academic-writing/references/citation-styles.md",
@@ -2857,7 +2877,7 @@
             "CCF 推荐目录查询": "6392e2838f43cfe5c420de4037beee72c5d3814087ce18f87b87743d3f1059af"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/academic-writing/references/mainland-china-academia.md",
@@ -3072,7 +3092,7 @@
             "附：常见缺料清单": "298431feabc38fcd5da4d9591705930b78ee7df3ac333fd9eed8250b7c96ea94"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/academic-writing/references/submission-letters.md",
@@ -3289,7 +3309,7 @@
             "Verification": "c6e37f4b7621f456a3e7b9151ddfdc966831c5534ced682b52371d1439110aa2"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/claim-evidence-graph/SKILL.md",
@@ -3514,7 +3534,7 @@
             "Verification": "27249495e999c62edbb24d4d87267a640758ba216bd4fcc5859069902aeaca86"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/cross-review-five/SKILL.md",
@@ -3751,7 +3771,7 @@
             "演进与落地状态 (2026-09-17 最新对账)": "2c2e58976a30a0a6a68e31f66fd2dff02fb8eb91e992c3b070c7d10aeeb9244d"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/cross-review-five/docs/implementation-contract-v2.md",
@@ -3955,7 +3975,7 @@
             "Verification": "7549de83605a5d77228dd465ef1c3b9d18663979a528c43f6477e81a1e59ccd3"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/skills/decision-ledger/SKILL.md",
@@ -4209,7 +4229,7 @@
             "Verification": "791233593fc6aaa54922a89466b884b02c298faa8f1531953cd894e3f9d4b127"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/SKILL.md",
@@ -4422,7 +4442,7 @@
             "验证": "0c80389c39c7bbfb6a8c89ee198d5e7270b3a7c3a7aad7df533b5005589ef9f3"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/bibtex-guide.md",
@@ -4633,7 +4653,7 @@
             "规则": "b158b94239fbb9d89056349596124aa22c097a4343c2813f1c767658ee7881b5"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/bilingual-reading.md",
@@ -4850,7 +4870,7 @@
             "执行要点": "008f25de6f6f86e56d599a63c9503d635a2142c6317e6352ef6619cfd9659210"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/fallacy-checklist.md",
@@ -5061,7 +5081,7 @@
             "诚实边界": "306d9a28019ff2fdb8f9b830ac3fef244d5bfb2403363abf0f3dabb22c42c26a"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/journal-matching.md",
@@ -5276,7 +5296,7 @@
             "审稿语气规则": "f3f3575c4816e670360afcb5baed3ea57c374d62d7dfa24e9007d7c9dd13bb72"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/peer-review-template.md",
@@ -5487,7 +5507,7 @@
             "Pitfalls": "9702bb94d65298dd6aa72963572b0f79e1b7bd87e0bda4f0a8a463775e2bfeff"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/reproduction.md",
@@ -5698,7 +5718,7 @@
             "诚实边界": "c510f3bb2754843d82a125b0c7cd3df3e6fe0355580cff16b09eeb4c3ea8355c"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/research-gap.md",
@@ -5909,7 +5929,7 @@
             "执行要点": "35ec568413cd525b14e92a11b567f195d0bde8f316e7ae7336b31b6701eb4eb4"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-analysis/references/review-matrix.md",
@@ -6128,7 +6148,7 @@
             "Verification": "6a1887acb798ea36b6da9b117e3b9391c31b7cb9a9cb3c6023011c7b16f202a8"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/literature-watch/SKILL.md",
@@ -6375,7 +6395,7 @@
             "Verification": "4e0578ca75149c6d8758f205141e510acb8451c287d1d9f652529046647f6eb6"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/math-computation/SKILL.md",
@@ -6596,7 +6616,7 @@
             "非线性拟合（参数标准误与局部近似置信区间）": "f6c4c90ead31f4e5aecf545ab644b3ec53a132d6dab9342b308ed75f3fd928cf"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/math-computation/references/advanced-recipes.md",
@@ -6815,7 +6835,7 @@
             "ARIMA 预测（statsmodels）": "63439dd05c56b7bef65342918d1968a58e3dde017be4662c862a60732843720c"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/math-computation/references/domain-recipes-finance.md",
@@ -7032,7 +7052,7 @@
             "边界声明": "445542cf4233077ca3aa2570eac7cf1fd9b67afa6772b7de9e511984c1b2fd12"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/math-computation/references/domain-recipes-physics-engineering.md",
@@ -7251,7 +7271,7 @@
             "调查抽样：分层加权估计": "55ac86ee6c6b88814a3f4a48fc265587fec85b6711241029c95ad66ff833875b"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/math-computation/references/domain-recipes-social-science.md",
@@ -7486,7 +7506,7 @@
             "Evidence Receipt 输出约定": "a49d146ae02506efdc4b622bb26e6b9ffefd8f39003fb3623cd2ed4f66cccc97"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/quantitative-paper-audit/SKILL.md",
@@ -7705,7 +7725,7 @@
             "7. 错配检测的容差依据": "01f8ff9e943798382c7cdd8a80b7734419d4c4a2a9f5210f0c26ed7908fc3963"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/quantitative-paper-audit/references/formulas.md",
@@ -7928,7 +7948,7 @@
             "报告模板": "23e2852ff59b198b2eadce5285ed2d4a14a276a71b8a52e2585c8624699d147d"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/quantitative-paper-audit/references/mismatch-catalog.md",
@@ -8155,7 +8175,7 @@
             "Verification": "87e3213a0917a84cb56254c6105a7ada7449909407e4d8dddc7c5c1abc7c77e7"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/research-object-identity/SKILL.md",
@@ -8374,7 +8394,7 @@
             "Verification": "1866f49e93da4aa27a7f85809090055d4601c6ae7d510949956fc1a9f60eb55b"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/research-reproducibility/SKILL.md",
@@ -8589,7 +8609,7 @@
             "判定示例": "b78de8e553a33b10cbca7644b81ca057af70fd6ef195067512c226c7c6613d65"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/research-reproducibility/references/adjudication.md",
@@ -8824,7 +8844,7 @@
             "清单 JSON 格式": "4084ee0730d3761411724223e0960add5c4f9c0df6255301632128e3da322f5e"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/research-reproducibility/references/pipeline.md",
@@ -9043,7 +9063,7 @@
             "Verification": "cc70db7ef957ace3d85a7d5639c1cf220661f67c2f6cc712ba51675d5edc5fa2"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/retraction-watch/SKILL.md",
@@ -9280,7 +9300,7 @@
             "Verification": "81d6155cae110e54e219f078fd6a5e96dc93c20d13b8572e4bad398d6ebb5714"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/systematic-review-meta-analysis/SKILL.md",
@@ -9497,7 +9517,7 @@
             "6. 报告清单(与 PRISMA 2020 条目对应)": "9dbe66a981c6a9ddd6b82d511d9f3e71430d3dae4c46a92ee7d29160c49cca1b"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/systematic-review-meta-analysis/references/effect-size-conversions.md",
@@ -9712,7 +9732,7 @@
             "5. 常见坑": "1899f54f495cfca52e8d0d845e3430a3f8f8674587edb9f5c2b0e33ac23de0e5"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/skills/systematic-review-meta-analysis/references/search-strategy-guide.md",
@@ -9918,7 +9938,7 @@
             "一句话": "930c8cf10cfc92125b2351ce58ac646b4239c414db92a1340faf1e4f0d92e697"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/docs/agenda-audit-20260917.md",
@@ -10150,7 +10170,7 @@
             "Official source ledger": "3ba9baca387554af902ed507cd10566ab18bb143555bb63e55869b06af277198"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/docs/audit-20260906.md",
@@ -10352,7 +10372,7 @@
             "被拒绝的部分": "2ffeb0444d2bf123abbd8ae57dd33bdf2de4a50a80c52d8ae1f35fae9c3bc143"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/docs/external-proposal-priors-20260917-scfabric.md",
@@ -10541,15 +10561,16 @@
       "canonical_title": "Documentation: kernel-architecture",
       "source_path": "docs/kernel-architecture.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "6e354631b1aabff6ad9bd377cbe871b6e811ecd94f0dd1780a0600a8c36740de",
+      "source_sha256": "a9f4dae61e8c3ea9dd9af50b18f99b1cdd5edf964cf4f420c41fc2dccb60ceb4",
       "section_hashes": {
         "Research-State Kernel Architecture & Ingestion Bridge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Overview": "6379dc37c7db1dfb943852483dbbd98e4b4b699c3ee65a8cf68655dcd6ac336c",
         "The Three Core State Layers": "467462b8eb023b8d0cc55aad801d13b5942b51d88bb6a2be5b90b052374148f8",
         "Research Artifact Ingestion Bridge v1": "2e860abe4c746ced8950081b01692b06671d111cc9f3ef9bc711449fe6023f32",
         "Ingestion Adapters (3 Tiers)": "2e58bde54e61a988a62b5bfe71ce0d07721111e7fb826310d93a9cb835131557",
-        "Tamper-Evident Kernel State": "574475be882ce6b417cc8e97de4397147a5b1bf3ca66c7c39d5cf3a8ba41c145",
-        "Complete semantic mutation commitments": "920e6f146e444240f8227d8eeda326625a5735aff3a195ace3bebcb1e7d31667",
+        "Tamper-Evident Kernel State": "cad3a65b303b3cf702f87d77220bb1dbd88ee6b0bde107c7c3eeb3fc6762866f",
+        "Complete semantic mutation commitments": "2d3437b09dd4fa96210a9680b554c6ed1699ba14758cc08f322b5722440d4dcf",
+        "Source-derived cache completeness": "0e0d17d48c984f4ffba6803412dd1b599e7ac0db3e7be6824b426be773c91df3",
         "Closure contract rules": "17486bb4af30cf1e5692a9388ccde712014899ea2a1d3bf5f2a15752f88e8d54",
         "Trusted lineage verification context": "704e564fc7902afa4cd8a058233f8d59def30cc07392da6b213211a05e65d1c8",
         "Universal MCP Interface (12 Tools)": "dfdf2a13f1f1effca6bc8708669859c7b92fd3cc54353e7e382f94700df33c50",
@@ -10570,23 +10591,24 @@
         "zh-Hans": {
           "path": "docs/kernel-architecture.md",
           "status": "canonical_current",
-          "localized_file_sha256": "6e354631b1aabff6ad9bd377cbe871b6e811ecd94f0dd1780a0600a8c36740de",
-          "translated_from_source_sha256": "6e354631b1aabff6ad9bd377cbe871b6e811ecd94f0dd1780a0600a8c36740de",
+          "localized_file_sha256": "a9f4dae61e8c3ea9dd9af50b18f99b1cdd5edf964cf4f420c41fc2dccb60ceb4",
+          "translated_from_source_sha256": "a9f4dae61e8c3ea9dd9af50b18f99b1cdd5edf964cf4f420c41fc2dccb60ceb4",
           "translated_from_section_hashes": {
             "Research-State Kernel Architecture & Ingestion Bridge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "Overview": "6379dc37c7db1dfb943852483dbbd98e4b4b699c3ee65a8cf68655dcd6ac336c",
             "The Three Core State Layers": "467462b8eb023b8d0cc55aad801d13b5942b51d88bb6a2be5b90b052374148f8",
             "Research Artifact Ingestion Bridge v1": "2e860abe4c746ced8950081b01692b06671d111cc9f3ef9bc711449fe6023f32",
             "Ingestion Adapters (3 Tiers)": "2e58bde54e61a988a62b5bfe71ce0d07721111e7fb826310d93a9cb835131557",
-            "Tamper-Evident Kernel State": "574475be882ce6b417cc8e97de4397147a5b1bf3ca66c7c39d5cf3a8ba41c145",
-            "Complete semantic mutation commitments": "920e6f146e444240f8227d8eeda326625a5735aff3a195ace3bebcb1e7d31667",
+            "Tamper-Evident Kernel State": "cad3a65b303b3cf702f87d77220bb1dbd88ee6b0bde107c7c3eeb3fc6762866f",
+            "Complete semantic mutation commitments": "2d3437b09dd4fa96210a9680b554c6ed1699ba14758cc08f322b5722440d4dcf",
+            "Source-derived cache completeness": "0e0d17d48c984f4ffba6803412dd1b599e7ac0db3e7be6824b426be773c91df3",
             "Closure contract rules": "17486bb4af30cf1e5692a9388ccde712014899ea2a1d3bf5f2a15752f88e8d54",
             "Trusted lineage verification context": "704e564fc7902afa4cd8a058233f8d59def30cc07392da6b213211a05e65d1c8",
             "Universal MCP Interface (12 Tools)": "dfdf2a13f1f1effca6bc8708669859c7b92fd3cc54353e7e382f94700df33c50",
             "Verification and residual boundaries": "1fdd5f83eb56cdf7c83b240d04d481faf3e98667719680e4f331e03e1d15d04c"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/docs/kernel-architecture.md",
@@ -10850,7 +10872,7 @@
             "4. Method notes": "1eb478f2e0fc6e4dce6d9de3a736502804e7029f3eb7e2fb4be689adbe4c4488"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "docs/pain-atlas-v0.zh.md",
@@ -11112,7 +11134,7 @@
             "PR #9 架构边界纪律：": "039ac8436147da32de84f36c752e3ba5ad747b3bf50db00f7b4e4c5fa49f59e5"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/docs/post-pr6-roadmap-reevaluation.md",
@@ -11333,7 +11355,7 @@
             "7. PR #12 最终候选事实对账（2026-09-20）": "60f43acf8149298137b75a36fde9de5cfd99b5185e63ceaf3eaef526f0e48aa5"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/docs/post-pr9-roadmap-reevaluation.md",
@@ -11513,19 +11535,20 @@
       "canonical_title": "Documentation: project-lineage-audit-20260920",
       "source_path": "docs/project-lineage-audit-20260920.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "a00b3c9fe23a93f762428212fcf94d5487e748785800dcf77cfb1ed3c6d7ffcb",
+      "source_sha256": "3c79772a85ce488b5e645dfe838031eeccdccc93d55ebe018bec101394fb40f3",
       "section_hashes": {
         "Project Lineage, PR/CI, and Residual-Risk Audit — 2026-09-20": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Scope and evidence boundary": "2bb582524997e6fe9d1a620f0af689decba069e374e4d03ad347975c324267ab",
-        "Executive result": "c1ab8f5a4b11aa9b106604ff4697b2e632620827de24bf3e9ad8bda09baf57ea",
+        "Scope and evidence boundary": "5c4309b1c717cd064e39db4752e860398bd4d2a6474e42dd8c3a2d7f2a106e2d",
+        "Executive result": "6e3996df13a1e1a7e763e8302ae87f009098f751f389788b264174a6a38a4710",
         "Complete PR and exact-head CI ledger": "2a3883d15a6d6b5038583c32403facee68a4fe6bfd5e31bb2fbf7a30575a8410",
         "CI interpretation": "1b60a98269ca4a239d85807f94159a6d957fbe7c013fa61fd78132308054e7a7",
         "PR #12 remediation ledger": "07b544a13ac7c6559ea341425e5e1f5c3c9c1e02f4d3567f95c05df994462cf9",
-        "Consolidated final-candidate ledger": "d2171a9aabd9da52c7f85373872db816e9c756b75dbaf98394066368a5eabc92",
-        "Final review round 1 and the single closure repair": "2c7de6bec0eefac7f5777ac26f85f4412324d91e1ae36565f58db77194a6a101",
+        "Consolidated final-candidate ledger": "b4922a79a6156437907c67162c9285038631a182a6b1226e4bd8bfb8da1e6c78",
+        "Final review round 1 and the single closure repair": "8f6b51cb72661df25196b0c343ad970a7d5d14a388237dc270d36ad6f01843f6",
+        "Four-blocker successor — 2026-09-21": "88ac87c8f12adeb3a6025011726513d78dd28a5ef0f997fa2b09be7c7bcdcf7d",
         "Project-planning audit": "da79c8873d72faa52987fb70013f284044944736e46daa25aff5b50c5baa722e",
-        "Code census and accepted historical/operational residuals": "d6108ae200328e4e701a6269962b8a771455b82cd3de4b756e9e9ececfd3c015",
-        "Verification performed for this remediation": "fde41deff65f52be627ffa46ef707b51e14527e14d8b9870220fe21c18311926"
+        "Code census and accepted historical/operational residuals": "975cd0eaacd932e342bf29523074bf899fbe42e92886f5dc2339f9d9d3a6c8d2",
+        "Verification performed for this remediation": "74d5d308ca492d3931cadbac5fc7916781477164fab569705dc800a284415b59"
       },
       "genre": "technical_and_schema_specifications",
       "aidetox_intensity": "medium",
@@ -11542,23 +11565,24 @@
         "zh-Hans": {
           "path": "docs/project-lineage-audit-20260920.md",
           "status": "canonical_current",
-          "localized_file_sha256": "a00b3c9fe23a93f762428212fcf94d5487e748785800dcf77cfb1ed3c6d7ffcb",
-          "translated_from_source_sha256": "a00b3c9fe23a93f762428212fcf94d5487e748785800dcf77cfb1ed3c6d7ffcb",
+          "localized_file_sha256": "3c79772a85ce488b5e645dfe838031eeccdccc93d55ebe018bec101394fb40f3",
+          "translated_from_source_sha256": "3c79772a85ce488b5e645dfe838031eeccdccc93d55ebe018bec101394fb40f3",
           "translated_from_section_hashes": {
             "Project Lineage, PR/CI, and Residual-Risk Audit — 2026-09-20": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "Scope and evidence boundary": "2bb582524997e6fe9d1a620f0af689decba069e374e4d03ad347975c324267ab",
-            "Executive result": "c1ab8f5a4b11aa9b106604ff4697b2e632620827de24bf3e9ad8bda09baf57ea",
+            "Scope and evidence boundary": "5c4309b1c717cd064e39db4752e860398bd4d2a6474e42dd8c3a2d7f2a106e2d",
+            "Executive result": "6e3996df13a1e1a7e763e8302ae87f009098f751f389788b264174a6a38a4710",
             "Complete PR and exact-head CI ledger": "2a3883d15a6d6b5038583c32403facee68a4fe6bfd5e31bb2fbf7a30575a8410",
             "CI interpretation": "1b60a98269ca4a239d85807f94159a6d957fbe7c013fa61fd78132308054e7a7",
             "PR #12 remediation ledger": "07b544a13ac7c6559ea341425e5e1f5c3c9c1e02f4d3567f95c05df994462cf9",
-            "Consolidated final-candidate ledger": "d2171a9aabd9da52c7f85373872db816e9c756b75dbaf98394066368a5eabc92",
-            "Final review round 1 and the single closure repair": "2c7de6bec0eefac7f5777ac26f85f4412324d91e1ae36565f58db77194a6a101",
+            "Consolidated final-candidate ledger": "b4922a79a6156437907c67162c9285038631a182a6b1226e4bd8bfb8da1e6c78",
+            "Final review round 1 and the single closure repair": "8f6b51cb72661df25196b0c343ad970a7d5d14a388237dc270d36ad6f01843f6",
+            "Four-blocker successor — 2026-09-21": "88ac87c8f12adeb3a6025011726513d78dd28a5ef0f997fa2b09be7c7bcdcf7d",
             "Project-planning audit": "da79c8873d72faa52987fb70013f284044944736e46daa25aff5b50c5baa722e",
-            "Code census and accepted historical/operational residuals": "d6108ae200328e4e701a6269962b8a771455b82cd3de4b756e9e9ececfd3c015",
-            "Verification performed for this remediation": "fde41deff65f52be627ffa46ef707b51e14527e14d8b9870220fe21c18311926"
+            "Code census and accepted historical/operational residuals": "975cd0eaacd932e342bf29523074bf899fbe42e92886f5dc2339f9d9d3a6c8d2",
+            "Verification performed for this remediation": "74d5d308ca492d3931cadbac5fc7916781477164fab569705dc800a284415b59"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hant": {
           "path": "i18n/zh-Hant/docs/project-lineage-audit-20260920.md",
@@ -11776,7 +11800,7 @@
             "9. Relation to other projects": "bc2c5f73faa311e6943433c5dcdbe3e7d2552023cfabdfd47c18d4be88e13b70"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "docs/research-plan-v0.zh.md",
@@ -12004,7 +12028,7 @@
             "Reproducibility": "1581a8d0d4c137c0e0b3925f277400a50274c8bdeb191378d8d8a1e4d3d425ee"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/docs/scientific-compute-fabric.md",
@@ -12211,7 +12235,7 @@
             "Resolution Hierarchy": "7cc314ad0e4c78341090fc780802d68f74353657882d063c339aa2219b1543d6"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/docs/standards/README.md",
@@ -12422,7 +12446,7 @@
             "3. Prohibited Jargon and Natural Academic Alternatives": "320090cbc91136dbad9217b990b0fdebd8e37011f94b04d38bf9ae87ed38d153"
           },
           "stale_sections": [],
-          "last_verified": "2026-09-20"
+          "last_verified": "2026-09-19"
         },
         "zh-Hans": {
           "path": "i18n/zh-Hans/docs/terminology/README.md",
