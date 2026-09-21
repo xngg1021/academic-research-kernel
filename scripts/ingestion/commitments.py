@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Mapping, Tuple
 
-from shared_contracts.evidence import _thaw_val, canonical_json_bytes, compute_sha256
+if __package__ and __package__.startswith("academic_research_kernel"):
+    from academic_research_kernel.shared_contracts.evidence import _thaw_val, canonical_json_bytes, compute_sha256
+else:
+    from shared_contracts.evidence import _thaw_val, canonical_json_bytes, compute_sha256
 
 
 MUTATION_KINDS = (

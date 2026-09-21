@@ -9,18 +9,32 @@ import hashlib
 import re
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, Union
 
-from shared_contracts.evidence import (
-    FrozenJSONMap,
-    LineageVerificationContext,
-    require_registry_key,
-    require_unique_snapshot_records,
-    ReceiptRef,
-    _thaw_val,
-    canonical_json_bytes,
-    compute_sha256,
-    freeze_json,
-    validate_lineage_receipt_contract,
-)
+if __package__ and __package__.startswith("academic_research_kernel"):
+    from academic_research_kernel.shared_contracts.evidence import (
+        FrozenJSONMap,
+        LineageVerificationContext,
+        require_registry_key,
+        require_unique_snapshot_records,
+        ReceiptRef,
+        _thaw_val,
+        canonical_json_bytes,
+        compute_sha256,
+        freeze_json,
+        validate_lineage_receipt_contract,
+    )
+else:
+    from shared_contracts.evidence import (
+        FrozenJSONMap,
+        LineageVerificationContext,
+        require_registry_key,
+        require_unique_snapshot_records,
+        ReceiptRef,
+        _thaw_val,
+        canonical_json_bytes,
+        compute_sha256,
+        freeze_json,
+        validate_lineage_receipt_contract,
+    )
 from .commitments import commitment_errors, mutation_inventory
 from .contracts import (
     validate_envelope_dict,

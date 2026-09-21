@@ -1,10 +1,79 @@
 # academic-research-kernel
 
+<!-- mcp-name: io.github.xngg1021/academic-research-kernel -->
+
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
 Harness-neutral deterministic research-state kernel for agentic research workflows. It unifies research object identity, empirical evidence receipts, tripartite claim-evidence graphs (CEG), and append-only research decision logs through a deterministic ingestion bridge and universal Model Context Protocol (MCP) server. 13 specialized scholarly skills act as producers and consumers of verified research state, with native support for Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external-service limitations are recorded in [the audit](docs/project-lineage-audit-20260920.md).
 
 Author: Junfu Shi (SJF, xngg1021), Hermes Agent. Current scoped offer: [Source Lineage License 1.0](LICENSE).
+
+## Quick start
+
+After 2.0.0 is published to PyPI, run with [uv](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+uvx academic-research-kernel mcp
+```
+
+Publication is a separate release step: check the [2.0.0 release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.0)
+manifest for the actual PyPI status. Before publication, download the release wheel
+and use `uvx --from ./academic_research_kernel-2.0.0-py3-none-any.whl academic-research-kernel mcp`.
+For a fixed product identity, use `uvx academic-research-kernel@2.0.0 mcp`.
+Python 3.10–3.14 is supported; `uvx --python 3.12` explicitly selects a supported interpreter.
+All 12 deterministic tools, including statistics, are included in the base install.
+
+## Verify
+
+```bash
+uvx academic-research-kernel doctor
+uvx academic-research-kernel --version
+```
+
+The offline diagnostic checks dependencies, schemas and all 12 tool definitions.
+Optional services can remain unconfigured. Use `doctor --json` for machine-readable output.
+
+## Package install
+
+```bash
+uv tool install academic-research-kernel==2.0.0
+academic-research-kernel doctor
+academic-research-kernel mcp
+```
+
+Alternatively, install with `pipx install academic-research-kernel==2.0.0` or
+`python -m pip install academic-research-kernel==2.0.0` inside a supported virtual environment.
+`[full]` adds libraries for extended scientific skill examples; `[qa]` adds repository
+validation tools. GPU backends and paid services remain optional.
+
+## Hermes
+
+Install uv so it is on Hermes' process PATH, then install and explicitly enable the portable plugin:
+
+```bash
+hermes plugins install xngg1021/academic-research-kernel --no-enable
+hermes plugins enable academic-skills
+```
+
+The existing `academic-skills` identity and all 13 skills are preserved. The plugin's
+`mcp.json` invokes `uv run --frozen --no-dev --no-editable` with Python 3.12 and the
+checkout's `uv.lock`; its environment lives under `${PLUGIN_DATA}/runtime`.
+It bootstraps dependencies on first use, without borrowing Hermes' or the system's Python
+packages. First use needs network access to obtain missing packages/interpreter.
+The older skill-only tap remains supported under [Integration & Portable Usage](#integration--portable-usage).
+
+## From source
+
+```bash
+git clone https://github.com/xngg1021/academic-research-kernel.git
+cd academic-research-kernel
+uv sync --frozen --no-dev --no-editable
+uv run --frozen --no-dev --no-editable academic-research-kernel doctor
+uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
+```
+
+See [distribution and release](docs/distribution-release.md) for dependency classification,
+reproduction, release identity, publication checkpoints and validation scope.
 
 ## License
 
@@ -47,7 +116,7 @@ This repository conforms to the vendor-neutral **Agent Plugins v1** specificatio
 
 ```bash
 # Add as stdio MCP server in your agent harness
-python scripts/mcp_server.py
+uvx academic-research-kernel mcp
 ```
 
 ### 2. Native Hermes Installation
@@ -79,7 +148,7 @@ PR #12 provides `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 14
 
 Lineage content authority is explicit and out of band. Trusted Python callers pass `LineageVerificationContext` when replaying serialized receipts or snapshots; MCP callers may supply bounded content bytes, never a host filesystem root. The default content budget is 10 MiB; a trusted host may explicitly authorize larger artifacts under the same producer/verifier policy. Without content authority, a `fully_verified` claim cannot be independently reproduced and returns a structured invalid verification result. Opaque prose stays opaque, dissent stays visible, and researchers retain control of commits, pruning, reopening, routing and truth judgments.
 
-See [the architecture](docs/kernel-architecture.md) for contracts and compatibility. PyPI, `uvx`, console packaging and official MCP Registry publication remain PR #13 scope. English and Simplified Chinese README are current; other translation states remain explicit in [the manifest](docs/i18n/manifest.json). Final candidate identity, exact-head CI, cumulative review and merge evidence are recorded in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342).
+See [the architecture](docs/kernel-architecture.md) for contracts and compatibility. Distribution and publication checkpoints are recorded in [the release guide](docs/distribution-release.md). English and Simplified Chinese README are current; other translation states remain explicit in [the manifest](docs/i18n/manifest.json). Final candidate identity, exact-head CI, cumulative review and merge evidence are recorded in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342).
 
 ## Validation
 

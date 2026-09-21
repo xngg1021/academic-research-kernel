@@ -118,9 +118,10 @@ def test_mock_reviewer_adapter_flow(tmp_path):
     assert "CONCEDE" in res_challenge.stances
 
 
-def test_command_reviewer_adapter_formats_and_invokes_cli(tmp_path):
+def test_command_reviewer_adapter_formats_and_invokes_cli(tmp_path, monkeypatch):
     """CommandReviewerAdapter must format CLI command template and invoke subprocess."""
-    helper = tmp_path / "helper.py"
+    monkeypatch.setenv("PATH", str(tmp_path))  # no unrelated system Python
+    helper = tmp_path / "helper with spaces.py"
     helper.write_text(
         "import sys, pathlib\n"
         "pathlib.Path(sys.argv[1]).write_text('cli review done', encoding='utf-8')\n"
@@ -132,7 +133,7 @@ def test_command_reviewer_adapter_formats_and_invokes_cli(tmp_path):
         executor="command",
         provider="custom",
         model="my-subagent",
-        cmd=f"python {helper} {{out_path}} {{findings_path}}"
+        cmd=f'"{sys.executable}" "{helper}" "{{out_path}}" "{{findings_path}}"'
     )
     adapter = CommandReviewerAdapter()
 
@@ -262,7 +263,7 @@ def test_command_adapter_challenge_receives_prompt_not_just_bundle(tmp_path):
         id="cmd_reviewer",
         executor="command",
         provider="custom",
-        cmd=f"python {helper} {{prompt_path}} {{out_path}}"
+        cmd=f'"{sys.executable}" "{helper}" "{{prompt_path}}" "{{out_path}}"'
     )
     adapter = CommandReviewerAdapter()
     req = ct.ChallengeRequest(
@@ -297,7 +298,7 @@ def test_command_adapter_environment_isolation(tmp_path, monkeypatch):
         id="anthropic_agent",
         executor="command",
         provider="anthropic",
-        cmd=f"python {helper} {{out_path}}"
+        cmd=f'"{sys.executable}" "{helper}" "{{out_path}}"'
     )
     adapter = CommandReviewerAdapter()
     req = ct.ReviewRequest(

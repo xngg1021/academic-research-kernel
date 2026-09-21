@@ -458,34 +458,60 @@ def _frozen_meta(metadata: Optional[Mapping[str, Any]]) -> FrozenDict:
 # ---------------------------------------------------------------------------
 
 try:
-    from shared_contracts.evidence import (
-        ReceiptRef,
-        canonical_receipt_ref_tuple,
-        canonical_academic_receipt_payload_sha256,
-        canonical_evidence_claim_digest,
-        LineageVerificationContext,
-        require_unique_snapshot_records,
-        validate_lineage_receipt_contract,
-        validate_academic_receipt_contract,
-        verify_receipt_reference,
-    )
+    if __package__ and __package__.startswith("academic_research_kernel"):
+        from academic_research_kernel.shared_contracts.evidence import (
+            ReceiptRef,
+            canonical_receipt_ref_tuple,
+            canonical_academic_receipt_payload_sha256,
+            canonical_evidence_claim_digest,
+            LineageVerificationContext,
+            require_unique_snapshot_records,
+            validate_lineage_receipt_contract,
+            validate_academic_receipt_contract,
+            verify_receipt_reference,
+        )
+    else:
+        from shared_contracts.evidence import (
+            ReceiptRef,
+            canonical_receipt_ref_tuple,
+            canonical_academic_receipt_payload_sha256,
+            canonical_evidence_claim_digest,
+            LineageVerificationContext,
+            require_unique_snapshot_records,
+            validate_lineage_receipt_contract,
+            validate_academic_receipt_contract,
+            verify_receipt_reference,
+        )
 except ImportError:
     import sys
     from pathlib import Path
     _repo_root = Path(__file__).resolve().parent.parent.parent.parent
     if str(_repo_root / "scripts") not in sys.path:
         sys.path.insert(0, str(_repo_root / "scripts"))
-    from shared_contracts.evidence import (
-        ReceiptRef,
-        canonical_receipt_ref_tuple,
-        canonical_academic_receipt_payload_sha256,
-        canonical_evidence_claim_digest,
-        LineageVerificationContext,
-        require_unique_snapshot_records,
-        validate_lineage_receipt_contract,
-        validate_academic_receipt_contract,
-        verify_receipt_reference,
-    )
+    if __package__ and __package__.startswith("academic_research_kernel"):
+        from academic_research_kernel.shared_contracts.evidence import (
+            ReceiptRef,
+            canonical_receipt_ref_tuple,
+            canonical_academic_receipt_payload_sha256,
+            canonical_evidence_claim_digest,
+            LineageVerificationContext,
+            require_unique_snapshot_records,
+            validate_lineage_receipt_contract,
+            validate_academic_receipt_contract,
+            verify_receipt_reference,
+        )
+    else:
+        from shared_contracts.evidence import (
+            ReceiptRef,
+            canonical_receipt_ref_tuple,
+            canonical_academic_receipt_payload_sha256,
+            canonical_evidence_claim_digest,
+            LineageVerificationContext,
+            require_unique_snapshot_records,
+            validate_lineage_receipt_contract,
+            validate_academic_receipt_contract,
+            verify_receipt_reference,
+        )
 
 
 def _check_id(value: str, field_name: str) -> str:

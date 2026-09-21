@@ -17,11 +17,17 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from shared_contracts.evidence import _thaw_val, canonical_json_bytes
+if __package__ and __package__.startswith("academic_research_kernel"):
+    from academic_research_kernel.shared_contracts.evidence import _thaw_val, canonical_json_bytes
+else:
+    from shared_contracts.evidence import _thaw_val, canonical_json_bytes
 
 
-ROOT = Path(__file__).resolve().parents[2]
-SCHEMAS = ROOT / "schemas"
+if __package__.startswith("academic_research_kernel"):
+    from importlib.resources import files
+    SCHEMAS = files("academic_research_kernel").joinpath("schemas")
+else:
+    SCHEMAS = Path(__file__).resolve().parents[2] / "schemas"
 
 MAX_PAYLOAD_BYTES = 10 * 1024 * 1024
 MAX_STRUCTURE_DEPTH = 64
@@ -84,7 +90,7 @@ def _json_pointer(parts: Iterable[Any]) -> str:
 def _load_schema(filename: str) -> Dict[str, Any]:
     path = SCHEMAS / filename
     if not path.is_file():
-        raise ValueError(f"Runtime schema file is missing: {path.relative_to(ROOT)}")
+        raise ValueError(f"Runtime schema file is missing: {filename}")
     data = json.loads(path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(data)
     return data

@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "academic-research-kernel"
+dynamic = ["version"]
+description = "Deterministic academic research state, evidence validation and statistical recomputation over MCP"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = "LicenseRef-Source-Lineage-1.0"
+license-files = ["LICENSE", "LICENSE-APPLICATION.md", "LICENSE-HISTORY.md", "SOURCE-LINEAGE.md", "LICENSES/MIT-pre-SLL.txt"]
+authors = [{name = "Junfu Shi"}]
+dependencies = ["jsonschema>=4.23,<5", "numpy>=1.26,<3", "scipy>=1.11,<2", "statsmodels>=0.14,<0.16"]
+classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent"]
+
+[project.urls]
+Homepage = "https://github.com/xngg1021/academic-research-kernel"
+Repository = "https://github.com/xngg1021/academic-research-kernel"
+Issues = "https://github.com/xngg1021/academic-research-kernel/issues"
+Releases = "https://github.com/xngg1021/academic-research-kernel/releases"
+
+[project.scripts]
+academic-research-kernel = "academic_research_kernel.cli:main"
+
+[project.optional-dependencies]
+full = ["pandas>=2.2,<3", "sympy>=1.13,<2", "mpmath>=1.3,<2", "matplotlib>=3.8,<4", "scikit-learn>=1.4,<2", "networkx>=3,<4", "lifelines>=0.30,<0.31", "arch>=8,<9", "pingouin>=0.6,<0.7"]
+qa = ["academic-research-kernel[full]", "PyYAML>=6,<7", "pytest>=8,<10", "build>=1.2,<2", "twine>=6,<7"]
+
+[tool.hatch.version]
+path = "scripts/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/academic_research_kernel"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"scripts/ingestion/__init__.py" = "academic_research_kernel/ingestion/__init__.py"
+"scripts/ingestion/adapters.py" = "academic_research_kernel/ingestion/adapters.py"
+"scripts/ingestion/commitments.py" = "academic_research_kernel/ingestion/commitments.py"
+"scripts/ingestion/contracts.py" = "academic_research_kernel/ingestion/contracts.py"
+"scripts/ingestion/engine.py" = "academic_research_kernel/ingestion/engine.py"
+"scripts/ingestion/models.py" = "academic_research_kernel/ingestion/models.py"
+"scripts/ingestion/registry.py" = "academic_research_kernel/ingestion/registry.py"
+"scripts/shared_contracts/__init__.py" = "academic_research_kernel/shared_contracts/__init__.py"
+"scripts/shared_contracts/evidence.py" = "academic_research_kernel/shared_contracts/evidence.py"
+"scripts/mcp_server.py" = "academic_research_kernel/mcp_server.py"
+"scripts/_version.py" = "academic_research_kernel/_version.py"
+"scripts/scfabric/hardware_probe.py" = "academic_research_kernel/hardware_probe.py"
+"skills/research-object-identity/scripts/identity.py" = "academic_research_kernel/identity.py"
+"skills/research-object-identity/scripts/provenance.py" = "academic_research_kernel/provenance.py"
+"skills/claim-evidence-graph/scripts/graph.py" = "academic_research_kernel/graph.py"
+"skills/decision-ledger/scripts/ledger.py" = "academic_research_kernel/ledger.py"
+"skills/quantitative-paper-audit/scripts/recompute.py" = "academic_research_kernel/recompute.py"
+"schemas/artifact-ingestion-receipt.schema.json" = "academic_research_kernel/schemas/artifact-ingestion-receipt.schema.json"
+"schemas/claim-evidence-graph.schema.json" = "academic_research_kernel/schemas/claim-evidence-graph.schema.json"
+"schemas/computation-artifact.schema.json" = "academic_research_kernel/schemas/computation-artifact.schema.json"
+"schemas/compute-receipt.schema.json" = "academic_research_kernel/schemas/compute-receipt.schema.json"
+"schemas/cross-review-artifact.schema.json" = "academic_research_kernel/schemas/cross-review-artifact.schema.json"
+"schemas/decision-ledger-receipt.schema.json" = "academic_research_kernel/schemas/decision-ledger-receipt.schema.json"
+"schemas/evidence-receipt.schema.json" = "academic_research_kernel/schemas/evidence-receipt.schema.json"
+"schemas/ingestion-kernel-state.schema.json" = "academic_research_kernel/schemas/ingestion-kernel-state.schema.json"
+"schemas/legacy-academic-evidence.schema.json" = "academic_research_kernel/schemas/legacy-academic-evidence.schema.json"
+"schemas/lineage-receipt.schema.json" = "academic_research_kernel/schemas/lineage-receipt.schema.json"
+"schemas/literature-analysis-artifact.schema.json" = "academic_research_kernel/schemas/literature-analysis-artifact.schema.json"
+"schemas/literature-delta.schema.json" = "academic_research_kernel/schemas/literature-delta.schema.json"
+"schemas/opaque-manuscript.schema.json" = "academic_research_kernel/schemas/opaque-manuscript.schema.json"
+"schemas/quantitative-audit.schema.json" = "academic_research_kernel/schemas/quantitative-audit.schema.json"
+"schemas/reproduction-receipt.schema.json" = "academic_research_kernel/schemas/reproduction-receipt.schema.json"
+"schemas/research-artifact-envelope.schema.json" = "academic_research_kernel/schemas/research-artifact-envelope.schema.json"
+"schemas/research-object.schema.json" = "academic_research_kernel/schemas/research-object.schema.json"
+"schemas/retraction-delta.schema.json" = "academic_research_kernel/schemas/retraction-delta.schema.json"
+"schemas/review-finding.schema.json" = "academic_research_kernel/schemas/review-finding.schema.json"
+"schemas/review-panel-spec.schema.json" = "academic_research_kernel/schemas/review-panel-spec.schema.json"
+"schemas/review-result.schema.json" = "academic_research_kernel/schemas/review-result.schema.json"
+"schemas/review-run-receipt.schema.json" = "academic_research_kernel/schemas/review-run-receipt.schema.json"
+"schemas/systematic-review-artifact.schema.json" = "academic_research_kernel/schemas/systematic-review-artifact.schema.json"
+"docs/artifact-adapter-matrix.json" = "academic_research_kernel/artifact-adapter-matrix.json"
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tools", "/scripts", "/skills", "/schemas", "/docs", "/tests", "/i18n", "/LICENSE*", "/LICENSES", "/SOURCE-LINEAGE.md", "/SLL-APPLICATION.json", "/CONTRIBUTING.md", "/README*", "/plugin.json", "/mcp.json", "/server.json", "/pyproject.toml", "/uv.lock", "/requirements-qa.txt", "/.gitignore", "/.github/workflows"]
+exclude = ["**/__pycache__", "**/*.pyc", "**/.venv", "**/venv", "**/env", "**/.env*", "**/.pytest_cache", "**/.mypy_cache", "**/.ruff_cache", "**/.tox", "**/.nox", "**/build", "**/dist", "**/node_modules", "**/*.log", "**/receipts-*.json"]

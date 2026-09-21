@@ -865,7 +865,11 @@ def _replay_lineage_receipt_structure(
 @lru_cache(maxsize=None)
 def _physical_receipt_validator(filename: str):
     from jsonschema import Draft202012Validator, FormatChecker
-    path = Path(__file__).resolve().parents[2] / "schemas" / filename
+    if __package__.startswith("academic_research_kernel"):
+        from importlib.resources import files
+        path = files("academic_research_kernel").joinpath("schemas", filename)
+    else:
+        path = Path(__file__).resolve().parents[2] / "schemas" / filename
     schema = json.loads(path.read_text(encoding="utf-8"))
     return Draft202012Validator(schema, format_checker=FormatChecker())
 

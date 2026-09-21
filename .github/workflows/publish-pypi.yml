@@ -1,0 +1,45 @@
+name: Publish verified 2.0.0 artifacts to PyPI
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pypi-v2.0.0
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/academic-research-kernel
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v2.0.0
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          version: '0.12.17'
+      - name: Fetch immutable release assets and verify source and hashes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          gh release download v2.0.0 --pattern '*.whl' --pattern '*.tar.gz' --pattern 'release-manifest.json' --dir release-input
+          python scripts/verify_release_assets.py release-input
+      - run: uv run --frozen --extra qa --no-editable python -m twine check --strict dist/*
+      - run: python scripts/package_acceptance.py --uvx
+      - name: Publish with PyPI Trusted Publishing (no stored token)
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
+        with:
+          packages-dir: dist/
+      - name: Verify actual public package with a clean cache
+        run: |
+          uv run --no-cache --no-project --python 3.12 --with academic-research-kernel==2.0.0 python -I scripts/distribution_smoke.py -- uvx --no-cache --python 3.12 academic-research-kernel@2.0.0

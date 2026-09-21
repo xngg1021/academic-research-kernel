@@ -34,11 +34,17 @@ from types import MappingProxyType
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
 try:
-    from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
+    if __package__ and __package__.startswith("academic_research_kernel"):
+        from academic_research_kernel.shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
+    else:
+        from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-    from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
+    if __package__ and __package__.startswith("academic_research_kernel"):
+        from academic_research_kernel.shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
+    else:
+        from shared_contracts.evidence import LineageVerificationContext, _replay_lineage_content_verification
 
 __all__ = [
     "Entity",

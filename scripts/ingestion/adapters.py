@@ -9,21 +9,38 @@ import re
 import unicodedata
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Set
 
-from shared_contracts.evidence import (
-    ReceiptRef,
-    LineageVerificationContext,
-    _thaw_val,
-    canonical_academic_receipt_payload_sha256,
-    canonical_evidence_claim_digest,
-    canonical_json_bytes,
-    canonical_text,
-    compute_sha256,
-    require_registry_key,
-    require_unique_snapshot_records,
-    validate_academic_receipt_contract,
-    validate_lineage_receipt_contract,
-    validate_lineage_receipt_integrity,
-)
+if __package__ and __package__.startswith("academic_research_kernel"):
+    from academic_research_kernel.shared_contracts.evidence import (
+        ReceiptRef,
+        LineageVerificationContext,
+        _thaw_val,
+        canonical_academic_receipt_payload_sha256,
+        canonical_evidence_claim_digest,
+        canonical_json_bytes,
+        canonical_text,
+        compute_sha256,
+        require_registry_key,
+        require_unique_snapshot_records,
+        validate_academic_receipt_contract,
+        validate_lineage_receipt_contract,
+        validate_lineage_receipt_integrity,
+    )
+else:
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        LineageVerificationContext,
+        _thaw_val,
+        canonical_academic_receipt_payload_sha256,
+        canonical_evidence_claim_digest,
+        canonical_json_bytes,
+        canonical_text,
+        compute_sha256,
+        require_registry_key,
+        require_unique_snapshot_records,
+        validate_academic_receipt_contract,
+        validate_lineage_receipt_contract,
+        validate_lineage_receipt_integrity,
+    )
 from .commitments import bind_mutations, mutation_inventory
 from .contracts import validate_schema
 from .models import (

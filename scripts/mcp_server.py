@@ -19,35 +19,50 @@ from typing import Any, Dict, List, Optional
 
 from jsonschema import Draft202012Validator
 
-ROOT = Path(__file__).resolve().parent.parent
+if not __package__:
+    ROOT = Path(__file__).resolve().parent.parent
 
-# Inject paths for core capabilities
-sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT / "skills" / "research-object-identity" / "scripts"))
-sys.path.insert(0, str(ROOT / "skills" / "claim-evidence-graph" / "scripts"))
-sys.path.insert(0, str(ROOT / "skills" / "decision-ledger" / "scripts"))
-sys.path.insert(0, str(ROOT / "skills" / "quantitative-paper-audit" / "scripts"))
-sys.path.insert(0, str(ROOT / "skills" / "academic-source-verification" / "scripts"))
-sys.path.insert(0, str(ROOT / "scripts" / "scfabric"))
+    # Inject paths for core capabilities
+    sys.path.insert(0, str(ROOT / "scripts"))
+    sys.path.insert(0, str(ROOT / "skills" / "research-object-identity" / "scripts"))
+    sys.path.insert(0, str(ROOT / "skills" / "claim-evidence-graph" / "scripts"))
+    sys.path.insert(0, str(ROOT / "skills" / "decision-ledger" / "scripts"))
+    sys.path.insert(0, str(ROOT / "skills" / "quantitative-paper-audit" / "scripts"))
+    sys.path.insert(0, str(ROOT / "skills" / "academic-source-verification" / "scripts"))
+    sys.path.insert(0, str(ROOT / "scripts" / "scfabric"))
 
-from shared_contracts.evidence import (
-    ReceiptRef,
-    LineageVerificationContext,
-    physical_receipt_schema_errors,
-    validate_lineage_receipt_contract,
-    verify_receipt_reference,
-)
-from ingestion import IngestionEngine, ArtifactEnvelope, IngestionKernelState
-from ingestion.contracts import validate_adapter_contract, validate_schema
-import identity as id_mod
-import provenance as prov_mod
-import graph as ceg_mod
-import ledger as ledger_mod
-
-try:
+if __package__ and __package__.startswith("academic_research_kernel"):
+    from academic_research_kernel.shared_contracts.evidence import (
+        ReceiptRef,
+        LineageVerificationContext,
+        physical_receipt_schema_errors,
+        validate_lineage_receipt_contract,
+        verify_receipt_reference,
+    )
+else:
+    from shared_contracts.evidence import (
+        ReceiptRef,
+        LineageVerificationContext,
+        physical_receipt_schema_errors,
+        validate_lineage_receipt_contract,
+        verify_receipt_reference,
+    )
+if __package__:
+    from .ingestion import IngestionEngine, ArtifactEnvelope, IngestionKernelState
+    from .ingestion.contracts import validate_adapter_contract, validate_schema
+    from . import identity as id_mod, provenance as prov_mod, graph as ceg_mod, ledger as ledger_mod
+    from . import recompute, hardware_probe
+    from ._version import __version__
+else:
+    from ingestion import IngestionEngine, ArtifactEnvelope, IngestionKernelState
+    from ingestion.contracts import validate_adapter_contract, validate_schema
+    import identity as id_mod
+    import provenance as prov_mod
+    import graph as ceg_mod
+    import ledger as ledger_mod
     import recompute
-except Exception:
-    recompute = None
+    import hardware_probe
+    from _version import __version__
 
 
 TOOLS = [
@@ -777,7 +792,6 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
 
         # 12. academic_scfabric_hardware_probe
         elif name == "academic_scfabric_hardware_probe":
-            import hardware_probe
             return hardware_probe.probe()
 
         return {"error": f"Unknown tool: {name}"}
@@ -807,7 +821,7 @@ def process_message(msg: dict) -> dict | None:
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "academic-research-kernel",
-                    "version": "2.0.0"
+                    "version": __version__
                 }
             }
         }
