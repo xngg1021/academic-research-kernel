@@ -812,8 +812,6 @@ class AcademicSourceVerificationAdapter(BaseArtifactAdapter):
             p.get("identifiers", {}),
             envelope.subject_refs,
         )
-        if not target_work and p.get("query"):
-            target_work = f"work:{canonical_text(p['query'])}"
 
         if target_work:
             if target_work in state.objects:
@@ -1633,7 +1631,6 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
             works = [p["canonical_work"]] if "canonical_work" in p else p.get("works", [])
         for w in works:
             _require_coherent_dois(w.get("doi"), w.get("work_id"), w.get("url"))
-            title = canonical_text(w.get("title", ""))
             doi = _canonical_doi(w.get("doi", ""))
             declared_work_id = w.get("work_id")
             if (
@@ -1647,7 +1644,6 @@ class LiteratureAnalysisAdapter(BaseArtifactAdapter):
             w_id = (
                 declared_work_id
                 or (f"work:doi:{doi}" if doi else None)
-                or (f"work:{title}" if title else None)
                 or f"work:{compute_sha256(canonical_json_bytes(w))[:32]}"
             )
             candidate = _thaw_val(w)

@@ -614,6 +614,15 @@ class IngestionKernelState:
         self._synchronise_receipts()
 
     def _synchronise_receipts(self) -> None:
+        for domain, registry_name in ((self.ceg, "_receipt_registry"), (self.ledger, "_receipts")):
+            if domain is not None:
+                retained = getattr(domain, registry_name)
+                missing = set(retained) - set(self.receipts)
+                if missing:
+                    raise ValueError(
+                        "Invalid kernel receipt registry mismatch: domain retains receipts "
+                        f"absent from the public registry: {sorted(missing)}"
+                    )
         for domain in (self.ceg, self.ledger):
             if domain is not None and self.verification_context is not None:
                 domain.verification_context = self.verification_context
@@ -924,6 +933,7 @@ class IngestionKernelState:
         return digests
 
     def _snapshot_payload(self) -> Dict[str, Any]:
+        self._synchronise_receipts()
         return {
             "protocol": "ingestion-kernel-state-1.0",
             "ceg": self.ceg.to_dict() if self.ceg is not None else None,

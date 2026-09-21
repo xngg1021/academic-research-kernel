@@ -65,6 +65,8 @@ Batch execution is transactional. Plans run against a detached state clone, ever
 
 `IngestionKernelState` serializes the complete CEG, decision ledger, research-object registry, physical receipt registry, kernel uncertainty queue, ingested-artifact registry, semantic receipt cache, and `ingestion_sources` containing each accepted source envelope and normalized caller bindings. Each first-class registry has a deterministic digest; those digests roll into `kernel_content_digest`, while the complete transport object carries a separate `snapshot_digest`. Strict loaders verify declared graph/ledger/lineage/receipt digests, replay invariants, and snapshot identity before accepting state.
 
+The public physical-receipt registry and internal CEG/Ledger registries must agree. Synchronization rejects orphaned or conflicting internal receipts, including before serialization; it cannot certify a snapshot that depends on hidden stale receipts.
+
 All envelope, receipt, object, uncertainty, CEG, ledger, and lineage metadata is recursively frozen inside domain objects. Serialization returns detached mutable copies, preventing callers from changing content-addressed state through a retained nested dictionary.
 
 ### Complete semantic mutation commitments
@@ -90,7 +92,7 @@ Pre-closeout experimental ingestion caches without complete bindings or independ
 
 The source envelope includes the original payload, so snapshot size grows with retained source content. Sources are immutable in memory and portable on the wire; they confer no filesystem or network authority. If an experimental or damaged cache lacks a source, replay fails closed. Recovery explicitly discards the invalid cache and reingests an intact envelope against a valid retained prefix. It never reports a damaged cache as an accepted hit. Source-derived hashes are integrity checks; no external authentication is implied.
 
-DOI-bearing `work_id`, DOI fields, resolver URLs and single-work evidence/retraction references must agree after canonical normalization. arXiv, PMID and OpenAlex identifier/reference pairs follow the same coherence rule. Title-only literature objects remain supported. Quantitative `discrepancy_detected` and boolean `consistent` must be inverse; a null consistency with no determinate discrepancy yields `unverifiable`. Receipt and state uncertainties use the same normalizer and equivalent schema definitions, including closed kinds, required identity/reason fields, boolean human-review flags, object metadata and bounded JSON. Contract parity has a regression gate.
+DOI-bearing `work_id`, DOI fields, resolver URLs and single-work evidence/retraction references must agree after canonical normalization. arXiv, PMID and OpenAlex identifier/reference pairs follow the same coherence rule. Literature without an explicit work ID or DOI uses a digest of its complete canonical bibliographic record, so equal titles with different authors or years remain distinct. Evidence without publication identifiers or subject references leaves its target unset; a search query is never a publication identity. Quantitative `discrepancy_detected` and boolean `consistent` must be inverse; a null consistency with no determinate discrepancy yields `unverifiable`. Receipt and state uncertainties use the same normalizer and equivalent schema definitions, including closed kinds, required identity/reason fields, boolean human-review flags, object metadata and bounded JSON. Contract parity has a regression gate.
 
 ### Closure contract rules
 

@@ -115,7 +115,7 @@
     "pr12_twelfth_followup_findings_remediated_locally": 7,
     "review_counts_scope": "historical_final_wave_intake; four_blocker_successor records current continuation",
     "local_tests_after_remediation": {
-      "passed": 965,
+      "passed": 974,
       "skipped": 0,
       "failed": 0
     }
@@ -200,5 +200,52 @@
       "independent_roadmap_validation",
       "SCFabric_future_direction"
     ]
+  },
+  "necessary_adjacent_followup": {
+    "as_of": "2026-09-21",
+    "parent_sha": "6ad401b9d582d1813cff60238481de8da2599098",
+    "first_successor": {
+      "sha": "6ad401b9d582d1813cff60238481de8da2599098",
+      "tree": "723cd24eee3cebc7a02fe9210b4f5dd4bbcf0a68",
+      "ci_run_id": 35555635942,
+      "conclusion": "success",
+      "successful_jobs": 13,
+      "expected_skips": [
+        "tap-lifecycle"
+      ],
+      "original_four_threads_resolved": true
+    },
+    "unexpected_automatic_review": {
+      "requested": false,
+      "new_P1_findings": 3,
+      "intake_threads": {
+        "total": 127,
+        "resolved": 124,
+        "active": 3
+      }
+    },
+    "fixes": [
+      "reject_public_domain_receipt_registry_drift",
+      "no_query_derived_publication_identity",
+      "full_bibliographic_fallback_identity"
+    ],
+    "local_tests": {
+      "passed": 974,
+      "skipped": 0,
+      "failed": 0
+    },
+    "additional_regression_cases": 9,
+    "final_blocker_file_cases": 101,
+    "original_ci_budget": 1,
+    "necessary_followup_ci_waves": 1,
+    "additional_review_requests": 0,
+    "publication": "one_consolidated_forward_successor_for_reproduced_adjacent_failures",
+    "local_actionable_census": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0,
+      "blocking_P3": 0
+    },
+    "final_remote_gates_and_merge": "recorded_in_linked_annex_after_publication"
   }
 }

@@ -79,7 +79,7 @@ PR #12 提供 `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、14
 
 谱系内容读取权限通过带外方式显式授予。可信 Python 调用方重放序列化凭证或快照时传入 `LineageVerificationContext`；MCP 调用方只能提供受限内容字节，不能指定宿主文件系统根目录。默认内容预算为 10 MiB；可信宿主可在生产者与验证者采用同一策略的前提下显式授权更大产物。缺少内容权限时，`fully_verified` 声明无法独立重现，返回结构化无效验证结果。非结构化文本保持不透明，异议保留可见；提交、剪枝、重开、路由选择与真值判断由研究者掌控。
 
-契约与兼容规则见[架构文档](docs/kernel-architecture.md)。PyPI、`uvx`、控制台打包与官方 MCP Registry 发布仍属 PR #13。英文及简体中文 README 已同步；其他译文状态由[清单](docs/i18n/manifest.json)如实记录。最终候选身份、精确 HEAD CI、累计评审与合并证据统一记录于[收尾账本](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151)。
+契约与兼容规则见[架构文档](docs/kernel-architecture.md)。PyPI、`uvx`、控制台打包与官方 MCP Registry 发布仍属 PR #13。英文及简体中文 README 已同步；其他译文状态由[清单](docs/i18n/manifest.json)如实记录。最终候选身份、精确 HEAD CI、累计评审与合并证据统一记录于[收尾账本](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)。
 
 ## QA 与测试
 
@@ -98,7 +98,7 @@ QA 校验元数据、参考文件、个人路径与已知密钥模式、Python �
 
 固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十三个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
 
-CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。最终候选本地测试为 965 passed、零跳过；精确 HEAD 的远端结果单独记录于收尾账本。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。最终候选本地测试为 974 passed、零跳过；精确 HEAD 的远端结果单独记录于收尾账本。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
 tools/longtail/ 存放确定性极端长尾场景生成器：4096 个 SHA256 种子候选组合铺满解耦因子轴，贪心覆盖选择，generated-scenarios.json 内附机器计算的覆盖报告。它是压测技能的输入层；语义展开（任务链、判据、注入事件）是独立阶段。
 

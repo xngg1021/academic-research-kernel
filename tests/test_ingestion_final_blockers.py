@@ -81,7 +81,8 @@ def test_title_only_work_remains_supported():
     env = envelope({'work_type': 'article', 'title': 'Title only', 'authors': []}, 'literature-analysis', 'canonical-work-1.0')
     state = kernel()
     assert IngestionEngine().ingest(env, state).status == 'accepted'
-    assert 'work:Title only' in reload_state(state).objects
+    work_id = 'work:' + compute_sha256(canonical_json_bytes(env.payload))[:32]
+    assert work_id in reload_state(state).objects
 
 
 MISSING = 'absent'
@@ -307,3 +308,49 @@ def test_cached_lineage_cannot_delete_its_independent_source_reference():
     state.uncertainties.clear()
     with pytest.raises(ValueError, match='invariant'):
         reload_state(state)
+
+
+@pytest.mark.parametrize('domain', ['ceg', 'ledger', 'both'])
+@pytest.mark.parametrize('mutation', ['delete', 'replace'])
+def test_public_receipt_registry_drift_is_rejected_before_serialization(domain, mutation):
+    state = kernel(); engine = IngestionEngine()
+    env = envelope(evidence_payload(), 'academic-source-verification', 'evidence-receipt-1.0')
+    assert engine.ingest(env, state).status == 'accepted'
+    state.ingestion_receipts.clear(); state.ingestion_sources.clear()
+    if domain == 'ceg': state.ledger = None
+    if domain == 'ledger': state.ceg = None
+    if mutation == 'delete': state.receipts.clear()
+    else:
+        changed = evidence_payload(); changed['query'] = 'substituted'
+        state.receipts[env.payload_sha256] = changed
+    valid, errors = state.validate_invariants()
+    assert valid is False and any('registry' in e for e in errors)
+    with pytest.raises(ValueError, match='registry|Conflicting'):
+        state.to_dict()
+
+
+def test_broad_queries_never_conflate_unidentified_publications():
+    state = kernel(); engine = IngestionEngine()
+    for claim in ('Paper A finding', 'Paper B finding'):
+        payload = evidence_payload(claim); payload.update(query='same broad topic', identifiers={})
+        env = envelope(payload, 'academic-source-verification', 'evidence-receipt-1.0')
+        assert engine.ingest(env, state).status == 'accepted'
+    assert not state.objects
+    assert len(state.ceg.claims) == 2
+    assert all(c.target_work_id is None for c in state.ceg.claims.values())
+    assert len(reload_state(state).ceg.claims) == 2
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_distinct_title_only_works_have_bibliographic_identities(wrapped):
+    works = [{'title':'Same title', 'work_type':'article', 'authors':['A'], 'year':2020},
+             {'title':'Same title', 'work_type':'article', 'authors':['B'], 'year':2021}]
+    state = kernel(); engine = IngestionEngine()
+    payloads = [{'works': works}] if wrapped else works
+    for payload in payloads:
+        env = envelope(payload, 'literature-analysis', 'corpus-matrix-1.0' if wrapped else 'canonical-work-1.0')
+        receipt = engine.ingest(env, state)
+        assert receipt.status == 'accepted', receipt.failure_reason
+        assert engine.ingest(env, reload_state(state)).receipt_id == receipt.receipt_id
+    assert len(state.objects) == 2
+    assert set(state.objects) == {'work:' + compute_sha256(canonical_json_bytes(w))[:32] for w in works}
