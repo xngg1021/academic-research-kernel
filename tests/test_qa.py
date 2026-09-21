@@ -51,3 +51,19 @@ def test_failed_numeric_assertion_is_a_failure(tmp_path):
     p.write_text('# isolated skill')
     result = qa.run_fence(p, 1, 'assert 100 == 10000')
     assert result.returncode != 0
+
+
+def test_inventory_prunes_local_environments_and_binary_garbage(tmp_path):
+    import subprocess
+    for tree in qa.EXCLUDED_TREES - {'.git'}:
+        path = tmp_path / tree / 'nested'
+        path.mkdir(parents=True)
+        (path / 'poison.md').write_bytes(b'\xff\xfe\x00')
+        (path / 'poison.py').write_bytes(b'\x80\x00')
+    (tmp_path / 'README.md').write_text('source', encoding='utf-8')
+    assert [p.name for p in qa.source_files(tmp_path)] == ['README.md']
+    # Git inventory also ignores unrelated untracked text, not just known caches.
+    subprocess.run(['git', 'init', str(tmp_path)], check=True, capture_output=True)
+    subprocess.run(['git', '-C', str(tmp_path), 'add', 'README.md'], check=True)
+    (tmp_path / 'random.md').write_bytes(b'\xff')
+    assert [p.name for p in qa.source_files(tmp_path)] == ['README.md']

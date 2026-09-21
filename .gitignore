@@ -5,3 +5,8 @@ __pycache__/
 # Machine-specific benchmark snapshots: receipts carry hardware
 # fingerprints and must never enter the shared repository.
 scripts/scfabric/receipts-*.json
+
+dist/
+build/
+*.egg-info/
+.uv-cache/

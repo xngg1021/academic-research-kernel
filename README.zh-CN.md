@@ -6,6 +6,69 @@
 
 作者：Junfu Shi（SJF，xngg1021），Hermes Agent。当前授权范围：[Source Lineage License 1.0](LICENSE)。
 
+## 快速开始
+
+2.0.0 发布到 PyPI 后，安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 即可运行：
+
+```bash
+uvx academic-research-kernel mcp
+```
+
+发布状态以 [2.0.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.0)
+附带的清单为准。尚未发布到 PyPI 时，下载发布 wheel，使用
+`uvx --from ./academic_research_kernel-2.0.0-py3-none-any.whl academic-research-kernel mcp`。
+固定产品版本可用 `uvx academic-research-kernel@2.0.0 mcp`。
+支持 Python 3.10–3.14；`uvx --python 3.12` 可显式选择受支持解释器。
+基础安装包含全部 12 个确定性工具及统计计算依赖。
+
+## 验证安装
+
+```bash
+uvx academic-research-kernel doctor
+uvx academic-research-kernel --version
+```
+
+诊断默认离线运行，检查依赖、schema 和 12 个工具定义；外部服务未配置不会使安装失败。
+`doctor --json` 提供机器可读结果。
+
+## 安装软件包
+
+```bash
+uv tool install academic-research-kernel==2.0.0
+academic-research-kernel doctor
+academic-research-kernel mcp
+```
+
+也可使用 `pipx install academic-research-kernel==2.0.0`，或在受支持的虚拟环境内执行
+`python -m pip install academic-research-kernel==2.0.0`。
+`[full]` 添加扩展科学计算示例所需库；`[qa]` 添加仓库验证工具。GPU 后端与付费服务为可选项。
+
+## Hermes
+
+确保 Hermes 进程的 PATH 中可找到 uv，再安装并显式启用插件：
+
+```bash
+hermes plugins install xngg1021/academic-research-kernel --no-enable
+hermes plugins enable academic-skills
+```
+
+兼容名称 `academic-skills` 与 13 项技能保持不变。`mcp.json` 使用
+`uv run --frozen --no-dev --no-editable`、Python 3.12 和仓库 `uv.lock`，
+将独立运行环境放在 `${PLUGIN_DATA}/runtime`。首次启动自动安装依赖；缺少解释器或包时需要联网。
+既有的纯技能 tap 安装仍受支持，见下方跨宿主集成说明。
+
+## 从源码运行
+
+```bash
+git clone https://github.com/xngg1021/academic-research-kernel.git
+cd academic-research-kernel
+uv sync --frozen --no-dev --no-editable
+uv run --frozen --no-dev --no-editable academic-research-kernel doctor
+uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
+```
+
+依赖分类、复现步骤、发布身份和外部发布条件见[分发与发布说明](docs/distribution-release.md)。
+
 ## 许可证
 
 含本通知的快照依据 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 所述范围，对其中识别出的受版权保护材料采用 **Source Lineage License 1.0**。首个 SLL 提交与树、以及其后的边界记录提交，分别在 [LICENSE-HISTORY.md](LICENSE-HISTORY.md) 与 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) 中区分。自该记录边界起保留本通知的快照，携带相同的授权范围。
@@ -47,7 +110,7 @@ PR #12 最终修补已覆盖 DOI 等外部标识的一致性、定量判定的�
 
 ```bash
 # 在您的智能体宿主中直接作为 stdio MCP 服务加载
-python scripts/mcp_server.py
+uvx academic-research-kernel mcp
 ```
 
 ### 2. 在 Hermes 中安装
@@ -79,7 +142,7 @@ PR #12 提供 `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、14
 
 谱系内容读取权限通过带外方式显式授予。可信 Python 调用方重放序列化凭证或快照时传入 `LineageVerificationContext`；MCP 调用方只能提供受限内容字节，不能指定宿主文件系统根目录。默认内容预算为 10 MiB；可信宿主可在生产者与验证者采用同一策略的前提下显式授权更大产物。缺少内容权限时，`fully_verified` 声明无法独立重现，返回结构化无效验证结果。非结构化文本保持不透明，异议保留可见；提交、剪枝、重开、路由选择与真值判断由研究者掌控。
 
-契约与兼容规则见[架构文档](docs/kernel-architecture.md)。PyPI、`uvx`、控制台打包与官方 MCP Registry 发布仍属 PR #13。英文及简体中文 README 已同步；其他译文状态由[清单](docs/i18n/manifest.json)如实记录。最终候选身份、精确 HEAD CI、累计评审与合并证据统一记录于[收尾账本](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)。
+契约与兼容规则见[架构文档](docs/kernel-architecture.md)。软件包、`uvx` 与官方 MCP Registry 的发布状态分别记录于[发布说明](docs/distribution-release.md)。英文及简体中文 README 已同步；其他译文状态由[清单](docs/i18n/manifest.json)如实记录。最终候选身份、精确 HEAD CI、累计评审与合并证据统一记录于[收尾账本](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)。
 
 ## QA 与测试
 

@@ -53,6 +53,14 @@ class CommandReviewerAdapter(ReviewerAdapter):
             s = s.replace("{" + k + "}", str(v))
         return s
 
+    @staticmethod
+    def _split_command(command: str, windows: bool = False) -> list[str]:
+        args = shlex.split(command, posix=not windows)
+        # Windows shlex preserves grouping quotes; subprocess(list) adds its own.
+        if windows:
+            args = [a[1:-1] if len(a) >= 2 and a[0] == a[-1] and a[0] in "\"'" else a for a in args]
+        return args
+
     def review(self, req: ReviewRequest) -> ReviewResult:
         p = req.participant
         cmd_template = p.cmd or os.environ.get(f"HERMES_REVIEW_CMD_{p.id.upper().replace('-', '_')}") or self.default_cmd_template
@@ -69,7 +77,7 @@ class CommandReviewerAdapter(ReviewerAdapter):
         })
 
         t0 = time.perf_counter()
-        args = shlex.split(cmd_str, posix=(sys.platform != "win32"))
+        args = self._split_command(cmd_str, windows=sys.platform == "win32")
         child_env = build_isolated_child_env(p)
         try:
             res = subprocess.run(
@@ -139,7 +147,7 @@ class CommandReviewerAdapter(ReviewerAdapter):
         })
 
         t0 = time.perf_counter()
-        args = shlex.split(cmd_str, posix=(sys.platform != "win32"))
+        args = self._split_command(cmd_str, windows=sys.platform == "win32")
         child_env = build_isolated_child_env(p)
         try:
             res = subprocess.run(

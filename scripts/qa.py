@@ -17,6 +17,35 @@ FENCE = re.compile(r'^```python\s*\n(.*?)^```\s*$', re.M | re.S)
 KINDS = ('smoke-test: true', 'external-test: true', 'fragment:')
 
 
+EXCLUDED_TREES = {'.git', '.venv', 'venv', 'env', '.pytest_cache', '.mypy_cache',
+                  '.ruff_cache', '.tox', '.nox', 'build', 'dist', '__pycache__',
+                  'node_modules', 'htmlcov', '.cache', '.uv-cache', '.coverage',
+                  '.hermes-upstream', '.hermes-latest'}
+SOURCE_ROOTS = {'scripts', 'src', 'skills', 'schemas', 'docs', 'tests', 'i18n',
+                'LICENSES', '.github', 'tools'}
+
+
+def source_files(root=ROOT):
+    """Tracked files in Git; explicit roots in source archives. Never follow links."""
+    root = root.resolve()
+    if (root / '.git').exists():
+        result = subprocess.run(['git', '-C', str(root), 'ls-files', '-z'],
+                                capture_output=True, check=True)
+        candidates = [root / os.fsdecode(p) for p in result.stdout.split(b'\0') if p]
+    else:
+        candidates = []
+        for directory, dirs, files in os.walk(root, followlinks=False):
+            base = Path(directory)
+            dirs[:] = sorted(d for d in dirs if d not in EXCLUDED_TREES
+                             and not (base / d).is_symlink()
+                             and (base != root or d in SOURCE_ROOTS))
+            candidates.extend(base / name for name in files)
+    return sorted(p for p in candidates if p.is_file()
+                  and not any(part in EXCLUDED_TREES for part in p.relative_to(root).parts)
+                  and not any(parent.is_symlink() for parent in [p, *p.parents] if parent != root)
+                  and p.resolve().is_relative_to(root))
+
+
 def fences(path):
     text = path.read_text(encoding='utf-8')
     for i, match in enumerate(FENCE.finditer(text), 1):
@@ -85,9 +114,10 @@ def reference_issues(path, root=ROOT):
 
 def static_checks(root=ROOT):
     errors, names = [], set()
+    inventory = source_files(root)
     readme = (root / 'README.md').read_text(encoding='utf-8')
-    paths = sorted(root.glob('skills/*/SKILL.md'))
-    nested = list(root.glob('skills/**/SKILL.md'))
+    paths = [p for p in inventory if p.name == 'SKILL.md' and len(p.relative_to(root).parts) == 3 and p.relative_to(root).parts[0] == 'skills']
+    nested = [p for p in inventory if p.name == 'SKILL.md' and p.relative_to(root).parts[0] == 'skills']
     if not paths:
         errors.append('no skills found directly under skills/')
     if len(nested) != len(paths):
@@ -121,7 +151,7 @@ def static_checks(root=ROOT):
             assert re.search(r'# (?:smoke|external)-test: true', section), 'Verification not executable'
         except (AssertionError, KeyError, IndexError, TypeError, yaml.YAMLError) as e:
             errors.append(f'{path.relative_to(root)}: frontmatter/verification {e}')
-    for path in sorted(root.rglob('*.md')):
+    for path in (p for p in inventory if p.suffix == '.md'):
         if '.git' in path.parts or '.pytest_cache' in path.parts:
             continue
         errors.extend(f'{path.relative_to(root)}: {e}' for e in reference_issues(path, root))
@@ -208,7 +238,7 @@ def static_checks(root=ROOT):
                 "レジャー", "영수증", "Beschneidungskausalität", "causalité d’élagage",
                 "causalidad de poda", "台账内核", "Truth Authority", "State Ledger本体"
             ])
-            for doc_path in root.rglob("*.md"):
+            for doc_path in (p for p in inventory if p.suffix == ".md"):
                 if '.git' in doc_path.parts or '.pytest_cache' in doc_path.parts:
                     continue
                 rel_str = "/".join(doc_path.relative_to(root).parts)
@@ -229,7 +259,7 @@ def static_checks(root=ROOT):
         try:
             aidetox_contract = json.loads(aidetox_path.read_text(encoding="utf-8"))
             prohibited_patterns = aidetox_contract.get("prohibited_patterns", {})
-            for doc_path in root.rglob("*.md"):
+            for doc_path in (p for p in inventory if p.suffix == ".md"):
                 if '.git' in doc_path.parts or '.pytest_cache' in doc_path.parts:
                     continue
                 rel_str = "/".join(doc_path.relative_to(root).parts)
@@ -271,10 +301,10 @@ def static_checks(root=ROOT):
     if manifest:
         try:
             canonical_docs = manifest.get("documents", [])
-            if len(canonical_docs) != 55:
-                errors.append(f"i18n manifest incomplete: expected 55 canonical documents, got {len(canonical_docs)}")
-            if manifest.get("total_theoretical_instances") != 1155:
-                errors.append(f"i18n manifest invariant failed: expected 1155 theoretical instances, got {manifest.get('total_theoretical_instances')}")
+            if len(canonical_docs) != 56:
+                errors.append(f"i18n manifest incomplete: expected 56 canonical documents, got {len(canonical_docs)}")
+            if manifest.get("total_theoretical_instances") != 1176:
+                errors.append(f"i18n manifest invariant failed: expected 1176 theoretical instances, got {manifest.get('total_theoretical_instances')}")
             recomputed_counts = {
                 "canonical_current": 0,
                 "localized_current": 0,
@@ -316,7 +346,7 @@ def static_checks(root=ROOT):
         except Exception as e:
             errors.append(f"i18n manifest QA check failed: {e}")
 
-    for path in root.rglob('*'):
+    for path in inventory:
         if not path.is_file() or '.git' in path.parts or '__pycache__' in path.parts or '.pytest_cache' in path.parts:
             continue
         if path.suffix not in {'.md', '.py', '.json', '.yaml', '.yml', '.txt'}:
@@ -343,7 +373,7 @@ def main():
     errors = static_checks()
     count = 0
     if not args.static_only:
-        for path in sorted((ROOT / 'skills').rglob('*.md')):
+        for path in (p for p in source_files(ROOT) if p.suffix == '.md' and p.relative_to(ROOT).parts[0] == 'skills'):
             for i, kind, code in fences(path):
                 if kind != 'smoke-test: true':
                     continue

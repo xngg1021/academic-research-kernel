@@ -3,8 +3,22 @@
   "mcpServers": {
     "academic-skills": {
       "type": "stdio",
-      "command": "python",
-      "args": ["scripts/mcp_server.py"]
+      "command": "uv",
+      "args": [
+        "run",
+        "--project",
+        "${PLUGIN_ROOT}",
+        "--python",
+        "3.12",
+        "--frozen",
+        "--no-dev",
+        "--no-editable",
+        "academic-research-kernel",
+        "mcp"
+      ],
+      "env": {
+        "UV_PROJECT_ENVIRONMENT": "${PLUGIN_DATA}/runtime"
+      }
     }
   }
 }

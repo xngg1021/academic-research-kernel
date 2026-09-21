@@ -117,13 +117,13 @@
       "tier": "european_academic"
     }
   ],
-  "total_canonical_documents": 55,
-  "total_theoretical_instances": 1155,
+  "total_canonical_documents": 56,
+  "total_theoretical_instances": 1176,
   "status_summary": {
-    "canonical_current": 55,
+    "canonical_current": 56,
     "localized_current": 3,
     "localized_stale": 19,
-    "queued_for_generation": 1078
+    "queued_for_generation": 1098
   },
   "documents": [
     {
@@ -131,17 +131,22 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "69b869a3996d21211a8462b013d5ee96e9a5769b62273e405aad98125626815d",
+      "source_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
       "section_hashes": {
-        "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
+        "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
+        "Quick start": "2ce6f833be8b7d7ca4a3060bc465277d090e862a4e8c889917cf2ba1a97ddbf9",
+        "Verify": "87f9373fd256c620b7ad5e8f70c4f717144a2e2f011d3d8fb74722fb2e8092f5",
+        "Package install": "32544a969eb3ddb5666c33de6ead1d6931192fa732c81cf9b054b05df29b0dfd",
+        "Hermes": "52f5c8fcae192332addc9aad44a96b8a23451ea190c2d8357132a3ee94a6edf7",
+        "From source": "181f90f1b66cced8b99be7ce92bb3bac3292f9b28bba275565d66d6d7c0cd6a2",
         "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
         "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
         "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
         "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
+        "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "551fd9e0607b1b8abcd49defa17b80172ad757b2c9d0cacd041a0261d60bab58",
         "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
         "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-        "Deterministic ingestion and public kernel": "e67ed154996106ca9bf11d216cb1d8ea7996a6e30ef9bf2e62d213e4757af8d7",
+        "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
         "Validation": "d9117d9444fc5040c4bbc9df3bd5f5e5f3ceaa0f0f22bc5ea92f71d7838be982",
         "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
       },
@@ -151,18 +156,23 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "69b869a3996d21211a8462b013d5ee96e9a5769b62273e405aad98125626815d",
-          "translated_from_source_sha256": "69b869a3996d21211a8462b013d5ee96e9a5769b62273e405aad98125626815d",
+          "localized_file_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
+          "translated_from_source_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
+            "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
+            "Quick start": "2ce6f833be8b7d7ca4a3060bc465277d090e862a4e8c889917cf2ba1a97ddbf9",
+            "Verify": "87f9373fd256c620b7ad5e8f70c4f717144a2e2f011d3d8fb74722fb2e8092f5",
+            "Package install": "32544a969eb3ddb5666c33de6ead1d6931192fa732c81cf9b054b05df29b0dfd",
+            "Hermes": "52f5c8fcae192332addc9aad44a96b8a23451ea190c2d8357132a3ee94a6edf7",
+            "From source": "181f90f1b66cced8b99be7ce92bb3bac3292f9b28bba275565d66d6d7c0cd6a2",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
             "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
             "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "551fd9e0607b1b8abcd49defa17b80172ad757b2c9d0cacd041a0261d60bab58",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Deterministic ingestion and public kernel": "e67ed154996106ca9bf11d216cb1d8ea7996a6e30ef9bf2e62d213e4757af8d7",
+            "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
             "Validation": "d9117d9444fc5040c4bbc9df3bd5f5e5f3ceaa0f0f22bc5ea92f71d7838be982",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
@@ -172,18 +182,23 @@
         "zh-Hans": {
           "path": "README.zh-Hans.md",
           "status": "localized_current",
-          "localized_file_sha256": "169f5b224312084f2bc91ac276b01c18a91e57cde974ac3b2a7a8f77dd236192",
-          "translated_from_source_sha256": "69b869a3996d21211a8462b013d5ee96e9a5769b62273e405aad98125626815d",
+          "localized_file_sha256": "93a6a635e340f43cd2ec65019a1eb8d0ec8fd6b08065757a8acd9784b74b9728",
+          "translated_from_source_sha256": "ec4c85b36b5117d34796ced6d96313d66f6294b78edf8d78b7af3d2506e9676c",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "ecc50c0394511c90db622e8cad5a80659871f6ded0f37701c8fc20bca55a2a6d",
+            "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
+            "Quick start": "2ce6f833be8b7d7ca4a3060bc465277d090e862a4e8c889917cf2ba1a97ddbf9",
+            "Verify": "87f9373fd256c620b7ad5e8f70c4f717144a2e2f011d3d8fb74722fb2e8092f5",
+            "Package install": "32544a969eb3ddb5666c33de6ead1d6931192fa732c81cf9b054b05df29b0dfd",
+            "Hermes": "52f5c8fcae192332addc9aad44a96b8a23451ea190c2d8357132a3ee94a6edf7",
+            "From source": "181f90f1b66cced8b99be7ce92bb3bac3292f9b28bba275565d66d6d7c0cd6a2",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
             "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
             "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "7d1a66084514cee87e2bb2291a39c52dbdc743297b9aa23591622b7328d26480",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "551fd9e0607b1b8abcd49defa17b80172ad757b2c9d0cacd041a0261d60bab58",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
-            "Deterministic ingestion and public kernel": "e67ed154996106ca9bf11d216cb1d8ea7996a6e30ef9bf2e62d213e4757af8d7",
+            "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
             "Validation": "d9117d9444fc5040c4bbc9df3bd5f5e5f3ceaa0f0f22bc5ea92f71d7838be982",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
@@ -208,10 +223,18 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
-            "admission_deficit: insufficient content length: 6880 bytes vs 15688 bytes"
+            "admission_deficit: code fence count deficit: expected at least 16, got 6",
+            "admission_deficit: insufficient content length: 6880 bytes vs 18504 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -233,9 +256,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -257,9 +288,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -281,9 +320,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -305,9 +352,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -329,9 +384,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -353,9 +416,18 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6",
+            "admission_deficit: insufficient content length: 7736 bytes vs 18504 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -377,9 +449,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -401,9 +481,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -425,9 +513,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -449,9 +545,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -473,9 +577,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -497,9 +609,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -521,9 +641,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -545,9 +673,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -569,9 +705,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -593,9 +737,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -617,9 +769,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         },
@@ -641,9 +801,17 @@
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
           "stale_sections": [
+            "academic-research-kernel",
+            "Quick start",
+            "Verify",
+            "Package install",
+            "Hermes",
+            "From source",
             "Scholarly Standards & Multi-Profile Baseline",
+            "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
-            "Validation"
+            "Validation",
+            "admission_deficit: code fence count deficit: expected at least 16, got 6"
           ],
           "last_verified": "2026-09-19"
         }
@@ -10336,6 +10504,225 @@
         },
         "pl": {
           "path": "i18n/pl/docs/audit-20260906.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        }
+      }
+    },
+    {
+      "doc_id": "doc_distribution_release",
+      "canonical_title": "Documentation: distribution-release",
+      "source_path": "docs/distribution-release.md",
+      "source_locale": "zh-Hans",
+      "source_sha256": "fcc75a7f1e0902b027fdf400fffa3913b4d4a2b34ede169adbdecfb72e75f0b8",
+      "section_hashes": {
+        "Distribution and runtime release 2.0.0": "3111a1926eec96e11576f8c3c4f1a9921c646f95160915611d6d809e91de33b4",
+        "Candidate discipline": "13e0cddfc81bed6ba9e77ebc179054da2e5b72e7c8af4343dd745fd6a7d6290d",
+        "Separate version axes": "95ba97c3a039b507dd24775180dfbbbf258ec343d98690b8476f3ee7c9e789ea",
+        "Deferred product decision": "7d6ccd6dad6f93ed42cc4c3cc86b75ba069463a221906d8d644ceb8fa6841e94",
+        "Dependency and resource audit": "be8ead24274fc65e55bea2447caa6604d883a378e534fdf92ad4974bad77d13d",
+        "Reproduction and QA scope": "c09860e221dd31cc61b047d98eab6e5383debf926dda39d8da6b3134ffa80a2d",
+        "Hermes evidence and limitations": "4ff6253261eac0cefd5d98edd8126dc80560f2c9ebaef5c5fd13f84a8b552c54",
+        "Publication checkpoints": "8659333958e463de0a950c6738708f13fdaca08cfce64c90db97f2ac94d2d3d8"
+      },
+      "genre": "technical_and_schema_specifications",
+      "aidetox_intensity": "medium",
+      "localized_instances": {
+        "en": {
+          "path": "i18n/en/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "zh-Hans": {
+          "path": "docs/distribution-release.md",
+          "status": "canonical_current",
+          "localized_file_sha256": "fcc75a7f1e0902b027fdf400fffa3913b4d4a2b34ede169adbdecfb72e75f0b8",
+          "translated_from_source_sha256": "fcc75a7f1e0902b027fdf400fffa3913b4d4a2b34ede169adbdecfb72e75f0b8",
+          "translated_from_section_hashes": {
+            "Distribution and runtime release 2.0.0": "3111a1926eec96e11576f8c3c4f1a9921c646f95160915611d6d809e91de33b4",
+            "Candidate discipline": "13e0cddfc81bed6ba9e77ebc179054da2e5b72e7c8af4343dd745fd6a7d6290d",
+            "Separate version axes": "95ba97c3a039b507dd24775180dfbbbf258ec343d98690b8476f3ee7c9e789ea",
+            "Deferred product decision": "7d6ccd6dad6f93ed42cc4c3cc86b75ba069463a221906d8d644ceb8fa6841e94",
+            "Dependency and resource audit": "be8ead24274fc65e55bea2447caa6604d883a378e534fdf92ad4974bad77d13d",
+            "Reproduction and QA scope": "c09860e221dd31cc61b047d98eab6e5383debf926dda39d8da6b3134ffa80a2d",
+            "Hermes evidence and limitations": "4ff6253261eac0cefd5d98edd8126dc80560f2c9ebaef5c5fd13f84a8b552c54",
+            "Publication checkpoints": "8659333958e463de0a950c6738708f13fdaca08cfce64c90db97f2ac94d2d3d8"
+          },
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "zh-Hant": {
+          "path": "i18n/zh-Hant/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "es": {
+          "path": "i18n/es/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "pt": {
+          "path": "i18n/pt/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "fr": {
+          "path": "i18n/fr/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "de": {
+          "path": "i18n/de/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ru": {
+          "path": "i18n/ru/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ja": {
+          "path": "i18n/ja/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ko": {
+          "path": "i18n/ko/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "id": {
+          "path": "i18n/id/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "it": {
+          "path": "i18n/it/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "hi": {
+          "path": "i18n/hi/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ar": {
+          "path": "i18n/ar/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "bn": {
+          "path": "i18n/bn/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ur": {
+          "path": "i18n/ur/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "vi": {
+          "path": "i18n/vi/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "tr": {
+          "path": "i18n/tr/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "fa": {
+          "path": "i18n/fa/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "sw": {
+          "path": "i18n/sw/docs/distribution-release.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "pl": {
+          "path": "i18n/pl/docs/distribution-release.md",
           "status": "queued_for_generation",
           "localized_file_sha256": null,
           "translated_from_source_sha256": null,

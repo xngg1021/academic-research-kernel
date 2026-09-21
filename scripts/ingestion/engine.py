@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-from shared_contracts.evidence import FrozenJSONMap, validate_lineage_receipt_contract
+if __package__ and __package__.startswith("academic_research_kernel"):
+    from academic_research_kernel.shared_contracts.evidence import FrozenJSONMap, validate_lineage_receipt_contract
+else:
+    from shared_contracts.evidence import FrozenJSONMap, validate_lineage_receipt_contract
 
 from .contracts import validate_adapter_contract
 from .models import (
