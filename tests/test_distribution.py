@@ -12,8 +12,8 @@ def test_version_mirrors():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.__version__ == '2.0.0'
-    assert json.loads((ROOT / 'plugin.json').read_text())['version'] == module.__version__
-    server = json.loads((ROOT / 'server.json').read_text())
+    assert json.loads((ROOT / 'plugin.json').read_text(encoding='utf-8'))['version'] == module.__version__
+    server = json.loads((ROOT / 'server.json').read_text(encoding='utf-8'))
     assert server['version'] == server['packages'][0]['version'] == module.__version__
     sys.path.insert(0, str(ROOT / 'scripts'))
     import mcp_server
@@ -28,7 +28,7 @@ def test_windows_command_quoting_preserves_interpreter_and_spaces():
 
 
 def test_plugin_uses_locked_isolated_runtime():
-    config = json.loads((ROOT / 'mcp.json').read_text())['mcpServers']['academic-skills']
+    config = json.loads((ROOT / 'mcp.json').read_text(encoding='utf-8'))['mcpServers']['academic-skills']
     assert config['command'] == 'uv'
     assert '--frozen' in config['args'] and '--no-editable' in config['args']
     assert config['env']['UV_PROJECT_ENVIRONMENT'].startswith('${PLUGIN_DATA}/')
@@ -36,6 +36,6 @@ def test_plugin_uses_locked_isolated_runtime():
 
 def test_current_official_registry_metadata_schema():
     from jsonschema import Draft7Validator
-    schema = json.loads((ROOT / 'tests/fixtures/mcp-registry-server.schema.json').read_text())
-    Draft7Validator(schema).validate(json.loads((ROOT / 'server.json').read_text()))
-    assert 'mcp-name: io.github.xngg1021/academic-research-kernel' in (ROOT / 'README.md').read_text()
+    schema = json.loads((ROOT / 'tests/fixtures/mcp-registry-server.schema.json').read_text(encoding='utf-8'))
+    Draft7Validator(schema).validate(json.loads((ROOT / 'server.json').read_text(encoding='utf-8')))
+    assert 'mcp-name: io.github.xngg1021/academic-research-kernel' in (ROOT / 'README.md').read_text(encoding='utf-8')
