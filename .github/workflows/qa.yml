@@ -9,7 +9,9 @@ on:
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci')) }}
+  # A delayed Draft/no-label event has no jobs to run and must not cancel
+  # the deliberately labeled candidate. Ready/full-ci keeps the same protection.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && (github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci')) }}
 permissions:
   contents: read
 jobs:
