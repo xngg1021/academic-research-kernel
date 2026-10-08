@@ -263,7 +263,7 @@ jobs:
         shell: bash
         run: |
           export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
-          uv build
+          uv build --no-create-gitignore
           uv run --frozen --extra qa --no-editable python -m twine check --strict dist/*
           uv run --frozen --extra qa --no-editable python scripts/release_manifest.py --output dist/release-manifest.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
