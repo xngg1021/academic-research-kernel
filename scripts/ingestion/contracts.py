@@ -56,6 +56,9 @@ PAYLOAD_SCHEMA_FILES: Dict[str, str] = {
     "computation-receipt-1.0": "computation-artifact.schema.json",
     "manuscript-opaque-1.0": "opaque-manuscript.schema.json",
     "submission-package-1.0": "opaque-manuscript.schema.json",
+    "paper-extraction-1.0": "paper-extraction.schema.json",
+    "paper-comparison-1.0": "paper-comparison.schema.json",
+    "research-documents-1.0": "research-documents.schema.json",
 }
 
 # Producer versions are installed skill versions, not payload-schema versions.
@@ -76,6 +79,7 @@ SUPPORTED_PRODUCER_MAJORS: Dict[str, frozenset[int]] = {
     "retraction-watch": frozenset({1}),
     "math-computation": frozenset({1}),
     "academic-writing": frozenset({1}),
+    "paper-research": frozenset({1}),
 }
 
 

@@ -83,10 +83,13 @@ jobs:
         env:
           RELEASE_COMMIT: ${{ steps.target.outputs.commit }}
         run: |
+          # The publisher writes .github/.tmp in its checkout. Verify clean source
+          # in a distinct immutable worktree without excluding any source paths.
+          git worktree add --detach "$RUNNER_TEMP/public-source" "$RELEASE_COMMIT"
           # Only reads are retried here. Each attempt gets new empty staging
           # directories; existing same-hash files never trigger another upload.
           for attempt in 1 2 3; do
-            if python scripts/verify_release_assets.py "$RUNNER_TEMP/release-input" --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --dist "$RUNNER_TEMP/public-verified-$attempt" --pypi-upload-dir "$RUNNER_TEMP/public-plan-$attempt" --verify-only; then
+            if python scripts/verify_release_assets.py "$RUNNER_TEMP/release-input" --repo "$RUNNER_TEMP/public-source" --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --dist "$RUNNER_TEMP/public-verified-$attempt" --pypi-upload-dir "$RUNNER_TEMP/public-plan-$attempt" --verify-only; then
               break
             fi
             if [[ "$attempt" == 3 ]]; then exit 1; fi

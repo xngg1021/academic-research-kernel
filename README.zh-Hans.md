@@ -2,29 +2,29 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-跨宿主中立的面向自主 Agent 科研工作流确定性科研状态内核。仓库通过统一产物入库桥接与通用 Model Context Protocol (MCP) 服务，将研究对象身份归一、因果凭证（Receipts）、主张证据图谱（CEG）与追加式研究决策与失败记录深度连接。全仓 13 项学术技能作为科研状态的生产者与消费者，原生兼容 Claude Code、Cursor、Codex、Gemini CLI 与 Hermes Agent。验证范围与外部服务限制记录于[审计文档](docs/project-lineage-audit-20260920.md)。
+跨宿主中立的面向自主 Agent 科研工作流确定性科研状态内核。仓库通过统一产物入库桥接与通用 Model Context Protocol (MCP) 服务，将研究对象身份归一、因果凭证（Receipts）、主张证据图谱（CEG）与追加式研究决策与失败记录深度连接。全仓 14 项学术技能作为科研状态的生产者与消费者，原生兼容 Claude Code、Cursor、Codex、Gemini CLI 与 Hermes Agent。验证范围与外部服务限制记录于[审计文档](docs/project-lineage-audit-20260920.md)。
 
 作者：Junfu Shi（SJF，xngg1021），Hermes Agent。当前授权范围：[Source Lineage License 1.0](LICENSE)。
 
 ## 快速开始
 
-安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后运行 2.0.1：
+安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后运行 2.1.0：
 
 ```bash
-uvx academic-research-kernel@2.0.1 mcp
+uvx academic-research-kernel@2.1.0 mcp
 ```
 
-[2.0.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.1)
+[2.1.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0)
 记录分发物哈希与发布状态。下载发布 wheel 后，也可在本地运行
-`uvx --from ./academic_research_kernel-2.0.1-py3-none-any.whl academic-research-kernel mcp`。
+`uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`。
 支持 Python 3.10–3.14；`uvx --python 3.12` 可显式选择受支持解释器。
 基础安装包含全部 12 个确定性工具及统计计算依赖。
 
 ## 验证安装
 
 ```bash
-uvx academic-research-kernel@2.0.1 doctor
-uvx academic-research-kernel@2.0.1 --version
+uvx academic-research-kernel@2.1.0 doctor
+uvx academic-research-kernel@2.1.0 --version
 ```
 
 诊断默认离线运行，检查依赖、schema 和 12 个工具定义；外部服务未配置不会使安装失败。
@@ -33,14 +33,14 @@ uvx academic-research-kernel@2.0.1 --version
 ## 安装软件包
 
 ```bash
-uv tool install academic-research-kernel==2.0.1
+uv tool install academic-research-kernel==2.1.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-也可使用 `pipx install academic-research-kernel==2.0.1`，或在受支持的虚拟环境内执行
-`python -m pip install academic-research-kernel==2.0.1`。
-`[full]` 添加扩展科学计算示例所需库；`[qa]` 添加仓库验证工具。GPU 后端与付费服务为可选项。
+也可使用 `pipx install academic-research-kernel==2.1.0`，或在受支持的虚拟环境内执行
+`python -m pip install academic-research-kernel==2.1.0`。
+`[full]` 添加扩展科学计算示例所需库；`[research]` 添加 `pypdf==6.19.0` 与 `fonttools==4.65.0`，使干净安装具有一致的 PDF 字体解码依赖，两者均支持 Python 3.10；`[qa]` 添加仓库验证工具及这些解析依赖。HTML/XML 与有界 DOCX/XLSX 读取使用标准库。GPU 后端与付费服务为可选项。
 
 ## Hermes
 
@@ -51,7 +51,7 @@ hermes plugins install xngg1021/academic-research-kernel --no-enable
 hermes plugins enable academic-skills
 ```
 
-兼容名称 `academic-skills` 与 13 项技能保持不变。`mcp.json` 使用
+兼容名称 `academic-skills` 保持不变，现包含 14 项技能。`mcp.json` 使用
 `uv run --frozen --no-dev --no-editable`、Python 3.12 和仓库 `uv.lock`，
 将独立运行环境放在 `${PLUGIN_DATA}/runtime`。首次启动自动安装依赖；缺少解释器或包时需要联网。
 既有的纯技能 tap 安装仍受支持，见下方跨宿主集成说明。
@@ -92,9 +92,10 @@ SLL 广泛允许使用、研究、修改、商用、分发与专有增补，受�
 | `skills/research-object-identity` | 1.1.0 | 确定性科研资源标识与来源追溯：标识符归一、五态判定、内容寻址衍生图、因果 DAG 校验与毫秒级脱机逆向溯源 |
 | `skills/claim-evidence-graph` | 1.0.0 | 确定性学术论断与证据关联：连接科学论断、实证证据记录、事实核验与计算过程追溯 |
 | `skills/decision-ledger` | 1.0.0 | 研究决策与失败记录：记录科研选择、失败尝试存证、为什么放弃某路线与按时序追加结果修正 |
+| `skills/paper-research` | 1.0.0 | 读取 DOI、链接或本地论文及附件，验证候选字段、核对数字并保存研究状态，生成带原文定位的中文报告和双论文比较 |
 | `skills/cross-review-five` | 2.0.0 | 动态多席位异构模型/子代理交叉审议（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini 等）：v2 四阶段 Sparse Deliberation 流（盲审产出、断言级聚类合并、基于匈牙利算法的全局最优互补错排匿名质询、对账与未决保护账本，支持 P0-P3 严重级别） |
 
-十三个技能共含 21 篇 Markdown 参考文件，按需加载。
+十四个技能共含 22 篇 Markdown 参考文件，按需加载。
 
 ## 学术规范与多区域基线
 
@@ -163,9 +164,37 @@ QA 校验元数据、参考文件、个人路径与已知密钥模式、Python �
 
 CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。历史 PR #12 候选本地测试为 974 passed。本轮实测数量与覆盖边界见[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)；远端证据单独标明被测 HEAD。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
-[tools/longtail/](tools/longtail/README.md) 存放确定性长尾因子生成器：4096 个 SHA256 种子候选，选取 30 个场景并输出机器计算的覆盖报告。v3 分别统计能力族（E01）、仓库实际的 13 个技能（E02）与任务目标（E03）。每个场景只绑定一个主要技能、一个受支持的任务目标及兼容能力；每个技能至少出现 2 次、覆盖 2 个不同目标，其中包含其声明的核心目标。技能目录与因子目录不一致时验证失败。语义展开（任务链、判据与实际事件注入）仍是独立阶段；因子覆盖不代表工作流已经执行验证。
+[tools/longtail/](tools/longtail/README.md) 存放确定性长尾因子生成器：4096 个 SHA256 种子候选，选取 30 个场景并输出机器计算的覆盖报告。v3 分别统计能力族（E01）、仓库实际的 14 个技能（E02）与任务目标（E03）。每个场景只绑定一个主要技能、一个受支持的任务目标及兼容能力；每个技能至少出现 2 次、覆盖 2 个不同目标，其中包含其声明的核心目标。技能目录与因子目录不一致时验证失败。语义展开（任务链、判据与实际事件注入）仍是独立阶段；因子覆盖不代表工作流已经执行验证。
 
 scripts/scfabric/ 是科学计算执行层：硬件探针、带 dtype 门禁的后端目录、五个工作负载画像、带数值等价检查的配对基准与 ComputeReceipt。本机首轮实测见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；经验规则是默认 CPU，加速器只凭 receipt 启用。
+
+## 让本地 Agent 研究论文
+
+安装 `academic-research-kernel[research]==2.1.0`，导出软件包随附的正式工作流：
+
+```sh
+academic-research-kernel research skill --output ./agent-skills/paper-research
+```
+
+请让 Work 或其他兼容本地 Agent 读取导出的 `SKILL.md`，随后只需提供 DOI、公开链接或本地资料包，并说：
+“研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
+双论文任务可直接说：“比较这两篇论文的数据、方法、评估条件和主要结果，说明哪些结果可以直接比较。”
+Agent 会在同一任务内继续完成原文阅读、候选验证、计算、入库、报告和独立原文复核。
+既有 MCP 保留 12 个工具；新增编排入口位于 CLI 和 portable skill。
+
+程序的实际分步入口为：
+
+```sh
+academic-research-kernel research prepare INPUT --project PROJECT
+academic-research-kernel research finish --project PROJECT --candidate CANDIDATE.json
+academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
+```
+
+`prepare` 获取和解析正文及附件，保存 manifest、文件哈希与原文段落定位。
+`finish` 验证 Agent 读取原文生成的结构化候选，调用现有函数重算适用的 t/p、两组效应量和计数/百分比，
+保存内核状态并生成中文 Markdown/HTML 报告。`compare` 验证 Agent 对数据、条件和结果可比性的明确判断。
+CLI 的语义阅读由当前 Agent 按 [paper-research](skills/paper-research/SKILL.md) 完成，无需新增模型账户。
+已保存的原始材料与提取快照可用于确定性脱机重放；报告会区分重放、联网获取和重新语义阅读。
 
 ## 2.0.1 正确性修复与分发验证
 

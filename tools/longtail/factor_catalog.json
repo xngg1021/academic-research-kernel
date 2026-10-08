@@ -72,7 +72,7 @@
     "D14_ground_truth_availability": {"levels": ["exact_machine_ground_truth", "authoritative_metadata", "two_sources_agree", "sources_conflict", "human_annotation_available", "only_partial_oracle", "no_external_ground_truth"], "tags": {}},
     "D15_temporal_mutability": {"levels": ["static", "metadata_updated", "correction_added", "retraction_added", "dataset_new_version", "repository_new_release", "API_schema_deprecated", "URL_rotted", "affiliation_changed", "author_name_changed", "living_review_updated"], "tags": {}},
     "E01_primary_capability": {"levels": ["source_verification", "quantitative_audit", "reproducibility_audit", "systematic_review", "literature_monitoring", "retraction_monitoring", "research_object_identity", "provenance_tracking", "literature_analysis", "evidence_synthesis", "peer_review", "bibliography_interop", "academic_writing", "mathematical_computation", "evidence_linking", "decision_tracking"], "tags": {}, "multi": true, "min_choice": 1, "max_choice": 3, "description": "Capability families exercised by the selected primary skill and task goal; 1..3 distinct supported families, not skill identities."},
-    "E02_skill_under_test": {"levels": ["academic-source-verification", "literature-analysis", "academic-writing", "math-computation", "quantitative-paper-audit", "research-reproducibility", "systematic-review-meta-analysis", "literature-watch", "retraction-watch", "research-object-identity", "claim-evidence-graph", "decision-ledger", "cross-review-five"], "multi": false, "description": "Exactly one primary repository skill per scenario. No implicit secondary skills or multi-skill workflow coverage.", "tags": {}},
+    "E02_skill_under_test": {"levels": ["academic-source-verification", "literature-analysis", "academic-writing", "math-computation", "quantitative-paper-audit", "research-reproducibility", "systematic-review-meta-analysis", "literature-watch", "retraction-watch", "research-object-identity", "claim-evidence-graph", "decision-ledger", "cross-review-five", "paper-research"], "multi": false, "description": "Exactly one primary repository skill per scenario. No implicit secondary skills or multi-skill workflow coverage.", "tags": {}},
     "E03_task_goal": {"levels": ["verify_identity", "resolve_duplicates", "reconstruct_lineage", "verify_update_status", "locate_best_available_fulltext", "recompute_statistic", "detect_numeric_inconsistency", "audit_reproduction", "link_reports_to_study", "deduplicate_review_corpus", "monitor_new_work", "detect_status_change", "recover_from_partial_failure", "produce_machine_readable_receipt", "compare_literature", "identify_counter_evidence", "build_review_matrix", "analyze_research_gaps", "export_bibliography", "adversarial_challenge", "revise_manuscript", "prepare_citation_style", "prepare_submission_materials", "symbolic_computation", "numerical_computation", "verify_mathematics", "link_evidence_to_claim", "trace_supporting_refuting_evidence", "validate_contradiction_provenance", "record_decision", "record_negative_result", "prune_route", "reopen_route", "record_outcome_correction", "multi_review", "reconcile_disagreements"], "tags": {}, "description": "One concrete task goal admitted by the primary skill semantics mapping. All goals are reported; the 30-scenario budget does not promise complete goal coverage."},
     "E04_correct_terminal_state": {"levels": ["SUCCESS", "PARTIAL", "BLOCKED", "UNRESOLVED", "NEEDS_HUMAN", "CONFLICT"], "tags": {"BLOCKED": ["non_success_terminal"], "UNRESOLVED": ["non_success_terminal"], "NEEDS_HUMAN": ["non_success_terminal"]}}
   },
@@ -86,6 +86,39 @@
     "state_concurrency": ["two_processes_write_same_state", "stale_cache", "state_file_truncated", "duplicate_event_delivered", "event_arrives_out_of_order", "replay_same_event_twice"]
   },
   "skill_semantics": {
+  "paper-research": {
+    "source": "skills/paper-research/SKILL.md",
+    "capability_families": [
+      "source_verification",
+      "literature_analysis",
+      "quantitative_audit",
+      "provenance_tracking"
+    ],
+    "task_goals": {
+      "locate_best_available_fulltext": [
+        "source_verification"
+      ],
+      "compare_literature": [
+        "literature_analysis",
+        "provenance_tracking"
+      ],
+      "recompute_statistic": [
+        "quantitative_audit",
+        "provenance_tracking"
+      ],
+      "produce_machine_readable_receipt": [
+        "provenance_tracking"
+      ]
+    },
+    "workflow_role": "paper and supplement semantic reading with deterministic calculation and source-linked reports",
+    "event_categories": [
+      "network_API",
+      "artifact",
+      "local_environment",
+      "workflow"
+    ],
+    "coverage_anchor_goal": "recompute_statistic"
+  },
     "academic-source-verification": {
       "source": "skills/academic-source-verification/SKILL.md",
       "capability_families": [

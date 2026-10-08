@@ -19,7 +19,7 @@ def main():
         diagnostics = []
         manifest, errors = agent_plugins._validate_manifest(root)
         assert manifest and not errors, errors
-        assert len(agent_plugins._discover_skills(root, diagnostics)) == 13
+        assert len(agent_plugins._discover_skills(root, diagnostics)) == 14
         config = agent_plugins._discover_mcp(root, data, diagnostics, create_data=True)['academic-skills']
         assert not diagnostics, diagnostics
         env = {k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'PYTHONHOME', 'VIRTUAL_ENV')}

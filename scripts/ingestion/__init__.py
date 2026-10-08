@@ -25,6 +25,7 @@ from .adapters import (
 )
 from .registry import AdapterRegistry, create_default_registry
 from .engine import IngestionEngine
+from .paper_research import PaperResearchAdapter
 
 __all__ = [
     "ArtifactEnvelope",
@@ -49,4 +50,5 @@ __all__ = [
     "AdapterRegistry",
     "create_default_registry",
     "IngestionEngine",
+    "PaperResearchAdapter",
 ]

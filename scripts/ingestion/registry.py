@@ -21,6 +21,7 @@ from .adapters import (
     OpaqueFallbackAdapter,
 )
 from .models import ArtifactEnvelope
+from .paper_research import PaperResearchAdapter
 
 
 class AdapterRegistry:
@@ -93,7 +94,7 @@ class AdapterRegistry:
 
 
 def create_default_registry() -> AdapterRegistry:
-    """Create and return the standard registry with all 13 scholarly skill adapters."""
+    """Create and return the complete installed scholarly artifact registry."""
     reg = AdapterRegistry()
     # Tier 1
     reg.register(AcademicSourceVerificationAdapter())
@@ -109,6 +110,7 @@ def create_default_registry() -> AdapterRegistry:
     reg.register(LiteratureWatchAdapter())
     reg.register(RetractionWatchAdapter())
     reg.register(MathComputationAdapter())
+    reg.register(PaperResearchAdapter())
     # Tier 3
     reg.register(AcademicWritingAdapter())
     reg.register(OpaqueFallbackAdapter())

@@ -1,4 +1,4 @@
-"""Small installation/stdio boundary; no research workflow orchestration."""
+"""Deterministic research utilities; semantic reading is supplied by your local agent."""
 import argparse
 import importlib
 from importlib import metadata, resources, util
@@ -6,6 +6,8 @@ import json
 import os
 import platform
 import sys
+from pathlib import Path
+import shutil
 
 from ._version import __version__
 
@@ -35,13 +37,26 @@ def doctor():
         from jsonschema import Draft202012Validator
         schemas = list(resources.files('academic_research_kernel').joinpath('schemas').iterdir())
         schemas = [p for p in schemas if p.name.endswith('.json')]
-        if len(schemas) != 23:
+        expected_schemas = {
+            'artifact-ingestion-receipt', 'claim-evidence-graph', 'computation-artifact', 'compute-receipt',
+            'cross-review-artifact', 'decision-ledger-receipt', 'evidence-receipt', 'ingestion-kernel-state',
+            'legacy-academic-evidence', 'lineage-receipt', 'literature-analysis-artifact', 'literature-delta',
+            'opaque-manuscript', 'quantitative-audit', 'reproduction-receipt', 'research-artifact-envelope',
+            'research-object', 'retraction-delta', 'review-finding', 'review-panel-spec', 'review-result',
+            'review-run-receipt', 'systematic-review-artifact', 'research-documents', 'paper-extraction', 'paper-comparison'}
+        if {p.name for p in schemas} != {n + '.schema.json' for n in expected_schemas}:
             raise ValueError('incomplete schema inventory')
         for path in schemas:
             Draft202012Validator.check_schema(json.loads(path.read_text(encoding='utf-8')))
         report['schema_resources'] = {'status': 'ok', 'count': len(schemas)}
         matrix = resources.files('academic_research_kernel').joinpath('artifact-adapter-matrix.json')
         json.loads(matrix.read_text(encoding='utf-8'))
+        skill = resources.files('academic_research_kernel').joinpath('skills/paper-research/SKILL.md')
+        if not skill.read_text(encoding='utf-8').strip():
+            raise ValueError('portable paper-research skill missing')
+        report['research'] = {'semantic_producer': 'local agent required',
+                              'pdf_parser': metadata.version('pypdf') if util.find_spec('pypdf') else 'not installed; use [research]',
+                              'portable_skill': 'available', 'schema_count': 3}
     except Exception as exc:
         report['schema_resources'] = {'status': 'error'}
         report['errors'].append(f'resources: {type(exc).__name__}')
@@ -70,6 +85,23 @@ def main(argv=None):
     check = commands.add_parser('doctor', help='offline environment diagnostic')
     check.add_argument('--json', action='store_true', help='machine-readable JSON')
     commands.add_parser('mcp', help='serve the existing 12 MCP tools over stdio')
+    research = commands.add_parser('research', help='prepare/read/verify/recompute/report with a local agent')
+    steps = research.add_subparsers(dest='step', required=True)
+    prep = steps.add_parser('prepare', help='acquire and locate raw materials; agent continues semantic reading')
+    prep.add_argument('input')
+    prep.add_argument('--project', required=True)
+    finish = steps.add_parser('finish', help='validate an agent candidate, recompute, persist and report')
+    finish.add_argument('--project', required=True)
+    finish.add_argument('--candidate', required=True)
+    comparison = steps.add_parser('compare', help='validate a sourced comparison supplied by the local agent')
+    comparison.add_argument('left')
+    comparison.add_argument('right')
+    comparison.add_argument('--analysis', required=True)
+    comparison.add_argument('--output', required=True)
+    skill = steps.add_parser('skill', help='export the installed portable workflow and canonical contracts')
+    skill.add_argument('--output', required=True)
+    replay = steps.add_parser('replay', help='offline deterministic replay of a saved semantic snapshot')
+    replay.add_argument('--project', required=True)
     args = parser.parse_args(argv)
     if args.command == 'doctor':
         report = doctor()
@@ -81,6 +113,41 @@ def main(argv=None):
                 if key not in ('version', 'status'):
                     print(f'{key}: {json.dumps(value, ensure_ascii=False)}')
         return 0 if report['status'] == 'ok' else 1
+    if args.command == 'research':
+        try:
+            if args.step == 'prepare':
+                from .research.sources import prepare
+                result = prepare(args.input, args.project)
+            elif args.step in ('finish', 'replay'):
+                from .research.analysis import finish
+                candidate = args.candidate if args.step == 'finish' else str(Path(args.project) / 'candidate.json')
+                result = finish(args.project, candidate)
+            elif args.step == 'compare':
+                from .research.analysis import compare
+                result = compare(args.left, args.right, args.analysis, args.output)
+            else:
+                target = Path(args.output).resolve()
+                target.mkdir(parents=True, exist_ok=True)
+                root = resources.files('academic_research_kernel')
+                source = root.joinpath('skills/paper-research')
+                def copy_resource(src, dst):
+                    dst.mkdir(parents=True, exist_ok=True)
+                    for item in src.iterdir():
+                        if item.is_dir():
+                            copy_resource(item, dst / item.name)
+                        else:
+                            (dst / item.name).write_bytes(item.read_bytes())
+                copy_resource(source, target)
+                for name in ('paper-extraction', 'paper-comparison', 'research-documents'):
+                    p = target / 'references' / (name + '.schema.json')
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_bytes(root.joinpath('schemas/' + p.name).read_bytes())
+                result = {'skill': str(target / 'SKILL.md'), 'version': __version__, 'semantic_producer': 'your local agent'}
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            return 0
+        except (ValueError, OSError, KeyError, ImportError) as exc:
+            print(json.dumps({'status': 'error', 'step': args.step, 'reason': str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
     try:
         from .mcp_server import main as serve
     except ImportError:

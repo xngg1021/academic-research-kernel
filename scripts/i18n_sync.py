@@ -153,7 +153,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                 "doc_id": f"doc_skill_{s_name.replace('-', '_')}",
                 "canonical_title": f"{s_name} Skill Specification",
                 "source_path": f"skills/{s_name}/SKILL.md",
-                "source_locale": "en" if s_name == "decision-ledger" else "zh-Hans",
+                "source_locale": "en" if s_name in ("decision-ledger", "paper-research") else "zh-Hans",
                 "genre": "user_facing_documentation",
                 "aidetox_intensity": "strong",
             })
@@ -165,7 +165,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                         "doc_id": f"doc_ref_{s_name.replace('-', '_')}_{r_stem.replace('-', '_')}",
                         "canonical_title": f"{s_name} Reference: {r_stem}",
                         "source_path": f"skills/{s_name}/references/{r_file.name}",
-                        "source_locale": "zh-Hans",
+                        "source_locale": "en" if s_name == "paper-research" else "zh-Hans",
                         "genre": "user_facing_documentation",
                         "aidetox_intensity": "strong",
                     })
@@ -250,7 +250,7 @@ def verify_content_parity_admission(doc_item: Dict[str, Any], loc: str, loc_file
     if loc_fences < src_fences:
         issues.append(f"code fence count deficit: expected at least {src_fences}, got {loc_fences}")
 
-    # 2. For READMEs: check that all 13 skill paths are present and content length is substantial
+    # 2. For READMEs: check all current skill paths and substantial content
     if doc_item["doc_id"] == "doc_root_readme":
         for s_dir in sorted((ROOT / "skills").iterdir()):
             if s_dir.is_dir() and (s_dir / "SKILL.md").exists():

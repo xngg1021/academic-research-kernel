@@ -6,6 +6,13 @@
 
 ## Unreleased
 
+## 2.1.0 — 2026-10-08 paper research workflow
+
+- DOI/URL/local-material preparation with bounded acquisition, source manifests and hashes, stable page/segment locators, and explicit partial failures. Digital PDF parsing is the optional `research` extra (`pypdf==6.19.0`, `fonttools==4.65.0`); the pinned font decoder prevents clean-environment CFF text drift. Structured text and bounded Office XML use the standard library.
+- A packaged `paper-research` skill drives the current local Agent through semantic reading, validated typed candidates, existing statistical recomputation, ResearchObject/lineage/CEG ingestion, Chinese Markdown/HTML reports and explicit two-paper comparability assessment. No new model account or resident CLI model is implied.
+- Registered extraction, comparison and prepared-document schemas; installed resource gates grow to 26 schemas and 14 skills while preserving all 12 MCP tool names. Long-tail representation retains its seed, 4096 candidates, 30 scenarios and every skill/diversity quota.
+- Frozen-byte publication retains exact commit/tree, clean-source, metadata and hash gates. Public verification uses a separate immutable worktree so the pinned publishing action's generated trampoline does not contaminate the clean source check. Historical 2.0.0/2.0.1 artifacts and tests remain valid.
+
 ## 2.0.1 — 2026-10-08 correctness repair
 
 - Decimal and scientific p-value precision, preserved literal trailing zeros, explicit half-open round-half-up boundaries, and finite statistical input/output domains. The existing MCP tool accepts optional `p_value_literal` / `p_value_decimals`; conflicting precision sources fail explicitly.

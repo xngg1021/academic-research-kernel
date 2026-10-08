@@ -4,29 +4,29 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-Harness-neutral deterministic research-state kernel for agentic research workflows. It unifies research object identity, empirical evidence receipts, tripartite claim-evidence graphs (CEG), and append-only research decision logs through a deterministic ingestion bridge and universal Model Context Protocol (MCP) server. 13 specialized scholarly skills act as producers and consumers of verified research state, with native support for Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external-service limitations are recorded in [the audit](docs/project-lineage-audit-20260920.md).
+Harness-neutral deterministic research-state kernel for agentic research workflows. It unifies research object identity, empirical evidence receipts, tripartite claim-evidence graphs (CEG), and append-only research decision logs through a deterministic ingestion bridge and universal Model Context Protocol (MCP) server. 14 specialized scholarly skills act as producers and consumers of verified research state, with native support for Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external-service limitations are recorded in [the audit](docs/project-lineage-audit-20260920.md).
 
 Author: Junfu Shi (SJF, xngg1021), Hermes Agent. Current scoped offer: [Source Lineage License 1.0](LICENSE).
 
 ## Quick start
 
-Run version 2.0.1 with [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Run version 2.1.0 with [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.0.1 mcp
+uvx academic-research-kernel@2.1.0 mcp
 ```
 
-The [2.0.1 release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.1)
+The [2.1.0 release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0)
 records distribution hashes and publication status. The release wheel also runs locally
-with `uvx --from ./academic_research_kernel-2.0.1-py3-none-any.whl academic-research-kernel mcp`.
+with `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`.
 Python 3.10–3.14 is supported; `uvx --python 3.12` explicitly selects a supported interpreter.
 All 12 deterministic tools, including statistics, are included in the base install.
 
 ## Verify
 
 ```bash
-uvx academic-research-kernel@2.0.1 doctor
-uvx academic-research-kernel@2.0.1 --version
+uvx academic-research-kernel@2.1.0 doctor
+uvx academic-research-kernel@2.1.0 --version
 ```
 
 The offline diagnostic checks dependencies, schemas and all 12 tool definitions.
@@ -35,15 +35,18 @@ Optional services can remain unconfigured. Use `doctor --json` for machine-reada
 ## Package install
 
 ```bash
-uv tool install academic-research-kernel==2.0.1
+uv tool install academic-research-kernel==2.1.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatively, install with `pipx install academic-research-kernel==2.0.1` or
-`python -m pip install academic-research-kernel==2.0.1` inside a supported virtual environment.
+Alternatively, install with `pipx install academic-research-kernel==2.1.0` or
+`python -m pip install academic-research-kernel==2.1.0` inside a supported virtual environment.
 `[full]` adds libraries for extended scientific skill examples; `[qa]` adds repository
-validation tools. GPU backends and paid services remain optional.
+validation tools, including the PDF parser. `[research]` adds `pypdf==6.19.0` and
+`fonttools==4.65.0` for consistent PDF font decoding across clean installations;
+both support Python 3.10. Structured HTML/XML and bounded DOCX/XLSX reading use
+the standard library. GPU backends and paid services remain optional.
 
 ## Hermes
 
@@ -54,7 +57,7 @@ hermes plugins install xngg1021/academic-research-kernel --no-enable
 hermes plugins enable academic-skills
 ```
 
-The existing `academic-skills` identity and all 13 skills are preserved. The plugin's
+The existing `academic-skills` identity is preserved, with 14 skills including `paper-research`. The plugin's
 `mcp.json` invokes `uv run --frozen --no-dev --no-editable` with Python 3.12 and the
 checkout's `uv.lock`; its environment lives under `${PLUGIN_DATA}/runtime`.
 It bootstraps dependencies on first use, without borrowing Hermes' or the system's Python
@@ -98,9 +101,10 @@ SLL broadly permits use, study, modification, commercial use, distribution and p
 | `skills/research-object-identity` | 1.1.0 | Deterministic research-resource identification and provenance tracking: identifier normalization, 5-state verification, content-addressed derivation graphs, causal DAG validation, and sub-100ms lineage tracing |
 | `skills/claim-evidence-graph` | 1.0.0 | Deterministic scientific claim–evidence linking connecting assertions, evidence records, and computational provenance |
 | `skills/decision-ledger` | 1.0.0 | Research Decision Log: deterministic, append-only log of research decisions, failed attempts (negative results), reasons for stopping routes, and outcome revisions |
+| `skills/paper-research` | 1.0.0 | DOI/URL/local paper and supplement reading with validated field candidates, statistical checks, persistent research state, source-linked Chinese reports and two-paper comparison |
 | `skills/cross-review-five` | 2.0.0 | Dynamic multi-reviewer panel orchestration supporting arbitrary models/subagents (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, etc.): v2 Sparse Deliberation pipeline with Kuhn-Munkres Hungarian assignment, assertion-level clustering, targeted anonymous challenge, and P0-P3 severity grading |
 
-There are 21 Markdown reference files across the thirteen skills. References load only when needed.
+There are 22 Markdown reference files across the fourteen skills. References load only when needed.
 
 ## Scholarly Standards & Multi-Profile Baseline
 
@@ -165,13 +169,46 @@ git diff --check
 
 QA validates metadata, references, personal-path/known-secret patterns, Python syntax and marked executable fences. Each smoke example runs unchanged in a fresh subprocess. Plot examples accept `PLOT_DIR` (default `~/plots`, explicitly expanded); tests use a temporary directory. Unclassified Python fences are rejected; `fragment:` blocks are syntax-checked but require named inputs and are not executed standalone. `external-test:` blocks run only via the manual external command. It returns 0 on passed configured checks, 1 on code/schema/identity failure, and 2 on transport/authentication/quota unavailability; optional unconfigured services remain SKIP.
 
-Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks thirteen skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
+Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks fourteen skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
 CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with live upstream canary validation. The historical PR #12 candidate passed 974 local tests. Current repair results and coverage limits are recorded in [the correctness repair](docs/maintenance/correctness-repair-20261008.md); remote evidence identifies the tested HEAD separately. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/project-lineage-audit-20260920.md).
 
-[tools/longtail/](tools/longtail/README.md) holds the deterministic long-tail factor generator: 4096 SHA256-seeded candidates, 30 selected scenarios and a machine-computed coverage report. The v3 model separately counts capability families (E01), the 13 actual repository skills (E02), and task goals (E03). Each scenario has one primary skill, a supported task goal and compatible capabilities; every skill must appear at least twice under two distinct goals, including its declared core goal. Skill-directory drift fails validation. Semantic expansion (task chains, oracles and executed event injection) remains a separate stage; factor coverage does not prove workflow execution coverage.
+[tools/longtail/](tools/longtail/README.md) holds the deterministic long-tail factor generator: 4096 SHA256-seeded candidates, 30 selected scenarios and a machine-computed coverage report. The v3 model separately counts capability families (E01), the 14 actual repository skills (E02), and task goals (E03). Each scenario has one primary skill, a supported task goal and compatible capabilities; every skill must appear at least twice under two distinct goals, including its declared core goal. Skill-directory drift fails validation. Semantic expansion (task chains, oracles and executed event injection) remains a separate stage; factor coverage does not prove workflow execution coverage.
 
 scripts/scfabric/ is the scientific compute fabric: hardware probe, backend catalog with dtype gates, five workload profiles, paired benchmark with parity admission, and ComputeReceipt. First-round measurements on this machine are in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); the rule of thumb is CPU by default, accelerator only with a receipt.
+
+## Research a paper with a local Agent
+
+Install `academic-research-kernel[research]==2.1.0` and export the packaged workflow:
+
+```sh
+academic-research-kernel research skill --output ./agent-skills/paper-research
+```
+
+Let Work or a compatible local Agent read that exported `SKILL.md`, then ask:
+“研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
+Supply only the DOI, public link or local bundle. For two papers, ask it to compare data,
+methods, evaluation conditions and results, explaining what is directly comparable.
+The Agent continues through original-text reading, candidate validation, calculation,
+ingestion, report generation and independent source review in the same task. The existing
+MCP surface retains its 12 tools; the new orchestration lives in the CLI and portable skill.
+
+The actual program stages are:
+
+```sh
+academic-research-kernel research prepare INPUT --project PROJECT
+academic-research-kernel research finish --project PROJECT --candidate CANDIDATE.json
+academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
+```
+
+`prepare` acquires and parses material into a manifest, source hashes and located segments.
+`finish` validates an Agent-produced extraction and recomputes eligible t/p, two-group
+effect-size and count/percentage claims using existing statistical tools, then saves kernel
+state and Chinese Markdown/HTML reports. `compare` validates an Agent's explicit assessment
+of comparable conditions. These commands do not embed a resident Work model: semantic
+reading is performed by the current Agent following [paper-research](skills/paper-research/SKILL.md).
+Saved original files and extraction snapshots support deterministic offline replay. Network
+acquisition and a new semantic reading remain separately identified operations.
 
 ## 2.0.1 correctness and distribution verification
 

@@ -18,6 +18,10 @@ from qa import EXCLUDED_TREES, hygiene
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = 'academic-research-kernel'
 SIDECARS = {'release-manifest.json', 'SHA256SUMS', 'server.json'}
+RESEARCH_SCHEMAS = {'paper-extraction.schema.json', 'paper-comparison.schema.json',
+                    'research-documents.schema.json'}
+PORTABLE_SKILL_FILES = {'academic_research_kernel/skills/paper-research/SKILL.md',
+                        'academic_research_kernel/skills/paper-research/references/contract.md'}
 
 
 def require(condition, message):
@@ -83,6 +87,7 @@ def inspect_artifact(path, version=None):
     require(path.name in package_filenames(version), 'unexpected package filename or version: ' + path.name)
     require(path.is_file() and not path.is_symlink(), 'package must be a regular file')
     wheel = path.suffix == '.whl'
+    research_release = tuple(map(int, version.split('.'))) >= (2, 1, 0)
     if wheel:
         with zipfile.ZipFile(path) as archive:
             members = archive.namelist()
@@ -106,7 +111,10 @@ def inspect_artifact(path, version=None):
         if wheel:
             require(parts[0] == 'academic_research_kernel' or parts[0] == 'academic_research_kernel-' + version + '.dist-info',
                     'unexpected wheel root: ' + name)
-            require(not any(part in {'skills', 'tests', 'scripts'} for part in parts), 'wheel runtime boundary violated: ' + name)
+            portable_skill = (research_release and len(parts) >= 4
+                              and parts[:3] == ('academic_research_kernel', 'skills', 'paper-research'))
+            require(not any(part in {'tests', 'scripts'} for part in parts)
+                    and ('skills' not in parts or portable_skill), 'wheel runtime boundary violated: ' + name)
         else:
             require(parts[0] == 'academic_research_kernel-' + version, 'unexpected sdist root: ' + name)
     metadata_name = ('academic_research_kernel-' + version + '.dist-info/METADATA' if wheel
@@ -137,7 +145,15 @@ def inspect_artifact(path, version=None):
                 and packages[0].get('identifier') == PACKAGE and packages[0].get('version') == version,
                 'sdist Registry PyPI reference version mismatch')
     if wheel:
-        require(len([name for name in files if '/schemas/' in name]) == 23, 'wheel schema inventory mismatch')
+        schema_files = {name for name in files if '/schemas/' in name}
+        require(len(schema_files) == (26 if research_release else 23), 'wheel schema inventory mismatch')
+        if research_release:
+            require({'academic_research_kernel/schemas/' + name for name in RESEARCH_SCHEMAS} <= schema_files,
+                    'wheel research schema inventory mismatch')
+            require(PORTABLE_SKILL_FILES <= set(files), 'wheel portable paper-research skill resources missing')
+            require(all('academic_research_kernel/' + name in files for name in
+                        ('research/sources.py', 'research/analysis.py', 'ingestion/paper_research.py')),
+                    'wheel paper research runtime files missing')
         require('academic_research_kernel/artifact-adapter-matrix.json' in files, 'wheel adapter matrix missing')
         require(all('academic_research_kernel/' + name in files for name in ('cli.py', 'mcp_server.py', 'recompute.py', 'ingestion/engine.py')),
                 'wheel runtime files missing')

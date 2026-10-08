@@ -31,27 +31,34 @@ def metadata(version=VERSION):
             'mcp-name: io.github.xngg1021/academic-research-kernel\n').encode()
 
 
-def packages(directory, internal_version=VERSION, runtime_version=None):
+def packages(directory, internal_version=VERSION, runtime_version=None, version=VERSION):
     runtime_version = internal_version if runtime_version is None else runtime_version
     directory.mkdir()
-    wheel = directory / f'academic_research_kernel-{VERSION}-py3-none-any.whl'
+    wheel = directory / f'academic_research_kernel-{version}-py3-none-any.whl'
     with zipfile.ZipFile(wheel, 'w') as archive:
-        archive.writestr(f'academic_research_kernel-{VERSION}.dist-info/METADATA', metadata(internal_version))
+        archive.writestr(f'academic_research_kernel-{version}.dist-info/METADATA', metadata(internal_version))
         archive.writestr('academic_research_kernel/_version.py', f'__version__ = "{runtime_version}"\n')
         for name in ('cli.py', 'mcp_server.py', 'recompute.py', 'ingestion/engine.py'):
             archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
         archive.writestr('academic_research_kernel/artifact-adapter-matrix.json', '{}')
         for number in range(23):
             archive.writestr(f'academic_research_kernel/schemas/{number}.json', '{}')
-    sdist = directory / f'academic_research_kernel-{VERSION}.tar.gz'
+        if tuple(map(int, version.split('.'))) >= (2, 1, 0):
+            for name in manifests.RESEARCH_SCHEMAS:
+                archive.writestr('academic_research_kernel/schemas/' + name, '{}')
+            for name in manifests.PORTABLE_SKILL_FILES:
+                archive.writestr(name, '# portable workflow fixture\n')
+            for name in ('research/sources.py', 'research/analysis.py', 'ingestion/paper_research.py'):
+                archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
+    sdist = directory / f'academic_research_kernel-{version}.tar.gz'
     with tarfile.open(sdist, 'w:gz') as archive:
         members = {'PKG-INFO': metadata(internal_version),
                    'scripts/_version.py': f'__version__ = "{runtime_version}"\n'.encode(),
-                   'plugin.json': json.dumps({'name': 'academic-skills', 'version': VERSION}).encode(),
-                   'server.json': json.dumps({'name': 'io.github.xngg1021/academic-research-kernel', 'version': VERSION,
-                                             'packages': [{'identifier': 'academic-research-kernel', 'version': VERSION}]}).encode()}
+                   'plugin.json': json.dumps({'name': 'academic-skills', 'version': version}).encode(),
+                   'server.json': json.dumps({'name': 'io.github.xngg1021/academic-research-kernel', 'version': version,
+                                             'packages': [{'identifier': 'academic-research-kernel', 'version': version}]}).encode()}
         for name, data in members.items():
-            info = tarfile.TarInfo(f'academic_research_kernel-{VERSION}/' + name)
+            info = tarfile.TarInfo(f'academic_research_kernel-{version}/' + name)
             info.size = len(data)
             archive.addfile(info, io.BytesIO(data))
     return [wheel, sdist]
@@ -102,6 +109,35 @@ def test_normal_201_release_has_exact_verified_bytes(release_case, tmp_path):
     assert {path.name for path in (tmp_path / 'verified').iterdir()} == manifests.package_filenames(VERSION)
     for item in result['artifacts']:
         assert hashlib.sha256((tmp_path / 'verified' / item['filename']).read_bytes()).hexdigest() == item['sha256']
+
+
+def test_210_distribution_requires_new_portable_resources_and_preserves_201_inventory(tmp_path):
+    for path in packages(tmp_path / 'current', internal_version='2.1.0', version='2.1.0'):
+        assert manifests.inspect_artifact(path, '2.1.0')['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in packages(tmp_path / 'historical'):
+        assert manifests.inspect_artifact(path, VERSION)['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+@pytest.mark.parametrize('damage', ['missing_skill', 'missing_runtime', 'renamed_schema', 'extra_schema', 'foreign_skill'])
+def test_210_rejects_incomplete_or_unexpected_runtime_resources(tmp_path, damage):
+    wheel, _ = packages(tmp_path / 'current', internal_version='2.1.0', version='2.1.0')
+    with zipfile.ZipFile(wheel) as archive:
+        files = {name: archive.read(name) for name in archive.namelist()}
+    if damage == 'missing_skill':
+        del files['academic_research_kernel/skills/paper-research/SKILL.md']
+    elif damage == 'missing_runtime':
+        del files['academic_research_kernel/ingestion/paper_research.py']
+    elif damage == 'renamed_schema':
+        files['academic_research_kernel/schemas/invented.schema.json'] = files.pop('academic_research_kernel/schemas/paper-extraction.schema.json')
+    elif damage == 'extra_schema':
+        files['academic_research_kernel/schemas/invented.schema.json'] = b'{}'
+    else:
+        files['academic_research_kernel/skills/foreign-skill/SKILL.md'] = b'foreign'
+    with zipfile.ZipFile(wheel, 'w') as archive:
+        for name, data in files.items():
+            archive.writestr(name, data)
+    with pytest.raises(ValueError):
+        manifests.inspect_artifact(wheel, '2.1.0')
 
 
 @pytest.mark.parametrize(('version', 'tag'), [('2.0.0', TAG), (VERSION, 'latest'), ('02.0.1', 'v02.0.1'),
@@ -180,6 +216,21 @@ def test_reject_dirty_source_nonempty_output_and_moved_target(release_case, tmp_
     (tmp_path / 'verified/old.whl').write_text('old', encoding='utf-8')
     with pytest.raises(ValueError, match='empty'):
         verify_case(release_case, tmp_path)
+
+
+def test_publication_trampoline_cannot_contaminate_separate_clean_source(release_case, tmp_path):
+    source, directory, manifest = release_case
+    generated = source / '.github/.tmp/.generated-actions/run-pypi-publish-in-docker-container'
+    generated.mkdir(parents=True)
+    (generated / 'action.yml').write_text('generated publisher trampoline\n', encoding='utf-8')
+    with pytest.raises(ValueError, match='clean'):
+        manifests.validate_target(VERSION, TAG, source, require_head=True)
+    clean = tmp_path / 'public-source'
+    git(source, 'worktree', 'add', '--detach', str(clean), TAG)
+    result = releases.verify(directory, VERSION, TAG, tmp_path / 'verified', clean)
+    assert result['source_commit'] == manifest['source_commit']
+    assert result['source_tree'] == manifest['source_tree']
+    assert git(clean, 'status', '--porcelain', '--untracked-files=normal') == ''
 
 
 def test_reject_tag_outside_main_and_lightweight_tag(release_case):
@@ -317,5 +368,7 @@ def test_publish_workflow_uses_validated_target_and_selective_recovery():
     for step in job['steps']:
         assert '${{ inputs.' not in step.get('run', '')
     smoke = job['steps'][-1]['run']
+    assert 'git worktree add --detach "$RUNNER_TEMP/public-source" "$RELEASE_COMMIT"' in smoke
+    assert '--repo "$RUNNER_TEMP/public-source"' in smoke
     assert '--expected-version "$RELEASE_VERSION"' in smoke
     assert 'academic-research-kernel==$RELEASE_VERSION' in smoke and 'academic-research-kernel@$RELEASE_VERSION' in smoke
