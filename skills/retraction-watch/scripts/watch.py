@@ -22,6 +22,9 @@ import os
 import re
 import sys
 import time
+import tempfile
+import uuid
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -76,56 +79,286 @@ def update_signals_from_records(records: list, target_doi: str) -> list:
     return sorted(set(found))
 
 
-def _atomic_write_json(path, payload) -> None:
-    """MW-04 / M04 / M05: 锁租期回收 + 临时写入 + 原子替换 + 重读合并。
-    - 锁内写入 pid 与当前时间戳;
-    - 若锁存在但超期 (30s) 或进程已不存在, 受控回收遗留锁 (M05);
-    - 获取锁后, 重新读取目标文件现有最新状态并合并字典 (M04: 防止并发覆盖丢失增量)。
+LOCK_LEASE_SECONDS = 30.0
+LOCK_TIMEOUT_SECONDS = 3.0
+
+
+@contextmanager
+def _lock_guard(target):
+    """OS lock serializes lease acquisition/recovery/release; never unlink it.
+
+    A persistent guard inode avoids the unlink/reopen race. The OS releases its
+    byte/flock ownership if a process dies, including during lease recovery.
     """
-    target = Path(path).expanduser()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    lock = target.with_suffix(target.suffix + '.lock')
-    lock_lease_seconds = 30.0
-
-    for _ in range(60):
+    guard = target.with_name(target.name + '.lock.guard')
+    with guard.open('a+b') as stream:
+        if stream.tell() == 0:
+            stream.write(b'\0')
+            stream.flush()
+        deadline = time.monotonic() + LOCK_TIMEOUT_SECONDS
+        while True:
+            try:
+                stream.seek(0)
+                if os.name == 'nt':
+                    import msvcrt
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(f'state guard timeout: {guard}')
+                time.sleep(0.01)
         try:
-            with open(lock, 'x') as f:
-                f.write(f'{os.getpid()}:{time.time()}')
-            break
-        except FileExistsError:
-            try:
-                content = lock.read_text(encoding='utf-8').strip()
-                if ':' in content:
-                    pid_str, ts_str = content.split(':', 1)
-                    lock_ts = float(ts_str)
-                    if time.time() - lock_ts > lock_lease_seconds:
-                        lock.unlink(missing_ok=True)
-                        continue
-            except Exception:
-                pass
-            time.sleep(0.05)
-    else:
-        raise RuntimeError(f'state lock timeout: {lock}')
+            yield
+        finally:
+            stream.seek(0)
+            if os.name == 'nt':
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
+
+def _pid_is_alive(pid):
+    if pid == os.getpid():
+        return True
+    if os.name == 'nt':
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+        kernel.GetExitCodeProcess.restype = wintypes.BOOL
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        handle = kernel.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+        if not handle:
+            # Access denied is not proof of death. Invalid PID is ERROR_INVALID_PARAMETER.
+            return ctypes.get_last_error() != 87
+        try:
+            code = wintypes.DWORD()
+            if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)):
+                return True
+            return code.value == 259  # STILL_ACTIVE
+        finally:
+            kernel.CloseHandle(handle)
     try:
-        final_payload = dict(payload) if isinstance(payload, dict) else payload
-        if isinstance(final_payload, dict) and target.is_file():
-            try:
-                disk_state = json.loads(target.read_text(encoding='utf-8'))
-                if isinstance(disk_state, dict):
-                    disk_state.update(final_payload)
-                    final_payload = disk_state
-            except Exception:
-                pass
-        tmp = target.with_suffix(target.suffix + '.tmp')
-        tmp.write_text(json.dumps(final_payload, ensure_ascii=False, indent=1, sort_keys=True),
-                       encoding='utf-8')
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def _lease_info(lock):
+    text = lock.read_text(encoding='utf-8').strip()
+    try:
+        data = json.loads(text)
+        return int(data['pid']), float(data['created_at']), data.get('token')
+    except (ValueError, TypeError, KeyError):
+        try:  # v1 legacy pid:timestamp lock files remain recoverable.
+            pid, stamp = text.split(':', 1)
+            return int(pid), float(stamp), None
+        except (ValueError, TypeError):
+            return None, lock.stat().st_mtime, None
+
+
+def _release_lease(target, token):
+    lock = target.with_name(target.name + '.lock')
+    with _lock_guard(target):
+        if lock.exists() and _lease_info(lock)[2] == token:
+            lock.unlink()
+
+
+@contextmanager
+def _state_lock(target):
+    target = Path(target).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock = target.with_name(target.name + '.lock')
+    token = uuid.uuid4().hex
+    deadline = time.monotonic() + LOCK_TIMEOUT_SECONDS
+    while True:
+        with _lock_guard(target):
+            if lock.exists():
+                pid, stamp, _ = _lease_info(lock)
+                expired = time.time() - stamp > LOCK_LEASE_SECONDS
+                # A long-lived active writer cannot be evicted by lease age.
+                if expired and (pid is None or not _pid_is_alive(pid)):
+                    lock.unlink()
+            if not lock.exists():
+                with lock.open('x', encoding='utf-8') as stream:
+                    json.dump({'pid': os.getpid(), 'created_at': time.time(), 'token': token}, stream)
+                break
+        if time.monotonic() >= deadline:
+            raise RuntimeError(f'state lock timeout: {lock}')
+        time.sleep(0.01)
+    try:
+        yield
+    finally:
+        _release_lease(target, token)
+
+
+def _read_json_object(path):
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'),
+                          parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+    except (ValueError, UnicodeError) as exc:
+        raise ValueError(f'corrupt state file: {path}: {exc}') from exc
+    if not isinstance(data, dict):
+        raise ValueError(f'state file must contain an object: {path}')
+    return data
+
+
+def _read_state(target):
+    state = _read_json_object(target)
+    for doi, snapshot in state.items():
+        if not isinstance(snapshot, dict):
+            raise ValueError(f'invalid state snapshot for {doi}: {target}')
+        for key in ('is_retracted', 'current_observation'):
+            value = snapshot.get(key)
+            if value is not None and not isinstance(value, bool):
+                raise ValueError(f'invalid state {key} for {doi}: {target}')
+        version = snapshot.get('observation_version', 0)
+        if type(version) is not int or version < 0:
+            raise ValueError(f'invalid observation version for {doi}: {target}')
+        confirmed = snapshot.get('confirmed_observation_version', 0)
+        if type(confirmed) is not int or confirmed < 0 or confirmed > version:
+            raise ValueError(f'invalid confirmed observation version for {doi}: {target}')
+    return state
+
+
+def _replace_json(target, payload):
+    """Unique same-directory temporary file; a failed replace leaves old data intact."""
+    text = json.dumps(payload, ensure_ascii=False, indent=1, sort_keys=True, allow_nan=False)
+    fd, temporary = tempfile.mkstemp(prefix=target.name + '.', suffix='.tmp', dir=target.parent)
+    tmp = Path(temporary)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
         os.replace(tmp, target)
     finally:
-        try:
-            lock.unlink()
-        except FileNotFoundError:
-            pass
+        tmp.unlink(missing_ok=True)
+
+
+def _next_version(target, state):
+    counter = target.with_name(target.name + '.sequence.json')
+    reserved = _read_json_object(counter).get('last_reserved', 0)
+    if type(reserved) is not int or reserved < 0:
+        raise ValueError(f'invalid observation sequence: {counter}')
+    version = max(reserved, max((s.get('observation_version', 0) for s in state.values()), default=0)) + 1
+    _replace_json(counter, {'last_reserved': version})
+    return version
+
+
+def _reserve_observation(path):
+    """Order observations before HTTP, under a short lock; commit order is irrelevant."""
+    target = Path(path).expanduser()
+    with _state_lock(target):
+        return _next_version(target, _read_state(target))
+
+
+def _prepare_observation(old, observed, version):
+    new = dict(observed)
+    current = new.get('is_retracted')
+    if current is not None and not isinstance(current, bool):
+        raise ValueError('is_retracted must be a boolean or None')
+    new['current_observation'] = current
+    new['observation_version'] = version
+    new['confirmed_observation_version'] = _confirmed_version(old)
+    if current is None:
+        if old is not None and old.get('is_retracted') is not None:
+            new['is_retracted'] = old['is_retracted']
+            new['verification_status'] = 'retained_prior'
+        else:
+            new['verification_status'] = 'unverified'
+    else:
+        new['verification_status'] = 'verified_current'
+        new['confirmed_observation_version'] = version
+    # Unavailable Crossref is not evidence that its previous notices disappeared.
+    if new.get('source_status', {}).get('crossref') not in (None, 'verified') and old:
+        new['signals'] = list(old.get('signals', []))
+    return new
+
+
+def _confirmed_version(snapshot):
+    if not snapshot or snapshot.get('is_retracted') is None:
+        return 0
+    if 'confirmed_observation_version' in snapshot:
+        return snapshot['confirmed_observation_version']
+    # Legacy verified records bind their known value to their observation.
+    # Legacy retained values without an independent version are a baseline.
+    if snapshot.get('current_observation', snapshot.get('is_retracted')) is not None:
+        return snapshot.get('observation_version', 0)
+    return 0
+
+
+def _merge_observation(old, observed, version):
+    current = observed.get('is_retracted')
+    if current is not None and not isinstance(current, bool):
+        raise ValueError('is_retracted must be a boolean or None')
+    if old and version <= old.get('observation_version', 0):
+        # A newer unknown observation orders the current status, but must not
+        # erase valid evidence that arrives later from an earlier query. Its
+        # confirmed version advances independently; current stays unknown.
+        if current is not None and version > _confirmed_version(old):
+            new = dict(old)
+            new['is_retracted'] = current
+            new['confirmed_observation_version'] = version
+            if new.get('current_observation') is None:
+                new['verification_status'] = 'retained_prior'
+            return new, True, True
+        return old, False, False
+    return _prepare_observation(old, observed, version), True, False
+
+
+def _commit_observation(path, doi, observed, version):
+    if type(version) is not int or version < 1:
+        raise ValueError('observation_version must be a positive integer')
+    target = Path(path).expanduser()
+    with _state_lock(target):
+        state = _read_state(target)
+        old = state.get(doi)
+        new, applied, historical_only = _merge_observation(old, observed, version)
+        if not applied:
+            return {'applied': False, 'old': old, 'new': old, 'changes': []}
+        changes = diff_snapshots(old, new) if old is not None else ['首次建档']
+        if historical_only and changes:
+            changes.append('迟到有效观测更新历史值；本轮观测仍无法核验')
+        state[doi] = new
+        _replace_json(target, state)
+        return {'applied': True, 'historical_only': historical_only, 'old': old, 'new': new, 'changes': changes}
+
+
+def _atomic_write_json(path, payload) -> None:
+    """Compatibility writer accepts DOI deltas only, never a pre-query full snapshot.
+
+    An explicit observation_version uses the same stale-write rejection as run().
+    Legacy unversioned deltas are fresh writes ordered at this call's lock boundary.
+    """
+    if not isinstance(payload, dict):
+        raise ValueError('state delta must be an object')
+    target = Path(path).expanduser()
+    with _state_lock(target):
+        state = _read_state(target)
+        for doi, observed in payload.items():
+            if not isinstance(observed, dict):
+                raise ValueError('state snapshot must be an object')
+            version = observed.get('observation_version')
+            if version is None:
+                version = _next_version(target, state)
+            if type(version) is not int or version < 1:
+                raise ValueError('observation_version must be a positive integer')
+            old = state.get(doi)
+            new, applied, _ = _merge_observation(old, observed, version)
+            if applied:
+                state[doi] = new
+        _replace_json(target, state)
 
 
 def snapshot_from_signals(is_retracted, signals, truncated: bool = False) -> dict:
@@ -153,10 +386,17 @@ def diff_snapshots(old: dict, new: dict) -> list:
     changes = []
     old_r = old.get('is_retracted')
     new_r = new.get('is_retracted')
-    if old_r is not None and new_r is None:
-        changes.append('is_retracted: 本轮无法核验 (OpenAlex 无记录), 保留上次成功核验结果')
+    old_current = old.get('current_observation', old_r)
+    new_current = new.get('current_observation', new_r)
+    if old_current is not None and new_current is None:
+        suffix = '，保留上次成功核验结果' if old_r is not None else ''
+        changes.append('is_retracted: 本轮无法核验' + suffix)
+    elif old_current is None and new_current is not None and old_r == new_r:
+        changes.append(f'is_retracted: 恢复本轮核验 ({new_current})')
     elif old_r != new_r:
         changes.append(f'is_retracted: {old_r} -> {new_r}')
+    if old.get('source_status') != new.get('source_status') and new.get('source_status') is not None:
+        changes.append('来源核验状态: ' + json.dumps(new['source_status'], ensure_ascii=False, sort_keys=True))
     added = sorted(set(new.get('signals', [])) - set(old.get('signals', [])))
     removed = sorted(set(old.get('signals', [])) - set(new.get('signals', [])))
     for sig in added:
@@ -230,55 +470,76 @@ def check_doi(doi: str) -> dict:
     MW-01: OpenAlex 404 (查不到记录) 时 is_retracted=None (未知三态),
     不得折叠成 False; 保留上次成功核验结果由 run 负责。
     """
-    signals, is_retracted = [], None
+    signals, is_retracted, truncated = [], None, False
+    statuses, errors = {}, {}
     try:
         data = get(f'{OPENALEX}/works/https://doi.org/{quote(doi)}?select=is_retracted')
-        is_retracted = bool(data.get('is_retracted'))
+        value = data.get('is_retracted') if isinstance(data, dict) else None
+        if isinstance(value, bool):
+            is_retracted = value
+            statuses['openalex'] = 'verified'
+        else:
+            statuses['openalex'] = 'invalid_response'
+            errors['openalex'] = 'is_retracted missing or not a JSON boolean'
     except HTTPError as exc:
-        if exc.code != 404:
-            raise
-    data_cr = get(f'{CROSSREF}/works?filter=updates:{quote(doi, safe="")}&rows=100')
-    message = data_cr.get('message') or {}
-    records = message.get('items') or []
-    total_results = message.get('total-results', len(records))
-    truncated = bool(total_results > len(records))
-    signals = update_signals_from_records(records, doi)
-    return snapshot_from_signals(is_retracted, signals, truncated=truncated)
+        statuses['openalex'] = 'not_found' if exc.code == 404 else 'unavailable'
+        errors['openalex'] = f'HTTP {exc.code}'
+    except (URLError, TimeoutError, OSError, ValueError) as exc:
+        statuses['openalex'] = 'unavailable'
+        errors['openalex'] = type(exc).__name__
+    try:
+        data_cr = get(f'{CROSSREF}/works?filter=updates:{quote(doi, safe="")}&rows=100')
+        message = data_cr.get('message') if isinstance(data_cr, dict) else None
+        records = message.get('items') if isinstance(message, dict) else None
+        if not isinstance(records, list):
+            raise ValueError('Crossref message.items must be an array')
+        total_results = message.get('total-results', len(records))
+        if type(total_results) is not int or total_results < 0:
+            raise ValueError('Crossref total-results must be a nonnegative integer')
+        truncated = total_results > len(records)
+        signals = update_signals_from_records(records, doi)
+        statuses['crossref'] = 'verified'
+    except (HTTPError, URLError, TimeoutError, OSError) as exc:
+        statuses['crossref'] = 'unavailable'
+        errors['crossref'] = f'HTTP {exc.code}' if isinstance(exc, HTTPError) else type(exc).__name__
+    except (ValueError, TypeError, AttributeError) as exc:
+        statuses['crossref'] = 'invalid_response'
+        errors['crossref'] = type(exc).__name__
+    snapshot = snapshot_from_signals(is_retracted, signals, truncated=truncated)
+    snapshot['source_status'] = statuses
+    if errors:
+        snapshot['source_errors'] = errors
+    return snapshot
 
 
 def run(watchlist_path, state_path) -> int:
     """live 入口：逐 DOI 检查，与状态文件比较，只报告变化。"""
     dois = load_watchlist(watchlist_path)
     state_file = Path(state_path).expanduser()
-    state = {}
-    if state_file.is_file():
-        state = json.loads(state_file.read_text(encoding='utf-8'))
     reports = 0
     for doi in dois:
+        version = _reserve_observation(state_file)
         new = check_doi(doi)
-        old = state.get(doi)
         if new.get('truncated'):
             print(f'警告: {doi} Crossref 更新记录超过首批 100 条并被截断，未能全量核验', file=sys.stderr)
-        # MW-01 / M06: 本轮无法核验且历史有成功核验结果时, 保留历史结果, 但明确标记本轮观测状态
-        new['current_observation'] = new.get('is_retracted')
-        if old is not None and new['is_retracted'] is None and old.get('is_retracted') is not None:
-            new['is_retracted'] = old['is_retracted']
-            new['verification_status'] = 'retained_prior'
-        else:
-            new['verification_status'] = 'verified_current'
+        event = _commit_observation(state_file, doi, new, version)
+        if not event['applied']:
+            print(f'- {doi}: 较早观测 {version} 已被新观测取代，未覆盖状态。')
+            continue
+        old, new = event['old'], event['new']
         if old is None:
             print(f'- {doi}: 首次建档（is_retracted={new["is_retracted"]}, '
+                  f'current_observation={new["current_observation"]}, '
+                  f'verification_status={new["verification_status"]}, '
                   f'signals={new["signals"] or "无"}）')
             reports += 1
         else:
-            changes = diff_snapshots(old, new)
+            changes = event['changes']
             if changes:
                 print(f'- {doi}: ' + '；'.join(changes))
                 reports += 1
-        state[doi] = new
     if not reports:
         print(f'无状态变化（监控 {len(dois)} 个 DOI，{date.today().isoformat()}）。')
-    _atomic_write_json(state_file, state)
     return 0
 
 

@@ -17,7 +17,7 @@ def test_version_mirrors():
     assert server['version'] == server['packages'][0]['version'] == module.__version__
     sys.path.insert(0, str(ROOT / 'scripts'))
     import mcp_server
-    assert mcp_server.process_message({'method': 'initialize'})['result']['serverInfo']['version'] == module.__version__
+    assert mcp_server.process_message({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'})['result']['serverInfo']['version'] == module.__version__
 
 
 def test_windows_command_quoting_preserves_interpreter_and_spaces():

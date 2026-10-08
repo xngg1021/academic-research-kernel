@@ -158,8 +158,9 @@ Use a dedicated Python environment. Runtime libraries are task-specific, not gua
 python -m pip install -r requirements-qa.txt
 python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu
 python scripts/qa.py
-python -m pytest -q tests
-python scripts/verify_external_apis.py
+python -m pytest -q -rs tests
+python scripts/i18n_sync.py --check
+python scripts/verify_external_apis.py --output external-status.json --summary external-summary.md
 git diff --check
 ```
 
@@ -167,11 +168,50 @@ QA validates metadata, references, personal-path/known-secret patterns, Python s
 
 Pinned Hermes authoring tests are reused without changing their per-skill rules. Upstream whole-distribution population checks do not apply to this tap; our harness checks thirteen skills and resolves references against the pinned bundled/optional catalog. This is not a complete Hermes installation test. CI uses network only to install dependencies; ordinary PR tests do not call scholarly APIs.
 
-CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with live upstream canary validation. The final candidate passed 974 local tests with zero skips; exact-head remote results are recorded separately in the closeout ledger. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/project-lineage-audit-20260920.md).
+CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), and macOS Intel (macos-15-intel), with live upstream canary validation. The historical PR #12 candidate passed 974 local tests. Current repair results and coverage limits are recorded in [the correctness repair](docs/maintenance/correctness-repair-20261008.md); remote evidence identifies the tested HEAD separately. A separate tap integration workflow runs on pushes to main: it installs the pinned Hermes checkout recorded in tests/upstream/provenance.json and exercises tap add, search, install and list against this repository. Exact versions, checks and limitations are in [the audit](docs/project-lineage-audit-20260920.md).
 
 [tools/longtail/](tools/longtail/README.md) holds the deterministic long-tail factor generator: 4096 SHA256-seeded candidates, 30 selected scenarios and a machine-computed coverage report. The v3 model separately counts capability families (E01), the 13 actual repository skills (E02), and task goals (E03). Each scenario has one primary skill, a supported task goal and compatible capabilities; every skill must appear at least twice under two distinct goals, including its declared core goal. Skill-directory drift fails validation. Semantic expansion (task chains, oracles and executed event injection) remains a separate stage; factor coverage does not prove workflow execution coverage.
 
 scripts/scfabric/ is the scientific compute fabric: hardware probe, backend catalog with dtype gates, five workload profiles, paired benchmark with parity admission, and ComputeReceipt. First-round measurements on this machine are in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); the rule of thumb is CPU by default, accelerator only with a receipt.
+
+## Unreleased correctness and local candidate verification
+
+The product version remains 2.0.0. The public `academic_recompute_statistics` tool
+exposes t-test p-values and two-group Cohen's d/Hedges' g. CI and OR/RR remain
+lower-level Python functions. Supply `p_value_literal` (for example `"1.0e-5"`)
+or `p_value_decimals` when the report's precision matters. Literals preserve
+trailing zeros; numeric inputs retain only their numeric representation. Conflicting
+precision sources fail explicitly. Round-half-up comparisons include the lower
+rounding boundary and exclude the upper boundary. An ordinary mismatch is a
+successful scientific result; invalid or partly failed computations set `isError`.
+
+Retraction checks record the current True/False/unknown observation separately
+from the last-known value. A short pre-query reservation orders same-DOI
+observations; commits reject older versions and preserve other DOI updates.
+Unknown results retain prior confirmed values, with explicit current uncertainty.
+HTTP fixtures in the regression chains are labeled test data.
+
+MCP responds to `ping`, remains silent for valid notifications (including
+`notifications/cancelled`), and keeps the stdio session alive after invalid input.
+The synchronous implementation does not advertise preemptive cancellation.
+Message handling follows the [MCP message contract](https://modelcontextprotocol.io/specification/2024-11-05/basic/messages)
+and [ping specification](https://modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping).
+
+Build and verify this checkout's distributions with an isolated environment:
+
+```bash
+python -m build
+python -m twine check --strict dist/*
+python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
+```
+
+`--source-checks` extracts the candidate sdist unchanged outside the checkout,
+sets `ARK_REPO` and `ARK_SDIST` to that candidate, and runs its tests, static QA,
+executable fences and i18n check. Wheel and sdist installations each use a fresh
+environment; uvx uses the local wheel with an independent cache. The report records
+artifact hashes and installed import paths. Scheduled lightweight pinned/latest
+Hermes checks report the tested SHA independently. External contract JSON and
+job summaries use `healthy`, `degraded` and `failed`; skipped probes remain explicit.
 
 ## Research and planning documents
 

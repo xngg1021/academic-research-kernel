@@ -76,6 +76,8 @@ hermes skills install xngg1021/academic-research-kernel/skills/retraction-watch
 
 状态快照文件默认 `~/.hermes/retraction-watch.state.json`，记录每个 DOI 上次的 `is_retracted` 与 Crossref 更新信号集合，由脚本自动维护；删除后下一轮全部按"首次建档"报告一次。
 
+每轮查询前在短锁内分配递增的 `observation_version`，HTTP 请求在锁外进行。提交只更新本次查询的 DOI，并在锁内读取最新历史：同 DOI 的当前观测仅接受更大的版本，较早开始但较晚返回的查询不能覆盖新观测。历史布尔值使用独立的 `confirmed_observation_version`：当较新的当前观测为 unknown，迟到的有效布尔值仍可更新较旧历史，同时保留当前 unknown。较新的有效布尔观测可将 True 修正为 False。相邻的 `.sequence.json` 保存已分配版本，`.lock.guard` 是保留的 OS 锁文件；进程退出会释放 OS 锁，过期且已确认进程不存在的 `.lock` 租约可回收。损坏的状态或版本文件会报错并保留原文件。
+
 ## 信号来源与判定
 
 两个独立信号，合并为状态快照（`snapshot_from_signals`）：
@@ -85,6 +87,8 @@ hermes skills install xngg1021/academic-research-kernel/skills/retraction-watch
 
 变化检测（`diff_snapshots`）：`is_retracted` 翻转、Crossref 更新信号新增或消失，都构成一次报告；首次建档的 DOI 也报告一次（作为基线）。完全相同则该 DOI 静默。
 
+OpenAlex 响应缺少 `is_retracted`、返回 null 或非布尔类型，以及超时、限流重试耗尽或查无记录，都记为本轮 unknown。`current_observation` 如实保存本轮 True/False/null；unknown 有历史布尔值时保留 `is_retracted` 并标记 `verification_status=retained_prior`，没有历史时标记 `unverified`。`source_status`/`source_errors` 分别记录双源核验状态与错误；Crossref 不可用时保留旧信号，不报告为已消失。进入 unknown、核验恢复以及来源状态变化均会报告，连续相同的 unknown 保持静默。
+
 手动跑一次：
 
 ```bash
@@ -93,7 +97,7 @@ python ${HERMES_SKILL_DIR}/scripts/watch.py --run --watchlist ~/.hermes/retracti
 
 ## 数据源与限制
 
-- OpenAlex 匿名查询有日预算与 100 req/s 上限；key 放 `OPENALEX_API_KEY` 环境变量，只发给 api.openalex.org。429 有界退避，最多 3 次；OpenAlex 404 时继续用 Crossref 单源判定。
+- OpenAlex key 放 `OPENALEX_API_KEY` 环境变量，只发给 api.openalex.org。429 有界退避，最多重试 3 次；OpenAlex 404 时撤稿布尔值为 unknown，仍查询 Crossref 更新信号。实际额度以服务当前账户政策为准。
 - Crossref 的撤稿标注依赖出版商与 Retraction Watch 数据登记；update 记录缺失不证明未撤稿，本技能只报告已登记的更新信号，不推断未登记的事实。
 - 两个信号可能不一致（一方先更新）：报告按快照逐字段列出，由用户判断，不做多数表决。
 - DOI 大小写与前缀形式先归一化再比对，状态文件以归一化 DOI 为键。

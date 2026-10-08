@@ -15,7 +15,10 @@
 错配检测函数(check_*)返回 {'consistent': bool, ...} 与判定依据。
 所有函数无 I/O、无随机性,可单测。
 """
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, localcontext
+from functools import wraps
+from numbers import Real
+import re
 
 import math
 
@@ -70,17 +73,68 @@ def _require(condition, message):
         raise ValueError(message)
 
 
+def _finite(name, value):
+    """Reject bools, non-numbers, and values outside finite float arithmetic."""
+    _require(not isinstance(value, bool) and isinstance(value, (Real, Decimal)),
+             f'{name} 须为有限数值')
+    try:
+        valid = math.isfinite(float(value))
+    except (ValueError, TypeError, OverflowError):
+        valid = False
+    _require(valid, f'{name} 须为有限数值')
+    return value
+
+
+def _finite_inputs(**values):
+    for name, value in values.items():
+        if value is not None:
+            _finite(name, value)
+
+
+def _integer(name, value, minimum=0):
+    _finite(name, value)
+    _require(value == int(value) and value >= minimum,
+             f'{name} 须为 >= {minimum} 的整数')
+    return int(value)
+
+
+def _validate_finite_tree(value):
+    if isinstance(value, dict):
+        for child in value.values():
+            _validate_finite_tree(child)
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            _validate_finite_tree(child)
+    elif isinstance(value, (Real, Decimal)) and not isinstance(value, bool):
+        _finite('计算结果', value)
+
+
+def _finite_output(func):
+    """No successful result may contain NaN/Infinity, including nested fields."""
+    @wraps(func)
+    def checked(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except ArithmeticError as exc:
+            raise ValueError('计算超出有限数值范围') from exc
+        _validate_finite_tree(result)
+        return result
+    return checked
+
+
 # ---------------------------------------------------------------------------
 # 1. 均值与标准差 → 效应量
 # ---------------------------------------------------------------------------
 
+@_finite_output
 def cohens_d(m1, sd1, n1, m2, sd2, n2, reported=None):
     """两组独立样本的 Cohen's d 与 Hedges' g(合并标准差)。
 
     sp = sqrt(((n1-1)sd1^2 + (n2-1)sd2^2) / (n1+n2-2)); d = (m1-m2)/sp。
     Hedges' g = d * J,小样本校正 J = 1 - 3/(4*df - 1),df = n1+n2-2。
     """
-    _require(n1 >= 2 and n2 >= 2, '每组样本量须 >= 2')
+    _finite_inputs(m1=m1, sd1=sd1, m2=m2, sd2=sd2, reported=reported)
+    n1, n2 = _integer('n1', n1, 2), _integer('n2', n2, 2)
     _require(sd1 >= 0 and sd2 >= 0, '标准差须非负')
     df = n1 + n2 - 2
     sp = np.sqrt(((n1 - 1) * sd1**2 + (n2 - 1) * sd2**2) / df)
@@ -100,26 +154,38 @@ def cohens_d(m1, sd1, n1, m2, sd2, n2, reported=None):
 # 2. 检验统计量 + 自由度 → 重算 p 值
 # ---------------------------------------------------------------------------
 
+@_finite_output
 def p_from_t(t, df, reported=None):
     """t 统计量与自由度 → 双侧 p 值。p = 2 * P(T_df > |t|)。"""
-    _require(df >= 1, '自由度须 >= 1')
+    _finite_inputs(t=t, df=df, reported=reported)
+    _require(df > 0, '自由度须为正 (允许非整数 Welch 自由度)')
+    if reported is not None:
+        _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     p = 2.0 * stats.t.sf(abs(t), df)
     return _result(reported, float(p), {'t': t, 'df': df, 'sided': 2},
                    'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf')
 
 
+@_finite_output
 def p_from_f(f, df1, df2, reported=None):
     """F 统计量与分子/分母自由度 → p 值(右尾,ANOVA/回归整体检验惯例)。"""
-    _require(df1 >= 1 and df2 >= 1, '自由度须 >= 1')
+    _finite_inputs(f=f, df1=df1, df2=df2, reported=reported)
+    _require(df1 > 0 and df2 > 0, '自由度须为正')
+    if reported is not None:
+        _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(f >= 0, 'F 统计量须非负')
     p = stats.f.sf(f, df1, df2)
     return _result(reported, float(p), {'F': f, 'df1': df1, 'df2': df2},
                    'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf')
 
 
+@_finite_output
 def p_from_chi2(chi2, df, reported=None):
     """卡方统计量与自由度 → p 值(右尾)。"""
-    _require(df >= 1, '自由度须 >= 1')
+    _finite_inputs(chi2=chi2, df=df, reported=reported)
+    _require(df > 0, '自由度须为正')
+    if reported is not None:
+        _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(chi2 >= 0, '卡方统计量须非负')
     p = stats.chi2.sf(chi2, df)
     return _result(reported, float(p), {'chi2': chi2, 'df': df},
@@ -130,12 +196,14 @@ def p_from_chi2(chi2, df, reported=None):
 # 3. 报告的 β 与 SE → 重算 Wald 统计量
 # ---------------------------------------------------------------------------
 
+@_finite_output
 def z_from_beta_se(beta, se, reported=None):
     """回归系数 β 与其标准误 → Wald z 与双侧正态近似 p 值。
 
     z = β/SE;p = 2 * (1 - Φ(|z|))。大样本 logistic/Cox 报告惯例;
     小样本 OLS 应改用 t 分布(见 p_from_t,df = 残差自由度)。
     """
+    _finite_inputs(beta=beta, se=se, reported=reported)
     _require(se > 0, '标准误须为正')
     z = beta / se
     p = 2.0 * stats.norm.sf(abs(z))
@@ -151,6 +219,7 @@ def z_from_beta_se(beta, se, reported=None):
 # 4. 置信区间与点估计一致性
 # ---------------------------------------------------------------------------
 
+@_finite_output
 def check_ci_consistency(estimate, lower, upper, level=0.95, log_scale=False, rel_tol=0.02):
     """点估计与报告 CI 的几何/算术一致性 + 反推 SE。
 
@@ -159,6 +228,9 @@ def check_ci_consistency(estimate, lower, upper, level=0.95, log_scale=False, re
     反推 SE(或 log 尺度 SE)= (upper-lower)/(2*z_{level}),log 尺度先取对数。
     rel_tol:估计值与 CI 中点的相对容差(报告四舍五入通常 <2%)。
     """
+    _finite_inputs(estimate=estimate, lower=lower, upper=upper, level=level, rel_tol=rel_tol)
+    _require(isinstance(log_scale, bool), 'log_scale 须为布尔值')
+    _require(rel_tol >= 0, 'rel_tol 须非负')
     _require(0 < level < 1, '置信水平须在 (0,1)')
     _require(lower < upper, 'CI 下限须小于上限')
     if log_scale:
@@ -191,6 +263,7 @@ def check_ci_consistency(estimate, lower, upper, level=0.95, log_scale=False, re
 # 5. 2×2 表 → OR / RR 及置信区间
 # ---------------------------------------------------------------------------
 
+@_finite_output
 def or_rr_from_2x2(a, b, c, d, level=0.95, reported=None):
     """2×2 表 → 比值比、相对危险度及 Wald(log 尺度)置信区间。
 
@@ -199,8 +272,10 @@ def or_rr_from_2x2(a, b, c, d, level=0.95, reported=None):
     RR = (a/(a+b))/(c/(c+d)),SE(logRR) = sqrt(b/(a(a+b)) + d/(c(c+d)))。
     出现 0 格时自动施加 Haldane-Anscombe 0.5 校正并在结果中标记。
     """
+    _finite_inputs(level=level, reported=reported)
+    _require(0 < level < 1, '置信水平须在 (0,1)')
+    a, b, c, d = (_integer(name, value) for name, value in zip('abcd', (a, b, c, d)))
     cells = {'a': a, 'b': b, 'c': c, 'd': d}
-    _require(all(v >= 0 for v in cells.values()), '格子计数须非负')
     _require(a + b > 0 and c + d > 0, '每行总数须为正')
     correction = any(v == 0 for v in cells.values())
     if correction:
@@ -234,16 +309,18 @@ def or_rr_from_2x2(a, b, c, d, level=0.95, reported=None):
 # 6. 样本量与效应量 → 实现功效(achieved power)
 # ---------------------------------------------------------------------------
 
+@_finite_output
 def achieved_power_ttest(d, n1, n2=None, alpha=0.05, reported=None):
     """两独立样本 t 检验的实现功效(双侧)。
 
     输入 Cohen's d、每组样本量与 α,返回在给定条件下能检出该效应量的概率。
     n2 省略时按两组相等处理。结果受 d 报告精度影响,confidence='medium'。
     """
-    _require(n1 >= 2, 'n1 须 >= 2')
+    _finite_inputs(d=d, alpha=alpha, reported=reported)
+    n1 = _integer('n1', n1, 2)
     _require(0 < alpha < 1, 'alpha 须在 (0,1)')
     n2 = n1 if n2 is None else n2
-    _require(n2 >= 2, 'n2 须 >= 2')
+    n2 = _integer('n2', n2, 2)
     power = TTestIndPower().solve_power(
         effect_size=abs(d), nobs1=n1, alpha=alpha, ratio=n2 / n1, alternative='two-sided')
     return _result(reported, float(power),
@@ -253,12 +330,14 @@ def achieved_power_ttest(d, n1, n2=None, alpha=0.05, reported=None):
                    confidence='medium')
 
 
+@_finite_output
 def required_n_ttest(d, power=0.8, alpha=0.05, ratio=1.0, reported=None):
     """达到目标功效所需的第一组样本量(未取整,请向上取整后报告)。
 
     用于核对论文"样本量经功效分析确定"的表述:n_required = solve(n)。
     ratio = n2/n1;返回值是连续解,实际入组须 ceil。
     """
+    _finite_inputs(d=d, power=power, alpha=alpha, ratio=ratio, reported=reported)
     _require(d != 0, '效应量须非零')
     _require(0 < power < 1 and 0 < alpha < 1, 'power/alpha 须在 (0,1)')
     _require(ratio > 0, 'ratio 须为正')
@@ -276,41 +355,97 @@ def required_n_ttest(d, power=0.8, alpha=0.05, ratio=1.0, reported=None):
 # 错配检测
 # ---------------------------------------------------------------------------
 
+_DECIMAL_LITERAL = re.compile(r'^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$')
+
+
+def _decimal(value, name):
+    _require(not isinstance(value, bool), f'{name} 须为有限十进制数')
+    text = str(value).strip()
+    _require(bool(_DECIMAL_LITERAL.fullmatch(text)), f'{name} 须为有限十进制数')
+    try:
+        result = Decimal(text)
+    except InvalidOperation as exc:
+        raise ValueError(f'{name} 须为有限十进制数') from exc
+    _require(result.is_finite(), f'{name} 须为有限十进制数')
+    return result
+
+
 def _decimals(value):
-    """由数值或字符串推断报告的小数位数 (Q03: 优先从原始字符串提取, 恢复尾随零)。"""
-    s = str(value).strip()
-    if "." in s:
-        base = s.split("e")[0].split("E")[0]
-        return len(base.split(".")[1])
-    return 0
+    """Decimal exponent includes scientific notation and literal trailing zeros.
+
+    A numeric float only retains its shortest decimal representation; lost
+    trailing zeros require a literal or explicit decimals from the caller.
+    """
+    return max(0, -_decimal(value, '报告值').as_tuple().exponent)
 
 
-def check_p_match(reported_p, recomputed_p, decimals=None):
+def _rounding_spec(value, decimals=None, reported_literal=None):
+    reported = _decimal(value, '报告值')
+    literal = None
+    if reported_literal is not None:
+        _require(isinstance(reported_literal, str), 'reported_literal 须为字符串')
+        literal_value = _decimal(reported_literal, 'reported_literal')
+        _require(literal_value == reported, 'reported_literal 与报告数值冲突')
+        literal = reported_literal.strip()
+    elif isinstance(value, (str, Decimal)):
+        literal = str(value).strip()
+    literal_decimals = _decimals(literal) if literal is not None else None
+    if decimals is not None:
+        _require(isinstance(decimals, int) and not isinstance(decimals, bool)
+                 and 0 <= decimals <= 10000, 'decimals 须为 [0,10000] 的整数')
+        if literal_decimals is not None:
+            _require(decimals == literal_decimals, 'decimals 与报告字面量精度冲突')
+        k = decimals
+        # Explicit precision may restore numeric trailing zeros, never discard
+        # nonzero digits that are already present in the reported number.
+        _require(k >= _decimals(reported.normalize()), 'decimals 与报告数值精度冲突')
+    else:
+        k = literal_decimals if literal_decimals is not None else _decimals(value)
+        _require(k <= 10000, '报告精度超过 10000 位小数')
+    with localcontext() as context:
+        context.prec = max(32, k + len(reported.as_tuple().digits) + 4)
+        tolerance = Decimal(5).scaleb(-k - 1)
+        lower, upper = reported - tolerance, reported + tolerance
+    source = ('literal' if literal is not None else
+              'explicit_decimals' if decimals is not None else 'numeric_representation')
+    return reported, k, tolerance, lower, upper, source, literal
+
+
+@_finite_output
+def check_p_match(reported_p, recomputed_p, decimals=None, *, reported_literal=None):
     """报告的 p 值与重算 p 值是否一致(按报告精度四舍五入容差)。
 
     报告 p 保留 k 位小数时,真值落在 [p - 0.5·10^-k, p + 0.5·10^-k) 即判一致;
-    decimals 省略时由 reported_p 的字面精度推断。p 以 "< .05" 形式报告时
+    decimals 省略时由 Decimal 指数推断,因此 "1.0e-5" 为 6 位小数。
+    reported_literal 可在旧数值调用外保留原始尾零;它必须与数值相等,
+    与显式 decimals 的精度也必须一致。数值本身无法恢复丢失的尾零。
+    舍入采用非负数 round-half-up 的半开区间,下端包含、上端排除。
+    p 以 "< .05" 形式报告时
     本函数不适用(改用方向性核对,见 SKILL.md 工作流 4)。
     """
-    k = _decimals(reported_p) if decimals is None else decimals
-    p_rep = float(reported_p)
-    p_rec = float(recomputed_p)
+    p_rep, k, tol, lower, upper, source, literal = _rounding_spec(
+        reported_p, decimals, reported_literal)
+    p_rec = _decimal(recomputed_p, '重算 p 值')
     _require(0 <= p_rep <= 1 and 0 <= p_rec <= 1, 'p 值须在 [0,1]')
-    tol = 0.5 * 10 ** (-k)
-    diff = abs(p_rec - p_rep)
     return {
-        'consistent': bool(diff <= tol + 1e-12),
-        'reported': p_rep,
-        'recomputed': p_rec,
+        'consistent': bool(lower <= p_rec < upper),
+        'reported': float(p_rep),
+        'recomputed': float(p_rec),
         'difference': float(p_rec - p_rep),
         'tolerance': float(tol),
+        'tolerance_decimal': str(tol),
         'decimals': int(k),
-        'formula': '|p_recomputed - p_reported| <= 0.5 * 10^-decimals',
-        'library': 'pure python',
+        'precision_source': source,
+        'reported_literal': literal,
+        'rounding_interval': {'lower': str(lower), 'upper': str(upper),
+                              'lower_inclusive': True, 'upper_inclusive': False},
+        'formula': 'p_reported - 0.5*10^-decimals <= p_recomputed < p_reported + 0.5*10^-decimals',
+        'library': 'decimal.Decimal',
         'confidence': 'high',
     }
 
 
+@_finite_output
 def check_percentage(count, percent, denominator=None, max_denominator=100000,
                      decimals=None):
     """百分比分母核对:报告百分比、计数与(可选)声明分母是否自洽。
@@ -324,24 +459,37 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000,
     QA-04 / Q03: decimals 显式传入或传入字符串可恢复 float 无法保留的尾随零(报告 0.050 应传
     "0.050" 或 decimals=3);省略时按字面量推断。
     """
-    _require(count >= 0, '计数须非负')
-    k = _decimals(percent) if decimals is None else decimals
-    p_val = float(percent)
-    _require(0 <= p_val <= 100, '百分比须在 [0,100]')
-    tol = 0.5 * 10 ** (-k) + 1e-12
+    count = _integer('count', count)
+    max_denominator = _integer('max_denominator', max_denominator, 1)
+    if denominator is not None:
+        denominator = _integer('denominator', denominator, 1)
+        _require(count <= denominator, 'count 不得超过 denominator')
+    p_decimal, k, tol, lower, upper, source, literal = _rounding_spec(percent, decimals)
+    p_val = float(p_decimal)
+    _require(0 <= p_decimal <= 100, '百分比须在 [0,100]')
+
+    def matches(candidate_denominator):
+        # Cross multiplication preserves exact half-open boundaries even when
+        # 100*count/denominator is a repeating decimal.
+        with localcontext() as context:
+            context.prec = max(32, k + len(str(candidate_denominator)) + len(str(count)) + 8)
+            return lower * candidate_denominator <= 100 * count < upper * candidate_denominator
+
     out = {
         'inputs': {'count': count, 'percent': p_val, 'raw_percent': str(percent)},
         'tolerance': float(tol),
+        'tolerance_decimal': str(tol),
+        'decimals': k,
+        'precision_source': source,
         'formula': 'percent ?= 100*count/denominator (按报告精度容差)',
         'library': 'pure python',
         'confidence': 'high',
     }
-    if p_val == 0:
+    if p_decimal == 0:
         if denominator is not None:
-            _require(denominator > 0, '分母须为正')
             recomputed = 100.0 * count / denominator
             out.update({
-                'consistent': bool(abs(recomputed - p_val) <= tol),
+                'consistent': bool(matches(denominator)),
                 'denominator': denominator,
                 'recomputed_percent': float(recomputed),
                 'difference': float(recomputed - p_val),
@@ -350,9 +498,8 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000,
             out.update({'consistent': None,
                         'note': '0% 与 0 计数自洽, 但未给分母时无法确定分母'})
         else:
-            # Q01: 按报告精度处理零边界——count>0 且 percent=0 时，若存在合理分母使 100*count/D <= tol，
-            # 则在四舍五入下可能成立，属于分母未知的欠定状态，不能判定为绝对不可能
-            min_denom = int(np.ceil(100.0 * count / tol))
+            # Zero's upper endpoint is excluded: 100*count/D must be < tol.
+            min_denom = 200 * count * 10**k + 1
             if min_denom <= max_denominator:
                 out.update({
                     'consistent': None,
@@ -366,10 +513,9 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000,
                 })
         return out
     if denominator is not None:
-        _require(denominator > 0, '分母须为正')
         recomputed = 100.0 * count / denominator
         out.update({
-            'consistent': bool(abs(recomputed - p_val) <= tol),
+            'consistent': bool(matches(denominator)),
             'denominator': denominator,
             'recomputed_percent': float(recomputed),
             'difference': float(recomputed - p_val),
@@ -377,13 +523,13 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000,
         return out
     implied = 100.0 * count / p_val
     nearest = int(round(implied))
-    if not (1 <= nearest <= max_denominator):
+    if not (max(1, count) <= nearest <= max_denominator):
         out.update({'consistent': False, 'implied_denominator': float(implied),
                     'note': '隐含分母超出合理范围'})
         return out
     recomputed = 100.0 * count / nearest
     out.update({
-        'consistent': bool(abs(recomputed - p_val) <= tol),
+        'consistent': bool(matches(nearest)),
         'implied_denominator': float(implied),
         'nearest_denominator': nearest,
         'recomputed_percent': float(recomputed),
@@ -392,6 +538,7 @@ def check_percentage(count, percent, denominator=None, max_denominator=100000,
     return out
 
 
+@_finite_output
 def check_sd_possible(sd, minimum, maximum, n=None):
     """有界量表的 SD 可行性:报告 SD 是否超出理论最大标准差。
 
@@ -399,11 +546,12 @@ def check_sd_possible(sd, minimum, maximum, n=None):
     (两极各半分布);样本 SD(分母 n-1)上界再乘 sqrt(n/(n-1))。
     超出即"不可能的 SD",常见于把 SE 误报为 SD 或量表范围记错。
     """
+    _finite_inputs(sd=sd, minimum=minimum, maximum=maximum)
     _require(sd >= 0, 'SD 须非负')
     _require(minimum < maximum, '量表下限须小于上限')
     max_pop_sd = (maximum - minimum) / 2.0
     if n is not None:
-        _require(n >= 2, 'n 须 >= 2')
+        n = _integer('n', n, 2)
         max_sd = max_pop_sd * np.sqrt(n / (n - 1.0))
     else:
         max_sd = max_pop_sd
@@ -419,6 +567,7 @@ def check_sd_possible(sd, minimum, maximum, n=None):
     }
 
 
+@_finite_output
 def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=None):
     """由报告自由度反推样本量,与论文声明的 N 核对。
 
@@ -428,9 +577,13 @@ def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=Non
       'regression'                     → N = df + n_params(残差 df + 参数个数,
                                           含截距;n_params 必填)
     """
-    _require(df >= 1, '自由度须 >= 1')
-    _require(reported_n >= 1, '样本量须 >= 1')
+    _finite('df', df)
+    _require(df > 0, '自由度须为正')
+    reported_n = _integer('reported_n', reported_n, 1)
+    if n_params is not None:
+        n_params = _integer('n_params', n_params, 1)
     if kind in ('ttest_1sample', 'ttest_paired'):
+        _require(df == int(df), '单样本/配对样本自由度须为整数')
         implied = df + 1
     elif kind == 'ttest_2sample':
         # QA-02: N = df + 2 只对 pooled Student t 成立且要求整数 df;
@@ -464,7 +617,8 @@ def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=Non
             'note': 'Welch 自由度无法反推样本量, 本函数不做判定',
         }
     elif kind == 'regression':
-        _require(n_params is not None and n_params >= 1,
+        _require(df == int(df), '回归残差自由度须为整数')
+        _require(n_params is not None,
                  "kind='regression' 须提供 n_params(含截距)")
         implied = df + n_params
     else:
@@ -485,18 +639,17 @@ def check_sample_size_from_df(df, reported_n, kind='ttest_2sample', n_params=Non
     }
 
 
+@_finite_output
 def values_agree(value_a, value_b, rel_tol=1e-3, abs_tol=None):
     """两处报告值(正文 vs 表格、摘要 vs 结果)是否一致。
 
     默认相对容差 1e-3(容忍排版四舍五入);跨量级或近零值用 abs_tol。
     QA-01: 输入与容差必须为有限数, inf/nan 一律 ValueError, 不得判成一致。
     """
-    for name, val in (('value_a', value_a), ('value_b', value_b)):
-        if not math.isfinite(float(val)):
-            raise ValueError(f'{name} 必须是有限数, got {val!r}')
-    if not math.isfinite(float(rel_tol)) or float(rel_tol) < 0:
+    _finite_inputs(value_a=value_a, value_b=value_b, rel_tol=rel_tol, abs_tol=abs_tol)
+    if rel_tol < 0:
         raise ValueError(f'rel_tol 必须是有限非负数, got {rel_tol!r}')
-    if abs_tol is not None and (not math.isfinite(float(abs_tol)) or float(abs_tol) < 0):
+    if abs_tol is not None and abs_tol < 0:
         raise ValueError(f'abs_tol 必须是有限非负数, got {abs_tol!r}')
     diff = abs(value_a - value_b)
     scale = max(abs(value_a), abs(value_b))

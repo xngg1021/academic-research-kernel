@@ -47,6 +47,20 @@
         "relative_deviation": {"type": "number"},
         "implied_se": {"type": "number"},
         "tolerance": {"type": "number"},
+        "tolerance_decimal": {"type": "string"},
+        "precision_source": {"enum": ["literal", "explicit_decimals", "numeric_representation"]},
+        "reported_literal": {"type": ["string", "null"]},
+        "rounding_interval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lower", "upper", "lower_inclusive", "upper_inclusive"],
+          "properties": {
+            "lower": {"type": "string"},
+            "upper": {"type": "string"},
+            "lower_inclusive": {"const": true},
+            "upper_inclusive": {"const": false}
+          }
+        },
         "decimals": {"type": "integer", "minimum": 0},
         "reported_sd": {"type": "number"},
         "max_possible_sd": {"type": "number"},

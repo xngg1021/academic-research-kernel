@@ -152,8 +152,9 @@ PR #12 提供 `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、14
 python -m pip install -r requirements-qa.txt
 python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu
 python scripts/qa.py
-python -m pytest -q tests
-python scripts/verify_external_apis.py
+python -m pytest -q -rs tests
+python scripts/i18n_sync.py --check
+python scripts/verify_external_apis.py --output external-status.json --summary external-summary.md
 git diff --check
 ```
 
@@ -161,11 +162,44 @@ QA 校验元数据、参考文件、个人路径与已知密钥模式、Python �
 
 固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十三个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
 
-CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。最终候选本地测试为 974 passed、零跳过；精确 HEAD 的远端结果单独记录于收尾账本。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。历史 PR #12 候选本地测试为 974 passed。本轮实测数量与覆盖边界见[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)；远端证据单独标明被测 HEAD。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
 [tools/longtail/](tools/longtail/README.md) 存放确定性长尾因子生成器：4096 个 SHA256 种子候选，选取 30 个场景并输出机器计算的覆盖报告。v3 分别统计能力族（E01）、仓库实际的 13 个技能（E02）与任务目标（E03）。每个场景只绑定一个主要技能、一个受支持的任务目标及兼容能力；每个技能至少出现 2 次、覆盖 2 个不同目标，其中包含其声明的核心目标。技能目录与因子目录不一致时验证失败。语义展开（任务链、判据与实际事件注入）仍是独立阶段；因子覆盖不代表工作流已经执行验证。
 
 scripts/scfabric/ 是科学计算执行层：硬件探针、带 dtype 门禁的后端目录、五个工作负载画像、带数值等价检查的配对基准与 ComputeReceipt。本机首轮实测见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；经验规则是默认 CPU，加速器只凭 receipt 启用。
+
+## Unreleased 修复与本地候选验证
+
+产品版本保持 2.0.0。公共 `academic_recompute_statistics` 工具暴露 t 检验
+p 值及两组 Cohen's d/Hedges' g；CI 和 OR/RR 保留为底层 Python 函数。
+需要保留报告精度时，传入 `p_value_literal`（例如 `"1.0e-5"`）或
+`p_value_decimals`。字面量保留尾零，单独数值只使用其现有数值表示；
+多个精度来源冲突时明确失败。四舍五入比较采用下端包含、上端排除的半开区间。
+正常统计不一致仍是成功科研结果；输入或部分计算失败通过 `isError` 表达。
+
+撤稿检查分别记录本轮 True/False/unknown 观测及 last-known 值。
+查询前短锁分配版本，同 DOI 拒绝旧观测覆盖新观测，其他 DOI 的更新增量保留。
+本轮未知保留历史已确认值，并明确当前不确定状态。任务链中的外部响应标明测试数据。
+
+MCP 支持 `ping`，合法通知（含 `notifications/cancelled`）不回包，
+错误输入后 stdio 会话继续。同步实现未声明抢占式取消。
+消息处理依据 [MCP 消息规范](https://modelcontextprotocol.io/specification/2024-11-05/basic/messages)
+与 [ping 规范](https://modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping)。
+
+在隔离环境中构建并验证本次检出的分发物：
+
+```bash
+python -m build
+python -m twine check --strict dist/*
+python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
+```
+
+`--source-checks` 在仓库外原样解包候选 sdist，显式设置 `ARK_REPO` 与
+`ARK_SDIST`，运行包内测试、静态 QA、可执行代码块和 i18n 校验。
+wheel/sdist 分别使用全新安装环境；uvx 使用本地 wheel 和独立缓存。
+报告保存分发物哈希与实际导入路径。定时轻量 Hermes 检查分开报告 pinned/latest
+及被测 SHA；外部契约 JSON 和 job summary 区分 `healthy`、`degraded`、`failed`，
+跳过的探测单独记录。
 
 ## 研究与规划文档
 

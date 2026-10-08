@@ -19,7 +19,7 @@ jobs:
     # full-ci requests the complete matrix while Draft, including every later
     # synchronize event. Promotion of that same candidate only triggers review;
     # retain its existing CI evidence instead of paying for a duplicate matrix.
-    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
+    if: github.event_name != 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
     strategy:
       fail-fast: false
       matrix:
@@ -72,6 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
         with:
@@ -103,6 +104,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Check out pinned Hermes upstream
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
         with:
@@ -131,13 +134,75 @@ jobs:
           hermes skills install xngg1021/academic-research-kernel/skills/cross-review-five
           hermes skills list
   upstream-canary:
-    # Canary integration against Hermes upstream main branch for forward compatibility
-    # Runs on main, manual dispatch, and PRs touching plugins/skills/adapters
+    name: Hermes compatibility (${{ matrix.channel }})
+    # Schedule resolves upstream main every run; pinned and latest evidence stay
+    # separate. This import-light loader canary does not install the full agent.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - channel: pinned
+            ref: 245e48008fa814b3251f50755eb656bd9fb86cb1
+            expected-sha: 245e48008fa814b3251f50755eb656bd9fb86cb1
+          - channel: latest-upstream
+            ref: main
+            expected-sha: ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
+        with:
+          python-version: '3.12'
+      # Latest Hermes uses its shared ruamel loader; the pinned snapshot uses PyYAML.
+      - run: python -m pip install 'PyYAML>=6,<7' 'ruamel.yaml==0.18.16'
+      - name: Check out tested Hermes revision
+        id: hermes-checkout
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
+        with:
+          repository: NousResearch/hermes-agent
+          ref: ${{ matrix.ref }}
+          path: .hermes-latest
+          fetch-depth: 1
+      - name: Check loader and publish explicit compatibility state
+        if: always()
+        shell: bash
+        env:
+          CHANNEL: ${{ matrix.channel }}
+          CHECKOUT_OUTCOME: ${{ steps.hermes-checkout.outcome }}
+          EXPECTED_SHA: ${{ matrix.expected-sha }}
+        run: |
+          set +e
+          args=(--upstream .hermes-latest --channel "$CHANNEL" --checkout-outcome "$CHECKOUT_OUTCOME" --output "monitoring/hermes-$CHANNEL.json")
+          if [[ -n "$EXPECTED_SHA" ]]; then args+=(--expected-sha "$EXPECTED_SHA"); fi
+          python scripts/hermes_compatibility_canary.py "${args[@]}"
+          code=$?
+          if [[ "$code" -eq 2 ]]; then
+            echo "::warning::Hermes $CHANNEL compatibility degraded; see report and summary."
+            exit 0
+          fi
+          exit "$code"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: hermes-${{ matrix.channel }}-status
+          path: monitoring/hermes-${{ matrix.channel }}.json
+          if-no-files-found: error
+
+  upstream-runtime:
+    # Retain the full latest runtime gate on candidate CI; schedule uses the
+    # independent lightweight compatibility reports above.
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Check out latest Hermes main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
         with:
@@ -147,7 +212,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Install latest Hermes and test CLI smoke
         run: |
           python -m pip install --upgrade pip
@@ -180,11 +245,12 @@ jobs:
           "
 
   distribution-build:
-    if: (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
+    if: github.event_name != 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -214,6 +280,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'

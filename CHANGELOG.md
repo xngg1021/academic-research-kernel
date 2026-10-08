@@ -4,6 +4,14 @@
 
 ---
 
+## Unreleased — 2026-10-08 correctness repair
+
+- Decimal and scientific p-value precision, preserved literal trailing zeros, explicit half-open round-half-up boundaries, and finite statistical input/output domains. The existing MCP tool accepts optional `p_value_literal` / `p_value_decimals`; conflicting precision sources fail explicitly.
+- DOI delta commits use pre-query monotonic observation versions and short owned locks. Unknown observations preserve last-known values and expose current source status; stale observations cannot overwrite newer valid corrections.
+- MCP ping, silent notifications, malformed request recovery, statistical execution errors and partial failures. Scientific inconsistency and successful `valid=false` verification retain their normal result semantics.
+- Complete sdist self-test inputs, independent raw-source/wheel/sdist acceptance, scheduled pinned/latest Hermes compatibility reports, and machine-readable external healthy/degraded/failed states.
+- English/Simplified Chinese usage and validation are synchronized. Package version remains 2.0.0; receipt/schema v1 and the long-tail model's seed, quotas and coverage definitions are retained.
+
 ## 2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）
 
 ### 唯一闭环修复（最终评审第 1 轮后）
