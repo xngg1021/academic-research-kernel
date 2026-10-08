@@ -90,7 +90,7 @@ class LicenseApplicationTests(unittest.TestCase):
             return
         from context_economics import __version__
         self.assertEqual(__version__, "0.7.1")
-        self.assertEqual((ROOT / "VERSION").read_text().strip(), __version__)
+        self.assertEqual((ROOT / "VERSION").read_text(encoding="utf-8").strip(), __version__)
         paths = list(ROOT.glob("README*.md"))
         self.assertEqual(len(paths), 8)
         for path in paths:
@@ -103,7 +103,7 @@ class LicenseApplicationTests(unittest.TestCase):
             prior = re.sub(r"\n*<!-- sll-license:start -->.*?<!-- sll-license:end -->\n*", "\n", text, flags=re.S).rstrip() + "\n"
             prior = prior.replace("0.7.1", "0.7.0")
             self.assertEqual(hashlib.sha256(prior.encode()).hexdigest(), self.receipt["readme_product_hashes"][path.name], path.name)
-        history = (ROOT / "LICENSE-HISTORY.md").read_text()
+        history = (ROOT / "LICENSE-HISTORY.md").read_text(encoding="utf-8")
         self.assertIn("CLOSED / NOT MERGED / SUPERSEDED", history)
         self.assertIn("never applicable to main through PR #9", history)
         forbidden = "LicenseRef-" + "SJF-SVPL-1.0"
@@ -114,12 +114,12 @@ class LicenseApplicationTests(unittest.TestCase):
     def test_hermes_mit_boundary_and_upstream_remain_separate(self):
         if self.receipt["repository"] != "xngg1021/hermes-academic-skills":
             return
-        history = (ROOT / "LICENSE-HISTORY.md").read_text()
+        history = (ROOT / "LICENSE-HISTORY.md").read_text(encoding="utf-8")
         self.assertIn("retain the permissions already granted under MIT", history)
         self.assertIn("do not have to migrate to SLL", history)
         for path, expected in self.receipt["preserved_mit_files"].items():
             self.assertEqual(hashlib.sha256((ROOT/path).read_bytes()).hexdigest(), expected)
-        lineage = (ROOT / "SOURCE-LINEAGE.md").read_text()
+        lineage = (ROOT / "SOURCE-LINEAGE.md").read_text(encoding="utf-8")
         for path, expected in HISTORICAL_SKILL_HASHES.items():
             self.assertIn(path, lineage)
             self.assertIn(expected, lineage)

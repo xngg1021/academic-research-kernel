@@ -77,5 +77,5 @@ packages = ["src/academic_research_kernel"]
 "docs/artifact-adapter-matrix.json" = "academic_research_kernel/artifact-adapter-matrix.json"
 
 [tool.hatch.build.targets.sdist]
-include = ["/src", "/tools", "/scripts", "/skills", "/schemas", "/docs", "/tests", "/i18n", "/LICENSE*", "/LICENSES", "/SOURCE-LINEAGE.md", "/SLL-APPLICATION.json", "/CONTRIBUTING.md", "/README*", "/plugin.json", "/mcp.json", "/server.json", "/pyproject.toml", "/uv.lock", "/requirements-qa.txt", "/.gitignore", "/.github/workflows"]
+include = ["/examples", "/CHANGELOG.md", "/REPOSITORY-IDENTITY.md", "/src", "/tools", "/scripts", "/skills", "/schemas", "/docs", "/tests", "/i18n", "/LICENSE*", "/LICENSES", "/SOURCE-LINEAGE.md", "/SLL-APPLICATION.json", "/CONTRIBUTING.md", "/README*", "/plugin.json", "/mcp.json", "/server.json", "/pyproject.toml", "/uv.lock", "/requirements-qa.txt", "/.gitignore", "/.github/workflows"]
 exclude = ["**/__pycache__", "**/*.pyc", "**/.venv", "**/venv", "**/env", "**/.env*", "**/.pytest_cache", "**/.mypy_cache", "**/.ruff_cache", "**/.tox", "**/.nox", "**/build", "**/dist", "**/node_modules", "**/*.log", "**/receipts-*.json"]

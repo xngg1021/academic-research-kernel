@@ -42,6 +42,7 @@ def run(command=None):
         assert execute(['--version']).strip() == '2.0.0'
         doctor = json.loads(execute(['doctor', '--json']))
         assert doctor['status'] == 'ok', doctor
+        assert 'site-packages' in Path(doctor['package_location']).parts
         assert doctor['mcp']['tool_count'] == 12
         assert doctor['external_services']['OPENALEX_API_KEY'] == 'configured'
         envelope = ArtifactEnvelope.create(payload={
@@ -56,6 +57,7 @@ def run(command=None):
             ('academic_recompute_statistics', {'t_stat': 2.0, 'df': 20, 'mean1': 5, 'sd1': 2, 'n1': 30, 'mean2': 3, 'sd2': 2, 'n2': 30}),
             ('research_artifact_validate', {'envelope': envelope}),
             ('research_artifact_ingest', {'envelope': envelope}),
+            ('academic_recompute_statistics', {'t_stat': 1, 'df': 30, 'p_value': .00001, 'p_value_literal': '1.0e-5'}),
         ]
         messages = [{'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2024-11-05'}},
                     {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
@@ -63,28 +65,35 @@ def run(command=None):
         for i, (name, arguments) in enumerate(calls, 3):
             messages.append({'jsonrpc': '2.0', 'id': i, 'method': 'tools/call', 'params': {'name': name, 'arguments': arguments}})
         messages.append({'jsonrpc': '2.0', 'id': 99, 'method': 'tools/call', 'params': {'name': 'academic_check_percentage', 'arguments': {'count': 'bad'}}})
+        messages.extend([{'jsonrpc': '2.0', 'method': 'notifications/cancelled', 'params': {'requestId': 99}},
+                         {'jsonrpc': '2.0', 'id': 'installed-ping', 'method': 'ping'}])
         output = execute(['mcp'], '\n'.join(json.dumps(m) for m in messages) + '\n')
         replies = [json.loads(line) for line in output.splitlines()]
-        assert len(replies) == len(messages) - 1
+        assert len(replies) == len(messages) - 2
         assert replies[0]['result']['serverInfo'] == {'name': 'academic-research-kernel', 'version': '2.0.0'}
         assert replies[0]['result']['protocolVersion'] == '2024-11-05'
         assert {t['name'] for t in replies[1]['result']['tools']} == EXPECTED_TOOLS
         data = {}
-        for response, (name, _) in zip(replies[2:-1], calls):
+        for response, (name, _) in zip(replies[2:-2], calls):
             assert not response['result']['isError'], response
-            data[name] = json.loads(response['result']['content'][0]['text'])
-            assert 'error' not in data[name], data[name]
+            value = json.loads(response['result']['content'][0]['text'])
+            assert 'error' not in value, value
+            data.setdefault(name, value)
+        assert json.loads(replies[-3]['result']['content'][0]['text'])['p_match']['consistent'] is False
         assert data['academic_check_percentage']['consistent'] is True
         assert 0.05 < data['academic_recompute_statistics']['recomputed_p'] < 0.07
         assert data['academic_recompute_statistics']['cohens_d'] == 1.0
         assert data['research_artifact_validate']['valid'] is True
         assert data['research_artifact_ingest']['success'] is True
         assert data['academic_scfabric_hardware_probe']['python']
-        assert replies[-1]['result']['isError'] is True
-        assert json.loads(replies[-1]['result']['content'][0]['text'])['details']
+        assert replies[-2]['result']['isError'] is True
+        assert json.loads(replies[-2]['result']['content'][0]['text'])['details']
+        assert replies[-1] == {'jsonrpc': '2.0', 'id': 'installed-ping', 'result': {}}
     print(json.dumps({'installed_e2e': 'PASS', 'version': __version__, 'tools': 12,
                       'calls': [name for name, _ in calls], 'clean_shutdown': True,
-                      'arbitrary_cwd': True, 'source_independent': True}))
+                      'arbitrary_cwd': True, 'source_independent': True, 'import_path': str(package_file),
+                      'command_package_location': doctor['package_location'],
+                      'command_python': doctor['python']['executable']}))
 
 
 if __name__ == '__main__':

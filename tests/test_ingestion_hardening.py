@@ -896,6 +896,7 @@ def test_real_stdio_transport_handles_tools_list_and_tools_call():
         [sys.executable, str(ROOT / "scripts" / "mcp_server.py")],
         input="".join(json.dumps(item) + "\n" for item in requests),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         check=True,
         timeout=10,

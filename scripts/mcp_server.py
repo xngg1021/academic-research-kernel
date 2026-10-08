@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -311,13 +312,15 @@ TOOLS = [
     # -------------------------------------------------------------------------
     {
         "name": "academic_recompute_statistics",
-        "description": "Recompute statistical claims (effect sizes, p-values, t-tests, CIs, OR/RR) to detect rounding errors or impossible figures.",
+        "description": "Recompute a t-test p-value and/or two-group Cohen's d and Hedges' g. Optional reported p-value comparison uses decimal round-half-up intervals; input or partial execution failures are tool errors, statistical mismatches are successful results.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "t_stat": {"type": "number", "description": "Reported t-statistic"},
                 "df": {"type": "number", "description": "Degrees of freedom (integer or Welch fractional)"},
                 "p_value": {"type": "number", "description": "Reported p-value"},
+                "p_value_literal": {"type": "string", "description": "Optional exact reported decimal/scientific literal, preserving trailing zeros; must agree with p_value and any explicit decimals."},
+                "p_value_decimals": {"type": "integer", "minimum": 0, "maximum": 10000, "description": "Optional decimal-place precision; must agree with a supplied literal."},
                 "mean1": {"type": "number", "description": "Group 1 mean"},
                 "sd1": {"type": "number", "description": "Group 1 SD"},
                 "n1": {"type": "integer", "description": "Group 1 size"},
@@ -395,10 +398,21 @@ def _tool_argument_errors(name: str, arguments: Any) -> List[str]:
         Draft202012Validator(tool["inputSchema"]).iter_errors(arguments),
         key=lambda error: (tuple(str(part) for part in error.absolute_path), error.message),
     )
-    return [
+    return _finite_errors(arguments) + [
         f"/{'/'.join(str(part) for part in error.absolute_path)}: {error.message}"
         for error in errors
     ]
+
+
+def _finite_errors(value: Any, path: str = "") -> List[str]:
+    """JSON numbers may overflow to infinity even without a NaN token."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return [f"{path or '/'}: number must be finite"]
+    if isinstance(value, dict):
+        return [error for key, item in value.items() for error in _finite_errors(item, f"{path}/{key}")]
+    if isinstance(value, list):
+        return [error for index, item in enumerate(value) for error in _finite_errors(item, f"{path}/{index}")]
+    return []
 
 
 def _wire_verification_context(arguments: dict, trusted: Optional[LineageVerificationContext]) -> Optional[LineageVerificationContext]:
@@ -749,16 +763,27 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
             df = arguments.get("df")
             p = arguments.get("p_value")
             res = {}
+            failures = {}
+            t_keys = ("t_stat", "df")
+            requested_t = any(key in arguments for key in (*t_keys, "p_value", "p_value_literal", "p_value_decimals"))
+            if requested_t and (t is None or df is None):
+                failures["t_test"] = "t_stat and df are required together"
+            if ("p_value_literal" in arguments or "p_value_decimals" in arguments) and p is None:
+                failures["p_match"] = "p_value is required with reported precision"
             if t is not None and df is not None:
                 try:
-                    p_receipt = recompute.p_from_t(float(t), float(df), reported=p)
+                    p_receipt = recompute.p_from_t(t, df, reported=p)
                     recomputed_val = p_receipt["recomputed"]
                     res["recomputed_p"] = recomputed_val
                     res["p_receipt"] = p_receipt
                     if p is not None:
-                        res["p_match"] = recompute.check_p_match(float(p), recomputed_val)
+                        res["p_match"] = recompute.check_p_match(
+                            p, recomputed_val, decimals=arguments.get("p_value_decimals"),
+                            reported_literal=arguments.get("p_value_literal"),
+                        )
                 except Exception as exc:
                     res["t_test_error"] = str(exc)
+                    failures["t_test"] = str(exc)
 
             d_keys = ("mean1", "sd1", "n1", "mean2", "sd2", "n2")
             provided_d_keys = [k for k in d_keys if k in arguments and arguments[k] is not None]
@@ -766,11 +791,12 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                 missing_d = [k for k in d_keys if k not in arguments or arguments[k] is None]
                 if missing_d:
                     res["cohens_d_error"] = f"Missing required parameters for Cohen's d: {', '.join(missing_d)}"
+                    failures["cohens_d"] = res["cohens_d_error"]
                 else:
                     try:
                         d_res = recompute.cohens_d(
-                            float(arguments["mean1"]), float(arguments["sd1"]), int(arguments["n1"]),
-                            float(arguments["mean2"]), float(arguments["sd2"]), int(arguments["n2"])
+                            arguments["mean1"], arguments["sd1"], arguments["n1"],
+                            arguments["mean2"], arguments["sd2"], arguments["n2"]
                         )
                         stats_payload = d_res["recomputed"]
                         res["cohens_d"] = stats_payload["cohens_d"]
@@ -779,6 +805,12 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                         res["df"] = stats_payload["df"]
                     except Exception as exc:
                         res["cohens_d_error"] = str(exc)
+                        failures["cohens_d"] = str(exc)
+            if not requested_t and not provided_d_keys:
+                failures["input"] = "Provide t_stat and df, or all six two-group effect-size parameters"
+            if failures:
+                res.update(error="Statistical computation failed", failures=failures,
+                           status="partial_failure" if "recomputed_p" in res or "cohens_d" in res else "failed")
             return res
 
         # 11. academic_check_percentage
@@ -806,12 +838,35 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
         return {"error": f"Internal execution failure in tool '{name}': {str(exc)}"}
 
 
-def process_message(msg: dict) -> dict | None:
-    method = msg.get("method")
-    msg_id = msg.get("id")
+def _rpc_error(msg_id: Any, code: int, message: str) -> dict:
+    return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": code, "message": message}}
+
+
+def process_message(msg: Any) -> dict | None:
+    # MCP uses JSON-RPC objects, string/integer IDs and named parameters.
+    # Validate the envelope before deciding whether it is a notification.
+    if not isinstance(msg, dict) or msg.get("jsonrpc") != "2.0" or not isinstance(msg.get("method"), str):
+        return _rpc_error(None, -32600, "Invalid Request")
+    if "id" in msg and (isinstance(msg["id"], bool) or not isinstance(msg["id"], (str, int))):
+        return _rpc_error(None, -32600, "Invalid request ID")
+    if "params" in msg and not isinstance(msg["params"], (dict, list)):
+        return _rpc_error(None, -32600, "Invalid Request params")
+    if "id" not in msg:
+        # Includes cancelled and unknown notifications. This synchronous server
+        # does not claim preemptive cancellation of an in-flight computation.
+        return None
+    method, msg_id = msg["method"], msg["id"]
+    params = msg.get("params", {})
+    if not isinstance(params, dict):
+        return _rpc_error(msg_id, -32602, "MCP params must be an object")
+
+    if method == "ping":
+        return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
 
     if method == "initialize":
-        client_version = (msg.get("params") or {}).get("protocolVersion", "2026-07-28")
+        client_version = params.get("protocolVersion", "2026-07-28")
+        if not isinstance(client_version, str):
+            return _rpc_error(msg_id, -32602, "protocolVersion must be a string")
         negotiated_version = client_version if client_version in ("2026-07-28", "2024-11-05") else "2026-07-28"
         return {
             "jsonrpc": "2.0",
@@ -832,15 +887,18 @@ def process_message(msg: dict) -> dict | None:
             "result": {"tools": TOOLS}
         }
     elif method == "tools/call":
-        params = msg.get("params") or {}
         name = params.get("name")
-        arguments = params.get("arguments") or {}
+        if not isinstance(name, str) or not any(tool["name"] == name for tool in TOOLS):
+            return _rpc_error(msg_id, -32602, "Unknown or missing tool name")
+        arguments = params.get("arguments", {})
         argument_errors = _tool_argument_errors(name, arguments)
         result_data = (
             {"error": "Invalid tool arguments", "details": argument_errors}
             if argument_errors
             else handle_tool_call(name, arguments)
         )
+        if _finite_errors(result_data):
+            result_data = {"error": "Execution produced a non-finite result"}
         is_error = bool(
             "error" in result_data
             or result_data.get("success") is False
@@ -852,20 +910,13 @@ def process_message(msg: dict) -> dict | None:
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(result_data, ensure_ascii=False, indent=2)
+                        "text": json.dumps(result_data, ensure_ascii=False, indent=2, allow_nan=False)
                     }
                 ],
                 "isError": is_error,
             }
         }
-    elif method == "notifications/initialized":
-        return None
-
-    return {
-        "jsonrpc": "2.0",
-        "id": msg_id,
-        "error": {"code": -32601, "message": f"Method not found: {method}"}
-    }
+    return _rpc_error(msg_id, -32601, f"Method not found: {method}")
 
 
 def main():
@@ -879,18 +930,19 @@ def main():
         if not line:
             continue
         try:
-            req = json.loads(line)
-            resp = process_message(req)
-            if resp is not None:
-                sys.stdout.write(json.dumps(resp, ensure_ascii=False) + "\n")
-                sys.stdout.flush()
-        except Exception as exc:
-            err_resp = {
-                "jsonrpc": "2.0",
-                "id": None,
-                "error": {"code": -32700, "message": f"Parse error: {exc}"}
-            }
-            sys.stdout.write(json.dumps(err_resp) + "\n")
+            req = json.loads(line, parse_constant=lambda token: (_ for _ in ()).throw(ValueError(f"Invalid JSON constant: {token}")))
+        except (ValueError, RecursionError) as exc:
+            resp = _rpc_error(None, -32700, f"Parse error: {exc}")
+        else:
+            try:
+                resp = process_message(req)
+            except Exception as exc:
+                print(f"Request execution failed: {exc}", file=sys.stderr)
+                resp = _rpc_error(req.get("id") if isinstance(req, dict) else None, -32603, "Internal error")
+        if resp is not None:
+            # ASCII escapes preserve JSON string identity, including escaped
+            # surrogate code units, without crashing the UTF-8 transport writer.
+            sys.stdout.write(json.dumps(resp, ensure_ascii=True, allow_nan=False) + "\n")
             sys.stdout.flush()
 
 

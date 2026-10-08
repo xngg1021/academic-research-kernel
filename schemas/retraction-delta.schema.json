@@ -42,6 +42,36 @@
         "null"
       ]
     },
+    "observation_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Local query-start order reserved before HTTP; older or duplicate commits cannot replace a newer DOI observation."
+    },
+    "confirmed_observation_version": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Version of the last known boolean, independent of a newer unknown current observation; 0 denotes an unversioned legacy baseline."
+    },
+    "source_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "openalex": {
+          "enum": ["verified", "not_found", "unavailable", "invalid_response"]
+        },
+        "crossref": {
+          "enum": ["verified", "unavailable", "invalid_response"]
+        }
+      }
+    },
+    "source_errors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "openalex": {"type": "string"},
+        "crossref": {"type": "string"}
+      }
+    },
     "truncated": {
       "type": "boolean"
     },

@@ -189,7 +189,8 @@ def test_a02_verify_pdf_identity_unicode_and_no_substring_false_positives():
 def test_q01_check_percentage_zero_percent_with_count_underdetermined():
     res = recompute.check_percentage(count=1, percent=0, denominator=None, decimals=0)
     assert res["consistent"] is None, "未声明分母时，0% 且 count=1 属于分母欠定，不应判不可能"
-    assert res["min_possible_denominator"] == 200
+    # 1/200 = 0.5% is the excluded upper round-half-up boundary for 0%.
+    assert res["min_possible_denominator"] == 201
 
 
 def test_q02_check_sample_size_welch_support():

@@ -91,13 +91,17 @@ print(result['recomputed'], result['difference'])
 
 检测函数统一返回 {'consistent': bool, ...} 与判定依据:
 
-- `check_p_match(reported_p, recomputed_p, decimals=None)`:按报告精度(小数位数)取四舍五入容差判定 p 值错配。
+- `check_p_match(reported_p, recomputed_p, decimals=None, reported_literal=None)`:按报告精度判定 p 值错配。科学计数法按完整 Decimal 指数计算小数位数,如 `"1.0e-5"` 对应 6 位小数。舍入使用非负数 round-half-up 的半开区间 `[p-0.5*10^-k, p+0.5*10^-k)`,下端包含、上端排除。
 - `check_percentage(count, percent, denominator=None)`:百分比分母核对;给了分母直接重算,没给就反推隐含分母。
 - `check_sd_possible(sd, minimum, maximum, n=None)`:有界量表 SD 是否超出理论上界(不可能的 SD)。
 - `check_sample_size_from_df(df, reported_n, kind=...)`:由自由度反推样本量,与声明 N 核对,支持单样本/配对/双样本 t 与回归残差自由度。
 - `values_agree(a, b, rel_tol=1e-3, abs_tol=None)`:正文与表格、摘要与结果两处报告值一致性。
 
 八类错配的判定规则、容差依据与报告模板见 `references/mismatch-catalog.md`;多重比较表述含糊没有可编程判定,按该文件的核对清单人工标注。
+
+数值调用保留兼容。浮点数已丢失的尾零无法恢复:报告 `0.050` 应传 `"0.050"`,或以数值 `0.05` 加 `reported_literal="0.050"` / `decimals=3`。`decimals` 为 0–10000 的整数;字面量须与数值相等,多种显式精度须一致,冲突会抛出 `ValueError`。MCP 的 `academic_recompute_statistics` 对应可选字段为 `p_value_literal` 与 `p_value_decimals`。返回的 `precision_source` 说明精度来源,`tolerance_decimal` 与 `rounding_interval` 保留十进制边界。
+
+输入须为有限数值。计数与样本量须为整数,声明分母须为正且 `count <= denominator`,置信水平须在 `(0,1)`。检验自由度须为正,允许 Welch 的非整数自由度;它不能单凭 `df+2` 反推样本量。合法零计数仍支持既有校正。非法输入或无法产生有限结果的计算抛出 `ValueError`,不返回 NaN/Infinity 科研结果。
 
 ## Pitfalls
 
