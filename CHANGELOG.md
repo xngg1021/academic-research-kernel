@@ -4,13 +4,17 @@
 
 ---
 
-## Unreleased — 2026-10-08 correctness repair
+## Unreleased
+
+## 2.0.1 — 2026-10-08 correctness repair
 
 - Decimal and scientific p-value precision, preserved literal trailing zeros, explicit half-open round-half-up boundaries, and finite statistical input/output domains. The existing MCP tool accepts optional `p_value_literal` / `p_value_decimals`; conflicting precision sources fail explicitly.
-- DOI delta commits use pre-query monotonic observation versions and short owned locks. Unknown observations preserve last-known values and expose current source status; stale observations cannot overwrite newer valid corrections.
+- DOI delta commits use pre-query monotonic observation versions and short owned locks. Current observations and last-known confirmations have separate versions, so a late valid confirmation may improve retained history without replacing a newer unknown observation. Unknown observations expose current source status; stale confirmations cannot overwrite newer valid corrections.
 - MCP ping, silent notifications, malformed request recovery, statistical execution errors and partial failures. Scientific inconsistency and successful `valid=false` verification retain their normal result semantics.
 - Complete sdist self-test inputs, independent raw-source/wheel/sdist acceptance, scheduled pinned/latest Hermes compatibility reports, and machine-readable external healthy/degraded/failed states.
-- English/Simplified Chinese usage and validation are synchronized. Package version remains 2.0.0; receipt/schema v1 and the long-tail model's seed, quotas and coverage definitions are retained.
+- Explicit release version/tag validation binds annotated tags, main ancestry, commit/tree, internal runtime and package metadata, file sizes and hashes. Interrupted PyPI publication stages only missing identical files; installed acceptance remains active under Python optimization.
+- Tap acceptance verifies real targeted GitHub discovery, noninteractive installation, source records, complete bundle bytes and enabled skills. Quantitative skill resource links now remain usable by the pinned Hermes fetcher; an empty installation can no longer pass through a zero CLI exit code.
+- English/Simplified Chinese installation, usage and validation are synchronized for patch release 2.0.1. These repairs were merged in PR #15; receipt/schema v1 and the long-tail model's seed, quotas and coverage definitions are retained. Historical 2.0.0 release records remain unchanged.
 
 ## 2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）
 

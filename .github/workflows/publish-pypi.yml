@@ -1,10 +1,24 @@
-name: Publish verified 2.0.0 artifacts to PyPI
+name: Publish verified release artifacts to PyPI
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Exact stable package version, for example 2.0.1'
+        required: true
+        type: string
+      tag:
+        description: 'Exact annotated release tag, for example v2.0.1'
+        required: true
+        type: string
+      verify_only:
+        description: 'Retry public acceptance only; require both matching files already published'
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
-  group: pypi-v2.0.0
+  group: pypi-${{ inputs.version }}
   cancel-in-progress: false
 jobs:
   publish:
@@ -16,30 +30,67 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      VERIFY_ONLY: ${{ inputs.verify_only }}
     steps:
+      # Start with controlled main code; resolve and validate the target before
+      # checking out its immutable commit, rather than trusting a moving tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: v2.0.0
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
+      - run: python -m pip install 'PyYAML>=6,<7'
+      - name: Resolve explicit release target on main
+        id: target
+        shell: bash
+        run: |
+          python scripts/verify_release_assets.py --validate-target --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ steps.target.outputs.commit }}
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
           version: '0.12.17'
-      - name: Fetch immutable release assets and verify source and hashes
+      - name: Verify frozen release files and plan only missing PyPI uploads
+        id: assets
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ steps.target.outputs.commit }}
         run: |
-          git merge-base --is-ancestor HEAD origin/main
-          gh release download v2.0.0 --pattern '*.whl' --pattern '*.tar.gz' --pattern 'release-manifest.json' --dir release-input
-          python scripts/verify_release_assets.py release-input
-      - run: uv run --frozen --extra qa --no-editable python -m twine check --strict dist/*
-      - run: python scripts/package_acceptance.py --uvx
-      - name: Publish with PyPI Trusted Publishing (no stored token)
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release-input"
+          args=("$RUNNER_TEMP/release-input" --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --dist "$RUNNER_TEMP/verified-dist" --pypi-upload-dir "$RUNNER_TEMP/pypi-upload" --github-output "$GITHUB_OUTPUT")
+          if [[ "$VERIFY_ONLY" == "true" ]]; then args+=(--verify-only); fi
+          python scripts/verify_release_assets.py "${args[@]}"
+      - name: Validate the verified package bytes
+        shell: bash
+        run: |
+          uv run --frozen --extra qa --no-editable python -m twine check --strict "$RUNNER_TEMP"/verified-dist/*
+          python scripts/package_acceptance.py --dist "$RUNNER_TEMP/verified-dist" --uvx
+      - name: Publish missing files with PyPI Trusted Publishing
+        if: inputs.verify_only == false && steps.assets.outputs.upload_count != '0'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
         with:
-          packages-dir: dist/
-      - name: Verify actual public package with a clean cache
+          packages-dir: ${{ runner.temp }}/pypi-upload/
+      - name: Verify exact public version and clean-cache execution
+        shell: bash
+        env:
+          RELEASE_COMMIT: ${{ steps.target.outputs.commit }}
         run: |
-          uv run --no-cache --no-project --python 3.12 --with academic-research-kernel==2.0.0 python -I scripts/distribution_smoke.py -- uvx --no-cache --python 3.12 academic-research-kernel@2.0.0
+          # Only reads are retried here. Each attempt gets new empty staging
+          # directories; existing same-hash files never trigger another upload.
+          for attempt in 1 2 3; do
+            if python scripts/verify_release_assets.py "$RUNNER_TEMP/release-input" --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --dist "$RUNNER_TEMP/public-verified-$attempt" --pypi-upload-dir "$RUNNER_TEMP/public-plan-$attempt" --verify-only; then
+              break
+            fi
+            if [[ "$attempt" == 3 ]]; then exit 1; fi
+            sleep "$((attempt * 5))"
+          done
+          unset PYTHONPATH PYTHONHOME VIRTUAL_ENV
+          uv run --no-cache --no-project --python 3.12 --with "academic-research-kernel==$RELEASE_VERSION" python -I scripts/distribution_smoke.py --expected-version "$RELEASE_VERSION" -- uvx --no-cache --python 3.12 "academic-research-kernel@$RELEASE_VERSION"

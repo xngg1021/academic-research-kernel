@@ -8,6 +8,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 
+from _version import __version__
+
 
 def main():
     from hermes_cli import agent_plugins
@@ -40,7 +42,7 @@ def main():
                                 text=True, encoding='utf-8', capture_output=True, timeout=180)
         assert result.returncode == 0, result.stderr
         replies = [json.loads(line) for line in result.stdout.splitlines()]
-        assert replies[0]['result']['serverInfo']['version'] == '2.0.0'
+        assert replies[0]['result']['serverInfo']['version'] == __version__
         assert len(replies[1]['result']['tools']) == 12
         assert not replies[2]['result']['isError']
         assert json.loads(replies[2]['result']['content'][0]['text'])['consistent'] is True

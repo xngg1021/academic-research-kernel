@@ -10,24 +10,23 @@ Author: Junfu Shi (SJF, xngg1021), Hermes Agent. Current scoped offer: [Source L
 
 ## Quick start
 
-After 2.0.0 is published to PyPI, run with [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Run version 2.0.1 with [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel mcp
+uvx academic-research-kernel@2.0.1 mcp
 ```
 
-Publication is a separate release step: check the [2.0.0 release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.0)
-manifest for the actual PyPI status. Before publication, download the release wheel
-and use `uvx --from ./academic_research_kernel-2.0.0-py3-none-any.whl academic-research-kernel mcp`.
-For a fixed product identity, use `uvx academic-research-kernel@2.0.0 mcp`.
+The [2.0.1 release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.1)
+records distribution hashes and publication status. The release wheel also runs locally
+with `uvx --from ./academic_research_kernel-2.0.1-py3-none-any.whl academic-research-kernel mcp`.
 Python 3.10–3.14 is supported; `uvx --python 3.12` explicitly selects a supported interpreter.
 All 12 deterministic tools, including statistics, are included in the base install.
 
 ## Verify
 
 ```bash
-uvx academic-research-kernel doctor
-uvx academic-research-kernel --version
+uvx academic-research-kernel@2.0.1 doctor
+uvx academic-research-kernel@2.0.1 --version
 ```
 
 The offline diagnostic checks dependencies, schemas and all 12 tool definitions.
@@ -36,13 +35,13 @@ Optional services can remain unconfigured. Use `doctor --json` for machine-reada
 ## Package install
 
 ```bash
-uv tool install academic-research-kernel==2.0.0
+uv tool install academic-research-kernel==2.0.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatively, install with `pipx install academic-research-kernel==2.0.0` or
-`python -m pip install academic-research-kernel==2.0.0` inside a supported virtual environment.
+Alternatively, install with `pipx install academic-research-kernel==2.0.1` or
+`python -m pip install academic-research-kernel==2.0.1` inside a supported virtual environment.
 `[full]` adds libraries for extended scientific skill examples; `[qa]` adds repository
 validation tools. GPU backends and paid services remain optional.
 
@@ -174,9 +173,9 @@ CI runs the full QA suite across Linux x86_64 (Python 3.10-3.14), Linux ARM64 (u
 
 scripts/scfabric/ is the scientific compute fabric: hardware probe, backend catalog with dtype gates, five workload profiles, paired benchmark with parity admission, and ComputeReceipt. First-round measurements on this machine are in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); the rule of thumb is CPU by default, accelerator only with a receipt.
 
-## Unreleased correctness and local candidate verification
+## 2.0.1 correctness and distribution verification
 
-The product version remains 2.0.0. The public `academic_recompute_statistics` tool
+Product release 2.0.1 includes the correctness repairs from PR #15. The public `academic_recompute_statistics` tool
 exposes t-test p-values and two-group Cohen's d/Hedges' g. CI and OR/RR remain
 lower-level Python functions. Supply `p_value_literal` (for example `"1.0e-5"`)
 or `p_value_decimals` when the report's precision matters. Literals preserve
@@ -187,8 +186,9 @@ successful scientific result; invalid or partly failed computations set `isError
 
 Retraction checks record the current True/False/unknown observation separately
 from the last-known value. A short pre-query reservation orders same-DOI
-observations; commits reject older versions and preserve other DOI updates.
-Unknown results retain prior confirmed values, with explicit current uncertainty.
+observations and preserves other DOI updates. Current observations and historical
+confirmations have separate versions: a late confirmation may improve retained
+history while a newer unknown remains explicitly unverified for the current check.
 HTTP fixtures in the regression chains are labeled test data.
 
 MCP responds to `ping`, remains silent for valid notifications (including
