@@ -31,18 +31,18 @@ and mathematical verification tasks. Review covers multi-review, challenges and
 disagreement reconciliation. CEG covers evidence links and contradiction/lineage
 traces; the ledger covers decisions, negative results, explicit prune/reopen
 transitions and append-only outcome corrections. These capabilities describe
-existing responsibilities; no skill or runtime behavior is added.
+existing responsibilities. The 2.1.0 `paper-research` mapping covers located full-text acquisition, statistical checking, comparison and research-state receipts. It receives its own primary-skill coverage.
 
 ## Feasibility and quotas
 
 The seed remains **20260917**, with **4096 candidates** and **30 selected
 scenarios**. The candidate supply was measured before setting the new quotas:
 
-- 285–343 candidates per primary skill;
+- the current candidate supply in `generated-scenarios.json` for each primary skill;
 - 3–6 supported goals per skill;
 - at least 46 candidates for every supported skill/goal pair;
 - with one primary skill per scenario, the maximum uniform quota is
-  `floor(30 / 13) = 2`; three appearances each would require 39 slots.
+  `floor(30 / 14) = 2`; three appearances each would require 42 slots.
 
 The required representation is therefore **at least two appearances and two
 unique task goals for every skill**, including its explicitly declared core
@@ -53,7 +53,7 @@ factor assignments, not successful executions.
 The v2 `>=8` pseudo-skill quota actually counted seven E01 families. Its
 `>=12 scenarios with 3+ skills` check counted multi-capability combinations.
 Neither is a valid quota for the new single-primary-skill model: eight actual
-appearances each would require 104 slots. Both are explicitly retired in v3;
+appearances each would require 112 slots. Both are explicitly retired in v3;
 `scenarios_with_3plus_capabilities` remains a descriptive counter, not a
 multi-skill coverage claim. The v2 tag quotas (language, accessibility, access,
 metadata, identifiers, topology, etc.) are unchanged. The 30 object types,
@@ -75,8 +75,8 @@ terminal coverage. Selection reserves remaining slots for primary skill usage,
 goal diversity/core goals and hard axes; scarce remaining level opportunities
 receive an urgency bonus (`40 / (remaining slots - missing levels + 1)`,
 with negative slack clamped to zero). A bounded local comparison of urgency
-weights retained the 4096 pool and selected this score with four ordinary factor
-gaps; this is observed coverage, not a proof of best attainable coverage. Bit masks implement the same set-coverage arithmetic
+weights retained the 4096 pool and selected this score; the committed report lists
+its observed ordinary factor gaps, without a claim of best attainable coverage. Bit masks implement the same set-coverage arithmetic
 without iterating over every factor for each score. Ties use SHA256; equal sweep
 scores retain the first sweep. The best sweep minimizes hard problems first,
 then ordinary coverage-target gaps. **There is no repair pass or optimality

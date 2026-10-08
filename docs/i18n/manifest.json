@@ -117,13 +117,13 @@
       "tier": "european_academic"
     }
   ],
-  "total_canonical_documents": 56,
-  "total_theoretical_instances": 1176,
+  "total_canonical_documents": 58,
+  "total_theoretical_instances": 1218,
   "status_summary": {
-    "canonical_current": 56,
+    "canonical_current": 58,
     "localized_current": 3,
     "localized_stale": 19,
-    "queued_for_generation": 1098
+    "queued_for_generation": 1138
   },
   "documents": [
     {
@@ -131,23 +131,24 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "5a9b8db5e8336e3dc7c7a6209ef4b19bb8a61444c1c384171aee45372ace019c",
+      "source_sha256": "b5c5141a3aaca75312400def141964ffcb6ed9d6e6e0bd51c72659ecd9c288e8",
       "section_hashes": {
-        "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
-        "Quick start": "4ef21dcd6a3a00a776e1ae61637a7735ca273abb99a65f832f403bb0a89fe5fc",
-        "Verify": "740cf5b38d2a0824ea03899ff23debf36b983a17068d6f0b71972926d70e0b08",
-        "Package install": "34df60c50590978f807e3bc1dc7ee5ad4b0b6cfcfb8765598ece1c23d263976d",
-        "Hermes": "52f5c8fcae192332addc9aad44a96b8a23451ea190c2d8357132a3ee94a6edf7",
+        "academic-research-kernel": "fe0a1fafedff38d5e6df8bedd588a616ddab91f09e835e782b8deb6ea3a9ab92",
+        "Quick start": "61af023e16ccb10e303a1ec0446608da98b1e23ca4783f09e3e900cf96851174",
+        "Verify": "06f83ac8bd029f30e089595f2098b10a5573e9d17d56a8fe29cfbe6cbfc77620",
+        "Package install": "3b62f5faf87a6e40002344ca0b8105a26a547a9433cdee43285aca04a7e05e7b",
+        "Hermes": "ed4e6637261f21981ac0657256a2bc9044c4f4d7f1f7e2e367ad94c3d078fd3a",
         "From source": "181f90f1b66cced8b99be7ce92bb3bac3292f9b28bba275565d66d6d7c0cd6a2",
         "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
-        "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
+        "Skills": "b24b16cf0abee5a36cd6aa1d652cbc5551951fd0e8a61b3a324e1cf445b11192",
         "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
         "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "551fd9e0607b1b8abcd49defa17b80172ad757b2c9d0cacd041a0261d60bab58",
         "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
         "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
         "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
-        "Validation": "e62e1a74370433667d08330accf728413bce322e94d022e6e5ca5ea06844b56f",
+        "Validation": "ed7bce90dcd6ec666d22a07dd3b5ec2317a843006ce5ba300721ab319eeed47d",
+        "Research a paper with a local Agent": "d56bedd34f960a6c220e051d39473c9b55ad04cee87b0b010ddc5f76da56d088",
         "2.0.1 correctness and distribution verification": "73e487d6a3689b946255e11032f5bca95046a8b2b0f493bfb0e57679adcad557",
         "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
       },
@@ -157,24 +158,25 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "5a9b8db5e8336e3dc7c7a6209ef4b19bb8a61444c1c384171aee45372ace019c",
-          "translated_from_source_sha256": "5a9b8db5e8336e3dc7c7a6209ef4b19bb8a61444c1c384171aee45372ace019c",
+          "localized_file_sha256": "b5c5141a3aaca75312400def141964ffcb6ed9d6e6e0bd51c72659ecd9c288e8",
+          "translated_from_source_sha256": "b5c5141a3aaca75312400def141964ffcb6ed9d6e6e0bd51c72659ecd9c288e8",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
-            "Quick start": "4ef21dcd6a3a00a776e1ae61637a7735ca273abb99a65f832f403bb0a89fe5fc",
-            "Verify": "740cf5b38d2a0824ea03899ff23debf36b983a17068d6f0b71972926d70e0b08",
-            "Package install": "34df60c50590978f807e3bc1dc7ee5ad4b0b6cfcfb8765598ece1c23d263976d",
-            "Hermes": "52f5c8fcae192332addc9aad44a96b8a23451ea190c2d8357132a3ee94a6edf7",
+            "academic-research-kernel": "fe0a1fafedff38d5e6df8bedd588a616ddab91f09e835e782b8deb6ea3a9ab92",
+            "Quick start": "61af023e16ccb10e303a1ec0446608da98b1e23ca4783f09e3e900cf96851174",
+            "Verify": "06f83ac8bd029f30e089595f2098b10a5573e9d17d56a8fe29cfbe6cbfc77620",
+            "Package install": "3b62f5faf87a6e40002344ca0b8105a26a547a9433cdee43285aca04a7e05e7b",
+            "Hermes": "ed4e6637261f21981ac0657256a2bc9044c4f4d7f1f7e2e367ad94c3d078fd3a",
             "From source": "181f90f1b66cced8b99be7ce92bb3bac3292f9b28bba275565d66d6d7c0cd6a2",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
-            "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
+            "Skills": "b24b16cf0abee5a36cd6aa1d652cbc5551951fd0e8a61b3a324e1cf445b11192",
             "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "551fd9e0607b1b8abcd49defa17b80172ad757b2c9d0cacd041a0261d60bab58",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
             "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
-            "Validation": "e62e1a74370433667d08330accf728413bce322e94d022e6e5ca5ea06844b56f",
+            "Validation": "ed7bce90dcd6ec666d22a07dd3b5ec2317a843006ce5ba300721ab319eeed47d",
+            "Research a paper with a local Agent": "d56bedd34f960a6c220e051d39473c9b55ad04cee87b0b010ddc5f76da56d088",
             "2.0.1 correctness and distribution verification": "73e487d6a3689b946255e11032f5bca95046a8b2b0f493bfb0e57679adcad557",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
@@ -184,24 +186,25 @@
         "zh-Hans": {
           "path": "README.zh-Hans.md",
           "status": "localized_current",
-          "localized_file_sha256": "59441cda867fee0f5e1c3dfb0d517b8463804dc4ad9cb2ae481ef4e56ba078ee",
-          "translated_from_source_sha256": "5a9b8db5e8336e3dc7c7a6209ef4b19bb8a61444c1c384171aee45372ace019c",
+          "localized_file_sha256": "df0cf0a745e5e0af5a02229a50bcb9f873594b61bddd139dab92e812c516b323",
+          "translated_from_source_sha256": "b5c5141a3aaca75312400def141964ffcb6ed9d6e6e0bd51c72659ecd9c288e8",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "da6f86283fc388ff6592103ff2267ac3eec772ad413411ff945256649e311aac",
-            "Quick start": "4ef21dcd6a3a00a776e1ae61637a7735ca273abb99a65f832f403bb0a89fe5fc",
-            "Verify": "740cf5b38d2a0824ea03899ff23debf36b983a17068d6f0b71972926d70e0b08",
-            "Package install": "34df60c50590978f807e3bc1dc7ee5ad4b0b6cfcfb8765598ece1c23d263976d",
-            "Hermes": "52f5c8fcae192332addc9aad44a96b8a23451ea190c2d8357132a3ee94a6edf7",
+            "academic-research-kernel": "fe0a1fafedff38d5e6df8bedd588a616ddab91f09e835e782b8deb6ea3a9ab92",
+            "Quick start": "61af023e16ccb10e303a1ec0446608da98b1e23ca4783f09e3e900cf96851174",
+            "Verify": "06f83ac8bd029f30e089595f2098b10a5573e9d17d56a8fe29cfbe6cbfc77620",
+            "Package install": "3b62f5faf87a6e40002344ca0b8105a26a547a9433cdee43285aca04a7e05e7b",
+            "Hermes": "ed4e6637261f21981ac0657256a2bc9044c4f4d7f1f7e2e367ad94c3d078fd3a",
             "From source": "181f90f1b66cced8b99be7ce92bb3bac3292f9b28bba275565d66d6d7c0cd6a2",
             "License": "1146ab996f4fdd96fddf6222dbaacd58e69e0e639018f044284867c56067fa06",
-            "Skills": "0150f472ade807c826e47fa2654a1330df7c24d25e778063a6650c9afc348fb8",
+            "Skills": "b24b16cf0abee5a36cd6aa1d652cbc5551951fd0e8a61b3a324e1cf445b11192",
             "Scholarly Standards & Multi-Profile Baseline": "e98e5509c90938106654235fa9706f16fa9c3e62975c2acdc726614854c12917",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "551fd9e0607b1b8abcd49defa17b80172ad757b2c9d0cacd041a0261d60bab58",
             "2. Native Hermes Installation": "312a1d8d29f77160045e68e05860c02fd64c77768f25eedb45f2e1727b556c72",
             "Data-source access": "4c2a6a821c4e667e4aec638008968b21ec4ada2c31b758d05692a1521a0a98f0",
             "Deterministic ingestion and public kernel": "f2fe474d261569752def38a8a0d71dd8d0db17d99ac44198d44cb1aec2d47d71",
-            "Validation": "e62e1a74370433667d08330accf728413bce322e94d022e6e5ca5ea06844b56f",
+            "Validation": "ed7bce90dcd6ec666d22a07dd3b5ec2317a843006ce5ba300721ab319eeed47d",
+            "Research a paper with a local Agent": "d56bedd34f960a6c220e051d39473c9b55ad04cee87b0b010ddc5f76da56d088",
             "2.0.1 correctness and distribution verification": "73e487d6a3689b946255e11032f5bca95046a8b2b0f493bfb0e57679adcad557",
             "Research and planning documents": "a47b610e5255d3e9de53f0b829f537944a6e2a3e3ff6ad525b74e96953617e81"
           },
@@ -232,13 +235,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 6880 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 6880 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -266,12 +272,15 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'"
           ],
           "last_verified": "2026-09-19"
         },
@@ -299,12 +308,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 10129 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -332,12 +345,15 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'"
           ],
           "last_verified": "2026-09-19"
         },
@@ -365,12 +381,15 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'"
           ],
           "last_verified": "2026-09-19"
         },
@@ -398,13 +417,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 9534 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 9534 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -432,13 +454,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 7736 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 7736 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -466,13 +491,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 8371 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 8371 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -500,12 +528,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 9904 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -533,12 +565,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 10128 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -566,13 +602,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 8715 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 8715 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -600,13 +639,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 8995 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 8995 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -634,13 +676,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 8696 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 8696 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -668,13 +713,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 8490 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 8490 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -702,13 +750,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 9238 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 9238 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -736,13 +787,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 9523 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 9523 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -770,13 +824,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 8337 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 8337 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -804,13 +861,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6",
-            "admission_deficit: insufficient content length: 9550 bytes vs 21372 bytes"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 9550 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         },
@@ -838,12 +898,16 @@
             "Package install",
             "Hermes",
             "From source",
+            "Skills",
             "Scholarly Standards & Multi-Profile Baseline",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)",
             "Deterministic ingestion and public kernel",
             "Validation",
+            "Research a paper with a local Agent",
             "2.0.1 correctness and distribution verification",
-            "admission_deficit: code fence count deficit: expected at least 18, got 6"
+            "admission_deficit: code fence count deficit: expected at least 22, got 6",
+            "admission_deficit: missing skill anchor: 'skills/paper-research'",
+            "admission_deficit: insufficient content length: 9893 bytes vs 23674 bytes"
           ],
           "last_verified": "2026-09-19"
         }
@@ -1065,10 +1129,11 @@
       "canonical_title": "Changelog and Release Manifest",
       "source_path": "CHANGELOG.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "290288055a2ad174f4e34a2599e23460524dbd46af6f007f88b9f029de9802c2",
+      "source_sha256": "967c88f35f80166b05ee8f5327597edb90cd8a56227ffff2e183352a5dfb90bf",
       "section_hashes": {
         "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
         "Unreleased": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2.1.0 — 2026-10-08 paper research workflow": "d1373eb0fda4a20765e7431149494a6cdfdb9a0c315d9751c17cec49330afdc0",
         "2.0.1 — 2026-10-08 correctness repair": "ce76432a77d4d21697ddc131a0b11e2ee57fc55ffeaac74091ee6a795c68a0b6",
         "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "唯一闭环修复（最终评审第 1 轮后）": "b910f46a6447e954118bd3abb921b35643362c7b7c0d4eacf32298bbf98a494c",
@@ -1107,11 +1172,12 @@
         "zh-Hans": {
           "path": "CHANGELOG.md",
           "status": "canonical_current",
-          "localized_file_sha256": "290288055a2ad174f4e34a2599e23460524dbd46af6f007f88b9f029de9802c2",
-          "translated_from_source_sha256": "290288055a2ad174f4e34a2599e23460524dbd46af6f007f88b9f029de9802c2",
+          "localized_file_sha256": "967c88f35f80166b05ee8f5327597edb90cd8a56227ffff2e183352a5dfb90bf",
+          "translated_from_source_sha256": "967c88f35f80166b05ee8f5327597edb90cd8a56227ffff2e183352a5dfb90bf",
           "translated_from_section_hashes": {
             "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
             "Unreleased": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "2.1.0 — 2026-10-08 paper research workflow": "d1373eb0fda4a20765e7431149494a6cdfdb9a0c315d9751c17cec49330afdc0",
             "2.0.1 — 2026-10-08 correctness repair": "ce76432a77d4d21697ddc131a0b11e2ee57fc55ffeaac74091ee6a795c68a0b6",
             "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "唯一闭环修复（最终评审第 1 轮后）": "b910f46a6447e954118bd3abb921b35643362c7b7c0d4eacf32298bbf98a494c",
@@ -7651,6 +7717,430 @@
       }
     },
     {
+      "doc_id": "doc_skill_paper_research",
+      "canonical_title": "paper-research Skill Specification",
+      "source_path": "skills/paper-research/SKILL.md",
+      "source_locale": "en",
+      "source_sha256": "22502f08d79138562222a4ff0f8202b227f77c2192db64c3b7fa6e1490788741",
+      "section_hashes": {
+        "preamble": "5f9b08d9cc51e0226d8ca1beb563614c7a6674de7b75e7ce3f6335ffefd69bcd",
+        "Paper research": "052588435939123f6db513ea5cc3364a3a954326e4f1621befd890c0fb4d1d58",
+        "Prepare and read": "e8c209acac7f8d889205c5930af6df090bfcff6e220eac219c887c492f4f5f7e",
+        "Extract and finish": "046aa53bc68b8c35f5e8c2b126725859deab6cf35c6834a024b802467405665b",
+        "Independent source review": "da6aee4f6a6e93448a0843bdbd5c4f4e9139aad0c6f14514c374ec548cdec532",
+        "Compare two papers": "3a47890ddf2dc7f0f6bb303b6264dfbb5605a8cde21d68d19e1149b5f1924f76",
+        "Resume and replay": "f56f7ef3ab7906903e7d5efe1fc0b369b075518434757facb6b25e66155036ce",
+        "Verification": "0fcb1d16f5cdd806cf807d3b117ca528e9ac001d04833706e551981bc6003e68"
+      },
+      "genre": "user_facing_documentation",
+      "aidetox_intensity": "strong",
+      "localized_instances": {
+        "en": {
+          "path": "skills/paper-research/SKILL.md",
+          "status": "canonical_current",
+          "localized_file_sha256": "22502f08d79138562222a4ff0f8202b227f77c2192db64c3b7fa6e1490788741",
+          "translated_from_source_sha256": "22502f08d79138562222a4ff0f8202b227f77c2192db64c3b7fa6e1490788741",
+          "translated_from_section_hashes": {
+            "preamble": "5f9b08d9cc51e0226d8ca1beb563614c7a6674de7b75e7ce3f6335ffefd69bcd",
+            "Paper research": "052588435939123f6db513ea5cc3364a3a954326e4f1621befd890c0fb4d1d58",
+            "Prepare and read": "e8c209acac7f8d889205c5930af6df090bfcff6e220eac219c887c492f4f5f7e",
+            "Extract and finish": "046aa53bc68b8c35f5e8c2b126725859deab6cf35c6834a024b802467405665b",
+            "Independent source review": "da6aee4f6a6e93448a0843bdbd5c4f4e9139aad0c6f14514c374ec548cdec532",
+            "Compare two papers": "3a47890ddf2dc7f0f6bb303b6264dfbb5605a8cde21d68d19e1149b5f1924f76",
+            "Resume and replay": "f56f7ef3ab7906903e7d5efe1fc0b369b075518434757facb6b25e66155036ce",
+            "Verification": "0fcb1d16f5cdd806cf807d3b117ca528e9ac001d04833706e551981bc6003e68"
+          },
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "zh-Hans": {
+          "path": "i18n/zh-Hans/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "zh-Hant": {
+          "path": "i18n/zh-Hant/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "es": {
+          "path": "i18n/es/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "pt": {
+          "path": "i18n/pt/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "fr": {
+          "path": "i18n/fr/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "de": {
+          "path": "i18n/de/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ru": {
+          "path": "i18n/ru/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ja": {
+          "path": "i18n/ja/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ko": {
+          "path": "i18n/ko/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "id": {
+          "path": "i18n/id/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "it": {
+          "path": "i18n/it/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "hi": {
+          "path": "i18n/hi/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ar": {
+          "path": "i18n/ar/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "bn": {
+          "path": "i18n/bn/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ur": {
+          "path": "i18n/ur/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "vi": {
+          "path": "i18n/vi/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "tr": {
+          "path": "i18n/tr/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "fa": {
+          "path": "i18n/fa/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "sw": {
+          "path": "i18n/sw/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "pl": {
+          "path": "i18n/pl/skills/paper-research/SKILL.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        }
+      }
+    },
+    {
+      "doc_id": "doc_ref_paper_research_contract",
+      "canonical_title": "paper-research Reference: contract",
+      "source_path": "skills/paper-research/references/contract.md",
+      "source_locale": "en",
+      "source_sha256": "51063ad37d77b1538ce2671875f078dcb7d4208437fd7f7291691b438e33cb80",
+      "section_hashes": {
+        "Paper research candidate contract": "0f97497abf2ca7a304459f9b1596ed9986d39d0ffdef000786182a4f40561151"
+      },
+      "genre": "user_facing_documentation",
+      "aidetox_intensity": "strong",
+      "localized_instances": {
+        "en": {
+          "path": "skills/paper-research/references/contract.md",
+          "status": "canonical_current",
+          "localized_file_sha256": "51063ad37d77b1538ce2671875f078dcb7d4208437fd7f7291691b438e33cb80",
+          "translated_from_source_sha256": "51063ad37d77b1538ce2671875f078dcb7d4208437fd7f7291691b438e33cb80",
+          "translated_from_section_hashes": {
+            "Paper research candidate contract": "0f97497abf2ca7a304459f9b1596ed9986d39d0ffdef000786182a4f40561151"
+          },
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "zh-Hans": {
+          "path": "i18n/zh-Hans/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "zh-Hant": {
+          "path": "i18n/zh-Hant/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "es": {
+          "path": "i18n/es/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "pt": {
+          "path": "i18n/pt/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "fr": {
+          "path": "i18n/fr/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "de": {
+          "path": "i18n/de/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ru": {
+          "path": "i18n/ru/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ja": {
+          "path": "i18n/ja/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ko": {
+          "path": "i18n/ko/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "id": {
+          "path": "i18n/id/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "it": {
+          "path": "i18n/it/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "hi": {
+          "path": "i18n/hi/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ar": {
+          "path": "i18n/ar/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "bn": {
+          "path": "i18n/bn/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "ur": {
+          "path": "i18n/ur/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "vi": {
+          "path": "i18n/vi/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "tr": {
+          "path": "i18n/tr/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "fa": {
+          "path": "i18n/fa/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "sw": {
+          "path": "i18n/sw/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        },
+        "pl": {
+          "path": "i18n/pl/skills/paper-research/references/contract.md",
+          "status": "queued_for_generation",
+          "localized_file_sha256": null,
+          "translated_from_source_sha256": null,
+          "translated_from_section_hashes": null,
+          "stale_sections": [],
+          "last_verified": "2026-09-19"
+        }
+      }
+    },
+    {
       "doc_id": "doc_skill_quantitative_paper_audit",
       "canonical_title": "quantitative-paper-audit Skill Specification",
       "source_path": "skills/quantitative-paper-audit/SKILL.md",
@@ -10554,8 +11044,9 @@
       "canonical_title": "Documentation: distribution-release",
       "source_path": "docs/distribution-release.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "fcc75a7f1e0902b027fdf400fffa3913b4d4a2b34ede169adbdecfb72e75f0b8",
+      "source_sha256": "29539e7c7037ea8c87b57e2260adf6f3d17831314d6480ae81876009c2985aa8",
       "section_hashes": {
+        "Distribution and paper research release 2.1.0": "c77546d5a4b511a28ecf3eafcec1468f678a513ba65b62c16064d019dee06282",
         "Distribution and runtime release 2.0.0": "3111a1926eec96e11576f8c3c4f1a9921c646f95160915611d6d809e91de33b4",
         "Candidate discipline": "13e0cddfc81bed6ba9e77ebc179054da2e5b72e7c8af4343dd745fd6a7d6290d",
         "Separate version axes": "95ba97c3a039b507dd24775180dfbbbf258ec343d98690b8476f3ee7c9e789ea",
@@ -10580,9 +11071,10 @@
         "zh-Hans": {
           "path": "docs/distribution-release.md",
           "status": "canonical_current",
-          "localized_file_sha256": "fcc75a7f1e0902b027fdf400fffa3913b4d4a2b34ede169adbdecfb72e75f0b8",
-          "translated_from_source_sha256": "fcc75a7f1e0902b027fdf400fffa3913b4d4a2b34ede169adbdecfb72e75f0b8",
+          "localized_file_sha256": "29539e7c7037ea8c87b57e2260adf6f3d17831314d6480ae81876009c2985aa8",
+          "translated_from_source_sha256": "29539e7c7037ea8c87b57e2260adf6f3d17831314d6480ae81876009c2985aa8",
           "translated_from_section_hashes": {
+            "Distribution and paper research release 2.1.0": "c77546d5a4b511a28ecf3eafcec1468f678a513ba65b62c16064d019dee06282",
             "Distribution and runtime release 2.0.0": "3111a1926eec96e11576f8c3c4f1a9921c646f95160915611d6d809e91de33b4",
             "Candidate discipline": "13e0cddfc81bed6ba9e77ebc179054da2e5b72e7c8af4343dd745fd6a7d6290d",
             "Separate version axes": "95ba97c3a039b507dd24775180dfbbbf258ec343d98690b8476f3ee7c9e789ea",

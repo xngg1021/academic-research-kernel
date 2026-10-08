@@ -1,0 +1,16 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/paper-comparison.schema.json",
+  "title":"Source-linked cross-paper comparison",
+  "type":"object","additionalProperties":false,
+  "required":["schema_version","producer","left_project_fingerprint","right_project_fingerprint","rows","conclusion"],
+  "properties":{
+    "schema_version":{"const":"1.0"},
+    "producer":{"type":"object","additionalProperties":false,"required":["kind","name","model"],"properties":{"kind":{"enum":["work","agent","human"]},"name":{"type":"string","minLength":1},"model":{"type":["string","null"]}}},
+    "left_project_fingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "right_project_fingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "rows":{"type":"array","minItems":6,"items":{"type":"object","additionalProperties":false,"required":["dimension","left_field_ids","right_field_ids","assessment","reason"],"properties":{"dimension":{"type":"string","minLength":1},"left_field_ids":{"$ref":"#/$defs/ids"},"right_field_ids":{"$ref":"#/$defs/ids"},"assessment":{"enum":["direct","conditional","not_comparable","not_applicable"]},"reason":{"type":"string","minLength":1}}}},
+    "conclusion":{"type":"object","additionalProperties":false,"required":["text","left_field_ids","right_field_ids"],"properties":{"text":{"type":"string","minLength":1},"left_field_ids":{"$ref":"#/$defs/ids"},"right_field_ids":{"$ref":"#/$defs/ids"}}}
+  },
+  "$defs":{"ids":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}}}
+}

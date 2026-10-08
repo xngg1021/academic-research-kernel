@@ -46,7 +46,7 @@ def state_for(catalog, combos):
 def test_live_skill_catalog_exact_equality(catalog):
     lt.validate_catalog(catalog)
     assert sorted(catalog["axes"][lt.SKILL]["levels"]) == lt.discover_skills()
-    assert len(lt.discover_skills()) == 13
+    assert len(lt.discover_skills()) == 14
     assert not catalog["axes"][lt.SKILL]["multi"]
     assert catalog["version"] == "extreme-academic-longtail-v3"
 
@@ -181,7 +181,7 @@ def test_supply_and_impossible_quota_fail_without_relaxation(catalog, pool, gene
     lt.verify_supply(catalog, supply)
     c = copy.deepcopy(catalog)
     c["coverage_quotas"]["min_skill_usage"] = 3
-    with pytest.raises(ValueError, match="39 slots required, 30 available"):
+    with pytest.raises(ValueError, match="42 slots required, 30 available"):
         lt.verify_supply(c, supply)
     limited = copy.deepcopy(supply)
     limited["per_skill"]["academic-writing"]["task_goal_counts"] = {"revise_manuscript": 300}

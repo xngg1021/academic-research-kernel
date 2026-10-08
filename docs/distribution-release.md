@@ -1,3 +1,52 @@
+# Distribution and paper research release 2.1.0
+
+The backward-compatible paper workflow adds `research prepare`, `research finish`,
+`research compare` and `research skill`; `doctor` and all 12 public MCP tool names
+remain available. The repository has 14 skills and 26 schemas. The wheel includes
+only `paper-research` from the skill tree, plus its contract reference; the export
+command copies the three canonical schemas into the exported reference folder.
+Other skill implementation files retain the existing explicit runtime mappings.
+
+Install `academic-research-kernel[research]==2.1.0` for digital PDF input. The
+optional parser and font decoder are fixed at `pypdf==6.19.0` and
+`fonttools==4.65.0`, verified against their official PyPI releases on 2026-10-08.
+Both support Python 3.10; fonttools 4.66.1 requires Python 3.11, so it is not used
+for this Python 3.10–3.14 release. Including the font decoder prevents pypdf's
+optional CFF decoding path from varying between QA and clean `[research]`
+installations. Actual fonttools versions are part of parser identity and cache
+invalidation. HTML/XML and bounded DOCX/XLSX parsing use Python's standard library.
+The base MCP dependencies are unchanged; `qa` includes `research` so source and
+archive tests exercise the parser without global dependencies. Version metadata:
+[fonttools 4.65.0](https://pypi.org/pypi/fonttools/4.65.0/json),
+[fonttools 4.66.1](https://pypi.org/pypi/fonttools/4.66.1/json).
+
+The current Work/Agent is the semantic producer. The program prepares locatable
+material, validates its typed extraction, computes eligible statistics using the
+existing implementation, ingests research state, and renders reports. The
+[portable workflow](../skills/paper-research/SKILL.md) requires the same task to
+continue through report generation and independent source review. Standalone CLI
+preparation is accurately marked as awaiting semantic reading.
+
+Build and inspect candidate bytes with the existing pinned build tools. After
+normal merge and verified main CI, freeze commit/tree, create annotated `v2.1.0`,
+build the final wheel/sdist and run fresh installation acceptance. Publish the
+same frozen files to GitHub and PyPI, then publish the exact MCP Registry version
+`io.github.xngg1021/academic-research-kernel` pointing to PyPI 2.1.0. Partial uploads
+stage only missing same-hash files; conflicting existing bytes stop that write.
+Record publication receipts outside the tagged source.
+
+The pinned PyPI action generates `.github/.tmp/.generated-actions` in its original
+checkout. The post-upload verification creates a separate detached worktree at
+the already validated release commit and passes it as `--repo`. It still requires
+an entirely clean checkout, annotated tag, main ancestry, exact source identity,
+internal metadata and distribution hashes. No generated-file exception is added
+to the source gate. Regression coverage retains dirty-source rejection and tests
+this separation using the action's actual generated-path shape.
+
+The historical 2.0.0 recipe below is retained as its original release record.
+
+---
+
 # Distribution and runtime release 2.0.0
 
 PR #13 packages the existing deterministic kernel. It preserves the 13 skills,

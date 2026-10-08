@@ -1,6 +1,6 @@
 {
   "protocol": "artifact-adapter-matrix-1.0",
-  "total_adapters": 14,
+  "total_adapters": 15,
   "adapters": [
     {
       "adapter_id": "adapter-academic-source-verification",
@@ -151,6 +151,19 @@
       ],
       "accepted_schemas": [
         "computation-receipt-1.0"
+      ]
+    },
+    {
+      "adapter_id": "adapter-paper-research",
+      "adapter_version": "1.0.0",
+      "tier": 2,
+      "is_lossless": true,
+      "accepted_producers": [
+        "paper-research"
+      ],
+      "accepted_schemas": [
+        "paper-comparison-1.0",
+        "paper-extraction-1.0"
       ]
     },
     {
