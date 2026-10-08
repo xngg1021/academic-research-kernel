@@ -10,6 +10,8 @@ import sys
 import tarfile
 import tempfile
 
+from _version import __version__
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -37,14 +39,14 @@ def main():
             subprocess.run([uv, 'venv', '--python', sys.executable, str(venv)], check=True, env=env, cwd=temp)
             python = venv / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
             subprocess.run([uv, 'pip', 'install', '--python', str(python), str(artifact)], check=True, env=env, cwd=temp)
-            subprocess.run([str(python), '-I', str(smoke)], check=True, env=env, cwd=temp)
+            subprocess.run([str(python), '-I', str(smoke), '--expected-version', __version__], check=True, env=env, cwd=temp)
             package_file = subprocess.check_output([str(python), '-I', '-c',
                 'import academic_research_kernel; print(academic_research_kernel.__file__)'], text=True, env=env, cwd=temp).strip()
             report['artifacts'].append({'filename': artifact.name, 'sha256': hashlib.sha256(artifact.read_bytes()).hexdigest(),
                                         'python': str(python), 'import_path': package_file, 'installed_smoke': 'passed'})
             if args.uvx and artifact.suffix == '.whl':
                 isolated = dict(env, UV_CACHE_DIR=str(temp / 'uvx-cache'))
-                subprocess.run([str(python), '-I', str(smoke), '--', uv, 'tool', 'run', '--python', sys.executable,
+                subprocess.run([str(python), '-I', str(smoke), '--expected-version', __version__, '--', uv, 'tool', 'run', '--python', sys.executable,
                                 '--from', str(artifact), 'academic-research-kernel'], check=True, env=isolated, cwd=temp)
                 report['artifacts'][-1]['clean_cache_uvx'] = 'passed'
             if args.source_checks and artifact.name.endswith('.tar.gz'):

@@ -4,12 +4,12 @@
   "title": "Academic Research Kernel",
   "description": "Deterministic research state, evidence validation and statistical recomputation.",
   "repository": {"url": "https://github.com/xngg1021/academic-research-kernel", "source": "github"},
-  "version": "2.0.0",
+  "version": "2.0.1",
   "packages": [{
     "registryType": "pypi",
     "registryBaseUrl": "https://pypi.org",
     "identifier": "academic-research-kernel",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "runtimeHint": "uvx",
     "packageArguments": [{"type": "positional", "value": "mcp"}],
     "transport": {"type": "stdio"}

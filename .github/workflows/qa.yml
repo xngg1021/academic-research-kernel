@@ -125,14 +125,14 @@ jobs:
           version: '0.12.17'
       - run: python scripts/hermes_runtime_smoke.py
       - name: Tap, search, install and list
-        run: |
-          hermes skills tap add xngg1021/academic-research-kernel
-          hermes skills search academic-source-verification
-          hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
-          hermes skills install xngg1021/academic-research-kernel/skills/quantitative-paper-audit
-          hermes skills install xngg1021/academic-research-kernel/skills/retraction-watch
-          hermes skills install xngg1021/academic-research-kernel/skills/cross-review-five
-          hermes skills list
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/hermes_tap_smoke.py --output tap-lifecycle.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: tap-lifecycle-status
+          path: tap-lifecycle.json
   upstream-canary:
     name: Hermes compatibility (${{ matrix.channel }})
     # Schedule resolves upstream main every run; pinned and latest evidence stay
@@ -263,7 +263,7 @@ jobs:
         shell: bash
         run: |
           export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
-          uv build
+          uv build --no-create-gitignore
           uv run --frozen --extra qa --no-editable python -m twine check --strict dist/*
           uv run --frozen --extra qa --no-editable python scripts/release_manifest.py --output dist/release-manifest.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

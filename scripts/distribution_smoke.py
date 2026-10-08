@@ -19,14 +19,20 @@ EXPECTED_TOOLS = {
 }
 
 
-def run(command=None):
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+
+def run(command=None, expected_version=None):
     from academic_research_kernel import __version__, __file__ as package_file
     from academic_research_kernel.ingestion import ArtifactEnvelope
-    assert __version__ == '2.0.0'
+    expected_version = expected_version or __version__
+    require(__version__ == expected_version, ('installed version mismatch', __version__, expected_version))
     checkout = Path(__file__).resolve().parents[1]
-    assert Path(package_file).resolve().is_relative_to(Path(sys.prefix).resolve()), 'package must come from installed environment'
-    assert 'site-packages' in Path(package_file).parts
-    assert str(checkout) not in sys.path
+    require(Path(package_file).resolve().is_relative_to(Path(sys.prefix).resolve()), 'package must come from installed environment')
+    require('site-packages' in Path(package_file).parts, 'installed import must use site-packages')
+    require(str(checkout) not in sys.path, 'checkout must not be on the import path')
     executable = Path(sys.executable).parent / ('academic-research-kernel.exe' if os.name == 'nt' else 'academic-research-kernel')
     command = command or [str(executable)]
     env = {k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'PYTHONHOME')}
@@ -36,15 +42,15 @@ def run(command=None):
         def execute(args, input=None):
             result = subprocess.run(command + args, input=input, cwd=directory, env=env,
                                     text=True, encoding='utf-8', capture_output=True, timeout=180)
-            assert result.returncode == 0, result.stderr
-            assert 'test-doctor-private-value' not in result.stdout + result.stderr
+            require(result.returncode == 0, result.stderr)
+            require('test-doctor-private-value' not in result.stdout + result.stderr, 'doctor exposed a configured credential')
             return result.stdout
-        assert execute(['--version']).strip() == '2.0.0'
+        require(execute(['--version']).strip() == expected_version, 'command version mismatch')
         doctor = json.loads(execute(['doctor', '--json']))
-        assert doctor['status'] == 'ok', doctor
-        assert 'site-packages' in Path(doctor['package_location']).parts
-        assert doctor['mcp']['tool_count'] == 12
-        assert doctor['external_services']['OPENALEX_API_KEY'] == 'configured'
+        require(doctor['status'] == 'ok', doctor)
+        require('site-packages' in Path(doctor['package_location']).parts, 'command must use an installed package')
+        require(doctor['mcp']['tool_count'] == 12, 'doctor tool inventory mismatch')
+        require(doctor['external_services']['OPENALEX_API_KEY'] == 'configured', 'doctor configuration status mismatch')
         envelope = ArtifactEnvelope.create(payload={
             'schema_version': '1.0', 'query': 'distribution smoke', 'identifiers': {},
             'sources': [], 'claims': [], 'generated_at': '2026-09-21T00:00:00Z',
@@ -58,6 +64,7 @@ def run(command=None):
             ('research_artifact_validate', {'envelope': envelope}),
             ('research_artifact_ingest', {'envelope': envelope}),
             ('academic_recompute_statistics', {'t_stat': 1, 'df': 30, 'p_value': .00001, 'p_value_literal': '1.0e-5'}),
+            ('academic_recompute_statistics', {'t_stat': 1, 'df': 30, 'p_value': .3253}),
         ]
         messages = [{'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2024-11-05'}},
                     {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
@@ -65,30 +72,36 @@ def run(command=None):
         for i, (name, arguments) in enumerate(calls, 3):
             messages.append({'jsonrpc': '2.0', 'id': i, 'method': 'tools/call', 'params': {'name': name, 'arguments': arguments}})
         messages.append({'jsonrpc': '2.0', 'id': 99, 'method': 'tools/call', 'params': {'name': 'academic_check_percentage', 'arguments': {'count': 'bad'}}})
+        messages.append({'jsonrpc': '2.0', 'id': 100, 'method': 'tools/call', 'params': {'name': 'academic_recompute_statistics', 'arguments': {'t_stat': 1}}})
         messages.extend([{'jsonrpc': '2.0', 'method': 'notifications/cancelled', 'params': {'requestId': 99}},
                          {'jsonrpc': '2.0', 'id': 'installed-ping', 'method': 'ping'}])
         output = execute(['mcp'], '\n'.join(json.dumps(m) for m in messages) + '\n')
         replies = [json.loads(line) for line in output.splitlines()]
-        assert len(replies) == len(messages) - 2
-        assert replies[0]['result']['serverInfo'] == {'name': 'academic-research-kernel', 'version': '2.0.0'}
-        assert replies[0]['result']['protocolVersion'] == '2024-11-05'
-        assert {t['name'] for t in replies[1]['result']['tools']} == EXPECTED_TOOLS
+        require(len(replies) == len(messages) - 2, 'missing replies or non-silent notifications')
+        require(replies[0]['result']['serverInfo'] == {'name': 'academic-research-kernel', 'version': expected_version}, 'MCP server version mismatch')
+        require(replies[0]['result']['protocolVersion'] == '2024-11-05', 'MCP protocol mismatch')
+        require({t['name'] for t in replies[1]['result']['tools']} == EXPECTED_TOOLS, 'MCP tool inventory mismatch')
         data = {}
-        for response, (name, _) in zip(replies[2:-2], calls):
-            assert not response['result']['isError'], response
+        successful_replies = replies[2:2 + len(calls)]
+        for response, (name, _) in zip(successful_replies, calls):
+            require(not response['result']['isError'], response)
             value = json.loads(response['result']['content'][0]['text'])
-            assert 'error' not in value, value
+            require('error' not in value, value)
             data.setdefault(name, value)
-        assert json.loads(replies[-3]['result']['content'][0]['text'])['p_match']['consistent'] is False
-        assert data['academic_check_percentage']['consistent'] is True
-        assert 0.05 < data['academic_recompute_statistics']['recomputed_p'] < 0.07
-        assert data['academic_recompute_statistics']['cohens_d'] == 1.0
-        assert data['research_artifact_validate']['valid'] is True
-        assert data['research_artifact_ingest']['success'] is True
-        assert data['academic_scfabric_hardware_probe']['python']
-        assert replies[-2]['result']['isError'] is True
-        assert json.loads(replies[-2]['result']['content'][0]['text'])['details']
-        assert replies[-1] == {'jsonrpc': '2.0', 'id': 'installed-ping', 'result': {}}
+        require(json.loads(successful_replies[-2]['result']['content'][0]['text'])['p_match']['consistent'] is False, 'small reported p must be inconsistent')
+        require(json.loads(successful_replies[-1]['result']['content'][0]['text'])['p_match']['consistent'] is True, 'ordinary reported p must be consistent')
+        require(data['academic_check_percentage']['consistent'] is True, 'percentage positive control failed')
+        require(0.05 < data['academic_recompute_statistics']['recomputed_p'] < 0.07, 't recomputation failed')
+        require(data['academic_recompute_statistics']['cohens_d'] == 1.0, 'effect size control failed')
+        require(data['research_artifact_validate']['valid'] is True, 'artifact validation failed')
+        require(data['research_artifact_ingest']['success'] is True, 'artifact ingestion failed')
+        require(data['academic_scfabric_hardware_probe']['python'], 'hardware probe missing interpreter')
+        by_id = {reply['id']: reply for reply in replies}
+        require(by_id[99]['result']['isError'] is True, 'invalid percentage must be a tool error')
+        require(json.loads(by_id[99]['result']['content'][0]['text'])['details'], 'invalid input missing details')
+        require(by_id[100]['result']['isError'] is True, 'incomplete statistics must be a tool error')
+        require(json.loads(by_id[100]['result']['content'][0]['text'])['status'] == 'failed', 'incomplete statistics failure state missing')
+        require(replies[-1] == {'jsonrpc': '2.0', 'id': 'installed-ping', 'result': {}}, 'ping response mismatch')
     print(json.dumps({'installed_e2e': 'PASS', 'version': __version__, 'tools': 12,
                       'calls': [name for name, _ in calls], 'clean_shutdown': True,
                       'arbitrary_cwd': True, 'source_independent': True, 'import_path': str(package_file),
@@ -97,5 +110,9 @@ def run(command=None):
 
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
-    run(args[1:] if args and args[0] == '--' else args or None)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--expected-version', help='Independently expected release version')
+    parser.add_argument('command', nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    command = args.command[1:] if args.command and args.command[0] == '--' else args.command
+    run(command or None, expected_version=args.expected_version)

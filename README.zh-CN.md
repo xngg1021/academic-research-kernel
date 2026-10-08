@@ -8,24 +8,23 @@
 
 ## 快速开始
 
-2.0.0 发布到 PyPI 后，安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 即可运行：
+安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后运行 2.0.1：
 
 ```bash
-uvx academic-research-kernel mcp
+uvx academic-research-kernel@2.0.1 mcp
 ```
 
-发布状态以 [2.0.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.0)
-附带的清单为准。尚未发布到 PyPI 时，下载发布 wheel，使用
-`uvx --from ./academic_research_kernel-2.0.0-py3-none-any.whl academic-research-kernel mcp`。
-固定产品版本可用 `uvx academic-research-kernel@2.0.0 mcp`。
+[2.0.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.0.1)
+记录分发物哈希与发布状态。下载发布 wheel 后，也可在本地运行
+`uvx --from ./academic_research_kernel-2.0.1-py3-none-any.whl academic-research-kernel mcp`。
 支持 Python 3.10–3.14；`uvx --python 3.12` 可显式选择受支持解释器。
 基础安装包含全部 12 个确定性工具及统计计算依赖。
 
 ## 验证安装
 
 ```bash
-uvx academic-research-kernel doctor
-uvx academic-research-kernel --version
+uvx academic-research-kernel@2.0.1 doctor
+uvx academic-research-kernel@2.0.1 --version
 ```
 
 诊断默认离线运行，检查依赖、schema 和 12 个工具定义；外部服务未配置不会使安装失败。
@@ -34,13 +33,13 @@ uvx academic-research-kernel --version
 ## 安装软件包
 
 ```bash
-uv tool install academic-research-kernel==2.0.0
+uv tool install academic-research-kernel==2.0.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-也可使用 `pipx install academic-research-kernel==2.0.0`，或在受支持的虚拟环境内执行
-`python -m pip install academic-research-kernel==2.0.0`。
+也可使用 `pipx install academic-research-kernel==2.0.1`，或在受支持的虚拟环境内执行
+`python -m pip install academic-research-kernel==2.0.1`。
 `[full]` 添加扩展科学计算示例所需库；`[qa]` 添加仓库验证工具。GPU 后端与付费服务为可选项。
 
 ## Hermes
@@ -168,9 +167,9 @@ CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（
 
 scripts/scfabric/ 是科学计算执行层：硬件探针、带 dtype 门禁的后端目录、五个工作负载画像、带数值等价检查的配对基准与 ComputeReceipt。本机首轮实测见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；经验规则是默认 CPU，加速器只凭 receipt 启用。
 
-## Unreleased 修复与本地候选验证
+## 2.0.1 正确性修复与分发验证
 
-产品版本保持 2.0.0。公共 `academic_recompute_statistics` 工具暴露 t 检验
+产品版本 2.0.1 包含 PR #15 的正确性修复。公共 `academic_recompute_statistics` 工具暴露 t 检验
 p 值及两组 Cohen's d/Hedges' g；CI 和 OR/RR 保留为底层 Python 函数。
 需要保留报告精度时，传入 `p_value_literal`（例如 `"1.0e-5"`）或
 `p_value_decimals`。字面量保留尾零，单独数值只使用其现有数值表示；
@@ -178,8 +177,9 @@ p 值及两组 Cohen's d/Hedges' g；CI 和 OR/RR 保留为底层 Python 函数�
 正常统计不一致仍是成功科研结果；输入或部分计算失败通过 `isError` 表达。
 
 撤稿检查分别记录本轮 True/False/unknown 观测及 last-known 值。
-查询前短锁分配版本，同 DOI 拒绝旧观测覆盖新观测，其他 DOI 的更新增量保留。
-本轮未知保留历史已确认值，并明确当前不确定状态。任务链中的外部响应标明测试数据。
+查询前短锁分配版本，其他 DOI 的更新增量保留；当前观测与历史确认分别排序。
+较迟完成的有效确认可更新保留历史，同时保留较新 unknown 的本轮未知状态。
+任务链中的外部响应标明测试数据。
 
 MCP 支持 `ping`，合法通知（含 `notifications/cancelled`）不回包，
 错误输入后 stdio 会话继续。同步实现未声明抢占式取消。

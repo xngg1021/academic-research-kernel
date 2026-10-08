@@ -11,7 +11,7 @@ def test_version_mirrors():
     spec = importlib.util.spec_from_file_location('product_version', ROOT / 'scripts/_version.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.__version__ == '2.0.0'
+    assert module.__version__ == '2.0.1'
     assert json.loads((ROOT / 'plugin.json').read_text(encoding='utf-8'))['version'] == module.__version__
     server = json.loads((ROOT / 'server.json').read_text(encoding='utf-8'))
     assert server['version'] == server['packages'][0]['version'] == module.__version__

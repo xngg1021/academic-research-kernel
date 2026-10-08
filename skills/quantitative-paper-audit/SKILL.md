@@ -146,7 +146,7 @@ print('quantitative-paper-audit Verification passed (deterministic landmarks)')
 
 ## Evidence Receipt 输出约定
 
-输入侧可以直接消费上游 receipt:把 [schemas/evidence-receipt.schema.json](../../schemas/evidence-receipt.schema.json) 中 claims 数组里 evidence_type 为 "computed" 或 "full_text" 的定量 claim 提取出来,逐条重算。输出侧把体检结论写回同一份 receipt 结构(示例见 [examples/evidence-receipt.example.json](../../examples/evidence-receipt.example.json)),要点:
+输入侧可以直接消费上游 receipt:把 [schemas/evidence-receipt.schema.json](https://github.com/xngg1021/academic-research-kernel/blob/main/schemas/evidence-receipt.schema.json) 中 claims 数组里 evidence_type 为 "computed" 或 "full_text" 的定量 claim 提取出来,逐条重算。输出侧把体检结论写回同一份 receipt 结构(示例见 [examples/evidence-receipt.example.json](https://github.com/xngg1021/academic-research-kernel/blob/main/examples/evidence-receipt.example.json)),要点:
 
 - 每条体检结论写成一个 claim,`evidence_type` 固定为 "computed",`source` 注明 "quantitative-paper-audit/recompute.py"。
 - `support_status` 映射:重算与报告一致写 "supported";确认错配写 "contradicted";报告精度不足无法判定写 "unverifiable"。
