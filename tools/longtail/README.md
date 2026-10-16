@@ -1,93 +1,40 @@
-# Long-tail factor coverage, v3
+# Long-tail scenario generator, v3
 
-This is a deterministic **input model**, not an execution harness or evidence
-that a skill's workflows work. Task chains, oracles, acceptance criteria and
-actual injected events still need a separate semantic expansion stage.
+This directory generates deterministic test scenario inputs for the repository's 14 scholarly skills. It is an input generator rather than an execution runner: generating a scenario combination does not by itself run a skill workflow or prove that a full multi-step task succeeded.
 
-## Three separate dimensions
+## Three separate task dimensions
 
-- `E01_primary_capability` groups 16 reusable capability families. A single task may draw on several families, and multiple skills may share a family.
-- `E02_skill_under_test` selects one primary skill directory from `skills/*/SKILL.md`. Secondary skills receive no implicit coverage credit, and the model does not pad scenarios with extra skill names to simulate multi-skill interactions.
-- `E03_task_goal` selects one of 36 concrete task goals from the primary skill's supported goal list.
+- `E01_primary_capability` defines 16 reusable capability families. One task can use up to three families, and different skills can share a family.
+- `E02_skill_under_test` picks exactly one primary skill from `skills/*/SKILL.md`. Secondary skills receive no implicit coverage credit, and the generator never pads a scenario with extra skill names.
+- `E03_task_goal` picks one of 36 concrete task goals supported by the chosen primary skill.
 
-`factor_catalog.json` contains `skill_semantics` for every actual skill: its
-source `SKILL.md`, workflow role, capability families, **per-goal capability
-allowlist**, relevant event categories and a core `coverage_anchor_goal`.
-The generator draws E02 first, E03 from that mapping, and 1–3 distinct E01
-families from the chosen goal's allowlist (bounded by the available families).
-Each event category also comes from the selected skill's mapping. These are
-admission rules for the three task dimensions, not a claim that every remaining
-independently sampled persona, object and environment combination is executable.
+`factor_catalog.json` defines `skill_semantics` for each of the 14 skills: its `SKILL.md` path, role description, supported capability families, allowed capabilities per task goal, event categories, and core `coverage_anchor_goal`. When building a candidate scenario, the generator picks the primary skill (`E02`) first, selects a compatible task goal (`E03`), and then draws one to three capability families (`E01`) allowed for that goal.
 
-The source responsibility audit distinguishes literature comparison, counter-
-evidence, matrices, bibliography and research gaps (`literature-analysis`) from
-stateful new-work monitoring (`literature-watch`). Writing covers editing,
-citation styles and submission materials. Computation covers symbolic, numeric
-and mathematical verification tasks. Review covers multi-review, challenges and
-disagreement reconciliation. CEG covers evidence links and contradiction/lineage
-traces; the ledger covers decisions, negative results, explicit prune/reopen
-transitions and append-only outcome corrections. These capabilities describe
-existing responsibilities. The 2.1.0 `paper-research` mapping covers located full-text acquisition, statistical checking, comparison and research-state receipts. It receives its own primary-skill coverage.
+Each skill has a distinct scope in the catalog:
+- `literature-analysis` covers paper comparison, counter-evidence search, review tables, bibliography export, and research-gap screening, while `literature-watch` handles recurring new-paper alerts.
+- `academic-writing` covers manuscript editing, citation formatting, and submission preparation.
+- `math-computation` covers symbolic math, numerical calculation, and formula checks.
+- `cross-review-five` covers multi-model blind review, cross-challenges, and disagreement tracking.
+- `claim-evidence-graph` links claims to evidence passages, while `decision-ledger` records choices, negative results, and abandoned routes.
+- `paper-research` covers full-text and supplement reading, statistical recomputation, two-paper comparison, and source-linked reports.
 
-## Feasibility and quotas
+## Quotas and candidate supply
 
-The seed remains **20260917**, with **4096 candidates** and **30 selected
-scenarios**. The candidate supply was measured before setting the new quotas:
+The generator uses seed **20260917** to build **4096 candidate scenarios** and selects **30 scenarios** for the final suite. Before setting quotas, we measured the candidate pool in `generated-scenarios.json`:
 
-- the current candidate supply in `generated-scenarios.json` for each primary skill;
-- 3–6 supported goals per skill;
-- at least 45 candidates for every supported skill/goal pair;
-- with one primary skill per scenario, the maximum uniform quota is
-  `floor(30 / 14) = 2`; three appearances each would require 42 slots.
+- every skill supports between 3 and 6 task goals;
+- every valid skill-and-goal pair appears at least 45 times in the 4096-candidate pool;
+- with 30 scenarios and 14 skills, the highest uniform floor is `floor(30 / 14) = 2` (requiring 3 appearances per skill would take 42 scenarios).
 
-The required representation is therefore **at least two appearances and two
-unique task goals for every skill**, including its explicitly declared core
-goal. This prevents generic receipt/recovery tasks alone from satisfying skill
-coverage. All 16 capability families must appear at least once. Counts are
-factor assignments, not successful executions.
+Every skill must therefore appear **at least twice across at least two distinct task goals**, including its declared core goal, and all 16 capability families must appear at least once.
 
-The v2 `>=8` pseudo-skill quota actually counted seven E01 families. Its
-`>=12 scenarios with 3+ skills` check counted multi-capability combinations.
-Neither is a valid quota for the new single-primary-skill model: eight actual
-appearances each would require 112 slots. Both are explicitly retired in v3;
-`scenarios_with_3plus_capabilities` remains a descriptive counter, not a
-multi-skill coverage claim. The v2 tag quotas (language, accessibility, access,
-metadata, identifiers, topology, etc.) are unchanged. The 30 object types,
-terminal states, critical-tuple uniqueness and five mid-task event markers
-remain hard checks. None is relaxed on failure.
+Earlier v2 counts treated capability families as skills and counted multi-capability scenarios as multi-skill coverage. In v3, `skill_usage_counts` counts actual repository skills (`E02`), while `scenarios_with_3plus_capabilities` is kept only as a descriptive counter. All v2 tag quotas (language, accessibility, offline access, metadata conflicts, non-DOI sources, and non-success terminal states), the 30 object types, critical-tuple uniqueness, and five mid-task event markers remain strict checks.
 
-The v2 artifact already left four ordinary factor levels uncovered. Its broad
-single-select `<=30` level targets remain measured, now separately reported as
-`coverage_target_gaps`. They are coverage objectives, distinct from the
-catalog's declared hard axes and the quotas above. The report also lists **all**
-uncovered levels, including E03's larger-than-30 goal universe. This distinction
-is explicit in v3 metadata rather than hiding gaps in a green skill total.
-Uncovered levels do not prove infeasibility.
+## Selection algorithm and coverage report
 
-## Selection and reports
+The selector runs seven deterministic greedy passes with different weightings for factor levels, pairs, events, and terminal states. During each pass, it reserves slots for under-used skills, core task goals, and required axes, and adds an urgency bonus (`40 / (remaining slots - missing levels + 1)`, clamped at zero) for scarce remaining levels. Ties break by SHA256, and the pass with the fewest hard-constraint violations and fewest remaining level gaps wins. If any hard quota fails, generation exits with an error rather than lowering the quota.
 
-Seven deterministic greedy weight sweeps balance level, pair, event and
-terminal coverage. Selection reserves remaining slots for primary skill usage,
-goal diversity/core goals and hard axes; scarce remaining level opportunities
-receive an urgency bonus (`40 / (remaining slots - missing levels + 1)`,
-with negative slack clamped to zero). A bounded local comparison of urgency
-weights retained the 4096 pool and selected this score; the committed report lists
-its observed ordinary factor gaps, without a claim of best attainable coverage. Bit masks implement the same set-coverage arithmetic
-without iterating over every factor for each score. Ties use SHA256; equal sweep
-scores retain the first sweep. The best sweep minimizes hard problems first,
-then ordinary coverage-target gaps. **There is no repair pass or optimality
-proof.** If supply or a hard gate fails, generation fails explicitly; quotas are
-never reduced automatically.
-
-The v3 report separates `capability_usage_counts`, `skill_usage_counts` and
-`task_goal_usage_counts`, each including declared zero-count entries. It also
-records all declared levels, uncovered skills/capabilities/goals, per-skill goal
-diversity, core goals, candidate supply, each sweep's result and remaining
-factor gaps. `event_category_counts` now records actual occurrences rather than
-v2's presence-only 0/1 values. `uncovered_required_levels` refers to declared hard
-axes; use `coverage_target_gaps` for v2's broader level targets. Consumers must
-check `factor_catalog_version` and must not interpret v2 pseudo-skill totals as
-actual skill coverage.
+The output file `generated-scenarios.json` reports `capability_usage_counts`, `skill_usage_counts`, and `task_goal_usage_counts` (including zero counts), along with per-skill goal diversity, candidate supply, sweep scores, `uncovered_required_levels` (hard axes), and `coverage_target_gaps` (broad single-select targets with 30 or fewer levels).
 
 ## Regeneration and verification
 
@@ -98,21 +45,11 @@ python tools/longtail/generate.py
 python -m pytest -q tests/test_longtail.py tests/test_audit_batch4.py tests/test_audit_batch6.py
 ```
 
-Use `--output /path/to/scenarios.json` to generate outside the checkout. Tests run
-two isolated processes with different Python hash seeds and compare both outputs
-byte-for-byte with the committed artifact. Catalog validation compares sorted
-live skill-directory names against E02 and the mapping; additions, deletions or
-renames fail deterministically. Unsupported skill/capability/goal triples are
-checked across the complete candidate pool and selected scenarios.
+Pass `--output /path/to/scenarios.json` to write to a separate path. The test suite runs the generator twice under different `PYTHONHASHSEED` values and verifies that both outputs match `generated-scenarios.json` byte for byte. Adding, removing, or renaming any `skills/*/SKILL.md` directory without updating the catalog fails validation immediately.
 
-The artifact is repository validation data. Package versions, public MCP tool
-names, kernel contracts, release assets, PyPI and MCP Registry are unchanged.
+## Committed seed coverage
 
-## Committed seed observation
-
-The committed v3 run covers all 14 skills and all 16 capability families, with
-all declared hard quotas satisfied. It leaves 12 of 36 task goals and these
-ordinary factor targets uncovered:
+With seed `20260917`, the 30 selected scenarios cover all 14 skills and all 16 capability families, passing every hard quota. Because 30 scenarios cannot cover all 36 task goals or every unconstrained factor level, 12 task goals and 7 observational factor levels remain unselected:
 
 - `A01_role`: `nurse_researcher`
 - `A01_role`: `translator`
@@ -122,5 +59,4 @@ ordinary factor targets uncovered:
 - `C21_locator_system`: `figure_table`
 - `D01_research_design`: `laboratory_experiment`
 
-The full zero-inclusive counters, per-skill goal lists and remaining task goals
-are in `generated-scenarios.json`; no complete-workflow coverage claim follows.
+See `generated-scenarios.json` for the complete counters and per-skill breakdowns.
