@@ -1,8 +1,8 @@
 # Scholarly Terminology Guide (去黑话与全球21语种自然学术表达)
 
-This repository provides software tools for researchers across the world. To ensure clarity and avoid confusing research users with software engineering house jargon, all user-facing documentation, skill frontmatter, and reporting outputs must use natural scholarly vocabulary.
+User-facing documentation, skill descriptions, and generated reports use standard scholarly vocabulary rather than internal software engineering jargon so researchers can read outputs directly in their own discipline's terms.
 
-The registry (`registry.json`) defines 18 core academic concepts mapped across all 21 supported locales, strictly aligned with **ISO 690:2021**, **ISO 5127:2017**, **ISO 704:2022**, and **W3C PROV**.
+The registry (`registry.json`) maps 18 core academic concepts across all 21 supported locales in accordance with **ISO 690:2021**, **ISO 5127:2017**, **ISO 704:2022**, and **W3C PROV**.
 
 ## 1. Global Core Terminology Mapping (Global 12 Locales)
 

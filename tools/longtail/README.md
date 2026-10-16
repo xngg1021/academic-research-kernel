@@ -6,13 +6,9 @@ actual injected events still need a separate semantic expansion stage.
 
 ## Three separate dimensions
 
-- **E01 — capability families:** 16 reusable categories. A task may exercise
-  several families, and several skills may share a family.
-- **E02 — actual skill under test:** exactly one primary canonical directory
-  from `skills/*/SKILL.md`. No secondary skill receives implicit coverage credit.
-  Multi-skill interactions are not modeled by padding scenarios with skill names.
-- **E03 — concrete task goal:** one of 36 declared goals, chosen only from the
-  primary skill's supported goals.
+- `E01_primary_capability` groups 16 reusable capability families. A single task may draw on several families, and multiple skills may share a family.
+- `E02_skill_under_test` selects one primary skill directory from `skills/*/SKILL.md`. Secondary skills receive no implicit coverage credit, and the model does not pad scenarios with extra skill names to simulate multi-skill interactions.
+- `E03_task_goal` selects one of 36 concrete task goals from the primary skill's supported goal list.
 
 `factor_catalog.json` contains `skill_semantics` for every actual skill: its
 source `SKILL.md`, workflow role, capability families, **per-goal capability
@@ -40,7 +36,7 @@ scenarios**. The candidate supply was measured before setting the new quotas:
 
 - the current candidate supply in `generated-scenarios.json` for each primary skill;
 - 3–6 supported goals per skill;
-- at least 46 candidates for every supported skill/goal pair;
+- at least 45 candidates for every supported skill/goal pair;
 - with one primary skill per scenario, the maximum uniform quota is
   `floor(30 / 14) = 2`; three appearances each would require 42 slots.
 
@@ -114,14 +110,17 @@ names, kernel contracts, release assets, PyPI and MCP Registry are unchanged.
 
 ## Committed seed observation
 
-The committed v3 run covers all 13 skills and all 16 capability families, with
-all declared hard quotas satisfied. It leaves 11 of 36 task goals and these
+The committed v3 run covers all 14 skills and all 16 capability families, with
+all declared hard quotas satisfied. It leaves 12 of 36 task goals and these
 ordinary factor targets uncovered:
 
-- `C10_carrier`: `born_digital_PDF`
-- `C21_locator_system`: `legal_neutral_citation`
-- `D11_statistical_claim_type`: `hazard_ratio`
-- `D11_statistical_claim_type`: `repeated_measures`
+- `A01_role`: `nurse_researcher`
+- `A01_role`: `translator`
+- `B01_jurisdiction`: `mainland_china`
+- `C01_domain`: `law`
+- `C06_identifier_topology`: `archival_shelfmark_only`
+- `C21_locator_system`: `figure_table`
+- `D01_research_design`: `laboratory_experiment`
 
 The full zero-inclusive counters, per-skill goal lists and remaining task goals
 are in `generated-scenarios.json`; no complete-workflow coverage claim follows.

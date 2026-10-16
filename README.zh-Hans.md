@@ -2,23 +2,23 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-跨宿主中立的面向自主 Agent 科研工作流确定性科研状态内核。仓库通过统一产物入库桥接与通用 Model Context Protocol (MCP) 服务，将研究对象身份归一、因果凭证（Receipts）、主张证据图谱（CEG）与追加式研究决策与失败记录深度连接。全仓 14 项学术技能作为科研状态的生产者与消费者，原生兼容 Claude Code、Cursor、Codex、Gemini CLI 与 Hermes Agent。验证范围与外部服务限制记录于[审计文档](docs/project-lineage-audit-20260920.md)。
+本仓库为自主智能体科研工作流提供确定性的研究状态管理与学术工具集。系统通过统一的研究材料接入与解析服务和通用 MCP 协议接口，将研究对象身份归一与证据核验记录串联起来，同时整合学术论断与证据关联以及研究决策与失败记录。全仓包含 14 项学术技能，直接兼容 Claude Code 与 Cursor，并原生支持 Codex、Gemini CLI 与 Hermes Agent。验证范围与外部服务限制记录于[审计文档](docs/project-lineage-audit-20260920.md)。
 
-作者：Junfu Shi（SJF，xngg1021），Hermes Agent。当前授权范围：[Source Lineage License 1.0](LICENSE)。
+作者为 Junfu Shi，笔名 SJF，GitHub 账号 xngg1021，联合 Hermes Agent 共同完成。当前授权范围适用 [Source Lineage License 1.0](LICENSE)。
 
 ## 快速开始
 
-安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 后运行 2.1.0：
+请先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，随后启动 2.1.0 版本服务：
 
 ```bash
 uvx academic-research-kernel@2.1.0 mcp
 ```
 
 [2.1.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0)
-记录分发物哈希与发布状态。下载发布 wheel 后，也可在本地运行
+页面记录了分发物哈希与发布状态。用户下载发布的 wheel 包后，也可直接本地执行
 `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`。
-支持 Python 3.10–3.14；`uvx --python 3.12` 可显式选择受支持解释器。
-基础安装包含全部 12 个确定性工具及统计计算依赖。
+本工具支持 Python 3.10–3.14，`uvx --python 3.12` 命令可显式指定受支持的解释器。
+基础安装包已内置全部 12 个确定性工具与统计计算依赖。
 
 ## 验证安装
 
@@ -27,8 +27,8 @@ uvx academic-research-kernel@2.1.0 doctor
 uvx academic-research-kernel@2.1.0 --version
 ```
 
-诊断默认离线运行，检查依赖、schema 和 12 个工具定义；外部服务未配置不会使安装失败。
-`doctor --json` 提供机器可读结果。
+诊断命令默认离线运行，负责检查运行依赖、数据结构定义与全部 12 个工具声明；未配置可选外部服务不会导致安装验证失败。
+`doctor --json` 命令可输出机器可读的诊断结果。
 
 ## 安装软件包
 
@@ -38,23 +38,23 @@ academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-也可使用 `pipx install academic-research-kernel==2.1.0`，或在受支持的虚拟环境内执行
+用户也可执行 `pipx install academic-research-kernel==2.1.0`，或启用受支持的虚拟环境运行
 `python -m pip install academic-research-kernel==2.1.0`。
-`[full]` 添加扩展科学计算示例所需库；`[research]` 添加 `pypdf==6.19.0` 与 `fonttools==4.65.0`，使干净安装具有一致的 PDF 字体解码依赖，两者均支持 Python 3.10；`[qa]` 添加仓库验证工具及这些解析依赖。HTML/XML 与有界 DOCX/XLSX 读取使用标准库。GPU 后端与付费服务为可选项。
+`[full]` 扩展项会安装科学计算示例所需的扩展库；`[research]` 扩展项会安装 `pypdf==6.19.0` 与 `fonttools==4.65.0`，为全新环境提供一致的 PDF 字体解码依赖，这两个软件包均支持 Python 3.10；`[qa]` 扩展项会安装仓库验证工具与上述解析依赖。结构化 HTML/XML 解析与受限 DOCX/XLSX 读取直接调用标准库，GPU 加速后端与付费外部服务均为可选项。
 
 ## Hermes
 
-确保 Hermes 进程的 PATH 中可找到 uv，再安装并显式启用插件：
+请先确认 Hermes 进程的环境变量 PATH 包含 uv，随后安装并显式启用插件：
 
 ```bash
 hermes plugins install xngg1021/academic-research-kernel --no-enable
 hermes plugins enable academic-skills
 ```
 
-兼容名称 `academic-skills` 保持不变，现包含 14 项技能。`mcp.json` 使用
-`uv run --frozen --no-dev --no-editable`、Python 3.12 和仓库 `uv.lock`，
-将独立运行环境放在 `${PLUGIN_DATA}/runtime`。首次启动自动安装依赖；缺少解释器或包时需要联网。
-既有的纯技能 tap 安装仍受支持，见下方跨宿主集成说明。
+插件兼容名称 `academic-skills` 保持不变，目前包含全部 14 项技能，涵盖新增的 `paper-research`。`mcp.json` 配置文件调用
+`uv run --frozen --no-dev --no-editable` 与 Python 3.12，配合仓库 `uv.lock` 锁文件，
+将独立运行环境部署至 `${PLUGIN_DATA}/runtime`。系统首次启动时会自动安装运行依赖，若本地缺少目标解释器或软件包则需要联网获取。
+既有的纯技能 tap 安装方式依然可用，具体步骤见下方[安装与集成](#安装与集成)章节。
 
 ## 从源码运行
 
@@ -66,47 +66,47 @@ uv run --frozen --no-dev --no-editable academic-research-kernel doctor
 uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 ```
 
-依赖分类、复现步骤、发布身份和外部发布条件见[分发与发布说明](docs/distribution-release.md)。
+依赖分类与复现步骤，以及发布身份和外部发布条件，均详见[分发与发布说明](docs/distribution-release.md)。
 
 ## 许可证
 
-含本通知的快照依据 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 所述范围，对其中识别出的受版权保护材料采用 **Source Lineage License 1.0**。首个 SLL 提交与树、以及其后的边界记录提交，分别在 [LICENSE-HISTORY.md](LICENSE-HISTORY.md) 与 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) 中区分。自该记录边界起保留本通知的快照，携带相同的授权范围。
+包含本通知的代码快照依据 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 所述范围，对文内列明的受版权保护材料适用 **Source Lineage License 1.0**。首个 SLL 提交与目录树，以及随后的分界记录提交，分别记录于 [LICENSE-HISTORY.md](LICENSE-HISTORY.md) 与 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md)。自该记录节点起，所有保留本通知的快照均沿用相同的授权范围。
 
-截至 `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` 的历史快照按 MIT 许可分发，受适用于那些副本的条款约束。接收者保留有效的 MIT 权限，无需迁移至 SLL。[前项目 MIT 文本](LICENSES/MIT-pre-SLL.txt)已保存；[tests/upstream/LICENSE](tests/upstream/LICENSE) 及其第三方来源记录保持原状。新的根授权不抹除既有权利。
+截至 `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` 的早期快照按 MIT 许可证分发，继续适用对应副本的原有条款。既有接收者保留完整的 MIT 授权权限，无需迁移至 SLL。仓库已完整保留[前项目 MIT 文本](LICENSES/MIT-pre-SLL.txt)，且 [tests/upstream/LICENSE](tests/upstream/LICENSE) 与配套的第三方来源记录均保持原状，新的根目录授权不会抹除既有权利。
 
-SLL 广泛允许使用、研究、修改、商用、分发与专有增补，受相应许可、通知与来源谱系条件约束。它不属 copyleft，不要求源码披露。纯网络服务且不提供副本者，不单独触发核心服务谱系通知条件。无明示专利授予。第三方材料仍受其自身条款约束。以英文原版 [LICENSE](LICENSE) 为准；`LicenseRef-Source-Lineage-1.0` 为本地引用，非 SPDX 指配，亦不声称 OSI 批准。[贡献接收](CONTRIBUTING.md)与下游许可权限相互独立。
+SLL 许可证允许使用与研究，支持修改与商用，并涵盖分发及专有扩展，同时要求遵守对应的许可条款与通知要求及来源追溯条件。该许可证不属于 copyleft 协议，不强制要求公开源码。仅提供网络服务而不分发软件副本的行为，不会单独触发核心服务的来源通知条件。本许可证不包含明示专利授权，第三方材料继续遵循各自原有的许可条款。法律解释以英文原版 [LICENSE](LICENSE) 为准；`LicenseRef-Source-Lineage-1.0` 仅为本地标识引用，并非 SPDX 官方指配编号，也不代表已获 OSI 批准。[贡献接收](CONTRIBUTING.md)规则与下游许可权限相互独立。
 
 ## 技能
 
 | 技能 | 版本 | 功能 |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | 交叉核对身份与来源特定的被引数；检查更新与撤稿信号；定位开放获取文本并核验 PDF 身份 |
-| `skills/literature-analysis` | 1.3.0 | 十二个工作流：主题相似、局部文本重叠、反证、作者档案、模拟评审、谬误检查、评审矩阵、期刊候选、BibTeX、双语阅读、研究空白筛查、复现 |
-| `skills/academic-writing` | 1.1.1 | 论文辅助编辑、引用规范指南（支持 ISO 690 国际基准与地区/机构规范）、期刊投稿指引、可选检测服务、投稿材料以及高校盲审要求 |
-| `skills/math-computation` | 1.2.1 | 既有领域与任务路由及修正后的数值与统计示例；四篇领域参考文件 |
-| `skills/quantitative-paper-audit` | 1.1.0 | 反算论文报告的统计量（效应量、p 值、置信区间、OR/RR、实现功效）并检测数值错配 |
-| `skills/research-reproducibility` | 1.0.1 | 十四阶段复现审计流水线，含结构化核验清单、五层事实与可复现审计记录 |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 检索日志、文献筛选记录、效应量换算、异质性、固定与随机效应合并、敏感性与发表偏倚诊断 |
-| `skills/literature-watch` | 1.1.0 | 周更蓝图：监控主题、作者与 DOI 在 OpenAlex 与 Crossref 的新作品；去重并只报告新增 |
-| `skills/retraction-watch` | 1.1.0 | 周更蓝图：对照 OpenAlex is_retracted 与 Crossref 更新记录（update-to 信号）复查 DOI 监控清单；只报告状态变化 |
-| `skills/research-object-identity` | 1.1.0 | 确定性科研资源标识与来源追溯：标识符归一、五态判定、内容寻址衍生图、因果 DAG 校验与毫秒级脱机逆向溯源 |
-| `skills/claim-evidence-graph` | 1.0.0 | 确定性学术论断与证据关联：连接科学论断、实证证据记录、事实核验与计算过程追溯 |
-| `skills/decision-ledger` | 1.0.0 | 研究决策与失败记录：记录科研选择、失败尝试存证、为什么放弃某路线与按时序追加结果修正 |
-| `skills/paper-research` | 1.0.0 | 读取 DOI、链接或本地论文及附件，验证候选字段、核对数字并保存研究状态，生成带原文定位的中文报告和双论文比较 |
-| `skills/cross-review-five` | 2.0.0 | 动态多席位异构模型/子代理交叉审议（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini 等）：v2 四阶段 Sparse Deliberation 流（盲审产出、断言级聚类合并、基于匈牙利算法的全局最优互补错排匿名质询、对账与未决保护账本，支持 P0-P3 严重级别） |
+| `skills/academic-source-verification` | 1.2.0 | 交叉核对文献身份与各数据源的被引次数，检查论文更新与撤稿信号，定位开放获取全文并校验 PDF 文件身份 |
+| `skills/literature-analysis` | 1.3.0 | 提供十二项文献分析流程，覆盖主题相似度比对与局部文本查重，支持反证检索与作者档案梳理。该技能同时包含模拟审稿与谬误核查，提供文献对比表与选刊评估，并支持 BibTeX 导出与双语精读以及研究空白筛查与复现评估 |
+| `skills/academic-writing` | 1.1.1 | 提供论文润色编辑与引用规范指南，兼容 ISO 690 国际标准及各地区机构规范，涵盖期刊投稿指引与可选检测服务，并支持投稿材料准备与高校盲审格式核查 |
+| `skills/math-computation` | 1.2.1 | 提供多学科计算任务路由与修订版数值统计计算示例，附带四篇领域参考文档 |
+| `skills/quantitative-paper-audit` | 1.1.0 | 独立重算论文报告的效应量与 p 值，核验置信区间、优势比与风险比及统计检验功效，自动检测数值不一致 |
+| `skills/research-reproducibility` | 1.0.1 | 执行十四阶段复现核查流程，提供结构化核验清单与五级事实分类，生成可复现的核验记录 |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | 管理 PRISMA 检索日志与文献筛选记录，执行效应量换算与异质性检验，支持固定效应与随机效应合并，并提供敏感性分析与发表偏倚诊断 |
+| `skills/literature-watch` | 1.1.0 | 提供按周运行的文献监控方案，追踪 OpenAlex 与 Crossref 上的主题、作者及施引文献更新，自动去重并仅报告新增条目 |
+| `skills/retraction-watch` | 1.1.0 | 提供按周运行的撤稿监控方案，比对 OpenAlex 的 `is_retracted` 字段与 Crossref 的 `update-to` 更新记录，复查 DOI 监控清单并仅报告状态变更 |
+| `skills/research-object-identity` | 1.1.0 | 提供确定性科研资源标识与来源追溯，涵盖标识符归一与五态核验，支持内容寻址衍生图与因果有向无环图校验，并具备毫秒级离线逆向溯源能力 |
+| `skills/claim-evidence-graph` | 1.0.0 | 构建确定性的学术论断与证据关联，直接连接科学论断与实证证据记录，支持事实核验与计算过程追溯 |
+| `skills/decision-ledger` | 1.0.0 | 维护研究决策与失败记录，按时间顺序保存科研选择与失败尝试存证，记录放弃特定路线的原因及后续结果修正 |
+| `skills/paper-research` | 1.0.0 | 读取 DOI、公开链接或本地论文及补充材料，验证候选字段并重算核对统计数字，持续保存研究状态，生成带原文定位的中文报告与双论文对比分析 |
+| `skills/cross-review-five` | 2.0.0 | 编排多席位异构模型与子智能体交叉审议，兼容 Kimi K3 与 DeepSeek V4 Pro，支持 GLM 5.3、Claude 及 Gemini 等模型；内置四阶段稀疏审议流程，涵盖独立盲审与论断聚类合并，采用匈牙利算法分配全局最优互补匿名质询，并提供审议结果核对、待核实事项记录与 P0 至 P3 严重度分级 |
 
-十四个技能共含 22 篇 Markdown 参考文件，按需加载。
+上述 14 项技能共包含 22 篇 Markdown 参考文档，由系统按需加载。
 
 ## 学术规范与多区域基线
 
-学术引文、元数据与报告规范遵循目标期刊、资助机构、学科与司法辖区规则。仓库确立 **ISO 690:2021**（参考文献与引文指南）、**ISO 5127:2017**（文献与信息概念词汇）与 **W3C PROV**（溯源数据模型）为全球基线，并支持中国大陆 GB/T 7714-2025、西班牙 UNE-ISO 690:2024、德国 DIN ISO 690:2021 等地区 Profile 与 APA、IEEE、PRISMA 2020、ICMJE 等学科规范。目标投稿机构的具体要求优先于默认规则。详见[学术规范架构](docs/standards/README.md)与[自然学术术语指南](docs/terminology/README.md)。
+学术引文、元数据与报告规范遵循目标期刊与资助机构的要求，同时适配所属学科与司法辖区的规则。本仓库以国际标准 **ISO 690:2021** 参考文献与引文指南、**ISO 5127:2017** 文献与信息概念词汇，以及 **W3C PROV** 溯源数据模型作为全球基线，同时支持中国大陆 GB/T 7714-2025、西班牙 UNE-ISO 690:2024 与德国 DIN ISO 690:2021 等地区规范，并兼容 APA 与 IEEE、PRISMA 2020 与 ICMJE 等学科标准。目标投稿机构的具体规定优先于系统默认规则，详细说明见[学术规范架构](docs/standards/README.md)与[自然学术术语指南](docs/terminology/README.md)。
 
-PR #12 最终修补已覆盖 DOI 等外部标识的一致性、定量判定的互斥布尔关系，以及内核与回执共用的不确定项契约。缓存完整性由保留的源产物与归一化绑定独立重建；同时删除状态记录和回执声明也无法取得错误的缓存命中。详见[四项阻塞收尾](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21)。
+系统严格校验 DOI 等外部标识符的一致性、定量核验结论的互斥状态标志，以及状态管理模块与核验记录共用的待核实事项规则。系统通过已保存的原始数据包与归一化哈希绑定独立重建缓存完整性，即便同时删除状态记录与核验声明也无法触发错误的缓存命中。相关验证细节见[四项阻塞收尾](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21)。
 
 ## 安装与集成
 
 ### 1. 便携式 Agent Plugins v1 与 MCP 工具服务
-本仓库遵循厂商中立的 **Agent Plugins v1** 规范（`plugin.json`），并通过 stdio 协议暴露通用的 **MCP 服务器**（`mcp.json` / `scripts/mcp_server.py`），原生兼容 Claude Code、Cursor、Gemini CLI 与任意现代智能体宿主（注：仓库身份已迁移为 `academic-research-kernel`，便携包标识符 `name: "academic-skills"` 与 MCP 工具配置别名保持长期稳定向后兼容）：
+本仓库遵循厂商中立的 **Agent Plugins v1** 规范并提供 `plugin.json` 清单，同时通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 所定义的通用 **MCP 服务器**，原生兼容 Claude Code 与 Cursor、Gemini CLI 以及各类现代智能体宿主。仓库名称现已统一为 `academic-research-kernel`，便携插件标识符 `name: "academic-skills"` 与 MCP 工具配置别名继续保持长期向后兼容：
 
 ```bash
 # 在您的智能体宿主中直接作为 stdio MCP 服务加载
@@ -114,7 +114,7 @@ uvx academic-research-kernel mcp
 ```
 
 ### 2. 在 Hermes 中安装
-在 Hermes 安装环境中执行：
+请于已安装 Hermes 的环境中运行这组命令：
 
 ```bash
 hermes skills tap add xngg1021/academic-research-kernel
@@ -122,31 +122,31 @@ hermes skills search academic-source-verification
 hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
 ```
 
-安装其余技能时替换完整标识符中的目录名。常规 tap 读取默认分支，新装即得上述技能集。如需在合并前检查工作分支，在本地检出该分支并遵循所装 Hermes 版本的本地目录安装说明。不要假定 tap 命令会选中 PR 分支。
+用户安装其余技能时，只需替换完整标识符里的技能目录名。常规 tap 命令默认读取主分支，全新安装即可获得上述全部技能。若需于代码合并前测试工作分支，请先将目标分支检出至本地，再参照当前 Hermes 版本的本地目录安装说明完成配置，切勿假定 tap 命令会自动切换至拉取请求分支。
 
-捆绑相关技能以上游 `245e48008fa814b3251f50755eb656bd9fb86cb1` 为准核对：arxiv、grounded-citations、docx、pdf、manim-video。huggingface-hub 与 llama-cpp 在可选目录中，可能需另行安装。ocr-and-documents 与 pc-hardware-benchmark 在该快照中未找到，亦非依赖项。会话工具与文档及浏览器后端取决于本地配置。
+捆绑的关联技能已对照上游提交 `245e48008fa814b3251f50755eb656bd9fb86cb1` 完成核对，涵盖 `arxiv` 与 `grounded-citations`，以及 `docx`、`pdf` 和 `manim-video`。可选目录包含 `huggingface-hub` 与 `llama-cpp`，使用时可能需另行安装。该上游快照未包含 `ocr-and-documents` 与 `pc-hardware-benchmark`，这两项也不是本仓库的依赖项。会话检索工具、文档处理组件与浏览器后端均取决于本地环境配置。
 
 ## 数据源访问
 
-- OpenAlex 基础查询可匿名执行，但每日预算较小。2026-09-06 核对的文档列出匿名每日 $0.10、免费 API key 每日 $1，以及每秒 100 请求上限；各查询类型成本不同，并非无限访问。可选密钥存于 `OPENALEX_API_KEY`，使用 `per_page`（最大 100）与游标分页。
-- Crossref 提供受限流的公开元数据。更新关系及 Retraction Watch 信号须核对 DOI 与方向；没有记录不等于论文未受影响。
-- Unpaywall 要求在 `UNPAYWALL_EMAIL` 配置真实联系邮箱。未返回位置不等于不存在开放获取副本。
-- arXiv、Europe PMC、PubMed E-utilities 与 DOAJ 为补充来源，各自有访问政策；默认测试未全部覆盖。Semantic Scholar 的匿名共享限额与密钥额度分别管理；可访问 API 不保证可取得引文上下文。
-- Scite、Dimensions、Scopus、Web of Science 与 AI 检测产品为可选外部服务。使用前须核对当前账号权限、API 权利和配额，不承诺通用免费层或固定价格。
+- OpenAlex 基础查询支持匿名调用，每日匿名额度较小。2026-09-06 核对的官方文档规定匿名访问每日额度为 $0.10，免费 API 密钥每日额度为 $1，且每秒请求上限为 100 次；不同查询类型的计费权重各异，并非无限量访问。用户可将可选密钥存入 `OPENALEX_API_KEY`，并通过上限为 100 的 `per_page` 参数配合游标分页拉取数据。
+- Crossref 提供带限流的公开元数据接口。程序解析更新关系与撤稿监控信号时必须同时核对 DOI 与关联方向，未检索到更新记录并不证明目标论文未受影响。
+- Unpaywall 要求通过环境变量 `UNPAYWALL_EMAIL` 配置真实联系邮箱。接口未返回全文链接并不代表该论文不存在开放获取副本。
+- arXiv 与 Europe PMC，以及 PubMed E-utilities 和 DOAJ 均属于补充数据源，各自适用独立的访问策略，默认测试套件不会全部调用。Semantic Scholar 的匿名共享限额与专属密钥配额实行分离管理，能够连通 API 并不保证一定能获取引文上下文。
+- Scite 与 Dimensions，以及 Scopus、Web of Science 和各类 AI 检测服务均属于可选外部商业服务。用户调用前须自行核对当前账号权限、API 授权范围与剩余配额，本仓库不承诺通用免费额度或固定价格。
 
-参见 [OpenAlex 认证](https://help.openalex.org/api/authentication/)、[预算与查询成本](https://help.openalex.org/api/llm-quick-reference/)及 [Crossref 更新过滤](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/)。
+详细规则参见 [OpenAlex 认证](https://help.openalex.org/api/authentication/)、[预算与查询成本](https://help.openalex.org/api/llm-quick-reference/)及 [Crossref 更新过滤](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/)。
 
 ## 确定性入库与内核公开界面
 
-PR #12 提供 `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、14 个适配器（13 项技能加 opaque fallback）与 12 个无状态 stdio MCP 工具。接受入库的凭证以类型、身份和规范 SHA-256 绑定每项保留的语义变异：对象、CEG 记录、Ledger 记录、不确定项、物理凭证与产物注册。缓存重放独立于传输快照摘要核验这些承诺。空 Ledger 合法；失败的原子批次不留下部分状态。
+系统公开接口提供 `ResearchArtifactEnvelope v1` 与 `ArtifactIngestionReceipt v1` 数据结构，内置覆盖全部 14 项技能与 1 项未分类文本兜底的 15 个研究材料接入与解析适配器，并暴露 12 个无状态标准输入输出 MCP 工具。入库生成的核验记录会用类型、唯一标识与规范 SHA-256 哈希绑定每一次状态变更，涵盖研究对象与学术论断关联，以及研究决策记录、待核实事项与原始证据文件注册。缓存重放会独立于传输快照哈希之外校验这些哈希记录；空的决策记录同样合法，原子批次一旦执行失败不会残留半成品状态。
 
-谱系内容读取权限通过带外方式显式授予。可信 Python 调用方重放序列化凭证或快照时传入 `LineageVerificationContext`；MCP 调用方只能提供受限内容字节，不能指定宿主文件系统根目录。默认内容预算为 10 MiB；可信宿主可在生产者与验证者采用同一策略的前提下显式授权更大产物。缺少内容权限时，`fully_verified` 声明无法独立重现，返回结构化无效验证结果。非结构化文本保持不透明，异议保留可见；提交、剪枝、重开、路由选择与真值判断由研究者掌控。
+来源与生成过程的原文读取权限须通过外部调用参数显式授予。可信 Python 调用方重放序列化的核验记录或状态快照时可传入 `LineageVerificationContext`；MCP 协议调用方只能传入受限的文件内容字节流，不得指定宿主文件系统根目录。单次内容读取预算默认为 10 MiB；只要生产端与验证端采用一致的预算策略，可信宿主即可显式授权处理更大体积的研究材料。若调用时缺少原文读取权限，标记为 `fully_verified` 的核验声明将无法独立重现，系统会返回结构化的验证失败结果。未结构化的自由文本保持原样存储，评审分歧始终公开可见；状态提交与路线终止，以及路线重开、工具路由选择与最终学术判断均由研究者自主掌控。
 
-契约与兼容规则见[架构文档](docs/kernel-architecture.md)。软件包、`uvx` 与官方 MCP Registry 的发布状态分别记录于[发布说明](docs/distribution-release.md)。英文及简体中文 README 已同步；其他译文状态由[清单](docs/i18n/manifest.json)如实记录。最终候选身份、精确 HEAD CI、累计评审与合并证据统一记录于[收尾账本](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)。
+数据结构规范与版本兼容规则详见[架构文档](docs/kernel-architecture.md)。软件包、`uvx` 运行入口与官方 MCP Registry 的发布状态记录于[发布说明](docs/distribution-release.md)。全部 21 个语种的 README 均已同步至 2.1.0 版本，全仓文档的多语言同步哈希记录于[多语言清单](docs/i18n/manifest.json)。候选版本身份与对应提交的 CI 记录，以及历次审议与合并存证，均汇总于[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)。
 
 ## QA 与测试
 
-请使用独立 Python 环境。运行依赖因任务而异，并非 Hermes 保证预装；QA 安装更广泛的依赖，以执行全部标记示例：
+测试与核验请使用独立的 Python 虚拟环境。具体运行依赖随任务类型变化，Hermes 宿主环境不保证默认预装；QA 环境会安装完整的测试依赖，以便执行全部带标记的代码示例：
 
 ```bash
 python -m pip install -r requirements-qa.txt
@@ -158,31 +158,31 @@ python scripts/verify_external_apis.py --output external-status.json --summary e
 git diff --check
 ```
 
-QA 校验元数据、参考文件、个人路径与已知密钥模式、Python 语法与标记为可执行的代码块。每个 smoke 示例在全新子进程中原样运行；绘图示例接受 `PLOT_DIR`（默认 `~/plots`，显式展开），测试使用临时目录。未分类的 Python 代码块被拒绝；`fragment:` 块做语法检查但需显式输入，不单独执行。`external-test:` 块仅经手动外部命令运行。该外部命令在配置检查通过时返回 0，代码、schema 或身份失败返回 1，传输、认证或配额不可用返回 2；未配置的可选服务保持 SKIP。
+QA 脚本负责校验技能元数据与参考文件路径，排查个人本地路径与已知密钥泄露模式，并检查 Python 语法及标记为可执行的代码块。每个 `smoke-test` 示例均会启动全新的独立子进程原样运行；绘图示例接收 `PLOT_DIR` 环境变量并显式展开默认路径 `~/plots`，自动化测试期间则会改用临时目录。QA 门禁会直接拒绝未标注分类的 Python 代码块；带 `fragment:` 标记的代码块仅接受语法检查，因依赖外部具名输入而不单独执行；带 `external-test:` 标记的代码块仅通过手动执行外部核验命令运行。已配置的检查项全部通过时，该外部核验命令返回状态码 0；遇到代码错误、数据结构不符或文献身份核验失败时返回 1；遇到网络传输故障、认证失败或配额耗尽时返回 2；未配置的可选外部服务则保持 `SKIP` 状态。
 
-固定版本的技能编写规范测试（authoring tests）被复用，其逐技能规则不改动。完整 Hermes 上游发行包的全局测试不适用于本 tap；本仓库测试覆盖全部十三个技能，并按固定的捆绑与可选目录解析参考文件。这不是完整的 Hermes 安装测试。CI 仅在安装依赖时使用网络；常规 PR 测试不调用学术 API。
+测试套件复用了固定版本的技能编写规范测试，并完整保留各技能原有的单项校验规则。上游 Hermes 完整发行包的全局目录检查不适用于本仓库；本仓库测试覆盖全部 14 项技能，并对照固定版本的捆绑目录与可选技能清单解析跨技能引用。这套检查不等同于完整的 Hermes 客户端安装测试。持续集成流水线仅在安装依赖包时访问网络，常规拉取请求测试不会调用外部学术 API。
 
-CI 经 GitHub Actions 覆盖 Linux x86_64（Python 3.10-3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 预迁移 Canary（ubuntu-26.04 与 ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）与 macOS Intel（macos-15-intel）全平台全架构，并附带针对上游 main 最新分支的实时 Canary 加载检验。历史 PR #12 候选本地测试为 974 passed。本轮实测数量与覆盖边界见[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)；远端证据单独标明被测 HEAD。另有一个 tap 集成工作流在 main 推送时运行：安装 tests/upstream/provenance.json 所记录的固定 Hermes 检出，并针对本仓库执行 tap add、search、install 与 list。确切版本、检查项与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+持续集成流水线通过 GitHub Actions 覆盖三大操作系统的 x86_64 与 ARM64 架构。测试范围包含运行 Python 3.10 至 3.14 的 Linux x86_64 与 `ubuntu-24.04-arm` 镜像，涵盖 `ubuntu-26.04` 与 `ubuntu-26.04-arm` 预迁移环境，同时覆盖 Windows x86_64 与 `windows-11-arm`，以及 `macos-latest` 与 `macos-15-intel` 环境，并附带针对上游 `main` 分支最新代码的实时加载检验。本地完整回归测试套件通过 1165 项测试，详细验证结果与测试覆盖范围见[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)，远端运行记录会单独标明被测提交哈希。同时，每当代码推送至 `main` 分支时，独立的 tap 集成工作流会自动安装 `tests/upstream/provenance.json` 所记录的固定版本 Hermes，并对本仓库依次执行 `tap add` 与 `search`，以及 `install` 和 `list` 验证。各项测试的确切版本、检查范围与已知限制详见[审计文档](docs/project-lineage-audit-20260920.md)。
 
-[tools/longtail/](tools/longtail/README.md) 存放确定性长尾因子生成器：4096 个 SHA256 种子候选，选取 30 个场景并输出机器计算的覆盖报告。v3 分别统计能力族（E01）、仓库实际的 14 个技能（E02）与任务目标（E03）。每个场景只绑定一个主要技能、一个受支持的任务目标及兼容能力；每个技能至少出现 2 次、覆盖 2 个不同目标，其中包含其声明的核心目标。技能目录与因子目录不一致时验证失败。语义展开（任务链、判据与实际事件注入）仍是独立阶段；因子覆盖不代表工作流已经执行验证。
+[tools/longtail/](tools/longtail/README.md) 目录提供确定性长尾因子生成器，从 4096 个 SHA256 种子候选中筛选出 30 个测试场景，并输出机器计算的核验覆盖度报告。v3 模型分别统计 E01 能力族、对应仓库实际 14 项技能的 E02 技能项以及 E03 任务目标。每个测试场景仅绑定一项主测技能、一个受支持的任务目标与兼容的能力族；每项技能至少出现 2 次且覆盖 2 个不同任务目标，并必须包含该技能声明的核心目标。一旦实际技能目录与因子目录出现偏差，校验即会报错退出。包含任务链构建、验证判据设计及实际事件注入在内的语义展开仍属于独立阶段，因子层面的覆盖度并不代表完整工作流已完成执行验证。
 
-scripts/scfabric/ 是科学计算执行层：硬件探针、带 dtype 门禁的后端目录、五个工作负载画像、带数值等价检查的配对基准与 ComputeReceipt。本机首轮实测见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；经验规则是默认 CPU，加速器只凭 receipt 启用。
+`scripts/scfabric/` 目录提供科学计算与统计分析工具，内置硬件探针与带数据类型门禁的后端目录，包含五类工作负载画像与带数值等价校验的配对基准测试，并生成 `ComputeReceipt` 核验记录。本机首轮实测数据见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)；系统默认采用 CPU 执行计算，仅在具备有效核验记录时才启用硬件加速器。
 
 ## 让本地 Agent 研究论文
 
-安装 `academic-research-kernel[research]==2.1.0`，导出软件包随附的正式工作流：
+请先安装 `academic-research-kernel[research]==2.1.0`，随后导出软件包随附的正式工作流：
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
 ```
 
-请让 Work 或其他兼容本地 Agent 读取导出的 `SKILL.md`，随后只需提供 DOI、公开链接或本地资料包，并说：
-“研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-双论文任务可直接说：“比较这两篇论文的数据、方法、评估条件和主要结果，说明哪些结果可以直接比较。”
-Agent 会在同一任务内继续完成原文阅读、候选验证、计算、入库、报告和独立原文复核。
-既有 MCP 保留 12 个工具；新增编排入口位于 CLI 和 portable skill。
+请让 Work 或其他兼容的本地智能体读取导出的 `SKILL.md`，随后只需提供论文 DOI、公开链接或本地文件包，并发送指令：
+“请研究这篇论文与补充材料，梳理实验方法并核对可重算的关键统计数字，生成一份带原文出处的中文报告。”
+针对双论文对比任务可直接发送指令：“请比较这两篇论文的数据集与实验方法，核对评估条件与主要结果，并说明哪些结论可以直接横向对比。”
+智能体会在同一任务内依次完成原文阅读与候选字段验证，执行统计重算与状态入库，并最终生成研究报告及独立原文复核结果。
+既有的 MCP 服务端保持 12 个基础工具不变，新增的研究编排入口统一由命令行工具与便携技能包提供。
 
-程序的实际分步入口为：
+命令行工具的分步调用入口为：
 
 ```sh
 academic-research-kernel research prepare INPUT --project PROJECT
@@ -190,32 +190,22 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` 获取和解析正文及附件，保存 manifest、文件哈希与原文段落定位。
-`finish` 验证 Agent 读取原文生成的结构化候选，调用现有函数重算适用的 t/p、两组效应量和计数/百分比，
-保存内核状态并生成中文 Markdown/HTML 报告。`compare` 验证 Agent 对数据、条件和结果可比性的明确判断。
-CLI 的语义阅读由当前 Agent 按 [paper-research](skills/paper-research/SKILL.md) 完成，无需新增模型账户。
-已保存的原始材料与提取快照可用于确定性脱机重放；报告会区分重放、联网获取和重新语义阅读。
+`prepare` 子命令负责获取并解析论文正文与补充材料，自动保存材料清单、文件哈希及原文段落定位信息。
+`finish` 子命令负责校验智能体阅读原文后生成的结构化候选数据，调用内置统计函数重算符合条件的 t 检验与 p 值、两组效应量以及计数与百分比，
+随后保存研究状态并导出中文 Markdown 与 HTML 报告。`compare` 子命令负责校验智能体针对两篇论文的数据集、实验条件与结果可比性生成的结构化结论。
+命令行工具本身不内置驻留大模型，语义阅读完全由当前智能体参照 [paper-research](skills/paper-research/SKILL.md) 规范完成，无需额外配置模型账户。
+已保存的原始文献与抽取快照支持确定性离线重放，最终报告会明确区分离线重放、联网获取与重新语义阅读。
 
 ## 2.0.1 正确性修复与分发验证
 
-产品版本 2.0.1 包含 PR #15 的正确性修复。公共 `academic_recompute_statistics` 工具暴露 t 检验
-p 值及两组 Cohen's d/Hedges' g；CI 和 OR/RR 保留为底层 Python 函数。
-需要保留报告精度时，传入 `p_value_literal`（例如 `"1.0e-5"`）或
-`p_value_decimals`。字面量保留尾零，单独数值只使用其现有数值表示；
-多个精度来源冲突时明确失败。四舍五入比较采用下端包含、上端排除的半开区间。
-正常统计不一致仍是成功科研结果；输入或部分计算失败通过 `isError` 表达。
+2.0.1 版本全面加固了统计重算与并发状态更新的正确性。公开的 `academic_recompute_statistics` 工具直接提供 t 检验 p 值以及两组样本的 Cohen's d 与 Hedges' g 效应量重算；置信区间与优势比及风险比计算继续作为内部 Python 函数提供。当分析任务需要严格保留原论文的报告精度时，调用方可传入字符串字面量 `p_value_literal` 如 `"1.0e-5"`，或显式指定小数位数 `p_value_decimals`。字符串字面量会完整保留末尾有效零，纯数值输入仅按本身的浮点数值解析；若同时传入相互冲突的精度参数，工具会明确报错返回。四舍五入一致性比对采用下界包含、上界排除的半开区间规则。常规的统计数值偏差属于正常的科学核查结果，仅在输入参数非法或计算过程异常中断时才会将 `isError` 设为真值。
 
-撤稿检查分别记录本轮 True/False/unknown 观测及 last-known 值。
-查询前短锁分配版本，其他 DOI 的更新增量保留；当前观测与历史确认分别排序。
-较迟完成的有效确认可更新保留历史，同时保留较新 unknown 的本轮未知状态。
-任务链中的外部响应标明测试数据。
+撤稿状态核查会分别记录本轮观测到的 `True`、`False` 或 `unknown` 状态以及上一次确认的有效值。系统在发起外部查询前通过短锁分配版本号，确保同一 DOI 的观测结果按序登记，同时保留其余 DOI 的并发更新增量。本轮观测值与既往确认记录采用独立的版本序列：较晚返回的权威确认结果可以更新既往确认记录，同时不会掩盖较新一次查询因网络或接口受限而产生的本轮未知状态。回归测试任务链所使用的外部响应样例均已显式标明为测试数据。
 
-MCP 支持 `ping`，合法通知（含 `notifications/cancelled`）不回包，
-错误输入后 stdio 会话继续。同步实现未声明抢占式取消。
-消息处理依据 [MCP 消息规范](https://modelcontextprotocol.io/specification/2024-11-05/basic/messages)
+MCP 服务端原生支持 `ping` 探活请求，收到 `notifications/cancelled` 等合法通知消息时保持静默不回包，并在遇到格式错误的输入后继续维持标准输入输出会话不中断。当前的同步服务端实现不声明支持抢占式任务取消。消息处理严格遵循 [MCP 消息规范](https://modelcontextprotocol.io/specification/2024-11-05/basic/messages)
 与 [ping 规范](https://modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping)。
 
-在隔离环境中构建并验证本次检出的分发物：
+使用独立隔离环境构建并验证当前检出版本的分发软件包：
 
 ```bash
 python -m build
@@ -223,16 +213,14 @@ python -m twine check --strict dist/*
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-`--source-checks` 在仓库外原样解包候选 sdist，显式设置 `ARK_REPO` 与
-`ARK_SDIST`，运行包内测试、静态 QA、可执行代码块和 i18n 校验。
-wheel/sdist 分别使用全新安装环境；uvx 使用本地 wheel 和独立缓存。
-报告保存分发物哈希与实际导入路径。定时轻量 Hermes 检查分开报告 pinned/latest
-及被测 SHA；外部契约 JSON 和 job summary 区分 `healthy`、`degraded`、`failed`，
-跳过的探测单独记录。
+`--source-checks` 选项会将候选源码分发包原样解包至仓库目录之外，显式设置 `ARK_REPO` 与
+`ARK_SDIST` 环境变量，随后依次运行包内单元测试与静态 QA，并执行代码示例检查及多语言同步校验。
+wheel 与 sdist 分发包各自使用全新的独立虚拟环境完成安装测试，`uvx` 验收则直接调用本地构建的 wheel 包并搭配独立缓存目录。
+验收报告会完整记录分发包哈希值与实际导入路径。定时运行的轻量级 Hermes 兼容性检查会分别汇报固定基线版本与最新上游主分支的被测提交哈希；外部接口契约 JSON 报告与任务摘要明确区分 `healthy`、`degraded` 与 `failed` 三种状态，并将跳过的探测项单独列明。
 
 ## 研究与规划文档
 
-这两份文档是探索性规划参考，不是强制路线图。其中的方向数字按 docs/direction-primitive-mapping.json 的入库归组重算。
+下列两份文档属于探索性研究规划参考，并非强制性的开发路线图；文内的研究方向编号均依据 `docs/direction-primitive-mapping.json` 保存的分组关系重算得出。
 
-- [痛点图集 v0（英文）](docs/pain-atlas-v0.en.md)与[中文版](docs/pain-atlas-v0.zh.md)：按生命周期枚举学术知识工作摩擦，定量论断标注核实状态。
-- [研究计划 v0（英文）](docs/research-plan-v0.en.md)与[中文版](docs/research-plan-v0.zh.md)：Research Object 模型、核心能力领域、候选研究方向与阶段一因子分解矩阵。
+- [问题图集 v0 英文版](docs/pain-atlas-v0.en.md)与[问题图集 v0 中文版](docs/pain-atlas-v0.zh.md)：按科研全生命周期梳理学术知识工作的常见阻碍，并为各项定量论断标注核实状态。
+- [研究计划 v0 英文版](docs/research-plan-v0.en.md)与[研究计划 v0 中文版](docs/research-plan-v0.zh.md)：阐述研究对象模型与核心能力领域，并列出候选研究方向及阶段一因子分解表。

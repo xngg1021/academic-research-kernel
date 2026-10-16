@@ -2,7 +2,7 @@
 
 Academic research happens in an international ecosystem where citation styles, metadata contracts, reporting guidelines, and provenance records must serve diverse disciplines and jurisdictions.
 
-**Core Principle**: Natural language does not determine jurisdiction or citation standard. A researcher writing in Spanish may target an IEEE transaction; an author writing in English may need to satisfy a Chinese university's thesis format; a German medical paper must follow ICMJE and PRISMA.
+Natural language never determines the applicable jurisdiction or citation standard. A researcher writing in Spanish may target an IEEE transaction; an author writing in English may need to satisfy a Chinese university's thesis format; a German medical paper must follow ICMJE and PRISMA.
 
 ## Resolution Hierarchy
 
