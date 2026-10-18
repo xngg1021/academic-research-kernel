@@ -871,8 +871,11 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
         return {"error": f"Internal execution failure in tool '{name}': {str(exc)}"}
 
 
-def _rpc_error(msg_id: Any, code: int, message: str) -> dict:
-    return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": code, "message": message}}
+def _rpc_error(msg_id: Any, code: int, message: str, data: Optional[Dict[str, Any]] = None) -> dict:
+    err: Dict[str, Any] = {"code": code, "message": message}
+    if data is not None:
+        err["data"] = data
+    return {"jsonrpc": "2.0", "id": msg_id, "error": err}
 
 
 SUPPORTED_PROTOCOLS = ("2024-11-05", "2026-07-28")
@@ -906,7 +909,12 @@ def process_message(msg: Any) -> dict | None:
                 if not isinstance(meta_version, str):
                     return _rpc_error(msg_id, -32602, f"_meta[{meta_key!r}] must be a string")
                 if meta_version not in SUPPORTED_PROTOCOLS:
-                    return _rpc_error(msg_id, -32022, f"Unsupported protocol version: {meta_version}")
+                    return _rpc_error(
+                        msg_id,
+                        -32022,
+                        f"Unsupported protocol version: {meta_version}",
+                        data={"requested": meta_version, "supported": list(SUPPORTED_PROTOCOLS)},
+                    )
 
     if method == "ping":
         return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
@@ -934,7 +942,7 @@ def process_message(msg: Any) -> dict | None:
             "id": msg_id,
             "result": {
                 "supportedVersions": list(SUPPORTED_PROTOCOLS),
-                "resultType": "full",
+                "resultType": "complete",
                 "ttlMs": 3600000,
                 "cacheScope": "public",
                 "capabilities": {"tools": {}},
@@ -949,7 +957,12 @@ def process_message(msg: Any) -> dict | None:
         return {
             "jsonrpc": "2.0",
             "id": msg_id,
-            "result": {"tools": TOOLS}
+            "result": {
+                "resultType": "complete",
+                "ttlMs": 3600000,
+                "cacheScope": "public",
+                "tools": TOOLS,
+            }
         }
     elif method == "tools/call":
         name = params.get("name")
@@ -972,6 +985,7 @@ def process_message(msg: Any) -> dict | None:
             "jsonrpc": "2.0",
             "id": msg_id,
             "result": {
+                "resultType": "complete",
                 "content": [
                     {
                         "type": "text",

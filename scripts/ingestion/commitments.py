@@ -146,13 +146,18 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
                     if b["kind"] == "physical_receipt"
                 )
             ctx = state.verification_context
-            ctx_fp = None if ctx is None else (
-                str(ctx.content_root) if ctx.content_root is not None else None,
-                tuple((k, compute_sha256(v)) for k, v in sorted(ctx.content_by_entity_id.items()))
-                if ctx.content_by_entity_id is not None else None,
-                tuple(str(p) for p in ctx.authorized_paths),
-                ctx.max_content_bytes,
-            )
+            if ctx is None:
+                ctx_fp = None
+            elif hasattr(ctx, "fingerprint"):
+                ctx_fp = ctx.fingerprint()
+            else:
+                ctx_fp = (
+                    str(ctx.content_root) if ctx.content_root is not None else None,
+                    tuple((k, compute_sha256(v)) for k, v in sorted(ctx.content_by_entity_id.items()))
+                    if ctx.content_by_entity_id is not None else None,
+                    tuple(str(p) for p in ctx.authorized_paths),
+                    ctx.max_content_bytes,
+                )
             proj_key = (
                 cache_key,
                 source_sha,
@@ -239,7 +244,7 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
             key, value = min(matches, key=lambda item: item[1]["sequence"])
             expected[key] = value
     elif proj_key is not None and isinstance(p_cache, dict):
-        if len(p_cache) >= 512:
+        if len(p_cache) >= 2048:
             p_cache.pop(next(iter(p_cache)), None)
         p_cache[proj_key] = dict(expected)
     return expected

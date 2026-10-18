@@ -430,4 +430,6 @@ def test_html_report_collapses_technical_appendix_and_doctor_reports_pdf_readine
     assert not diag["research"]["font_decoder"].startswith("not installed")
     assert "budget" in cli._error_hint("prepare", "PDF page budget exceeded").lower()
     assert "[research]" not in cli._error_hint("prepare", "PDF page budget exceeded")
-    assert "[research]" in cli._error_hint("prepare", "PDF support requires pypdf")
+    assert "not a valid pdf" in cli._error_hint("prepare", "PDF signature missing (HTML/error response is not a PDF)").lower()
+    assert "[research]" not in cli._error_hint("prepare", "PDF signature missing (HTML/error response is not a PDF)")
+    assert "[research]" in cli._error_hint("prepare", "PDF requires the research extra: academic-research-kernel[research]")

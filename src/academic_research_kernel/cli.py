@@ -20,10 +20,12 @@ SERVICES = ('OPENALEX_API_KEY', 'UNPAYWALL_EMAIL', 'SCITE_API_KEY', 'WOS_API_KEY
 
 def _error_hint(step: str, reason: str) -> str:
     lower = reason.lower()
+    if 'signature missing' in lower or 'not a pdf' in lower or 'landing' in lower:
+        return 'File is not a valid PDF (e.g. HTML landing or error page); provide a real PDF or full-text HTML/XML file'
     if 'budget' in lower or 'exceeded' in lower or 'too large' in lower:
         return 'Input exceeds size or page budget; provide a smaller file or extract relevant sections'
-    if 'pypdf' in lower or 'fonttools' in lower or (
-        'pdf' in lower and any(k in lower for k in ('install', 'missing', 'require', 'unavailable', 'support'))
+    if 'pypdf' in lower or 'fonttools' in lower or 'research extra' in lower or 'academic-research-kernel[research]' in lower or (
+        'pdf' in lower and any(k in lower for k in ('install', 'require', 'unavailable', 'support'))
     ):
         return 'Install PDF support with: pip install "academic-research-kernel[research]"'
     if 'stale' in lower or 'fingerprint' in lower or 'changed' in lower:

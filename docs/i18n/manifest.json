@@ -961,10 +961,10 @@
       "canonical_title": "Changelog and Release Manifest",
       "source_path": "CHANGELOG.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "fa193e97b7964017bb3c4b3a6af910f40a1fec63d9b55b584ba9255ab71f6738",
+      "source_sha256": "5890338e171a333987681a101ac214e6e1bef57042d082b8ff20877e4606aad5",
       "section_hashes": {
         "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
-        "Unreleased": "66b201ab51d470cc185d31c0b4d811e9cbfcbf4c87197a27a1cad802f0159a33",
+        "Unreleased": "a7f5da431ad1ccd5a499e2b8e5925f9aea169aad3b0e3b5a00ebc54b22b27a15",
         "2.1.0 — 2026-10-08 paper research workflow": "d1373eb0fda4a20765e7431149494a6cdfdb9a0c315d9751c17cec49330afdc0",
         "2.0.1 — 2026-10-08 correctness repair": "ce76432a77d4d21697ddc131a0b11e2ee57fc55ffeaac74091ee6a795c68a0b6",
         "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -1004,11 +1004,11 @@
         "zh-Hans": {
           "path": "CHANGELOG.md",
           "status": "canonical_current",
-          "localized_file_sha256": "fa193e97b7964017bb3c4b3a6af910f40a1fec63d9b55b584ba9255ab71f6738",
-          "translated_from_source_sha256": "fa193e97b7964017bb3c4b3a6af910f40a1fec63d9b55b584ba9255ab71f6738",
+          "localized_file_sha256": "5890338e171a333987681a101ac214e6e1bef57042d082b8ff20877e4606aad5",
+          "translated_from_source_sha256": "5890338e171a333987681a101ac214e6e1bef57042d082b8ff20877e4606aad5",
           "translated_from_section_hashes": {
             "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
-            "Unreleased": "66b201ab51d470cc185d31c0b4d811e9cbfcbf4c87197a27a1cad802f0159a33",
+            "Unreleased": "a7f5da431ad1ccd5a499e2b8e5925f9aea169aad3b0e3b5a00ebc54b22b27a15",
             "2.1.0 — 2026-10-08 paper research workflow": "d1373eb0fda4a20765e7431149494a6cdfdb9a0c315d9751c17cec49330afdc0",
             "2.0.1 — 2026-10-08 correctness repair": "ce76432a77d4d21697ddc131a0b11e2ee57fc55ffeaac74091ee6a795c68a0b6",
             "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",

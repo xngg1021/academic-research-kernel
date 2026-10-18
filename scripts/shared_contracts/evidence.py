@@ -54,6 +54,7 @@ class LineageVerificationContext:
     content_by_entity_id: Optional[Mapping[str, bytes]] = None
     authorized_paths: Tuple[Path, ...] = ()
     max_content_bytes: int = 10 * 1024 * 1024
+    _fp_cache: Optional[Tuple[Any, Any]] = None
 
     def __post_init__(self) -> None:
         if type(self.max_content_bytes) is not int or self.max_content_bytes < 0:
@@ -68,6 +69,30 @@ class LineageVerificationContext:
             if sum(map(len, values.values())) > self.max_content_bytes:
                 raise ValueError("Authorized lineage content exceeds the read-size budget")
             object.__setattr__(self, "content_by_entity_id", MappingProxyType(values))
+        object.__setattr__(self, "_fp_cache", None)
+
+    def fingerprint(self) -> Tuple[Any, ...]:
+        """Return content-addressed context fingerprint, reusing hashes while bytes are unchanged."""
+        content_map = self.content_by_entity_id
+        state_token = (
+            str(self.content_root) if self.content_root is not None else None,
+            tuple(str(p) for p in self.authorized_paths),
+            self.max_content_bytes,
+            tuple((k, id(v), len(v)) for k, v in sorted(content_map.items()))
+            if content_map is not None else None,
+        )
+        cached = self._fp_cache
+        if cached is not None and cached[0] == state_token:
+            return cached[1]
+        fp = (
+            state_token[0],
+            tuple((k, compute_sha256(v)) for k, v in sorted(content_map.items()))
+            if content_map is not None else None,
+            state_token[1],
+            state_token[2],
+        )
+        object.__setattr__(self, "_fp_cache", (state_token, fp))
+        return fp
 
     def __deepcopy__(self, memo: Dict[int, Any]) -> "LineageVerificationContext":
         return self

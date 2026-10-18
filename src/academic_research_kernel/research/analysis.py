@@ -562,7 +562,7 @@ def _lib_version(name: str) -> str:
     try:
         return metadata.version(name)
     except metadata.PackageNotFoundError:
-        return "stdlib-fallback"
+        return "not-installed"
 
 
 def finish(project: str | Path, candidate_path: str | Path) -> dict:

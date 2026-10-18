@@ -202,7 +202,7 @@ def cohens_d(m1, sd1, n1, m2, sd2, n2, reported=None):
         {'cohens_d': float(d), 'hedges_g': float(d * j), 'pooled_sd': float(sp), 'df': int(df)},
         {'m1': m1, 'sd1': sd1, 'n1': n1, 'm2': m2, 'sd2': sd2, 'n2': n2},
         "d = (m1-m2)/sqrt(((n1-1)sd1^2+(n2-1)sd2^2)/(n1+n2-2)); g = d*(1-3/(4df-1))",
-        'numpy (closed form)',
+        'math (closed form)',
     )
 
 
@@ -363,7 +363,7 @@ def or_rr_from_2x2(a, b, c, d, level=0.95, reported=None):
         },
         {'a': cells['a'], 'b': cells['b'], 'c': cells['c'], 'd': cells['d'], 'level': level},
         'OR=ad/bc (log-Wald CI); RR=(a/(a+b))/(c/(c+d)) (log-Wald CI)',
-        'scipy.stats.norm.ppf + numpy (closed form)',
+        'scipy.stats.norm.ppf + math (closed form)',
         confidence='medium' if correction else 'high',
     )
 
@@ -628,7 +628,7 @@ def check_sd_possible(sd, minimum, maximum, n=None):
         'excess': float(sd - max_sd),
         'inputs': {'sd': sd, 'minimum': minimum, 'maximum': maximum, 'n': n},
         'formula': 'max_sd = (max-min)/2 * sqrt(n/(n-1)) (n 省略时取总体界)',
-        'library': 'numpy (closed form)',
+        'library': 'math (closed form)',
         'confidence': 'high',
     }
 

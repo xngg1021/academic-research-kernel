@@ -92,6 +92,17 @@ _RIS_TO = {
     'misc': 'GEN',
 }
 
+_VALID_CSL_TYPES = frozenset({
+    'article', 'article-journal', 'article-magazine', 'article-newspaper',
+    'bill', 'book', 'broadcast', 'chapter', 'classic', 'collection', 'dataset',
+    'document', 'entry', 'entry-dictionary', 'entry-encyclopedia', 'event',
+    'figure', 'graphic', 'hearing', 'interview', 'legal_case', 'legislation',
+    'manuscript', 'map', 'motion_picture', 'musical_score', 'pamphlet',
+    'paper-conference', 'patent', 'performance', 'periodical',
+    'personal_communication', 'post', 'post-weblog', 'regulation', 'report',
+    'review', 'review-book', 'software', 'song', 'speech', 'standard',
+    'thesis', 'treaty', 'webpage',
+})
 _CSL_FROM = {
     'article': 'article',
     'article-journal': 'article', 'article-magazine': 'article',
@@ -524,8 +535,8 @@ def from_csl_json(obj: dict) -> CanonicalWork:
     raw_id = obj.get('id')
     if raw_id is not None and str(raw_id).strip():
         extra['id'] = str(raw_id).strip()
-    if raw_type == 'manuscript':
-        extra['csl_type'] = 'manuscript'
+    if raw_type in _VALID_CSL_TYPES:
+        extra['csl_type'] = raw_type
     return CanonicalWork(
         work_type=work_type,
         title=str(obj.get('title') or '').strip(),
@@ -564,9 +575,14 @@ def to_csl_json(work: CanonicalWork) -> dict:
             }, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
             digest8 = hashlib.sha256(canonical_meta).hexdigest()[:8]
             item_id = f'{base}-{digest8}'
-    csl_type = _CSL_TO.get(work.work_type, 'article')
-    if work.work_type == 'preprint' and work.extra.get('csl_type') == 'manuscript' and not (work.doi or work.url or work.container or work.publisher):
-        csl_type = 'manuscript'
+    preserved_csl = str(work.extra.get('csl_type') or '').strip().lower()
+    if preserved_csl in _VALID_CSL_TYPES and _CSL_FROM.get(preserved_csl, 'misc') == work.work_type:
+        if work.work_type == 'preprint' and preserved_csl == 'manuscript' and (work.doi or work.url or work.container or work.publisher):
+            csl_type = 'article'
+        else:
+            csl_type = preserved_csl
+    else:
+        csl_type = _CSL_TO.get(work.work_type, 'article')
     out = {'id': item_id, 'type': csl_type}
     if work.work_type == 'preprint':
         out['genre'] = 'preprint'

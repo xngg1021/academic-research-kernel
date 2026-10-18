@@ -272,7 +272,7 @@ def test_mcp_server_discover_and_meta_protocol_version():
     res = disc["result"]
     assert "protocolVersion" not in res
     assert res["supportedVersions"] == ["2024-11-05", "2026-07-28"]
-    assert res["resultType"] == "full"
+    assert res["resultType"] == "complete"
     assert res["ttlMs"] == 3600000
     assert res["cacheScope"] == "public"
     assert len(res["tools"]) == 12
@@ -284,6 +284,10 @@ def test_mcp_server_discover_and_meta_protocol_version():
         "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2099-01-01"}},
     })
     assert bad_official_meta["error"]["code"] == -32022
+    assert bad_official_meta["error"]["data"] == {
+        "requested": "2099-01-01",
+        "supported": ["2024-11-05", "2026-07-28"],
+    }
 
     ok_official_meta = mcp_server.process_message({
         "jsonrpc": "2.0",
@@ -291,7 +295,22 @@ def test_mcp_server_discover_and_meta_protocol_version():
         "method": "tools/list",
         "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}},
     })
+    assert ok_official_meta["result"]["resultType"] == "complete"
+    assert ok_official_meta["result"]["ttlMs"] == 3600000
+    assert ok_official_meta["result"]["cacheScope"] == "public"
     assert len(ok_official_meta["result"]["tools"]) == 12
+
+    call_resp = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 104,
+        "method": "tools/call",
+        "params": {
+            "name": "academic_check_percentage",
+            "arguments": {"count": 10, "percent": 50.0, "sample_size": 20},
+        },
+    })
+    assert call_resp["result"]["resultType"] == "complete"
+    assert call_resp["result"]["isError"] is False
 
 
 def test_mcp_startup_and_percentage_do_not_import_statistics_stack():
@@ -372,4 +391,14 @@ def test_frozen_json_map_deep_nesting_memory_and_duck_typed_receipt_isolation():
     assert ceg._receipt_registry["r1"]["score"] == 1
 
     import ingestion.commitments as commitments_mod
+    from shared_contracts.evidence import LineageVerificationContext
+    import time
     assert not hasattr(commitments_mod, "_SOURCE_PROJECTION_CACHE")
+
+    ctx_10m = LineageVerificationContext(content_by_entity_id={"e1": b"x" * (10 * 1024 * 1024)})
+    t0 = time.perf_counter()
+    for _ in range(500):
+        fp = ctx_10m.fingerprint()
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 0.25
+    assert len(fp[1][0][1]) == 64

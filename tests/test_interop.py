@@ -233,3 +233,8 @@ def test_csl_json_preserves_id_and_maps_preprint_to_valid_csl_type():
     assert csl_w1['id'] != csl_w2['id']
     assert csl_w1['id'].startswith('anon2026work-')
     assert csl_w2['id'].startswith('anon2026work-')
+
+    generic_article = interop.from_csl_json({'id': 'a', 'type': 'article', 'title': 'A'})
+    assert interop.to_csl_json(generic_article)['type'] == 'article'
+    journal_article = interop.from_csl_json({'id': 'b', 'type': 'article-journal', 'title': 'B'})
+    assert interop.to_csl_json(journal_article)['type'] == 'article-journal'
