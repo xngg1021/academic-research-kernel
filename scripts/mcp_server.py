@@ -900,12 +900,13 @@ def process_message(msg: Any) -> dict | None:
     if meta is not None:
         if not isinstance(meta, dict):
             return _rpc_error(msg_id, -32602, "_meta must be an object")
-        if "protocolVersion" in meta:
-            meta_version = meta["protocolVersion"]
-            if not isinstance(meta_version, str):
-                return _rpc_error(msg_id, -32602, "_meta.protocolVersion must be a string")
-            if meta_version not in SUPPORTED_PROTOCOLS:
-                return _rpc_error(msg_id, -32022, f"Unsupported protocol version: {meta_version}")
+        for meta_key in ("io.modelcontextprotocol/protocolVersion", "protocolVersion"):
+            if meta_key in meta:
+                meta_version = meta[meta_key]
+                if not isinstance(meta_version, str):
+                    return _rpc_error(msg_id, -32602, f"_meta[{meta_key!r}] must be a string")
+                if meta_version not in SUPPORTED_PROTOCOLS:
+                    return _rpc_error(msg_id, -32022, f"Unsupported protocol version: {meta_version}")
 
     if method == "ping":
         return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
@@ -932,7 +933,10 @@ def process_message(msg: Any) -> dict | None:
             "jsonrpc": "2.0",
             "id": msg_id,
             "result": {
-                "protocolVersion": "2026-07-28",
+                "supportedVersions": list(SUPPORTED_PROTOCOLS),
+                "resultType": "full",
+                "ttlMs": 3600000,
+                "cacheScope": "public",
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "academic-research-kernel",

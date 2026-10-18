@@ -76,6 +76,7 @@ class IngestionEngine:
         target.ingested_artifacts = source.ingested_artifacts
         target.ingestion_receipts = source.ingestion_receipts
         target.ingestion_sources = source.ingestion_sources
+        target._projection_cache = getattr(source, "_projection_cache", {})
 
     def batch_ingest(
         self,

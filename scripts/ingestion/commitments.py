@@ -18,11 +18,9 @@ MUTATION_KINDS = (
     "ledger_state_event", "ledger_correction",
 )
 
-_SOURCE_PROJECTION_CACHE: Dict[Any, Dict[Tuple[str, str], Any]] = {}
-
 
 def record_digest(record: Any) -> str:
-    if isinstance(record, FrozenJSONMap):
+    if type(record) is FrozenJSONMap:
         return record.sha256()
     return compute_sha256(canonical_json_bytes(_thaw_val(record)))
 
@@ -133,36 +131,48 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
     source = state.ingestion_sources.get(cache_key)
     if source is None or not isinstance(source, collections.abc.Mapping) or set(source) != {"envelope", "bindings"}:
         raise ValueError("missing independent ingestion source; reingest the artifact")
-    try:
-        source_bytes = canonical_json_bytes(source)
-        receipt_keys = tuple((k, canonical_json_bytes(v)) for k, v in sorted(state.receipts.items()))
-        ctx = state.verification_context
-        ctx_key = None if ctx is None else (
-            ctx.content_root,
-            tuple(sorted(ctx.content_by_entity_id.items())) if ctx.content_by_entity_id is not None else None,
-            ctx.authorized_paths,
-            ctx.max_content_bytes,
-        )
-        proj_key = (
-            cache_key,
-            source_bytes,
-            receipt.receipt_id,
-            receipt.source_artifact_id,
-            receipt.source_artifact_sha256,
-            receipt.ingestion_context_digest,
-            receipt.source_lineage_ref,
-            receipt.adapter_id,
-            receipt.adapter_version,
-            state.ceg.graph_id if state.ceg is not None else None,
-            state.ledger.ledger_id if state.ledger is not None else None,
-            receipt_keys,
-            ctx_key,
-        )
-        hash(proj_key)
-    except Exception:
-        proj_key = None
-    if proj_key is not None and proj_key in _SOURCE_PROJECTION_CACHE:
-        return dict(_SOURCE_PROJECTION_CACHE[proj_key])
+    p_cache = getattr(state, "_projection_cache", None)
+    proj_key = None
+    if isinstance(p_cache, dict):
+        try:
+            source_sha = record_digest(source)
+            if receipt.adapter_id in ("adapter-claim-evidence-graph", "adapter-decision-ledger"):
+                rec_fp = tuple((k, record_digest(v)) for k, v in sorted(state.receipts.items()))
+            else:
+                rec_fp = tuple(
+                    (b["identity"], record_digest(state.receipts[b["identity"]]))
+                    if b["identity"] in state.receipts else (b["identity"], None)
+                    for b in receipt.mutation_bindings
+                    if b["kind"] == "physical_receipt"
+                )
+            ctx = state.verification_context
+            ctx_fp = None if ctx is None else (
+                str(ctx.content_root) if ctx.content_root is not None else None,
+                tuple((k, compute_sha256(v)) for k, v in sorted(ctx.content_by_entity_id.items()))
+                if ctx.content_by_entity_id is not None else None,
+                tuple(str(p) for p in ctx.authorized_paths),
+                ctx.max_content_bytes,
+            )
+            proj_key = (
+                cache_key,
+                source_sha,
+                receipt.receipt_id,
+                receipt.source_artifact_id,
+                receipt.source_artifact_sha256,
+                receipt.ingestion_context_digest,
+                receipt.source_lineage_ref,
+                receipt.adapter_id,
+                receipt.adapter_version,
+                state.ceg.graph_id if state.ceg is not None else None,
+                state.ledger.ledger_id if state.ledger is not None else None,
+                rec_fp,
+                ctx_fp,
+            )
+            hash(proj_key)
+        except Exception:
+            proj_key = None
+        if proj_key is not None and proj_key in p_cache:
+            return dict(p_cache[proj_key])
 
     envelope = ArtifactEnvelope.from_dict(source["envelope"])
     adapter = create_default_registry().resolve(envelope)
@@ -228,10 +238,10 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
             # after subsequent corrections append newer history.
             key, value = min(matches, key=lambda item: item[1]["sequence"])
             expected[key] = value
-    elif proj_key is not None:
-        if len(_SOURCE_PROJECTION_CACHE) >= 4096:
-            _SOURCE_PROJECTION_CACHE.clear()
-        _SOURCE_PROJECTION_CACHE[proj_key] = dict(expected)
+    elif proj_key is not None and isinstance(p_cache, dict):
+        if len(p_cache) >= 512:
+            p_cache.pop(next(iter(p_cache)), None)
+        p_cache[proj_key] = dict(expected)
     return expected
 
 

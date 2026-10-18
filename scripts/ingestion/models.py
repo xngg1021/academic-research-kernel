@@ -601,17 +601,18 @@ class IngestionKernelState:
     ingestion_receipts: Dict[str, IngestionReceipt] = field(default_factory=dict)
     verification_context: Optional[LineageVerificationContext] = field(default=None, repr=False, compare=False)
     ingestion_sources: Dict[str, Mapping[str, Any]] = field(default_factory=dict)
+    _projection_cache: Dict[Any, Any] = field(default_factory=dict, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         self.objects = {
             require_registry_key(key): (
-                value if isinstance(value, FrozenJSONMap) else FrozenJSONMap(_thaw_val(value))
+                value if type(value) is FrozenJSONMap else FrozenJSONMap(_thaw_val(value))
             )
             for key, value in self.objects.items()
         }
         self.receipts = {
             require_registry_key(key): (
-                value if isinstance(value, FrozenJSONMap) else FrozenJSONMap(_thaw_val(value))
+                value if type(value) is FrozenJSONMap else FrozenJSONMap(_thaw_val(value))
             )
             for key, value in self.receipts.items()
         }
@@ -628,7 +629,7 @@ class IngestionKernelState:
         }
         self.ingestion_sources = {
             require_registry_key(key): (
-                value if isinstance(value, FrozenJSONMap) else FrozenJSONMap(value)
+                value if type(value) is FrozenJSONMap else FrozenJSONMap(value)
             )
             for key, value in self.ingestion_sources.items()
         }
@@ -721,14 +722,14 @@ class IngestionKernelState:
         cloned.ceg = copy.deepcopy(self.ceg)
         cloned.ledger = copy.deepcopy(self.ledger)
         cloned.objects = {
-            require_registry_key(k): (v if isinstance(v, FrozenJSONMap) else FrozenJSONMap(_thaw_val(v)))
+            require_registry_key(k): (v if type(v) is FrozenJSONMap else FrozenJSONMap(_thaw_val(v)))
             for k, v in self.objects.items()
         }
         cloned.receipts = {
-            require_registry_key(k): (v if isinstance(v, FrozenJSONMap) else FrozenJSONMap(_thaw_val(v)))
+            require_registry_key(k): (v if type(v) is FrozenJSONMap else FrozenJSONMap(_thaw_val(v)))
             for k, v in self.receipts.items()
         }
-        if all(isinstance(u, FrozenJSONMap) for u in self.uncertainties):
+        if all(type(u) is FrozenJSONMap for u in self.uncertainties):
             cloned.uncertainties = list(self.uncertainties)
         else:
             cloned.uncertainties = []
@@ -740,9 +741,10 @@ class IngestionKernelState:
             for k, v in self.ingestion_receipts.items()
         }
         cloned.ingestion_sources = {
-            require_registry_key(k): (v if isinstance(v, FrozenJSONMap) else FrozenJSONMap(v))
+            require_registry_key(k): (v if type(v) is FrozenJSONMap else FrozenJSONMap(v))
             for k, v in self.ingestion_sources.items()
         }
+        cloned._projection_cache = dict(getattr(self, "_projection_cache", {}))
         cloned._synchronise_receipts()
         return cloned
 

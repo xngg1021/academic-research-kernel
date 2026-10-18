@@ -48,6 +48,26 @@ def _ttest_ind_power():
     return _TTEST_POWER_CLS or None
 
 
+def _require_scipy_stats():
+    st = _scipy_stats()
+    if st is None:
+        raise RuntimeError(
+            "scipy is required for statistical distribution calculations; "
+            "install scipy or run inside the repository environment."
+        )
+    return st
+
+
+def _require_ttest_ind_power():
+    cls = _ttest_ind_power()
+    if cls is None:
+        raise RuntimeError(
+            "statsmodels is required for noncentral-t power calculations; "
+            "install statsmodels or run inside the repository environment."
+        )
+    return cls
+
+
 def __getattr__(name: str):
     if name == "stats":
         st = _scipy_stats()
@@ -61,159 +81,6 @@ def __getattr__(name: str):
         import numpy as _np
         return _np
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def _betacf(a: float, b: float, x: float) -> float:
-    max_iter = 200
-    eps = 3.0e-16
-    fpmin = 1.0e-300
-    qab = a + b
-    qap = a + 1.0
-    qam = a - 1.0
-    c = 1.0
-    d = 1.0 - qab * x / qap
-    if abs(d) < fpmin:
-        d = fpmin
-    d = 1.0 / d
-    h = d
-    for m in range(1, max_iter + 1):
-        m2 = 2 * m
-        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
-        d = 1.0 + aa * d
-        if abs(d) < fpmin:
-            d = fpmin
-        c = 1.0 + aa / c
-        if abs(c) < fpmin:
-            c = fpmin
-        d = 1.0 / d
-        h *= d * c
-        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
-        d = 1.0 + aa * d
-        if abs(d) < fpmin:
-            d = fpmin
-        c = 1.0 + aa / c
-        if abs(c) < fpmin:
-            c = fpmin
-        d = 1.0 / d
-        delta = d * c
-        h *= delta
-        if abs(delta - 1.0) <= eps:
-            break
-    return h
-
-
-def _betainc(a: float, b: float, x: float) -> float:
-    if x <= 0.0:
-        return 0.0
-    if x >= 1.0:
-        return 1.0
-    bt = math.exp(
-        math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
-        + a * math.log(x) + b * math.log1p(-x)
-    )
-    if x < (a + 1.0) / (a + b + 2.0):
-        return bt * _betacf(a, b, x) / a
-    return 1.0 - bt * _betacf(b, a, 1.0 - x) / b
-
-
-def _gammaincc(a: float, x: float) -> float:
-    if x <= 0.0:
-        return 1.0
-    if x < a + 1.0:
-        ap = a
-        s = 1.0 / a
-        del_val = s
-        for _ in range(200):
-            ap += 1.0
-            del_val *= x / ap
-            s += del_val
-            if abs(del_val) < abs(s) * 3.0e-16:
-                break
-        return 1.0 - s * math.exp(-x + a * math.log(x) - math.lgamma(a))
-    b = x + 1.0 - a
-    c = 1.0 / 1.0e-300
-    d = 1.0 / b
-    h = d
-    for i in range(1, 201):
-        an = -i * (i - a)
-        b += 2.0
-        d = an * d + b
-        if abs(d) < 1.0e-300:
-            d = 1.0e-300
-        c = b + an / c
-        if abs(c) < 1.0e-300:
-            c = fpmin = 1.0e-300
-        d = 1.0 / d
-        delta = d * c
-        h *= delta
-        if abs(delta - 1.0) <= 3.0e-16:
-            break
-    return math.exp(-x + a * math.log(x) - math.lgamma(a)) * h
-
-
-def _norm_sf(z: float) -> float:
-    st = _scipy_stats()
-    if st is not None:
-        return float(st.norm.sf(z))
-    return 0.5 * math.erfc(z / math.sqrt(2.0))
-
-
-def _norm_ppf(p: float) -> float:
-    st = _scipy_stats()
-    if st is not None:
-        return float(st.norm.ppf(p))
-    a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
-         1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00]
-    b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
-         6.680131188771972e+01, -1.328068155288572e+01]
-    c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
-         -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00]
-    d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00]
-    plow = 0.02425
-    phigh = 1.0 - plow
-    if p < plow:
-        q = math.sqrt(-2.0 * math.log(p))
-        x = (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1.0)
-    elif p <= phigh:
-        q = p - 0.5
-        r = q * q
-        x = (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1.0)
-    else:
-        q = math.sqrt(-2.0 * math.log(1.0 - p))
-        x = -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1.0)
-    err = 0.5 * math.erfc(-x / math.sqrt(2.0)) - p
-    pdf = math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
-    x -= err / (pdf + 0.5 * x * err)
-    return x
-
-
-def _t_ppf_two_sided(alpha: float, df: float) -> float:
-    st = _scipy_stats()
-    if st is not None:
-        return float(st.t.ppf(1.0 - alpha / 2.0, df))
-    lo, hi = 0.0, 1000.0
-    while _betainc(0.5 * df, 0.5, df / (df + hi * hi)) > alpha:
-        hi *= 2.0
-    for _ in range(80):
-        mid = 0.5 * (lo + hi)
-        if _betainc(0.5 * df, 0.5, df / (df + mid * mid)) > alpha:
-            lo = mid
-        else:
-            hi = mid
-    return 0.5 * (lo + hi)
-
-
-def _nct_power_two_sided(effect_size: float, n1: float, alpha: float, ratio: float) -> float:
-    cls = _ttest_ind_power()
-    if cls is not None:
-        return float(cls().solve_power(effect_size=abs(effect_size), nobs1=n1, alpha=alpha, ratio=ratio, alternative='two-sided'))
-    n2 = n1 * ratio
-    df = n1 + n2 - 2.0
-    nc = abs(effect_size) * math.sqrt(n1 * n2 / (n1 + n2))
-    crit = _t_ppf_two_sided(alpha, df)
-    z_upper = crit - nc
-    z_lower = -crit - nc
-    return _norm_sf(z_upper) + (1.0 - _norm_sf(z_lower))
 
 import sys as _sys
 if _sys.platform == "win32":
@@ -350,11 +217,8 @@ def p_from_t(t, df, reported=None):
     _require(df > 0, '自由度须为正 (允许非整数 Welch 自由度)')
     if reported is not None:
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
-    st = _scipy_stats()
-    if st is not None:
-        p = 2.0 * st.t.sf(abs(t), df)
-    else:
-        p = 1.0 if t == 0 else _betainc(0.5 * float(df), 0.5, float(df) / (float(df) + float(t) ** 2))
+    st = _require_scipy_stats()
+    p = 2.0 * st.t.sf(abs(t), df)
     return _result(reported, float(p), {'t': t, 'df': df, 'sided': 2},
                    'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf')
 
@@ -367,11 +231,8 @@ def p_from_f(f, df1, df2, reported=None):
     if reported is not None:
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(f >= 0, 'F 统计量须非负')
-    st = _scipy_stats()
-    if st is not None:
-        p = st.f.sf(f, df1, df2)
-    else:
-        p = 1.0 if f == 0 else _betainc(0.5 * float(df2), 0.5 * float(df1), float(df2) / (float(df2) + float(df1) * float(f)))
+    st = _require_scipy_stats()
+    p = st.f.sf(f, df1, df2)
     return _result(reported, float(p), {'F': f, 'df1': df1, 'df2': df2},
                    'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf')
 
@@ -384,11 +245,8 @@ def p_from_chi2(chi2, df, reported=None):
     if reported is not None:
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(chi2 >= 0, '卡方统计量须非负')
-    st = _scipy_stats()
-    if st is not None:
-        p = st.chi2.sf(chi2, df)
-    else:
-        p = _gammaincc(0.5 * float(df), 0.5 * float(chi2))
+    st = _require_scipy_stats()
+    p = st.chi2.sf(chi2, df)
     return _result(reported, float(p), {'chi2': chi2, 'df': df},
                    'p = sf_chi2(chi2, df)', 'scipy.stats.chi2.sf')
 
@@ -406,8 +264,9 @@ def z_from_beta_se(beta, se, reported=None):
     """
     _finite_inputs(beta=beta, se=se, reported=reported)
     _require(se > 0, '标准误须为正')
+    st = _require_scipy_stats()
     z = beta / se
-    p = 2.0 * _norm_sf(abs(z))
+    p = 2.0 * st.norm.sf(abs(z))
     return _result(
         reported,
         {'z': float(z), 'p': float(p)},
@@ -434,7 +293,8 @@ def check_ci_consistency(estimate, lower, upper, level=0.95, log_scale=False, re
     _require(rel_tol >= 0, 'rel_tol 须非负')
     _require(0 < level < 1, '置信水平须在 (0,1)')
     _require(lower < upper, 'CI 下限须小于上限')
-    z_crit = _norm_ppf(1 - (1 - level) / 2)
+    st = _require_scipy_stats()
+    z_crit = float(st.norm.ppf(1 - (1 - level) / 2))
     if log_scale:
         _require(lower > 0 and estimate > 0, 'log 尺度要求区间与估计值为正')
         mid = float(math.sqrt(lower * upper))
@@ -482,7 +342,8 @@ def or_rr_from_2x2(a, b, c, d, level=0.95, reported=None):
     correction = any(v == 0 for v in cells.values())
     if correction:
         a, b, c, d = a + 0.5, b + 0.5, c + 0.5, d + 0.5
-    z = _norm_ppf(1 - (1 - level) / 2)
+    st = _require_scipy_stats()
+    z = float(st.norm.ppf(1 - (1 - level) / 2))
     or_ = (a * d) / (b * c)
     se_log_or = math.sqrt(1 / a + 1 / b + 1 / c + 1 / d)
     log_or = math.log(or_)
@@ -523,7 +384,10 @@ def achieved_power_ttest(d, n1, n2=None, alpha=0.05, reported=None):
     _require(0 < alpha < 1, 'alpha 须在 (0,1)')
     n2 = n1 if n2 is None else n2
     n2 = _integer('n2', n2, 2)
-    power = _nct_power_two_sided(abs(d), n1, alpha, n2 / n1)
+    cls = _require_ttest_ind_power()
+    power = cls().solve_power(
+        effect_size=abs(d), nobs1=n1, alpha=alpha, ratio=n2 / n1,
+        alternative='two-sided')
     return _result(reported, float(power),
                    {'d': d, 'n1': n1, 'n2': n2, 'alpha': alpha, 'sided': 2},
                    'noncentral-t power, |d|, n1, n2, alpha',
@@ -542,22 +406,10 @@ def required_n_ttest(d, power=0.8, alpha=0.05, ratio=1.0, reported=None):
     _require(d != 0, '效应量须非零')
     _require(0 < power < 1 and 0 < alpha < 1, 'power/alpha 须在 (0,1)')
     _require(ratio > 0, 'ratio 须为正')
-    cls = _ttest_ind_power()
-    if cls is not None:
-        n = cls().solve_power(
-            effect_size=abs(d), nobs1=None, alpha=alpha, power=power, ratio=ratio,
-            alternative='two-sided')
-    else:
-        lo, hi = 2.0001, 64.0
-        while _nct_power_two_sided(abs(d), hi, alpha, ratio) < power:
-            hi *= 2.0
-        for _ in range(80):
-            mid = 0.5 * (lo + hi)
-            if _nct_power_two_sided(abs(d), mid, alpha, ratio) < power:
-                lo = mid
-            else:
-                hi = mid
-        n = 0.5 * (lo + hi)
+    cls = _require_ttest_ind_power()
+    n = cls().solve_power(
+        effect_size=abs(d), nobs1=None, alpha=alpha, power=power, ratio=ratio,
+        alternative='two-sided')
     return _result(reported, float(n),
                    {'d': d, 'power': power, 'alpha': alpha, 'ratio': ratio, 'sided': 2},
                    'invert noncentral-t power for nobs1',

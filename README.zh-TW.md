@@ -157,7 +157,7 @@ git diff --check
 
 測試套件沿用了固定版本的 Hermes 技能編寫規範檢查，完整測試本倉庫的全部 14 項技能，並對照固定版本的內建與可選技能目錄核對引用關係。持續整合環境只在安裝依賴套件時連網，平時的程式碼提交測試不會請求外部學術資料庫。
 
-GitHub Actions 持續整合覆蓋三大作業系統的 x86_64 與 ARM64 架構。測試範圍包含執行 Python 3.10 至 3.14 的 Linux x86_64 與 `ubuntu-24.04-arm` 映像，涵蓋 `ubuntu-26.04` 與 `ubuntu-26.04-arm` 預遷移環境，同時覆蓋 Windows x86_64 與 `windows-11-arm`，以及 `macos-latest` 與 `macos-15-intel` 環境，並附帶針對上游 `main` 分支最新程式碼的即時載入檢驗。本機完整迴歸測試套件共通過 1315 項測試，此前 1165 項基線與覆蓋範圍記錄在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)中，遠端測試日誌會單獨標明所測的程式碼提交雜湊值。每當程式碼推送到 `main` 分支時，獨立的整合測試工作流還會自動安裝 `tests/upstream/provenance.json` 記錄的固定版本 Hermes，實測對本倉庫執行 `tap add` 與 `search`，以及 `install` 和 `list` 全流程。各項檢查的確切版本與限制見[審計文件](docs/project-lineage-audit-20260920.md)。
+GitHub Actions 持續整合覆蓋三大作業系統的 x86_64 與 ARM64 架構。測試範圍包含執行 Python 3.10 至 3.14 的 Linux x86_64 與 `ubuntu-24.04-arm` 映像，涵蓋 `ubuntu-26.04` 與 `ubuntu-26.04-arm` 預遷移環境，同時覆蓋 Windows x86_64 與 `windows-11-arm`，以及 `macos-latest` 與 `macos-15-intel` 環境，並附帶針對上游 `main` 分支最新程式碼的即時載入檢驗。本機完整迴歸測試套件共通過 1316 項測試，此前 1165 項基線與覆蓋範圍記錄在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)中，遠端測試日誌會單獨標明所測的程式碼提交雜湊值。每當程式碼推送到 `main` 分支時，獨立的整合測試工作流還會自動安裝 `tests/upstream/provenance.json` 記錄的固定版本 Hermes，實測對本倉庫執行 `tap add` 與 `search`，以及 `install` 和 `list` 全流程。各項檢查的確切版本與限制見[審計文件](docs/project-lineage-audit-20260920.md)。
 
 [tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，從 4096 個 SHA256 種子候選中選出 30 個代表性測試場景，並自動生成核驗覆蓋度報告，分別統計 16 類能力族、倉庫實際的 14 項技能以及 36 項具體任務目標。每項技能至少出現 2 次並覆蓋 2 個不同任務目標，且必須包含該技能的核心目標。
 

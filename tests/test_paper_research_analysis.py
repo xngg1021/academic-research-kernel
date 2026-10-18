@@ -426,5 +426,8 @@ def test_html_report_collapses_technical_appendix_and_doctor_reports_pdf_readine
     cli = importlib.import_module(PACKAGE + ".cli")
     diag = cli.doctor()
     assert "readiness" in diag
-    assert "pdf_ready" in diag["research"]
-    assert "font_decoder" in diag["research"]
+    assert diag["research"]["pdf_ready"] is True
+    assert not diag["research"]["font_decoder"].startswith("not installed")
+    assert "budget" in cli._error_hint("prepare", "PDF page budget exceeded").lower()
+    assert "[research]" not in cli._error_hint("prepare", "PDF page budget exceeded")
+    assert "[research]" in cli._error_hint("prepare", "PDF support requires pypdf")

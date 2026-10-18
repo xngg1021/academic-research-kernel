@@ -23,6 +23,8 @@ CanonicalWork 字段（最小集）：
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable, Optional
@@ -544,7 +546,24 @@ def to_csl_json(work: CanonicalWork) -> dict:
     """导出 CSL-JSON 记录（dict，可直接 json.dumps，符合官方 CSL-JSON v1.0.2 schema）。"""
     item_id = str(work.extra.get('id') or work.extra.get('citekey') or '').strip()
     if not item_id:
-        item_id = f'doi:{work.doi}' if work.doi else make_citekey(work)
+        if work.doi:
+            item_id = f'doi:{work.doi}'
+        else:
+            base = make_citekey(work)
+            canonical_meta = json.dumps({
+                'work_type': work.work_type,
+                'title': work.title,
+                'authors': list(work.authors),
+                'year': work.year,
+                'container': work.container,
+                'url': work.url,
+                'volume': work.volume,
+                'issue': work.issue,
+                'pages': work.pages,
+                'publisher': work.publisher,
+            }, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+            digest8 = hashlib.sha256(canonical_meta).hexdigest()[:8]
+            item_id = f'{base}-{digest8}'
     csl_type = _CSL_TO.get(work.work_type, 'article')
     if work.work_type == 'preprint' and work.extra.get('csl_type') == 'manuscript' and not (work.doi or work.url or work.container or work.publisher):
         csl_type = 'manuscript'

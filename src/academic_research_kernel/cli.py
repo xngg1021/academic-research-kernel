@@ -20,7 +20,11 @@ SERVICES = ('OPENALEX_API_KEY', 'UNPAYWALL_EMAIL', 'SCITE_API_KEY', 'WOS_API_KEY
 
 def _error_hint(step: str, reason: str) -> str:
     lower = reason.lower()
-    if 'pypdf' in lower or 'pdf' in lower:
+    if 'budget' in lower or 'exceeded' in lower or 'too large' in lower:
+        return 'Input exceeds size or page budget; provide a smaller file or extract relevant sections'
+    if 'pypdf' in lower or 'fonttools' in lower or (
+        'pdf' in lower and any(k in lower for k in ('install', 'missing', 'require', 'unavailable', 'support'))
+    ):
         return 'Install PDF support with: pip install "academic-research-kernel[research]"'
     if 'stale' in lower or 'fingerprint' in lower or 'changed' in lower:
         return 'Materials changed; re-run: academic-research-kernel research prepare <input> --project <dir>'
@@ -50,7 +54,7 @@ def doctor():
             except Exception:
                 report['required_dependencies'][name] = 'available'
         else:
-            report['required_dependencies'][name] = 'not installed (stdlib fallback active; install [stats] for SciPy/statsmodels)'
+            report['required_dependencies'][name] = 'not installed (install numpy, scipy, and statsmodels for statistical recomputation)'
     for name in OPTIONAL:
         report['optional_dependencies'][name] = 'available' if util.find_spec(name) else 'not installed (optional)'
     try:
@@ -75,7 +79,7 @@ def doctor():
         if not skill.read_text(encoding='utf-8').strip():
             raise ValueError('portable paper-research skill missing')
         has_pypdf = bool(util.find_spec('pypdf'))
-        has_fonttools = bool(util.find_spec('fonttools'))
+        has_fonttools = bool(util.find_spec('fontTools') or util.find_spec('fonttools'))
         pdf_ready = has_pypdf and has_fonttools
         report['research'] = {
             'semantic_producer': 'local agent required',

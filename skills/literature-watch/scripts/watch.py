@@ -156,10 +156,17 @@ def _fetch_paged_openalex(query_params: dict, max_pages: int = 1):
             data = get(f'{OPENALEX}/works?{params}') or {}
         except (HTTPError, URLError) as exc:
             if page > 1 and all_results:
-                code = getattr(exc, 'code', 'network_error')
+                code = getattr(exc, 'code', None)
+                if code in (401, 403):
+                    reason = f'status={code}; 匿名请求继续使用 next_cursor 需配置免费 OPENALEX_API_KEY'
+                elif code == 429:
+                    reason = 'status=429; 触发 OpenAlex 速率或日额度限制'
+                elif code is not None:
+                    reason = f'status={code}; OpenAlex 远端服务异常'
+                else:
+                    reason = f'network_error={getattr(exc, "reason", exc)}; 网络连接中断'
                 print(
-                    f'⚠ OpenAlex 翻页在第 {page} 页中断 (status={code}); '
-                    '匿名请求继续使用 next_cursor 需配置免费 OPENALEX_API_KEY，已保留前序页面结果。',
+                    f'⚠ OpenAlex 翻页在第 {page} 页中断 ({reason})，已保留前序页面结果。',
                     file=sys.stderr,
                 )
                 truncated = True

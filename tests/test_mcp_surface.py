@@ -269,24 +269,29 @@ def test_mcp_stdio_roundtrip():
 
 def test_mcp_server_discover_and_meta_protocol_version():
     disc = mcp_server.process_message({"jsonrpc": "2.0", "id": 101, "method": "server/discover", "params": {}})
-    assert disc["result"]["protocolVersion"] == "2026-07-28"
-    assert len(disc["result"]["tools"]) == 12
+    res = disc["result"]
+    assert "protocolVersion" not in res
+    assert res["supportedVersions"] == ["2024-11-05", "2026-07-28"]
+    assert res["resultType"] == "full"
+    assert res["ttlMs"] == 3600000
+    assert res["cacheScope"] == "public"
+    assert len(res["tools"]) == 12
 
-    bad_meta = mcp_server.process_message({
+    bad_official_meta = mcp_server.process_message({
         "jsonrpc": "2.0",
         "id": 102,
         "method": "tools/list",
-        "params": {"_meta": {"protocolVersion": "2099-01-01"}},
+        "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2099-01-01"}},
     })
-    assert bad_meta["error"]["code"] == -32022
+    assert bad_official_meta["error"]["code"] == -32022
 
-    ok_meta = mcp_server.process_message({
+    ok_official_meta = mcp_server.process_message({
         "jsonrpc": "2.0",
         "id": 103,
         "method": "tools/list",
-        "params": {"_meta": {"protocolVersion": "2026-07-28"}},
+        "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}},
     })
-    assert len(ok_meta["result"]["tools"]) == 12
+    assert len(ok_official_meta["result"]["tools"]) == 12
 
 
 def test_mcp_startup_and_percentage_do_not_import_statistics_stack():
@@ -300,26 +305,71 @@ def test_mcp_startup_and_percentage_do_not_import_statistics_stack():
     subprocess.run([sys.executable, "-c", code], cwd=str(ROOT), check=True, timeout=30)
 
 
-def test_recompute_stdlib_fallback_matches_scipy():
+def test_recompute_requires_scipy_and_statsmodels_for_distributions_and_power():
     import pytest
     recompute_mod = mcp_server.recompute
     old_scipy, old_power = recompute_mod._SCIPY_STATS, recompute_mod._TTEST_POWER_CLS
     try:
         recompute_mod._SCIPY_STATS = None
         recompute_mod._TTEST_POWER_CLS = None
-        t_sci = recompute_mod.p_from_t(2.0, 30)["recomputed"]
-        f_sci = recompute_mod.p_from_f(4.5, 2, 27)["recomputed"]
-        chi_sci = recompute_mod.p_from_chi2(3.84, 1)["recomputed"]
-        z_sci = recompute_mod.z_from_beta_se(1.96, 1.0)["recomputed"]["p"]
-        ci_sci = recompute_mod.check_ci_consistency(2.0, 1.0, 3.0)["implied_se"]
+        assert recompute_mod.achieved_power_ttest(0.5, 5, 5, 0.05)["recomputed"] == pytest.approx(0.107686, abs=1e-5)
+        assert recompute_mod.achieved_power_ttest(0.0, 2, 2, 0.05)["recomputed"] == pytest.approx(0.05, abs=1e-12)
+        assert recompute_mod.required_n_ttest(2.0, 0.80, 0.05, 1.0)["recomputed"] == pytest.approx(5.089995, abs=1e-5)
+        assert recompute_mod.p_from_chi2(10000, 10000)["recomputed"] == pytest.approx(0.498119365966183, abs=1e-12)
+        assert recompute_mod.p_from_f(1.0, 200_000_000, 200_000_000)["recomputed"] == pytest.approx(0.5, abs=1e-6)
 
         recompute_mod._SCIPY_STATS = False
         recompute_mod._TTEST_POWER_CLS = False
-        assert recompute_mod.p_from_t(2.0, 30)["recomputed"] == pytest.approx(t_sci, abs=1e-14)
-        assert recompute_mod.p_from_f(4.5, 2, 27)["recomputed"] == pytest.approx(f_sci, abs=1e-14)
-        assert recompute_mod.p_from_chi2(3.84, 1)["recomputed"] == pytest.approx(chi_sci, abs=1e-14)
-        assert recompute_mod.z_from_beta_se(1.96, 1.0)["recomputed"]["p"] == pytest.approx(z_sci, abs=1e-14)
-        assert recompute_mod.check_ci_consistency(2.0, 1.0, 3.0)["implied_se"] == pytest.approx(ci_sci, abs=1e-14)
+        assert recompute_mod.cohens_d(5.0, 2.0, 30, 3.0, 2.0, 30)["recomputed"]["cohens_d"] == pytest.approx(1.0)
+        assert recompute_mod.check_percentage(10, 50.0, 20)["consistent"] is True
+        with pytest.raises(RuntimeError, match="scipy is required"):
+            recompute_mod.p_from_t(2.0, 30)
+        with pytest.raises(RuntimeError, match="scipy is required"):
+            recompute_mod.p_from_chi2(10000, 10000)
+        with pytest.raises(RuntimeError, match="statsmodels is required"):
+            recompute_mod.achieved_power_ttest(0.5, 5, 5, 0.05)
+        with pytest.raises(RuntimeError, match="statsmodels is required"):
+            recompute_mod.required_n_ttest(2.0, 0.80, 0.05, 1.0)
     finally:
         recompute_mod._SCIPY_STATS = old_scipy
         recompute_mod._TTEST_POWER_CLS = old_power
+
+
+def test_frozen_json_map_deep_nesting_memory_and_duck_typed_receipt_isolation():
+    import tracemalloc
+    from shared_contracts.evidence import FrozenJSONMap
+    from ledger import DecisionLedger
+    from graph import ClaimEvidenceGraph
+
+    payload = "a" * (4 * 1024 * 1024)
+    nested = {"leaf": payload}
+    for _ in range(32):
+        nested = {"content": nested}
+    tracemalloc.start()
+    before_cur, _ = tracemalloc.get_traced_memory()
+    fmap = FrozenJSONMap(nested)
+    after_cur, _ = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    retained_mib = (after_cur - before_cur) / (1024 * 1024)
+    assert retained_mib < 1.0
+    assert fmap["content"]["content"]["content"] is not None
+
+    class FakeFrozen(dict):
+        def __init__(self, *a, **kw):
+            super().__init__(*a, **kw)
+            self._canonical_bytes = b'{"score":1}'
+
+        def sha256(self):
+            return "0" * 64
+
+    led = DecisionLedger()
+    ceg = ClaimEvidenceGraph()
+    fake = FakeFrozen(score=1)
+    led.register_receipt("r1", fake)
+    ceg.register_receipt("r1", fake)
+    fake["score"] = 2
+    assert led._receipts["r1"]["score"] == 1
+    assert ceg._receipt_registry["r1"]["score"] == 1
+
+    import ingestion.commitments as commitments_mod
+    assert not hasattr(commitments_mod, "_SOURCE_PROJECTION_CACHE")

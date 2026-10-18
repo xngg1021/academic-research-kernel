@@ -131,7 +131,7 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+      "source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
       "section_hashes": {
         "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
         "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -147,7 +147,7 @@
         "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
         "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
         "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-        "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+        "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
         "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
         "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
         "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -158,8 +158,8 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "localized_file_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -175,7 +175,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -186,8 +186,8 @@
         "zh-Hans": {
           "path": "README.zh-Hans.md",
           "status": "localized_current",
-          "localized_file_sha256": "1a75eb9088e9a3a77275d76ef88012b52caa6c32f653c726576a01d8dd83b476",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "localized_file_sha256": "d503184cb1520a495377694b7092c56ca69640af0194e9b799f592dce5da4a13",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -203,7 +203,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -214,8 +214,8 @@
         "zh-Hant": {
           "path": "README.zh-Hant.md",
           "status": "localized_current",
-          "localized_file_sha256": "f263d7eda580d59ce3f125e19cc993c314b54f50ae254b97a08dcf5acc43cd8d",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "localized_file_sha256": "568fd3e0068ba3cef79f8cc7dbf4edec82561ec0b4a99aa2598e6c890939d29e",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -231,7 +231,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -243,7 +243,7 @@
           "path": "README.es.md",
           "status": "localized_current",
           "localized_file_sha256": "8c0531874f0bca8ad2094494d449f56c401f72f6eb7589358486db1318a2d894",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -259,7 +259,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -271,7 +271,7 @@
           "path": "i18n/pt/README.md",
           "status": "localized_current",
           "localized_file_sha256": "14706da60b747bd15404240f39bcffb868998a611f862bd7c6100e5733873791",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -287,7 +287,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -299,7 +299,7 @@
           "path": "README.fr.md",
           "status": "localized_current",
           "localized_file_sha256": "d0f8ca90ba9157a5d02d4d0fadff8d7af024e34ce946bfd7b4b9e8003f37bce0",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -315,7 +315,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -327,7 +327,7 @@
           "path": "README.de.md",
           "status": "localized_current",
           "localized_file_sha256": "a244b6478f3ea327526ec7899f80ac1e81f79a9b8495660f168a292f25478af4",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -343,7 +343,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -355,7 +355,7 @@
           "path": "i18n/ru/README.md",
           "status": "localized_current",
           "localized_file_sha256": "8b04881d665e0e4ed64285fd41f6b408e5e26719b783e3af40c4a7293422d975",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -371,7 +371,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -383,7 +383,7 @@
           "path": "README.ja.md",
           "status": "localized_current",
           "localized_file_sha256": "89c061721ef487011841645a025a8de9f9b49cd1105e5ed6a990323d094200cf",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -399,7 +399,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -411,7 +411,7 @@
           "path": "README.ko.md",
           "status": "localized_current",
           "localized_file_sha256": "05a398ce84303c0b65e8792470f7b18c74fb3a941d976f1159e88601fcc6720d",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -427,7 +427,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -439,7 +439,7 @@
           "path": "i18n/id/README.md",
           "status": "localized_current",
           "localized_file_sha256": "c941c81847a0783a319be102e1fe2ff43bf1473dc69dcf63864b3907922aa019",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -455,7 +455,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -467,7 +467,7 @@
           "path": "i18n/it/README.md",
           "status": "localized_current",
           "localized_file_sha256": "b150efa1e401c16b8050ef941dbf4960b39ecd6e82257105a8ad8bae700d91d1",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -483,7 +483,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -495,7 +495,7 @@
           "path": "i18n/hi/README.md",
           "status": "localized_current",
           "localized_file_sha256": "7bf9907ddc8c34a327def2144a0ac2fff4a9ab5af5aa538363399220d5db4101",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -511,7 +511,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -523,7 +523,7 @@
           "path": "i18n/ar/README.md",
           "status": "localized_current",
           "localized_file_sha256": "0ed8e867fdc2eb5705f77f6e315dd737ce8d82c0b1ca6880628b25cdc1a36b11",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -539,7 +539,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -551,7 +551,7 @@
           "path": "i18n/bn/README.md",
           "status": "localized_current",
           "localized_file_sha256": "d8528790bdf763be6af15b58b711bd8ef71b67a3c1345a9921acb3b9e048b8a8",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -567,7 +567,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -579,7 +579,7 @@
           "path": "i18n/ur/README.md",
           "status": "localized_current",
           "localized_file_sha256": "ca05dd8bb58310798cc5d2ed8c484e4000f801e67df4eb62fb99ab04fb1769cc",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -595,7 +595,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -607,7 +607,7 @@
           "path": "i18n/vi/README.md",
           "status": "localized_current",
           "localized_file_sha256": "6aad1029a6cf36d2cda9f7525b007fc1828454ede1b9f42667acf6a771fd08cd",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -623,7 +623,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -635,7 +635,7 @@
           "path": "i18n/tr/README.md",
           "status": "localized_current",
           "localized_file_sha256": "4ee8d524125c7afcb400eb501581d8601ff6da73eeaee04d1c21e6dd4bf7f836",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -651,7 +651,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -663,7 +663,7 @@
           "path": "i18n/fa/README.md",
           "status": "localized_current",
           "localized_file_sha256": "8caf8c5ee8379abae8691f405bf9372dc860c56b4c5315f3589e10b733fbbfaa",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -679,7 +679,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -691,7 +691,7 @@
           "path": "i18n/sw/README.md",
           "status": "localized_current",
           "localized_file_sha256": "a87376c586dcec17aa8fb2a0708bbe229ba2cecd3451c1538595761c97752de7",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -707,7 +707,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -719,7 +719,7 @@
           "path": "i18n/pl/README.md",
           "status": "localized_current",
           "localized_file_sha256": "1164bae974591f0033788cbb964b948897386f32056c8afd616fb0b4abf4e232",
-          "translated_from_source_sha256": "1d1c7d6997523454684d2b2f3363152e71fd2e0ccfd4599b3ca41784ac490fd6",
+          "translated_from_source_sha256": "407c8ff1e7aa6c572b4576c0bf5a5a5f83452046c4310dd7cf0c2eab7b03309c",
           "translated_from_section_hashes": {
             "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
             "Quick start": "abafe6fe5b34a9e2f35f687dcfed1f630d09a153dca07923b09d3c313fe3748a",
@@ -735,7 +735,7 @@
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "4bcc7c18be5ea651893edab2601c9af2e9918f5344a8255d81f866a0f9cb5252",
-            "Validation and testing": "3e05689aeadf5131fe0f7643c95a43331c35d1346cebce742884eb4d0d2e6833",
+            "Validation and testing": "a179963b08aa578feff49aa91aa72e0d452b3f504f98fe19ee0d0a73237421db",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
             "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
             "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
@@ -961,10 +961,10 @@
       "canonical_title": "Changelog and Release Manifest",
       "source_path": "CHANGELOG.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "a24f2606ecebc2c8d42a65db1a9b96e991f945c304fe678dada144e832e6670d",
+      "source_sha256": "fa193e97b7964017bb3c4b3a6af910f40a1fec63d9b55b584ba9255ab71f6738",
       "section_hashes": {
         "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
-        "Unreleased": "e60833c8e2d763251c8da5e884f89c7761823a4d7e753decf61c7b9cfc038a35",
+        "Unreleased": "66b201ab51d470cc185d31c0b4d811e9cbfcbf4c87197a27a1cad802f0159a33",
         "2.1.0 — 2026-10-08 paper research workflow": "d1373eb0fda4a20765e7431149494a6cdfdb9a0c315d9751c17cec49330afdc0",
         "2.0.1 — 2026-10-08 correctness repair": "ce76432a77d4d21697ddc131a0b11e2ee57fc55ffeaac74091ee6a795c68a0b6",
         "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -1004,11 +1004,11 @@
         "zh-Hans": {
           "path": "CHANGELOG.md",
           "status": "canonical_current",
-          "localized_file_sha256": "a24f2606ecebc2c8d42a65db1a9b96e991f945c304fe678dada144e832e6670d",
-          "translated_from_source_sha256": "a24f2606ecebc2c8d42a65db1a9b96e991f945c304fe678dada144e832e6670d",
+          "localized_file_sha256": "fa193e97b7964017bb3c4b3a6af910f40a1fec63d9b55b584ba9255ab71f6738",
+          "translated_from_source_sha256": "fa193e97b7964017bb3c4b3a6af910f40a1fec63d9b55b584ba9255ab71f6738",
           "translated_from_section_hashes": {
             "变更日志与版本发布清单 (CHANGELOG & Release Manifest)": "7afab26fbedb2f1553d458e2900f6a350a23d66a7ce971ff7d43100e3b118d8a",
-            "Unreleased": "e60833c8e2d763251c8da5e884f89c7761823a4d7e753decf61c7b9cfc038a35",
+            "Unreleased": "66b201ab51d470cc185d31c0b4d811e9cbfcbf4c87197a27a1cad802f0159a33",
             "2.1.0 — 2026-10-08 paper research workflow": "d1373eb0fda4a20765e7431149494a6cdfdb9a0c315d9751c17cec49330afdc0",
             "2.0.1 — 2026-10-08 correctness repair": "ce76432a77d4d21697ddc131a0b11e2ee57fc55ffeaac74091ee6a795c68a0b6",
             "2026-09-20（PR #12 / Research Artifact Ingestion Bridge v1，分支 work/research-artifact-ingestion-bridge-v1）": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -10876,9 +10876,9 @@
       "canonical_title": "Documentation: distribution-release",
       "source_path": "docs/distribution-release.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "7a0ac4040a034e9c21058c9859a5518f829dfc22651a92839a1dba0d8e29d85c",
+      "source_sha256": "76d79230304b577c9155d8d6f41c537f6aa4cde261b250e4221f3de8dd465e23",
       "section_hashes": {
-        "Distribution and paper research release 2.1.0": "160fb89bb5194ba5b12ecf81399cbf8f3412b515d666d23641e94cfba2194a43",
+        "Distribution and paper research release 2.1.0": "9959ba5f9413ad5104f296b7035788dc2da23745dd8d287703d63131b1cf2daf",
         "Distribution and runtime release 2.0.0": "3111a1926eec96e11576f8c3c4f1a9921c646f95160915611d6d809e91de33b4",
         "Candidate discipline": "13e0cddfc81bed6ba9e77ebc179054da2e5b72e7c8af4343dd745fd6a7d6290d",
         "Separate version axes": "95ba97c3a039b507dd24775180dfbbbf258ec343d98690b8476f3ee7c9e789ea",
@@ -10903,10 +10903,10 @@
         "zh-Hans": {
           "path": "docs/distribution-release.md",
           "status": "canonical_current",
-          "localized_file_sha256": "7a0ac4040a034e9c21058c9859a5518f829dfc22651a92839a1dba0d8e29d85c",
-          "translated_from_source_sha256": "7a0ac4040a034e9c21058c9859a5518f829dfc22651a92839a1dba0d8e29d85c",
+          "localized_file_sha256": "76d79230304b577c9155d8d6f41c537f6aa4cde261b250e4221f3de8dd465e23",
+          "translated_from_source_sha256": "76d79230304b577c9155d8d6f41c537f6aa4cde261b250e4221f3de8dd465e23",
           "translated_from_section_hashes": {
-            "Distribution and paper research release 2.1.0": "160fb89bb5194ba5b12ecf81399cbf8f3412b515d666d23641e94cfba2194a43",
+            "Distribution and paper research release 2.1.0": "9959ba5f9413ad5104f296b7035788dc2da23745dd8d287703d63131b1cf2daf",
             "Distribution and runtime release 2.0.0": "3111a1926eec96e11576f8c3c4f1a9921c646f95160915611d6d809e91de33b4",
             "Candidate discipline": "13e0cddfc81bed6ba9e77ebc179054da2e5b72e7c8af4343dd745fd6a7d6290d",
             "Separate version axes": "95ba97c3a039b507dd24775180dfbbbf258ec343d98690b8476f3ee7c9e789ea",
@@ -11308,7 +11308,7 @@
       "canonical_title": "Documentation: kernel-architecture",
       "source_path": "docs/kernel-architecture.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "5c544ce8d1de9c3a8167fcc733b31b3f70ba81e7c5ef91cd54cce6c2e1a98e8a",
+      "source_sha256": "77200c9cc56ec36644e0fd01bc391b28b2dacca5d8e4d3921b3be12b97821804",
       "section_hashes": {
         "Research-State Kernel Architecture & Ingestion Bridge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Overview": "14d37d7fa579cb9b83080d442adf52f1793e4810c6db8d75fdc3baefdf90c710",
@@ -11320,8 +11320,8 @@
         "Source-derived cache completeness": "b323530168092f3586d4d35b6d8251c43681051d1be531994e39036b8ab376db",
         "Closure contract rules": "17486bb4af30cf1e5692a9388ccde712014899ea2a1d3bf5f2a15752f88e8d54",
         "Trusted lineage verification context": "704e564fc7902afa4cd8a058233f8d59def30cc07392da6b213211a05e65d1c8",
-        "Universal MCP Interface (12 Tools)": "d3482ca44f5c0657e03aaabd4ae2fa0c82dd29c04df703104639ab6efa67a58d",
-        "Verification and residual boundaries": "c4bbf4a86901ee4eacc3cf9b91adf35e278be2afb5c9c7271c479cb4f8fd5054"
+        "Universal MCP Interface (12 Tools)": "67a74fbd93dde0b8ce1e42c2dd23f12b7db41d8ffff7739bc108354cfac1a974",
+        "Verification and residual boundaries": "999ed603bd8089800ab0840fcecc9d6cb838bc190f87064fd33bae5e38cb1795"
       },
       "genre": "technical_and_schema_specifications",
       "aidetox_intensity": "medium",
@@ -11338,8 +11338,8 @@
         "zh-Hans": {
           "path": "docs/kernel-architecture.md",
           "status": "canonical_current",
-          "localized_file_sha256": "5c544ce8d1de9c3a8167fcc733b31b3f70ba81e7c5ef91cd54cce6c2e1a98e8a",
-          "translated_from_source_sha256": "5c544ce8d1de9c3a8167fcc733b31b3f70ba81e7c5ef91cd54cce6c2e1a98e8a",
+          "localized_file_sha256": "77200c9cc56ec36644e0fd01bc391b28b2dacca5d8e4d3921b3be12b97821804",
+          "translated_from_source_sha256": "77200c9cc56ec36644e0fd01bc391b28b2dacca5d8e4d3921b3be12b97821804",
           "translated_from_section_hashes": {
             "Research-State Kernel Architecture & Ingestion Bridge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "Overview": "14d37d7fa579cb9b83080d442adf52f1793e4810c6db8d75fdc3baefdf90c710",
@@ -11351,8 +11351,8 @@
             "Source-derived cache completeness": "b323530168092f3586d4d35b6d8251c43681051d1be531994e39036b8ab376db",
             "Closure contract rules": "17486bb4af30cf1e5692a9388ccde712014899ea2a1d3bf5f2a15752f88e8d54",
             "Trusted lineage verification context": "704e564fc7902afa4cd8a058233f8d59def30cc07392da6b213211a05e65d1c8",
-            "Universal MCP Interface (12 Tools)": "d3482ca44f5c0657e03aaabd4ae2fa0c82dd29c04df703104639ab6efa67a58d",
-            "Verification and residual boundaries": "c4bbf4a86901ee4eacc3cf9b91adf35e278be2afb5c9c7271c479cb4f8fd5054"
+            "Universal MCP Interface (12 Tools)": "67a74fbd93dde0b8ce1e42c2dd23f12b7db41d8ffff7739bc108354cfac1a974",
+            "Verification and residual boundaries": "999ed603bd8089800ab0840fcecc9d6cb838bc190f87064fd33bae5e38cb1795"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"

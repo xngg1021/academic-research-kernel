@@ -91,7 +91,7 @@ class FrozenJSONMap(collections.abc.Mapping):
     __slots__ = ("_data", "_canonical_bytes", "_sha256")
 
     def __init__(self, value: Optional[Mapping[str, Any]] = None):
-        if isinstance(value, FrozenJSONMap):
+        if type(value) is FrozenJSONMap:
             object.__setattr__(self, "_data", value._data)
             object.__setattr__(self, "_canonical_bytes", value._canonical_bytes)
             object.__setattr__(self, "_sha256", value._sha256)
@@ -105,16 +105,29 @@ class FrozenJSONMap(collections.abc.Mapping):
             if not isinstance(key, str):
                 raise TypeError(f"JSON object keys must be strings, got {type(key).__name__}")
             frozen[key] = freeze_json(item)
-        # Canonical serialization is also the fail-closed check for NaN/Inf.
-        cb = canonical_json_bytes({k: _thaw_val(v) for k, v in frozen.items()})
         object.__setattr__(self, "_data", MappingProxyType(frozen))
-        object.__setattr__(self, "_canonical_bytes", cb)
+        object.__setattr__(self, "_canonical_bytes", None)
         object.__setattr__(self, "_sha256", None)
+
+    def canonical_bytes(self) -> bytes:
+        cb = self._canonical_bytes
+        if cb is not None:
+            return cb
+        cb = json.dumps(
+            self.to_dict(),
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        if len(cb) <= 16384:
+            object.__setattr__(self, "_canonical_bytes", cb)
+        return cb
 
     def sha256(self) -> str:
         digest = self._sha256
         if digest is None:
-            digest = compute_sha256(self._canonical_bytes)
+            digest = compute_sha256(self.canonical_bytes())
             object.__setattr__(self, "_sha256", digest)
         return digest
 
@@ -150,7 +163,7 @@ class FrozenJSONMap(collections.abc.Mapping):
 
 def freeze_json(value: Any) -> Any:
     """Recursively freeze a JSON-domain value and reject custom mutable objects."""
-    if isinstance(value, FrozenJSONMap):
+    if type(value) is FrozenJSONMap:
         return value
     if hasattr(value, "to_dict"):
         return freeze_json(value.to_dict())
@@ -160,7 +173,8 @@ def freeze_json(value: Any) -> Any:
         return tuple(freeze_json(item) for item in value)
     if value is None or isinstance(value, (str, int, float, bool)):
         # Reject non-finite floats through the canonical serializer.
-        canonical_json_bytes(value)
+        if isinstance(value, float):
+            canonical_json_bytes(value)
         return value
     raise TypeError(f"Value of type {type(value).__name__!r} is outside the JSON domain")
 
@@ -197,8 +211,8 @@ def canonical_text(text: str) -> str:
 
 def canonical_json_bytes(obj: Any) -> bytes:
     """Serialize object to strictly canonical UTF-8 JSON bytes."""
-    if isinstance(obj, FrozenJSONMap):
-        return obj._canonical_bytes
+    if type(obj) is FrozenJSONMap:
+        return obj.canonical_bytes()
     return json.dumps(
         _thaw_val(obj),
         sort_keys=True,

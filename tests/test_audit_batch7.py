@@ -300,9 +300,9 @@ def test_p1_openalex_capped_cursor_paging():
     assert tr_2 is False
 
 
-def test_p1_openalex_anonymous_second_page_401_retains_first_page():
+def test_p1_openalex_anonymous_second_page_401_retains_first_page(capsys):
     """When page 2 cursor fails with HTTP 401 (anonymous cursor restriction), retain page 1 and mark truncated=True."""
-    from urllib.error import HTTPError
+    from urllib.error import HTTPError, URLError
 
     def fake_urlopen_401(req, timeout=20):
         url = req.full_url
@@ -316,3 +316,20 @@ def test_p1_openalex_anonymous_second_page_401_retains_first_page():
     assert len(items) == 2
     assert items[0]["id"] == "W1"
     assert truncated is True
+    err_401 = capsys.readouterr().err
+    assert "OPENALEX_API_KEY" in err_401
+
+    def fake_urlopen_offline(req, timeout=20):
+        url = req.full_url
+        if "cursor=%2A" in url or "cursor=*" in url:
+            resp_body = b'{"meta": {"count": 4, "next_cursor": "cursor_page_2"}, "results": [{"id": "W1", "title": "P1"}]}'
+            return _make_mock_response(resp_body)
+        raise URLError("offline")
+
+    with patch.object(lit_watch, "urlopen", side_effect=fake_urlopen_offline):
+        items_net, truncated_net = lit_watch.fetch_topic_works("agent", date(2026, 1, 1), max_pages=2)
+    assert len(items_net) == 1
+    assert truncated_net is True
+    err_net = capsys.readouterr().err
+    assert "网络连接中断" in err_net
+    assert "OPENALEX_API_KEY" not in err_net

@@ -225,3 +225,11 @@ def test_csl_json_preserves_id_and_maps_preprint_to_valid_csl_type():
     exported_ms = interop.to_csl_json(no_id_work)
     assert exported_ms['id']
     assert exported_ms['type'] == 'manuscript'
+
+    zh_w1 = CanonicalWork(title='基于教育公平的研究', authors=['张三'], year=2026)
+    zh_w2 = CanonicalWork(title='气候变化与水稻产量', authors=['李四'], year=2026)
+    csl_w1 = interop.to_csl_json(zh_w1)
+    csl_w2 = interop.to_csl_json(zh_w2)
+    assert csl_w1['id'] != csl_w2['id']
+    assert csl_w1['id'].startswith('anon2026work-')
+    assert csl_w2['id'].startswith('anon2026work-')

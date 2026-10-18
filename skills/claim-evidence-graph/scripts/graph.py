@@ -278,6 +278,7 @@ def canonical_evidence_claim_digest(claim_item: Dict[str, Any]) -> str:
 try:
     if __package__ and __package__.startswith("academic_research_kernel"):
         from academic_research_kernel.shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -289,6 +290,7 @@ try:
         )
     else:
         from shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -306,6 +308,7 @@ except ImportError:
         sys.path.insert(0, str(_repo_root / "scripts"))
     if __package__ and __package__.startswith("academic_research_kernel"):
         from academic_research_kernel.shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -317,6 +320,7 @@ except ImportError:
         )
     else:
         from shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -556,7 +560,7 @@ class ClaimEvidenceGraph:
         cloned._support_edge_keys = set(self._support_edge_keys)
         cloned._claim_relation_keys = set(self._claim_relation_keys)
         cloned._receipt_registry = {
-            k: (v if hasattr(v, "_canonical_bytes") else copy.deepcopy(v, memo))
+            k: (v if type(v) is FrozenJSONMap else copy.deepcopy(v, memo))
             for k, v in self._receipt_registry.items()
         }
         return cloned
@@ -564,9 +568,9 @@ class ClaimEvidenceGraph:
     def register_receipt(self, receipt_id: str, receipt_data: Any):
         """Register an AcademicEvidenceReceipt or LineageReceipt with deepcopy and conflict rejection."""
         rid = str(receipt_id).strip()
-        if rid in self._receipt_registry and self._receipt_registry[rid] is receipt_data and hasattr(receipt_data, "_canonical_bytes"):
+        if rid in self._receipt_registry and self._receipt_registry[rid] is receipt_data and type(receipt_data) is FrozenJSONMap:
             return
-        snapshot = copy.deepcopy(receipt_data)
+        snapshot = receipt_data if type(receipt_data) is FrozenJSONMap else copy.deepcopy(receipt_data)
         if rid in self._receipt_registry:
             existing = self._receipt_registry[rid]
             ex_dict = existing.to_dict() if hasattr(existing, "to_dict") else existing

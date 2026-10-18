@@ -18,8 +18,8 @@ invalidation. HTML/XML and bounded DOCX/XLSX parsing use Python's standard libra
 The base MCP dependencies are unchanged; `qa` includes `research` so source and
 archive tests exercise the parser without global dependencies. At runtime,
 `mcp_server` and `recompute` load `numpy`, `scipy`, and `statsmodels` lazily on
-first statistical tool invocation, with a deterministic Python standard-library
-fallback when optional scientific wheels are absent. Version metadata:
+first statistical distribution invocation while executing closed-form checks
+with the Python standard library. Version metadata:
 [fonttools 4.65.0](https://pypi.org/pypi/fonttools/4.65.0/json),
 [fonttools 4.66.1](https://pypi.org/pypi/fonttools/4.66.1/json).
 
