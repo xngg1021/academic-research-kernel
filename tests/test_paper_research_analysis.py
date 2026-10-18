@@ -414,3 +414,17 @@ def test_numeric_library_version_change_invalidates_computation_cache(case, monk
     assert changed['reused'] is False
     assert changed['analysis_fingerprint'] != first['analysis_fingerprint']
     assert changed['runtime']['libraries']['scipy'] == '999.0.synthetic'
+
+
+def test_html_report_collapses_technical_appendix_and_doctor_reports_pdf_readiness(case):
+    project, _, _, path = case
+    receipt = analysis.finish(project, path)
+    html_text = Path(receipt["report_html"]).read_text("utf-8")
+    assert '<details class="tech-appendix"><summary>' in html_text
+    assert html_text.count('<details class="tech-appendix">') == 2
+
+    cli = importlib.import_module(PACKAGE + ".cli")
+    diag = cli.doctor()
+    assert "readiness" in diag
+    assert "pdf_ready" in diag["research"]
+    assert "font_decoder" in diag["research"]

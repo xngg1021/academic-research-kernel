@@ -11,10 +11,22 @@ import shutil
 
 from ._version import __version__
 
-REQUIRED = ('jsonschema', 'numpy', 'scipy', 'statsmodels')
+REQUIRED = ('jsonschema',)
+STATS = ('numpy', 'scipy', 'statsmodels')
 OPTIONAL = ('sympy', 'matplotlib', 'sklearn', 'networkx', 'lifelines', 'arch', 'pingouin', 'torch', 'cupy')
 SERVICES = ('OPENALEX_API_KEY', 'UNPAYWALL_EMAIL', 'SCITE_API_KEY', 'WOS_API_KEY',
             'SCOPUS_API_KEY', 'DIMENSIONS_API_KEY')
+
+
+def _error_hint(step: str, reason: str) -> str:
+    lower = reason.lower()
+    if 'pypdf' in lower or 'pdf' in lower:
+        return 'Install PDF support with: pip install "academic-research-kernel[research]"'
+    if 'stale' in lower or 'fingerprint' in lower or 'changed' in lower:
+        return 'Materials changed; re-run: academic-research-kernel research prepare <input> --project <dir>'
+    if 'semantic producer' in lower or 'candidate' in lower or 'schema' in lower:
+        return 'Have your Agent read the prepared materials using skills/paper-research/SKILL.md and pass --candidate'
+    return f'Check inputs for step "{step}" or run: academic-research-kernel doctor'
 
 
 def doctor():
@@ -31,6 +43,14 @@ def doctor():
         except Exception as exc:
             report['required_dependencies'][name] = 'unavailable'
             report['errors'].append(f'{name}: {type(exc).__name__}')
+    for name in STATS:
+        if util.find_spec(name):
+            try:
+                report['required_dependencies'][name] = metadata.version(name)
+            except Exception:
+                report['required_dependencies'][name] = 'available'
+        else:
+            report['required_dependencies'][name] = 'not installed (stdlib fallback active; install [stats] for SciPy/statsmodels)'
     for name in OPTIONAL:
         report['optional_dependencies'][name] = 'available' if util.find_spec(name) else 'not installed (optional)'
     try:
@@ -54,12 +74,21 @@ def doctor():
         skill = resources.files('academic_research_kernel').joinpath('skills/paper-research/SKILL.md')
         if not skill.read_text(encoding='utf-8').strip():
             raise ValueError('portable paper-research skill missing')
-        report['research'] = {'semantic_producer': 'local agent required',
-                              'pdf_parser': metadata.version('pypdf') if util.find_spec('pypdf') else 'not installed; use [research]',
-                              'portable_skill': 'available', 'schema_count': 3}
+        has_pypdf = bool(util.find_spec('pypdf'))
+        has_fonttools = bool(util.find_spec('fonttools'))
+        pdf_ready = has_pypdf and has_fonttools
+        report['research'] = {
+            'semantic_producer': 'local agent required',
+            'pdf_parser': metadata.version('pypdf') if has_pypdf else 'not installed; use [research]',
+            'font_decoder': metadata.version('fonttools') if has_fonttools else 'not installed; use [research]',
+            'pdf_ready': pdf_ready,
+            'portable_skill': 'available',
+            'schema_count': 3,
+        }
     except Exception as exc:
         report['schema_resources'] = {'status': 'error'}
         report['errors'].append(f'resources: {type(exc).__name__}')
+        pdf_ready = False
     try:
         from . import mcp_server
         report['mcp'] = {'importable': True, 'tool_count': len(mcp_server.TOOLS)}
@@ -72,6 +101,11 @@ def doctor():
         report['mcp'] = {'importable': False}
         report['errors'].append(f'MCP: {type(exc).__name__}')
     report['status'] = 'ok' if not report['errors'] else 'error'
+    report['readiness'] = {
+        'core_verification_and_mcp': 'ready' if report['status'] == 'ok' else 'error',
+        'pdf_reading': 'ready' if pdf_ready else 'not ready (install academic-research-kernel[research] to parse PDF files)',
+        'local_agent': 'connect your Agent (Claude Code, Cursor, Codex, Gemini CLI, or Hermes) to run paper-research',
+    }
     return report
 
 
@@ -146,7 +180,13 @@ def main(argv=None):
             print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
             return 0
         except (ValueError, OSError, KeyError, ImportError) as exc:
-            print(json.dumps({'status': 'error', 'step': args.step, 'reason': str(exc)}, ensure_ascii=False), file=sys.stderr)
+            reason = str(exc)
+            print(json.dumps({
+                'status': 'error',
+                'step': args.step,
+                'reason': reason,
+                'hint': _error_hint(args.step, reason),
+            }, ensure_ascii=False), file=sys.stderr)
             return 1
     try:
         from .mcp_server import main as serve

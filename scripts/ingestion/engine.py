@@ -156,7 +156,7 @@ class IngestionEngine:
                     break
                 continue
 
-            before = staged.clone()
+            before = staged.clone() if index > 0 else None
             try:
                 plan = adapter.plan(env, staged, bindings)
                 if not plan.valid:
@@ -209,7 +209,7 @@ class IngestionEngine:
                     )
                 results[index] = receipt
             except Exception as exc:
-                staged = before
+                staged = before if before is not None else target_state.clone()
                 errors = [str(exc)]
                 results[index] = self._rejected(
                     env,

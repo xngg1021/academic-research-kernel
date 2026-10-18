@@ -91,6 +91,7 @@ _RIS_TO = {
 }
 
 _CSL_FROM = {
+    'article': 'article',
     'article-journal': 'article', 'article-magazine': 'article',
     'article-newspaper': 'article', 'review': 'article',
     'paper-conference': 'paper-conference', 'proceedings-article': 'paper-conference',
@@ -104,7 +105,7 @@ _CSL_TO = {
     'paper-conference': 'paper-conference',
     'book': 'book',
     'chapter': 'chapter',
-    'preprint': 'preprint',
+    'preprint': 'article',
     'thesis': 'thesis',
     'report': 'report',
     'misc': 'article',
@@ -511,8 +512,20 @@ def from_csl_json(obj: dict) -> CanonicalWork:
     container = obj.get('container-title') or ''
     if isinstance(container, list):
         container = _first(container)
+    raw_type = str(obj.get('type', '')).strip().lower()
+    raw_genre = str(obj.get('genre', '')).strip().lower()
+    if raw_genre == 'preprint':
+        work_type = 'preprint'
+    else:
+        work_type = _CSL_FROM.get(raw_type, 'misc')
+    extra = {}
+    raw_id = obj.get('id')
+    if raw_id is not None and str(raw_id).strip():
+        extra['id'] = str(raw_id).strip()
+    if raw_type == 'manuscript':
+        extra['csl_type'] = 'manuscript'
     return CanonicalWork(
-        work_type=_CSL_FROM.get(str(obj.get('type', '')).lower(), 'misc'),
+        work_type=work_type,
         title=str(obj.get('title') or '').strip(),
         authors=authors,
         year=year,
@@ -523,12 +536,21 @@ def from_csl_json(obj: dict) -> CanonicalWork:
         issue=str(obj.get('issue') or ''),
         pages=str(obj.get('page') or ''),
         publisher=str(obj.get('publisher') or ''),
+        extra=extra,
     )
 
 
 def to_csl_json(work: CanonicalWork) -> dict:
-    """导出 CSL-JSON 记录（dict，可直接 json.dumps）。"""
-    out = {'type': _CSL_TO.get(work.work_type, 'article')}
+    """导出 CSL-JSON 记录（dict，可直接 json.dumps，符合官方 CSL-JSON v1.0.2 schema）。"""
+    item_id = str(work.extra.get('id') or work.extra.get('citekey') or '').strip()
+    if not item_id:
+        item_id = f'doi:{work.doi}' if work.doi else make_citekey(work)
+    csl_type = _CSL_TO.get(work.work_type, 'article')
+    if work.work_type == 'preprint' and work.extra.get('csl_type') == 'manuscript' and not (work.doi or work.url or work.container or work.publisher):
+        csl_type = 'manuscript'
+    out = {'id': item_id, 'type': csl_type}
+    if work.work_type == 'preprint':
+        out['genre'] = 'preprint'
     if work.title:
         out['title'] = work.title
     if work.authors:

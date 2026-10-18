@@ -201,3 +201,27 @@ def test_no_third_party_imports():
     names.discard('__future__')
     for name in names:
         assert name in sys.stdlib_module_names, f'非标准库依赖: {name}'
+
+
+def test_csl_json_preserves_id_and_maps_preprint_to_valid_csl_type():
+    raw_preprint = {
+        'id': 'preprint-123',
+        'type': 'preprint',
+        'title': 'A Preprint Study',
+        'DOI': '10.1234/preprint.1',
+    }
+    work = interop.from_csl_json(raw_preprint)
+    assert work.work_type == 'preprint'
+    assert work.extra.get('id') == 'preprint-123'
+    exported = interop.to_csl_json(work)
+    assert exported['id'] == 'preprint-123'
+    assert exported['type'] == 'article'
+    assert exported['genre'] == 'preprint'
+    roundtripped = interop.from_csl_json(exported)
+    assert roundtripped.work_type == 'preprint'
+    assert roundtripped.extra.get('id') == 'preprint-123'
+
+    no_id_work = CanonicalWork(work_type='preprint', title='Unpublished Draft', extra={'csl_type': 'manuscript'})
+    exported_ms = interop.to_csl_json(no_id_work)
+    assert exported_ms['id']
+    assert exported_ms['type'] == 'manuscript'

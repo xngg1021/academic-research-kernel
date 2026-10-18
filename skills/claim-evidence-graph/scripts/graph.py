@@ -543,9 +543,29 @@ class ClaimEvidenceGraph:
         self._claim_relation_keys: Set[Tuple[Any, ...]] = set()
         self._receipt_registry: Dict[str, Any] = {}
 
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "ClaimEvidenceGraph":
+        cloned = object.__new__(ClaimEvidenceGraph)
+        memo[id(self)] = cloned
+        cloned.verification_context = self.verification_context
+        cloned.graph_id = self.graph_id
+        cloned.claims = dict(self.claims)
+        cloned.evidence_anchors = dict(self.evidence_anchors)
+        cloned.support_edges = list(self.support_edges)
+        cloned.claim_relations = list(self.claim_relations)
+        cloned._all_node_ids = dict(self._all_node_ids)
+        cloned._support_edge_keys = set(self._support_edge_keys)
+        cloned._claim_relation_keys = set(self._claim_relation_keys)
+        cloned._receipt_registry = {
+            k: (v if hasattr(v, "_canonical_bytes") else copy.deepcopy(v, memo))
+            for k, v in self._receipt_registry.items()
+        }
+        return cloned
+
     def register_receipt(self, receipt_id: str, receipt_data: Any):
         """Register an AcademicEvidenceReceipt or LineageReceipt with deepcopy and conflict rejection."""
         rid = str(receipt_id).strip()
+        if rid in self._receipt_registry and self._receipt_registry[rid] is receipt_data and hasattr(receipt_data, "_canonical_bytes"):
+            return
         snapshot = copy.deepcopy(receipt_data)
         if rid in self._receipt_registry:
             existing = self._receipt_registry[rid]
@@ -1032,40 +1052,44 @@ class ClaimEvidenceGraph:
         return hashlib.sha256(canon_bytes).hexdigest().lower()
 
     def to_dict(self) -> Dict[str, Any]:
-        """Deepcopy and serialize strictly matching schemas/claim-evidence-graph.schema.json."""
+        """Serialize strictly matching schemas/claim-evidence-graph.schema.json."""
         canon_claims = sorted([c.to_dict() for c in self.claims.values()], key=lambda x: x["id"])
         canon_evidence = sorted([e.to_dict() for e in self.evidence_anchors.values()], key=lambda x: x["id"])
-        canon_support = sorted(
-            [e.to_dict() for e in self.support_edges],
-            key=lambda x: canonical_support_edge_tuple(EvidenceSupportEdge(
-                evidence_id=x["evidence_id"],
-                claim_id=x["claim_id"],
-                support_status=x["support_status"],
-                receipt_ref=ReceiptRef(**x["receipt_ref"]) if x.get("receipt_ref") else None,
-                metadata=FrozenDict(x.get("metadata", {})),
-            )),
-        )
-        canon_relations = sorted(
-            [e.to_dict() for e in self.claim_relations],
-            key=lambda x: canonical_claim_relation_tuple(ClaimRelationEdge(
-                source_claim_id=x["source_claim_id"],
-                target_claim_id=x["target_claim_id"],
-                relation_type=x["relation_type"],
-                evidence_refs=tuple(x.get("evidence_refs", [])),
-                metadata=FrozenDict(x.get("metadata", {})),
-            )),
-        )
+        canon_support = [
+            e.to_dict() for e in sorted(self.support_edges, key=canonical_support_edge_tuple)
+        ]
+        canon_relations = [
+            e.to_dict() for e in sorted(self.claim_relations, key=canonical_claim_relation_tuple)
+        ]
         canon_uncertainties = sorted([u.to_dict() for u in self.extract_uncertainties()], key=lambda x: x["item_id"])
+
+        payload = {
+            "protocol": "claim-evidence-graph-1.0",
+            "graph_id": self.graph_id,
+            "claims": canon_claims,
+            "evidence_anchors": canon_evidence,
+            "support_edges": canon_support,
+            "claim_relations": canon_relations,
+            "uncertainties": canon_uncertainties,
+        }
+        canon_bytes = json.dumps(
+            payload,
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        digest = hashlib.sha256(canon_bytes).hexdigest().lower()
 
         return {
             "protocol": "claim-evidence-graph-1.0",
             "graph_id": self.graph_id,
-            "graph_digest": self.graph_digest(),
-            "claims": [copy.deepcopy(c) for c in canon_claims],
-            "evidence_anchors": [copy.deepcopy(e) for e in canon_evidence],
-            "support_edges": [copy.deepcopy(s) for s in canon_support],
-            "claim_relations": [copy.deepcopy(r) for r in canon_relations],
-            "uncertainties": [copy.deepcopy(u) for u in canon_uncertainties],
+            "graph_digest": digest,
+            "claims": canon_claims,
+            "evidence_anchors": canon_evidence,
+            "support_edges": canon_support,
+            "claim_relations": canon_relations,
+            "uncertainties": canon_uncertainties,
         }
 
     @classmethod

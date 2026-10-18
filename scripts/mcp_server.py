@@ -52,7 +52,6 @@ if __package__:
     from .ingestion import IngestionEngine, ArtifactEnvelope, IngestionKernelState
     from .ingestion.contracts import validate_adapter_contract, validate_schema
     from . import identity as id_mod, provenance as prov_mod, graph as ceg_mod, ledger as ledger_mod
-    from . import recompute, hardware_probe
     from ._version import __version__
 else:
     from ingestion import IngestionEngine, ArtifactEnvelope, IngestionKernelState
@@ -61,9 +60,40 @@ else:
     import provenance as prov_mod
     import graph as ceg_mod
     import ledger as ledger_mod
-    import recompute
-    import hardware_probe
     from _version import __version__
+
+_RECOMPUTE_MOD = None
+_HARDWARE_PROBE_MOD = None
+
+
+def _get_recompute():
+    global _RECOMPUTE_MOD
+    if _RECOMPUTE_MOD is None:
+        if __package__:
+            from . import recompute as _mod
+        else:
+            import recompute as _mod
+        _RECOMPUTE_MOD = _mod
+    return _RECOMPUTE_MOD
+
+
+def _get_hardware_probe():
+    global _HARDWARE_PROBE_MOD
+    if _HARDWARE_PROBE_MOD is None:
+        if __package__:
+            from . import hardware_probe as _mod
+        else:
+            import hardware_probe as _mod
+        _HARDWARE_PROBE_MOD = _mod
+    return _HARDWARE_PROBE_MOD
+
+
+def __getattr__(name: str):
+    if name == "recompute":
+        return _get_recompute()
+    if name == "hardware_probe":
+        return _get_hardware_probe()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 TOOLS = [
@@ -757,7 +787,8 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
 
         # 10. academic_recompute_statistics
         elif name == "academic_recompute_statistics":
-            if recompute is None:
+            recompute_mod = globals().get("recompute") if "recompute" in globals() else _get_recompute()
+            if recompute_mod is None:
                 return {"error": "recompute module unavailable"}
             t = arguments.get("t_stat")
             df = arguments.get("df")
@@ -772,12 +803,12 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                 failures["p_match"] = "p_value is required with reported precision"
             if t is not None and df is not None:
                 try:
-                    p_receipt = recompute.p_from_t(t, df, reported=p)
+                    p_receipt = recompute_mod.p_from_t(t, df, reported=p)
                     recomputed_val = p_receipt["recomputed"]
                     res["recomputed_p"] = recomputed_val
                     res["p_receipt"] = p_receipt
                     if p is not None:
-                        res["p_match"] = recompute.check_p_match(
+                        res["p_match"] = recompute_mod.check_p_match(
                             p, recomputed_val, decimals=arguments.get("p_value_decimals"),
                             reported_literal=arguments.get("p_value_literal"),
                         )
@@ -794,7 +825,7 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                     failures["cohens_d"] = res["cohens_d_error"]
                 else:
                     try:
-                        d_res = recompute.cohens_d(
+                        d_res = recompute_mod.cohens_d(
                             arguments["mean1"], arguments["sd1"], arguments["n1"],
                             arguments["mean2"], arguments["sd2"], arguments["n2"]
                         )
@@ -815,16 +846,18 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
 
         # 11. academic_check_percentage
         elif name == "academic_check_percentage":
-            if recompute is None:
+            recompute_mod = globals().get("recompute") if "recompute" in globals() else _get_recompute()
+            if recompute_mod is None:
                 return {"error": "recompute module unavailable"}
             count = arguments["count"]
             pct = arguments["percent"]
             n = arguments.get("sample_size")
-            return recompute.check_percentage(count, pct, n)
+            return recompute_mod.check_percentage(count, pct, n)
 
         # 12. academic_scfabric_hardware_probe
         elif name == "academic_scfabric_hardware_probe":
-            return hardware_probe.probe()
+            probe_mod = globals().get("hardware_probe") if "hardware_probe" in globals() else _get_hardware_probe()
+            return probe_mod.probe()
 
         return {"error": f"Unknown tool: {name}"}
 
@@ -840,6 +873,10 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
 
 def _rpc_error(msg_id: Any, code: int, message: str) -> dict:
     return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": code, "message": message}}
+
+
+SUPPORTED_PROTOCOLS = ("2024-11-05", "2026-07-28")
+DEFAULT_PROTOCOL_VERSION = "2024-11-05"
 
 
 def process_message(msg: Any) -> dict | None:
@@ -859,15 +896,25 @@ def process_message(msg: Any) -> dict | None:
     params = msg.get("params", {})
     if not isinstance(params, dict):
         return _rpc_error(msg_id, -32602, "MCP params must be an object")
+    meta = params.get("_meta")
+    if meta is not None:
+        if not isinstance(meta, dict):
+            return _rpc_error(msg_id, -32602, "_meta must be an object")
+        if "protocolVersion" in meta:
+            meta_version = meta["protocolVersion"]
+            if not isinstance(meta_version, str):
+                return _rpc_error(msg_id, -32602, "_meta.protocolVersion must be a string")
+            if meta_version not in SUPPORTED_PROTOCOLS:
+                return _rpc_error(msg_id, -32022, f"Unsupported protocol version: {meta_version}")
 
     if method == "ping":
         return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
 
     if method == "initialize":
-        client_version = params.get("protocolVersion", "2026-07-28")
+        client_version = params.get("protocolVersion", DEFAULT_PROTOCOL_VERSION)
         if not isinstance(client_version, str):
             return _rpc_error(msg_id, -32602, "protocolVersion must be a string")
-        negotiated_version = client_version if client_version in ("2026-07-28", "2024-11-05") else "2026-07-28"
+        negotiated_version = client_version if client_version in SUPPORTED_PROTOCOLS else DEFAULT_PROTOCOL_VERSION
         return {
             "jsonrpc": "2.0",
             "id": msg_id,
@@ -878,6 +925,20 @@ def process_message(msg: Any) -> dict | None:
                     "name": "academic-research-kernel",
                     "version": __version__
                 }
+            }
+        }
+    elif method == "server/discover":
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {
+                "protocolVersion": "2026-07-28",
+                "capabilities": {"tools": {}},
+                "serverInfo": {
+                    "name": "academic-research-kernel",
+                    "version": __version__
+                },
+                "tools": TOOLS,
             }
         }
     elif method == "tools/list":

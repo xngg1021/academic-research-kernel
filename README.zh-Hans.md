@@ -8,13 +8,18 @@
 
 ## 快速开始
 
-请先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，随后直接启动 2.1.0 版本的 MCP 服务：
+如果您想直接让 AI 助手帮您读论文、核对统计数字并生成中文报告，请先安装带 PDF 解析功能的软件包并把 `paper-research` 技能导出给您的助手；如果您需要将 12 个核查工具挂载为后台 MCP 服务供客户端自动调用，请先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/) 再启动 2.1.0 版本的 MCP 服务：
 
 ```bash
+# 方式一：让 AI 助手直接读 PDF 论文并生成中文报告
+uv tool install "academic-research-kernel[research]==2.1.0"
+academic-research-kernel research skill --output ./paper-research
+
+# 方式二：作为后台 MCP 服务启动，供客户端连接调用
 uvx academic-research-kernel@2.1.0 mcp
 ```
 
-[2.1.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) 页面记录了安装包哈希值与发布状态。如果您已将发布的 wheel 安装包下载到本地，也可以直接运行 `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`。本工具支持 Python 3.10–3.14，`uvx --python 3.12` 命令可显式指定受支持的 Python 解释器。基础安装包已内置全部 12 个核查工具与统计计算依赖。
+直接在终端运行 `mcp` 命令会让程序进入后台静默等待客户端连接的状态，不会弹出交互菜单。[2.1.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) 页面记录了安装包哈希值与发布状态。如果您已将发布的 wheel 安装包下载到本地，也可以直接运行 `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`。本工具支持 Python 3.10–3.14，`uvx --python 3.12` 命令可显式指定受支持的 Python 解释器。基础安装包已内置全部 12 个核查工具，统计计算库会在调用统计重算功能时按需加载。
 
 ## 验证安装
 
@@ -118,7 +123,7 @@ hermes skills install xngg1021/academic-research-kernel/skills/academic-source-v
 
 ## 学术数据源与接口限额
 
-- OpenAlex 基础查询支持匿名使用，但匿名每日额度较小。根据 2026-09-06 核对的官方文档，匿名访问每日额度为 $0.10，申请免费 API 密钥后每日额度为 $1，每秒最多发送 100 次请求；不同查询方式的扣费标准不同，并非不限量使用。建议将免费密钥存入环境变量 `OPENALEX_API_KEY`，查询时配合上限为 100 的 `per_page` 参数与游标分页。
+- OpenAlex 基础首屏查询支持匿名使用，但匿名每日额度较小。按照官方文档现行标准，无密钥每秒最多发送 10 次请求，配置免费或预付费密钥后每秒最多 30 次请求，年度订阅方案每秒最多 50 次请求；匿名访问每日额度为 $0.10，申请免费 API 密钥后每日额度为 $1。匿名请求只能获取第一页游标结果，翻页继续读取 `next_cursor` 需要将免费密钥存入环境变量 `OPENALEX_API_KEY`，未配密钥时翻页会在保留首屏结果后自动截断。
 - Crossref 提供带限流的公开元数据接口。核查论文更正与撤稿信号时必须同时核对 DOI 与更新方向；接口没查到记录不代表论文一定没有问题。
 - Unpaywall 要求在环境变量 `UNPAYWALL_EMAIL` 中填入真实联系邮箱。如果接口没有返回全文地址，不代表网上不存在其他开放获取版本。
 - arXiv 与 Europe PMC，以及 PubMed E-utilities 和 DOAJ 属于补充数据源，各自有独立的限流规则，默认自动化测试不会逐一请求。Semantic Scholar 的匿名公共额度与专属密钥额度分开计算，能连上接口也不保证每篇论文都开放了引文上下文。
@@ -152,7 +157,7 @@ git diff --check
 
 测试套件沿用了固定版本的 Hermes 技能编写规范检查，完整测试本仓库的全部 14 项技能，并对照固定版本的内置与可选技能目录核对引用关系。持续集成环境只在安装依赖包时联网，平时的代码提交测试不会请求外部学术数据库。
 
-GitHub Actions 持续集成覆盖三大操作系统的 x86_64 与 ARM64 架构。测试范围包含运行 Python 3.10 至 3.14 的 Linux x86_64 与 `ubuntu-24.04-arm` 镜像，涵盖 `ubuntu-26.04` 与 `ubuntu-26.04-arm` 预迁移环境，同时覆盖 Windows x86_64 与 `windows-11-arm`，以及 `macos-latest` 与 `macos-15-intel` 环境，并附带针对上游 `main` 分支最新代码的实时加载检验。本地完整回归测试套件共通过 1165 项测试，详细结果与覆盖范围见[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)，远端测试日志会单独标明所测的代码提交哈希。每当代码推送到 `main` 分支时，独立的集成测试工作流还会自动安装 `tests/upstream/provenance.json` 记录的固定版本 Hermes，实测对本仓库执行 `tap add` 与 `search`，以及 `install` 和 `list` 全流程。各项检查的确切版本与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+GitHub Actions 持续集成覆盖三大操作系统的 x86_64 与 ARM64 架构。测试范围包含运行 Python 3.10 至 3.14 的 Linux x86_64 与 `ubuntu-24.04-arm` 镜像，涵盖 `ubuntu-26.04` 与 `ubuntu-26.04-arm` 预迁移环境，同时覆盖 Windows x86_64 与 `windows-11-arm`，以及 `macos-latest` 与 `macos-15-intel` 环境，并附带针对上游 `main` 分支最新代码的实时加载检验。本地完整回归测试套件共通过 1315 项测试，此前 1165 项基线与覆盖范围记录在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)中，远端测试日志会单独标明所测的代码提交哈希。每当代码推送到 `main` 分支时，独立的集成测试工作流还会自动安装 `tests/upstream/provenance.json` 记录的固定版本 Hermes，实测对本仓库执行 `tap add` 与 `search`，以及 `install` 和 `list` 全流程。各项检查的确切版本与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
 [tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，从 4096 个 SHA256 种子候选中选出 30 个代表性测试场景，并自动生成核验覆盖度报告，分别统计 16 类能力族、仓库实际的 14 项技能以及 36 项具体任务目标。每项技能至少出现 2 次并覆盖 2 个不同任务目标，且必须包含该技能的核心目标。
 

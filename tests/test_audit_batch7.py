@@ -298,3 +298,21 @@ def test_p1_openalex_capped_cursor_paging():
     assert len(page_urls) == 2
     assert len(items_2) == 4
     assert tr_2 is False
+
+
+def test_p1_openalex_anonymous_second_page_401_retains_first_page():
+    """When page 2 cursor fails with HTTP 401 (anonymous cursor restriction), retain page 1 and mark truncated=True."""
+    from urllib.error import HTTPError
+
+    def fake_urlopen_401(req, timeout=20):
+        url = req.full_url
+        if "cursor=%2A" in url or "cursor=*" in url:
+            resp_body = b'{"meta": {"count": 4, "next_cursor": "cursor_page_2"}, "results": [{"id": "W1", "title": "P1"}, {"id": "W2", "title": "P2"}]}'
+            return _make_mock_response(resp_body)
+        raise HTTPError(url, 401, "Unauthorized cursor pagination", {}, None)
+
+    with patch.object(lit_watch, "urlopen", side_effect=fake_urlopen_401):
+        items, truncated = lit_watch.fetch_topic_works("agent", date(2026, 1, 1), max_pages=2)
+    assert len(items) == 2
+    assert items[0]["id"] == "W1"
+    assert truncated is True

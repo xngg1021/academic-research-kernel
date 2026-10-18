@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import collections.abc
 from typing import Any, Dict, Mapping, Tuple
 
 if __package__ and __package__.startswith("academic_research_kernel"):
-    from academic_research_kernel.shared_contracts.evidence import _thaw_val, canonical_json_bytes, compute_sha256
+    from academic_research_kernel.shared_contracts.evidence import FrozenJSONMap, _thaw_val, canonical_json_bytes, compute_sha256
 else:
-    from shared_contracts.evidence import _thaw_val, canonical_json_bytes, compute_sha256
+    from shared_contracts.evidence import FrozenJSONMap, _thaw_val, canonical_json_bytes, compute_sha256
 
 
 MUTATION_KINDS = (
@@ -17,8 +18,12 @@ MUTATION_KINDS = (
     "ledger_state_event", "ledger_correction",
 )
 
+_SOURCE_PROJECTION_CACHE: Dict[Any, Dict[Tuple[str, str], Any]] = {}
+
 
 def record_digest(record: Any) -> str:
+    if isinstance(record, FrozenJSONMap):
+        return record.sha256()
     return compute_sha256(canonical_json_bytes(_thaw_val(record)))
 
 
@@ -32,16 +37,19 @@ def mutation_inventory(state: Any) -> Dict[Tuple[str, str], Any]:
     """
     records: Dict[Tuple[str, str], Any] = {}
     for key, value in state.objects.items():
-        records[("object", key)] = _thaw_val(value)
+        records[("object", key)] = value if isinstance(value, FrozenJSONMap) else _thaw_val(value)
     for key, value in state.receipts.items():
-        value = _thaw_val(value)
-        if value.get("protocol") == "lineage-receipt-1.0":
-            value.pop("timestamp", None)
-        records[("physical_receipt", key)] = value
+        if isinstance(value, FrozenJSONMap) and value.get("protocol") != "lineage-receipt-1.0":
+            records[("physical_receipt", key)] = value
+        else:
+            raw_val = _thaw_val(value)
+            if isinstance(raw_val, dict) and raw_val.get("protocol") == "lineage-receipt-1.0":
+                raw_val.pop("timestamp", None)
+            records[("physical_receipt", key)] = raw_val
     for key, sha in state.ingested_artifacts.items():
         records[("artifact", key)] = {"artifact_id": key, "payload_sha256": sha}
     for value in state.uncertainties:
-        raw = _thaw_val(value)
+        raw = value if isinstance(value, FrozenJSONMap) else _thaw_val(value)
         derived = raw.get("metadata", {}).get("kernel_origin") in {
             "domain_derived", "envelope_lineage",
         }
@@ -72,8 +80,10 @@ def mutation_inventory(state: Any) -> Dict[Tuple[str, str], Any]:
 def bind_mutations(before: Mapping, state: Any, plan: Any) -> list:
     """Commit changes plus every existing record explicitly adopted by a plan."""
     after = mutation_inventory(state)
-    selected = {key for key, value in after.items()
-                if key not in before or record_digest(value) != record_digest(before[key])}
+    selected = {
+        key for key, value in after.items()
+        if key not in before or (value is not before[key] and record_digest(value) != record_digest(before[key]))
+    }
     selected.update(("object", key) for key in plan.created_objects)
     selected.update(("physical_receipt", key) for key in plan.registered_receipts)
     selected.add(("artifact", plan.envelope.artifact_id))
@@ -121,8 +131,39 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
     from .registry import create_default_registry
 
     source = state.ingestion_sources.get(cache_key)
-    if source is None or set(source) != {"envelope", "bindings"}:
+    if source is None or not isinstance(source, collections.abc.Mapping) or set(source) != {"envelope", "bindings"}:
         raise ValueError("missing independent ingestion source; reingest the artifact")
+    try:
+        source_bytes = canonical_json_bytes(source)
+        receipt_keys = tuple((k, canonical_json_bytes(v)) for k, v in sorted(state.receipts.items()))
+        ctx = state.verification_context
+        ctx_key = None if ctx is None else (
+            ctx.content_root,
+            tuple(sorted(ctx.content_by_entity_id.items())) if ctx.content_by_entity_id is not None else None,
+            ctx.authorized_paths,
+            ctx.max_content_bytes,
+        )
+        proj_key = (
+            cache_key,
+            source_bytes,
+            receipt.receipt_id,
+            receipt.source_artifact_id,
+            receipt.source_artifact_sha256,
+            receipt.ingestion_context_digest,
+            receipt.source_lineage_ref,
+            receipt.adapter_id,
+            receipt.adapter_version,
+            state.ceg.graph_id if state.ceg is not None else None,
+            state.ledger.ledger_id if state.ledger is not None else None,
+            receipt_keys,
+            ctx_key,
+        )
+        hash(proj_key)
+    except Exception:
+        proj_key = None
+    if proj_key is not None and proj_key in _SOURCE_PROJECTION_CACHE:
+        return dict(_SOURCE_PROJECTION_CACHE[proj_key])
+
     envelope = ArtifactEnvelope.from_dict(source["envelope"])
     adapter = create_default_registry().resolve(envelope)
     bindings = adapter.normalize_bindings(source["bindings"])
@@ -187,6 +228,10 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
             # after subsequent corrections append newer history.
             key, value = min(matches, key=lambda item: item[1]["sequence"])
             expected[key] = value
+    elif proj_key is not None:
+        if len(_SOURCE_PROJECTION_CACHE) >= 4096:
+            _SOURCE_PROJECTION_CACHE.clear()
+        _SOURCE_PROJECTION_CACHE[proj_key] = dict(expected)
     return expected
 
 

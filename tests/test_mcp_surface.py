@@ -265,3 +265,61 @@ def test_mcp_stdio_roundtrip():
     resp = json.loads(line)
     assert resp["id"] == 100
     assert resp["result"]["serverInfo"]["name"] == "academic-research-kernel"
+
+
+def test_mcp_server_discover_and_meta_protocol_version():
+    disc = mcp_server.process_message({"jsonrpc": "2.0", "id": 101, "method": "server/discover", "params": {}})
+    assert disc["result"]["protocolVersion"] == "2026-07-28"
+    assert len(disc["result"]["tools"]) == 12
+
+    bad_meta = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 102,
+        "method": "tools/list",
+        "params": {"_meta": {"protocolVersion": "2099-01-01"}},
+    })
+    assert bad_meta["error"]["code"] == -32022
+
+    ok_meta = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 103,
+        "method": "tools/list",
+        "params": {"_meta": {"protocolVersion": "2026-07-28"}},
+    })
+    assert len(ok_meta["result"]["tools"]) == 12
+
+
+def test_mcp_startup_and_percentage_do_not_import_statistics_stack():
+    code = (
+        "import sys; sys.path.insert(0, 'scripts'); "
+        "import mcp_server; "
+        "r = mcp_server.handle_tool_call('academic_check_percentage', {'count': 10, 'percent': 50.0, 'sample_size': 20}); "
+        "assert r['consistent'] is True; "
+        "assert not any(m in sys.modules for m in ('numpy', 'scipy', 'statsmodels'))"
+    )
+    subprocess.run([sys.executable, "-c", code], cwd=str(ROOT), check=True, timeout=30)
+
+
+def test_recompute_stdlib_fallback_matches_scipy():
+    import pytest
+    recompute_mod = mcp_server.recompute
+    old_scipy, old_power = recompute_mod._SCIPY_STATS, recompute_mod._TTEST_POWER_CLS
+    try:
+        recompute_mod._SCIPY_STATS = None
+        recompute_mod._TTEST_POWER_CLS = None
+        t_sci = recompute_mod.p_from_t(2.0, 30)["recomputed"]
+        f_sci = recompute_mod.p_from_f(4.5, 2, 27)["recomputed"]
+        chi_sci = recompute_mod.p_from_chi2(3.84, 1)["recomputed"]
+        z_sci = recompute_mod.z_from_beta_se(1.96, 1.0)["recomputed"]["p"]
+        ci_sci = recompute_mod.check_ci_consistency(2.0, 1.0, 3.0)["implied_se"]
+
+        recompute_mod._SCIPY_STATS = False
+        recompute_mod._TTEST_POWER_CLS = False
+        assert recompute_mod.p_from_t(2.0, 30)["recomputed"] == pytest.approx(t_sci, abs=1e-14)
+        assert recompute_mod.p_from_f(4.5, 2, 27)["recomputed"] == pytest.approx(f_sci, abs=1e-14)
+        assert recompute_mod.p_from_chi2(3.84, 1)["recomputed"] == pytest.approx(chi_sci, abs=1e-14)
+        assert recompute_mod.z_from_beta_se(1.96, 1.0)["recomputed"]["p"] == pytest.approx(z_sci, abs=1e-14)
+        assert recompute_mod.check_ci_consistency(2.0, 1.0, 3.0)["implied_se"] == pytest.approx(ci_sci, abs=1e-14)
+    finally:
+        recompute_mod._SCIPY_STATS = old_scipy
+        recompute_mod._TTEST_POWER_CLS = old_power

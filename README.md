@@ -10,13 +10,18 @@ Author: Junfu Shi (SJF, xngg1021), Hermes Agent. License: [Source Lineage Licens
 
 ## Quick start
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and start the 2.1.0 MCP server directly:
+If you want your AI agent to read a paper, check its numbers, and generate a report, install the package with PDF support and export the `paper-research` workflow into your agent's skill directory; if you want to connect the 12 verification tools as a background MCP server for an MCP client, install [uv](https://docs.astral.sh/uv/getting-started/installation/) and start the stdio server:
 
 ```bash
+# 1. Read PDF papers and generate reports with your local AI agent
+uv tool install "academic-research-kernel[research]==2.1.0"
+academic-research-kernel research skill --output ./paper-research
+
+# 2. Or start the background stdio MCP server for an MCP client
 uvx academic-research-kernel@2.1.0 mcp
 ```
 
-The [2.1.0 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) lists package hashes and publication status. If you download the release wheel, you can also run it locally with `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. The package supports Python 3.10–3.14, and `uvx --python 3.12` selects a specific Python version. The base installation includes all 12 verification tools and their statistical calculation dependencies.
+Note that running `mcp` in a terminal waits silently for JSON-RPC requests from an MCP client rather than opening an interactive menu. The [2.1.0 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) lists package hashes and publication status. If you download the release wheel, you can also run it locally with `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. The package supports Python 3.10–3.14, and `uvx --python 3.12` selects a specific Python version. The base installation includes all 12 verification tools and loads statistical libraries on demand when statistical recomputation is called.
 
 ## Verify installation
 
@@ -120,7 +125,7 @@ Related skills checked against upstream Hermes commit `245e48008fa814b3251f50755
 
 ## Data-source access
 
-- OpenAlex allows anonymous queries with a small daily budget. According to the 2026-09-06 documentation, anonymous use covers $0.10/day and a free API key covers $1/day, with a rate limit of 100 requests per second. Store your optional key in `OPENALEX_API_KEY`, and use `per_page` (up to 100) with cursor pagination.
+- OpenAlex allows anonymous first-page queries with a small daily budget. Current OpenAlex rate limits are 10 requests per second without a key, 30 requests per second with a free or prepaid API key, and 50 requests per second on annual plans; anonymous use covers $0.10/day and a free API key covers $1/day. Following `next_cursor` beyond the first page requires an API key in `OPENALEX_API_KEY` (anonymous second-page cursor requests return HTTP 401 and are truncated to the first page).
 - Crossref provides public metadata with rate limits. Checking corrections and retractions requires verifying both the DOI and the update direction; an empty result does not prove a paper has no issues.
 - Unpaywall requires a real contact email in `UNPAYWALL_EMAIL`. If Unpaywall returns no link, an open-access copy may still exist elsewhere.
 - arXiv, Europe PMC, PubMed E-utilities, and DOAJ serve as additional sources with their own rate limits. Semantic Scholar separates shared anonymous limits from dedicated API key quotas, and API access does not guarantee that citation context snippets are available for every paper.
@@ -154,7 +159,7 @@ git diff --check
 
 Our test suite reuses the upstream Hermes skill-authoring rules for each individual skill while validating all 14 skills in this repository against the pinned catalog. CI accesses the network only to install packages; standard pull-request checks never call external scholarly APIs.
 
-GitHub Actions runs the full test matrix across Linux x86_64 (Python 3.10–3.14), Linux ARM64 (`ubuntu-24.04-arm`), Ubuntu 26.04 preview runners (`ubuntu-26.04` and `ubuntu-26.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`), and macOS Intel (`macos-15-intel`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1165 tests; full details are in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md). On pushes to `main`, a separate workflow installs the pinned Hermes commit from `tests/upstream/provenance.json` and tests `tap add`, `search`, `install`, and `list` against this repository. See [the project audit](docs/project-lineage-audit-20260920.md) for exact versions and test boundaries.
+GitHub Actions runs the full test matrix across Linux x86_64 (Python 3.10–3.14), Linux ARM64 (`ubuntu-24.04-arm`), Ubuntu 26.04 preview runners (`ubuntu-26.04` and `ubuntu-26.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`), and macOS Intel (`macos-15-intel`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1315 tests (extending the 1165-test baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md)). On pushes to `main`, a separate workflow installs the pinned Hermes commit from `tests/upstream/provenance.json` and tests `tap add`, `search`, `install`, and `list` against this repository. See [the project audit](docs/project-lineage-audit-20260920.md) for exact versions and test boundaries.
 
 [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, which draws 4096 SHA256-seeded candidates, selects 30 test scenarios, and outputs a coverage report across 16 capability families (E01), the 14 repository skills (E02), and 36 task goals (E03). Every skill appears at least twice across at least two distinct goals, including its core workflow goal.
 

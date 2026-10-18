@@ -604,10 +604,15 @@ class IngestionKernelState:
 
     def __post_init__(self) -> None:
         self.objects = {
-            require_registry_key(key): FrozenJSONMap(_thaw_val(value)) for key, value in self.objects.items()
+            require_registry_key(key): (
+                value if isinstance(value, FrozenJSONMap) else FrozenJSONMap(_thaw_val(value))
+            )
+            for key, value in self.objects.items()
         }
         self.receipts = {
-            require_registry_key(key): FrozenJSONMap(_thaw_val(value))
+            require_registry_key(key): (
+                value if isinstance(value, FrozenJSONMap) else FrozenJSONMap(_thaw_val(value))
+            )
             for key, value in self.receipts.items()
         }
         existing_uncertainties = list(self.uncertainties)
@@ -622,7 +627,9 @@ class IngestionKernelState:
             for key, value in self.ingestion_receipts.items()
         }
         self.ingestion_sources = {
-            require_registry_key(key): FrozenJSONMap(value)
+            require_registry_key(key): (
+                value if isinstance(value, FrozenJSONMap) else FrozenJSONMap(value)
+            )
             for key, value in self.ingestion_sources.items()
         }
         self._synchronise_receipts()
@@ -708,18 +715,36 @@ class IngestionKernelState:
         self.uncertainties.sort(key=lambda item: item["item_id"])
 
     def clone(self) -> "IngestionKernelState":
-        """Detached transactional clone without replaying the complete ledger."""
-        return IngestionKernelState(
-            verification_context=self.verification_context,
-            ceg=copy.deepcopy(self.ceg),
-            ledger=copy.deepcopy(self.ledger),
-            objects=copy.deepcopy(self.objects),
-            receipts=copy.deepcopy(self.receipts),
-            uncertainties=copy.deepcopy(self.uncertainties),
-            ingested_artifacts=copy.deepcopy(self.ingested_artifacts),
-            ingestion_receipts=copy.deepcopy(self.ingestion_receipts),
-            ingestion_sources=copy.deepcopy(self.ingestion_sources),
-        )
+        """Detached transactional clone without replaying immutable registries."""
+        cloned = object.__new__(IngestionKernelState)
+        cloned.verification_context = self.verification_context
+        cloned.ceg = copy.deepcopy(self.ceg)
+        cloned.ledger = copy.deepcopy(self.ledger)
+        cloned.objects = {
+            require_registry_key(k): (v if isinstance(v, FrozenJSONMap) else FrozenJSONMap(_thaw_val(v)))
+            for k, v in self.objects.items()
+        }
+        cloned.receipts = {
+            require_registry_key(k): (v if isinstance(v, FrozenJSONMap) else FrozenJSONMap(_thaw_val(v)))
+            for k, v in self.receipts.items()
+        }
+        if all(isinstance(u, FrozenJSONMap) for u in self.uncertainties):
+            cloned.uncertainties = list(self.uncertainties)
+        else:
+            cloned.uncertainties = []
+            for value in self.uncertainties:
+                cloned.add_uncertainty(value)
+        cloned.ingested_artifacts = {require_registry_key(k): v for k, v in self.ingested_artifacts.items()}
+        cloned.ingestion_receipts = {
+            require_registry_key(k): (v if isinstance(v, IngestionReceipt) else IngestionReceipt.from_dict(v))
+            for k, v in self.ingestion_receipts.items()
+        }
+        cloned.ingestion_sources = {
+            require_registry_key(k): (v if isinstance(v, FrozenJSONMap) else FrozenJSONMap(v))
+            for k, v in self.ingestion_sources.items()
+        }
+        cloned._synchronise_receipts()
+        return cloned
 
     def validate_invariants(self) -> Tuple[bool, List[str]]:
         errors: List[str] = []
@@ -915,26 +940,25 @@ class IngestionKernelState:
 
     def compute_digests(self) -> Dict[str, str]:
         """Digest every first-class, non-circular kernel content registry."""
-        object_entries = [
-            {"registry_key": key, "value": _thaw_val(self.objects[key])}
+        object_bytes = b"[" + b",".join(
+            b'{"registry_key":' + canonical_json_bytes(key) + b',"value":' + canonical_json_bytes(self.objects[key]) + b'}'
             for key in sorted(self.objects)
-        ]
-        receipt_entries = [
-            {"registry_key": key, "value": _thaw_val(self.receipts[key])}
+        ) + b"]"
+        receipt_bytes = b"[" + b",".join(
+            b'{"registry_key":' + canonical_json_bytes(key) + b',"value":' + canonical_json_bytes(self.receipts[key]) + b'}'
             for key in sorted(self.receipts)
-        ]
-        uncertainty_entries = sorted(
-            (_thaw_val(value) for value in self.uncertainties),
-            key=lambda value: canonical_json_bytes(value),
-        )
+        ) + b"]"
+        uncertainty_bytes = b"[" + b",".join(
+            sorted(canonical_json_bytes(value) for value in self.uncertainties)
+        ) + b"]"
         artifact_entries = [
             {"artifact_id": key, "payload_sha256": self.ingested_artifacts[key]}
             for key in sorted(self.ingested_artifacts)
         ]
         digests: Dict[str, str] = {
-            "object_registry_digest": compute_sha256(canonical_json_bytes(object_entries)),
-            "receipt_registry_digest": compute_sha256(canonical_json_bytes(receipt_entries)),
-            "uncertainty_state_digest": compute_sha256(canonical_json_bytes(uncertainty_entries)),
+            "object_registry_digest": compute_sha256(object_bytes),
+            "receipt_registry_digest": compute_sha256(receipt_bytes),
+            "uncertainty_state_digest": compute_sha256(uncertainty_bytes),
             "ingested_artifact_digest": compute_sha256(canonical_json_bytes(artifact_entries)),
         }
         if self.ceg is not None:

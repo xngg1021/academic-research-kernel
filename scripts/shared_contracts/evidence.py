@@ -88,9 +88,14 @@ class FrozenJSONMap(collections.abc.Mapping):
     retaining a lossless ``to_dict`` representation for schemas and hashing.
     """
 
-    __slots__ = ("_data",)
+    __slots__ = ("_data", "_canonical_bytes", "_sha256")
 
     def __init__(self, value: Optional[Mapping[str, Any]] = None):
+        if isinstance(value, FrozenJSONMap):
+            object.__setattr__(self, "_data", value._data)
+            object.__setattr__(self, "_canonical_bytes", value._canonical_bytes)
+            object.__setattr__(self, "_sha256", value._sha256)
+            return
         if value is None:
             value = {}
         if not isinstance(value, collections.abc.Mapping):
@@ -101,8 +106,17 @@ class FrozenJSONMap(collections.abc.Mapping):
                 raise TypeError(f"JSON object keys must be strings, got {type(key).__name__}")
             frozen[key] = freeze_json(item)
         # Canonical serialization is also the fail-closed check for NaN/Inf.
-        canonical_json_bytes({k: _thaw_val(v) for k, v in frozen.items()})
+        cb = canonical_json_bytes({k: _thaw_val(v) for k, v in frozen.items()})
         object.__setattr__(self, "_data", MappingProxyType(frozen))
+        object.__setattr__(self, "_canonical_bytes", cb)
+        object.__setattr__(self, "_sha256", None)
+
+    def sha256(self) -> str:
+        digest = self._sha256
+        if digest is None:
+            digest = compute_sha256(self._canonical_bytes)
+            object.__setattr__(self, "_sha256", digest)
+        return digest
 
     def __setattr__(self, key: str, value: Any) -> None:
         raise TypeError("FrozenJSONMap does not support attribute mutation")
@@ -183,6 +197,8 @@ def canonical_text(text: str) -> str:
 
 def canonical_json_bytes(obj: Any) -> bytes:
     """Serialize object to strictly canonical UTF-8 JSON bytes."""
+    if isinstance(obj, FrozenJSONMap):
+        return obj._canonical_bytes
     return json.dumps(
         _thaw_val(obj),
         sort_keys=True,
