@@ -8,7 +8,7 @@ This upstream intake policy does not restrict use, independent modification or r
 
 ## External proposal intake discipline
 
-Wholesale proposals from a single external model (for example a ChatGPT thread) follow a recorded discipline, added 2026-09-17 after the agenda audit:
+Wholesale proposals from a single external model follow a recorded discipline, added 2026-09-17 after the agenda audit:
 
 1. Before adoption, the maintainer writes down their own prior ranking and expectations in a dated note, so external influence is measurable afterwards.
 2. The proposal passes the five-model review panel (skills/cross-review-five) before implementation. Overnight wholesale adoption is recorded in the risk log.

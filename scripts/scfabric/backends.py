@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Backend catalog: capability discovery, dispatch and data transfer as
-separate concerns, mirroring THM's provider contract in miniature.
+separate concerns with a self-contained backend capability contract.
 
 A backend spec declares what it SUPPORTS (declared), what is actually
 EXECUTABLE right now (probed), and what has a receipt (measured). Support

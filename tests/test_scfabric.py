@@ -233,8 +233,10 @@ def test_c08_cupy_probe_requires_device(monkeypatch):
 
 def test_c09_admission_handles_timing_exception_gracefully(monkeypatch):
     import admission as ad
-    inputs = wp.make_input("matmul_eig", "small", "float64")
-    # 模拟候选执行正常，但在 time_call 阶段崩溃
+    # 确保即使在无 Torch/CuPy 环境下也有至少一个候选后端进入 timing_failed 分支
+    if not [n for n in be.select_candidates("float64") if n not in ("numpy_cpu", "scipy_cpu")]:
+        monkeypatch.setattr(be, "select_candidates", lambda dtype: ["numpy_cpu", "scipy_cpu", "torch_cpu"])
+        monkeypatch.setattr(wp, "candidate", lambda workload, backend, inputs, dtype: wp.reference(workload, inputs))
     orig_time_call = ad.time_call
     called = 0
 
@@ -247,6 +249,7 @@ def test_c09_admission_handles_timing_exception_gracefully(monkeypatch):
 
     monkeypatch.setattr(ad, "time_call", failing_time_call)
     receipt = ad.run_admission("matmul_eig", "small", dtype="float64", warmup=1, repeat=1)
+    assert len(receipt["candidates"]) >= 1
     for c in receipt["candidates"]:
         assert c["verdict"] == "REFERENCE"
         assert "timing_failed" in c["fallback_reason"]

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import collections.abc
 from typing import Any, Dict, Mapping, Tuple
 
 if __package__ and __package__.startswith("academic_research_kernel"):
-    from academic_research_kernel.shared_contracts.evidence import _thaw_val, canonical_json_bytes, compute_sha256
+    from academic_research_kernel.shared_contracts.evidence import FrozenJSONMap, _thaw_val, canonical_json_bytes, compute_sha256
 else:
-    from shared_contracts.evidence import _thaw_val, canonical_json_bytes, compute_sha256
+    from shared_contracts.evidence import FrozenJSONMap, _thaw_val, canonical_json_bytes, compute_sha256
 
 
 MUTATION_KINDS = (
@@ -19,6 +20,8 @@ MUTATION_KINDS = (
 
 
 def record_digest(record: Any) -> str:
+    if type(record) is FrozenJSONMap:
+        return record.sha256()
     return compute_sha256(canonical_json_bytes(_thaw_val(record)))
 
 
@@ -32,16 +35,19 @@ def mutation_inventory(state: Any) -> Dict[Tuple[str, str], Any]:
     """
     records: Dict[Tuple[str, str], Any] = {}
     for key, value in state.objects.items():
-        records[("object", key)] = _thaw_val(value)
+        records[("object", key)] = value if isinstance(value, FrozenJSONMap) else _thaw_val(value)
     for key, value in state.receipts.items():
-        value = _thaw_val(value)
-        if value.get("protocol") == "lineage-receipt-1.0":
-            value.pop("timestamp", None)
-        records[("physical_receipt", key)] = value
+        if isinstance(value, FrozenJSONMap) and value.get("protocol") != "lineage-receipt-1.0":
+            records[("physical_receipt", key)] = value
+        else:
+            raw_val = _thaw_val(value)
+            if isinstance(raw_val, dict) and raw_val.get("protocol") == "lineage-receipt-1.0":
+                raw_val.pop("timestamp", None)
+            records[("physical_receipt", key)] = raw_val
     for key, sha in state.ingested_artifacts.items():
         records[("artifact", key)] = {"artifact_id": key, "payload_sha256": sha}
     for value in state.uncertainties:
-        raw = _thaw_val(value)
+        raw = value if isinstance(value, FrozenJSONMap) else _thaw_val(value)
         derived = raw.get("metadata", {}).get("kernel_origin") in {
             "domain_derived", "envelope_lineage",
         }
@@ -72,8 +78,10 @@ def mutation_inventory(state: Any) -> Dict[Tuple[str, str], Any]:
 def bind_mutations(before: Mapping, state: Any, plan: Any) -> list:
     """Commit changes plus every existing record explicitly adopted by a plan."""
     after = mutation_inventory(state)
-    selected = {key for key, value in after.items()
-                if key not in before or record_digest(value) != record_digest(before[key])}
+    selected = {
+        key for key, value in after.items()
+        if key not in before or (value is not before[key] and record_digest(value) != record_digest(before[key]))
+    }
     selected.update(("object", key) for key in plan.created_objects)
     selected.update(("physical_receipt", key) for key in plan.registered_receipts)
     selected.add(("artifact", plan.envelope.artifact_id))
@@ -121,8 +129,57 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
     from .registry import create_default_registry
 
     source = state.ingestion_sources.get(cache_key)
-    if source is None or set(source) != {"envelope", "bindings"}:
+    if source is None or not isinstance(source, collections.abc.Mapping) or set(source) != {"envelope", "bindings"}:
         raise ValueError("missing independent ingestion source; reingest the artifact")
+    p_cache = getattr(state, "_projection_cache", None)
+    proj_key = None
+    ctx = state.verification_context
+    has_disk_ctx = ctx is not None and (ctx.content_root is not None or bool(ctx.authorized_paths))
+    if isinstance(p_cache, dict) and not has_disk_ctx:
+        try:
+            source_sha = record_digest(source)
+            if receipt.adapter_id in ("adapter-claim-evidence-graph", "adapter-decision-ledger"):
+                rec_fp = tuple((k, record_digest(v)) for k, v in sorted(state.receipts.items()))
+            else:
+                rec_fp = tuple(
+                    (b["identity"], record_digest(state.receipts[b["identity"]]))
+                    if b["identity"] in state.receipts else (b["identity"], None)
+                    for b in receipt.mutation_bindings
+                    if b["kind"] == "physical_receipt"
+                )
+            if ctx is None:
+                ctx_fp = None
+            elif hasattr(ctx, "fingerprint"):
+                ctx_fp = ctx.fingerprint()
+            else:
+                ctx_fp = (
+                    str(ctx.content_root) if ctx.content_root is not None else None,
+                    tuple((k, compute_sha256(v)) for k, v in sorted(ctx.content_by_entity_id.items()))
+                    if ctx.content_by_entity_id is not None else None,
+                    tuple(str(p) for p in ctx.authorized_paths),
+                    ctx.max_content_bytes,
+                )
+            proj_key = (
+                cache_key,
+                source_sha,
+                receipt.receipt_id,
+                receipt.source_artifact_id,
+                receipt.source_artifact_sha256,
+                receipt.ingestion_context_digest,
+                receipt.source_lineage_ref,
+                receipt.adapter_id,
+                receipt.adapter_version,
+                state.ceg.graph_id if state.ceg is not None else None,
+                state.ledger.ledger_id if state.ledger is not None else None,
+                rec_fp,
+                ctx_fp,
+            )
+            hash(proj_key)
+        except Exception:
+            proj_key = None
+        if proj_key is not None and proj_key in p_cache:
+            return dict(p_cache[proj_key])
+
     envelope = ArtifactEnvelope.from_dict(source["envelope"])
     adapter = create_default_registry().resolve(envelope)
     bindings = adapter.normalize_bindings(source["bindings"])
@@ -187,6 +244,10 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
             # after subsequent corrections append newer history.
             key, value = min(matches, key=lambda item: item[1]["sequence"])
             expected[key] = value
+    elif proj_key is not None and isinstance(p_cache, dict):
+        if len(p_cache) >= 2048:
+            p_cache.pop(next(iter(p_cache)), None)
+        p_cache[proj_key] = dict(expected)
     return expected
 
 

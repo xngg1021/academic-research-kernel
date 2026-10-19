@@ -447,7 +447,8 @@ def _html(markdown: str, title: str) -> str:
         text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", link, text)
         text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
         return re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
-    blocks, in_table, in_list = [], False, False
+    blocks, in_table, in_list, in_details = [], False, False, False
+    collapsible_headings = {"数值核对（程序调用现有计算工具）", "原始材料及可追溯状态"}
     for line in markdown.splitlines():
         if not line.startswith("|") and in_table:
             blocks.append("</tbody></table></div>")
@@ -465,7 +466,14 @@ def _html(markdown: str, title: str) -> str:
             blocks.append("<tr>" + "".join("<td>" + inline(c.strip().replace("\\|", "|")) + "</td>" for c in cells) + "</tr>")
         elif line.startswith("#"):
             level = min(6, len(line) - len(line.lstrip("#")))
-            blocks.append(f"<h{level}>{inline(line[level:].strip())}</h{level}>")
+            heading_text = line[level:].strip()
+            if level <= 2 and in_details:
+                blocks.append("</details>")
+                in_details = False
+            blocks.append(f"<h{level}>{inline(heading_text)}</h{level}>")
+            if level == 2 and heading_text in collapsible_headings:
+                blocks.append('<details class="tech-appendix"><summary>展开查看详细计算参数、原始 JSON 与文件 SHA-256 指纹</summary>')
+                in_details = True
         elif line.startswith("> "):
             blocks.append("<blockquote>" + inline(line[2:]) + "</blockquote>")
         elif line.startswith("- "):
@@ -479,7 +487,9 @@ def _html(markdown: str, title: str) -> str:
         blocks.append("</tbody></table></div>")
     if in_list:
         blocks.append("</ul>")
-    return '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + html.escape(title) + '</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#15252d;background:#f6f7f6;max-width:1100px;margin:0 auto;padding:32px}h1{font-size:27px;line-height:1.3}h2{border-bottom:1px solid #c8d1d3;padding-bottom:8px;margin-top:36px}h3{font-size:18px}a{color:#12637b}table{border-collapse:collapse;width:100%;font-size:14px;background:white}td{border:1px solid #d4dadd;padding:9px;vertical-align:top}tr:first-child{font-weight:600;background:#e9eef0}.table{overflow:auto}code{overflow-wrap:anywhere;font-size:13px}blockquote{border-left:3px solid #7e9ba7;margin:10px 0;padding:8px 14px;background:white;color:#334b56}p{overflow-wrap:anywhere}</style><main>' + "\n".join(blocks) + "</main></html>\n"
+    if in_details:
+        blocks.append("</details>")
+    return '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + html.escape(title) + '</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#15252d;background:#f6f7f6;max-width:1100px;margin:0 auto;padding:32px}h1{font-size:27px;line-height:1.3}h2{border-bottom:1px solid #c8d1d3;padding-bottom:8px;margin-top:36px}h3{font-size:18px}a{color:#12637b}table{border-collapse:collapse;width:100%;font-size:14px;background:white}td{border:1px solid #d4dadd;padding:9px;vertical-align:top}tr:first-child{font-weight:600;background:#e9eef0}.table{overflow:auto}code{overflow-wrap:anywhere;font-size:13px}blockquote{border-left:3px solid #7e9ba7;margin:10px 0;padding:8px 14px;background:white;color:#334b56}p{overflow-wrap:anywhere}details.tech-appendix{background:#eef2f3;border:1px solid #c8d1d3;border-radius:6px;padding:10px 14px;margin:12px 0}details.tech-appendix>summary{cursor:pointer;font-weight:600;color:#12637b}</style><main>' + "\n".join(blocks) + "</main></html>\n"
 
 
 def _ingest(project: Path, run: Path, candidate: dict, documents: dict, results: list[dict]) -> dict:
@@ -548,6 +558,13 @@ def _ingest(project: Path, run: Path, candidate: dict, documents: dict, results:
             "object_count": len(state.objects), "claim_count": len(state.ceg.claims), "ledger_decisions": len(state.ledger.to_dict()["decisions"]), "round_trip": "passed"}
 
 
+def _lib_version(name: str) -> str:
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return "not-installed"
+
+
 def finish(project: str | Path, candidate_path: str | Path) -> dict:
     """Complete all deterministic stages after a source-grounded Agent reading."""
     project = Path(project).resolve()
@@ -561,7 +578,7 @@ def finish(project: str | Path, candidate_path: str | Path) -> dict:
                "recompute_sha256": hashlib.sha256(Path(kernel.recompute.__file__).read_bytes()).hexdigest(),
                "mcp_sha256": hashlib.sha256(Path(kernel.__file__).read_bytes()).hexdigest(),
                "adapter_sha256": hashlib.sha256(Path(paper_research.__file__).read_bytes()).hexdigest(),
-               "libraries": {name: metadata.version(name) for name in ("numpy", "scipy", "statsmodels")}}
+               "libraries": {name: _lib_version(name) for name in ("numpy", "scipy", "statsmodels")}}
     digest = _digest({"runtime": runtime, "documents": documents, "candidate": candidate})
     run = project / "runs" / digest[:24]
     completion = run / "completion.json"

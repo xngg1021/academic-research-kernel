@@ -23,6 +23,8 @@ CanonicalWork 字段（最小集）：
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable, Optional
@@ -90,7 +92,19 @@ _RIS_TO = {
     'misc': 'GEN',
 }
 
+_VALID_CSL_TYPES = frozenset({
+    'article', 'article-journal', 'article-magazine', 'article-newspaper',
+    'bill', 'book', 'broadcast', 'chapter', 'classic', 'collection', 'dataset',
+    'document', 'entry', 'entry-dictionary', 'entry-encyclopedia', 'event',
+    'figure', 'graphic', 'hearing', 'interview', 'legal_case', 'legislation',
+    'manuscript', 'map', 'motion_picture', 'musical_score', 'pamphlet',
+    'paper-conference', 'patent', 'performance', 'periodical',
+    'personal_communication', 'post', 'post-weblog', 'regulation', 'report',
+    'review', 'review-book', 'software', 'song', 'speech', 'standard',
+    'thesis', 'treaty', 'webpage',
+})
 _CSL_FROM = {
+    'article': 'article',
     'article-journal': 'article', 'article-magazine': 'article',
     'article-newspaper': 'article', 'review': 'article',
     'paper-conference': 'paper-conference', 'proceedings-article': 'paper-conference',
@@ -98,16 +112,17 @@ _CSL_FROM = {
     'preprint': 'preprint', 'manuscript': 'preprint', 'posted-content': 'preprint',
     'thesis': 'thesis', 'dissertation': 'thesis',
     'report': 'report',
+    'document': 'misc',
 }
 _CSL_TO = {
     'article': 'article-journal',
     'paper-conference': 'paper-conference',
     'book': 'book',
     'chapter': 'chapter',
-    'preprint': 'preprint',
+    'preprint': 'article',
     'thesis': 'thesis',
     'report': 'report',
-    'misc': 'article',
+    'misc': 'document',
 }
 
 _CROSSREF_TYPE_FROM = {
@@ -511,8 +526,20 @@ def from_csl_json(obj: dict) -> CanonicalWork:
     container = obj.get('container-title') or ''
     if isinstance(container, list):
         container = _first(container)
+    raw_type = str(obj.get('type', '')).strip().lower()
+    raw_genre = str(obj.get('genre', '')).strip().lower()
+    if raw_genre == 'preprint':
+        work_type = 'preprint'
+    else:
+        work_type = _CSL_FROM.get(raw_type, 'misc')
+    extra = {}
+    raw_id = obj.get('id')
+    if raw_id is not None and str(raw_id).strip():
+        extra['id'] = str(raw_id).strip()
+    if raw_type in _VALID_CSL_TYPES:
+        extra['csl_type'] = raw_type
     return CanonicalWork(
-        work_type=_CSL_FROM.get(str(obj.get('type', '')).lower(), 'misc'),
+        work_type=work_type,
         title=str(obj.get('title') or '').strip(),
         authors=authors,
         year=year,
@@ -523,12 +550,43 @@ def from_csl_json(obj: dict) -> CanonicalWork:
         issue=str(obj.get('issue') or ''),
         pages=str(obj.get('page') or ''),
         publisher=str(obj.get('publisher') or ''),
+        extra=extra,
     )
 
 
 def to_csl_json(work: CanonicalWork) -> dict:
-    """导出 CSL-JSON 记录（dict，可直接 json.dumps）。"""
-    out = {'type': _CSL_TO.get(work.work_type, 'article')}
+    """导出 CSL-JSON 记录（dict，可直接 json.dumps，符合官方 CSL-JSON v1.0.2 schema）。"""
+    item_id = str(work.extra.get('id') or work.extra.get('citekey') or '').strip()
+    if not item_id:
+        if work.doi:
+            item_id = f'doi:{work.doi}'
+        else:
+            base = make_citekey(work)
+            canonical_meta = json.dumps({
+                'work_type': work.work_type,
+                'title': work.title,
+                'authors': list(work.authors),
+                'year': work.year,
+                'container': work.container,
+                'url': work.url,
+                'volume': work.volume,
+                'issue': work.issue,
+                'pages': work.pages,
+                'publisher': work.publisher,
+            }, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+            digest8 = hashlib.sha256(canonical_meta).hexdigest()[:8]
+            item_id = f'{base}-{digest8}'
+    preserved_csl = str(work.extra.get('csl_type') or '').strip().lower()
+    if preserved_csl in _VALID_CSL_TYPES and _CSL_FROM.get(preserved_csl, 'misc') == work.work_type:
+        if work.work_type == 'preprint' and preserved_csl == 'manuscript' and (work.doi or work.url or work.container or work.publisher):
+            csl_type = 'article'
+        else:
+            csl_type = preserved_csl
+    else:
+        csl_type = _CSL_TO.get(work.work_type, 'article')
+    out = {'id': item_id, 'type': csl_type}
+    if work.work_type == 'preprint':
+        out['genre'] = 'preprint'
     if work.title:
         out['title'] = work.title
     if work.authors:

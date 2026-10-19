@@ -8,13 +8,18 @@
 
 ## 快速開始
 
-請先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)，隨後直接啟動 2.1.0 版本的 MCP 服務：
+如果您想直接讓 AI 助手幫您讀論文、核對統計數字並生成中文報告，請先安裝帶 PDF 解析功能的軟體套件並把 `paper-research` 技能匯出給您的助手；如果您需要將 12 個查核工具掛載為背景 MCP 服務供用戶端自動呼叫，請先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/) 再啟動 2.1.0 版本的 MCP 服務：
 
 ```bash
+# 方式一：讓 AI 助手直接讀 PDF 論文並生成中文報告
+uv tool install "academic-research-kernel[research]==2.1.0"
+academic-research-kernel research skill --output ./paper-research
+
+# 方式二：作為背景 MCP 服務啟動，供用戶端連線呼叫
 uvx academic-research-kernel@2.1.0 mcp
 ```
 
-[2.1.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) 頁面記錄了安裝套件雜湊值與發布狀態。如果您已將發布的 wheel 安裝套件下載到本機，也可以直接執行 `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`。本工具支援 Python 3.10–3.14，`uvx --python 3.12` 命令可顯式指定受支援的 Python 直譯器。基礎安裝套件已內建全部 12 個查核工具與統計計算依賴。
+直接在終端機執行 `mcp` 命令會讓程式進入背景靜默等待用戶端連線的狀態，不會彈出互動選單。[2.1.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) 頁面記錄了安裝套件雜湊值與發布狀態。如果您已將發布的 wheel 安裝套件下載到本機，也可以直接執行 `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`。本工具支援 Python 3.10–3.14，`uvx --python 3.12` 命令可顯式指定受支援的 Python 直譯器。基礎安裝套件已內建全部 12 個查核工具，統計計算套件會在呼叫統計重算功能時按需載入。
 
 ## 驗證安裝
 
@@ -118,7 +123,7 @@ hermes skills install xngg1021/academic-research-kernel/skills/academic-source-v
 
 ## 學術資料源與介面限額
 
-- OpenAlex 基礎查詢支援匿名使用，但匿名每日額度較小。根據 2026-09-06 核對的官方文件，匿名存取每日額度為 $0.10，申請免費 API 金鑰後每日額度為 $1，每秒最多發送 100 次請求；不同查詢方式的扣費標準不同，並非不限量使用。建議將免費金鑰存入環境變數 `OPENALEX_API_KEY`，查詢時配合上限為 100 的 `per_page` 參數與游標分頁。
+- OpenAlex 基礎首屏查詢支援匿名使用，但匿名每日額度較小。按照官方文件現行標準，無金鑰每秒最多發送 10 次請求，設定免費或預付費金鑰後每秒最多 30 次請求，年度訂閱方案每秒最多 50 次請求；匿名存取每日額度為 $0.10，申請免費 API 金鑰後每日額度為 $1。匿名請求只能取得第一頁游標結果，翻頁繼續讀取 `next_cursor` 需要將免費金鑰存入環境變數 `OPENALEX_API_KEY`，未設定金鑰時翻頁會在保留首屏結果後自動截斷。
 - Crossref 提供帶限流的公開元資料介面。查核論文更正與撤稿訊號時必須同時核對 DOI 與更新方向；介面沒查到紀錄不代表論文一定沒有問題。
 - Unpaywall 要求在環境變數 `UNPAYWALL_EMAIL` 中填入真實聯絡信箱。如果介面沒有回傳全文位址，不代表網路上不存在其他開放取用版本。
 - arXiv 與 Europe PMC，以及 PubMed E-utilities 和 DOAJ 屬於補充資料源，各自有獨立的限流規則，預設自動化測試不會逐一請求。Semantic Scholar 的匿名公共額度與專屬金鑰額度分開計算，能連上介面也不保證每篇論文都開放了引文上下文。
@@ -152,7 +157,7 @@ git diff --check
 
 測試套件沿用了固定版本的 Hermes 技能編寫規範檢查，完整測試本倉庫的全部 14 項技能，並對照固定版本的內建與可選技能目錄核對引用關係。持續整合環境只在安裝依賴套件時連網，平時的程式碼提交測試不會請求外部學術資料庫。
 
-GitHub Actions 持續整合覆蓋三大作業系統的 x86_64 與 ARM64 架構。測試範圍包含執行 Python 3.10 至 3.14 的 Linux x86_64 與 `ubuntu-24.04-arm` 映像，涵蓋 `ubuntu-26.04` 與 `ubuntu-26.04-arm` 預遷移環境，同時覆蓋 Windows x86_64 與 `windows-11-arm`，以及 `macos-latest` 與 `macos-15-intel` 環境，並附帶針對上游 `main` 分支最新程式碼的即時載入檢驗。本機完整迴歸測試套件共通過 1165 項測試，詳細結果與覆蓋範圍見[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)，遠端測試日誌會單獨標明所測的程式碼提交雜湊值。每當程式碼推送到 `main` 分支時，獨立的整合測試工作流還會自動安裝 `tests/upstream/provenance.json` 記錄的固定版本 Hermes，實測對本倉庫執行 `tap add` 與 `search`，以及 `install` 和 `list` 全流程。各項檢查的確切版本與限制見[審計文件](docs/project-lineage-audit-20260920.md)。
+GitHub Actions 持續整合覆蓋三大作業系統的 x86_64 與 ARM64 架構。測試範圍包含執行 Python 3.10、3.12 與 3.14 的 Linux x86_64 與 `ubuntu-24.04-arm` 映像，同時覆蓋 Windows x86_64 與 `windows-11-arm` 以及 `macos-latest` 環境，並附帶針對上游 `main` 分支最新程式碼的即時載入檢驗。本機完整迴歸測試套件共通過 1317 項測試，此前 1165 項基線與覆蓋範圍記錄在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)中，遠端測試日誌會單獨標明所測的程式碼提交雜湊值。每當程式碼推送到 `main` 分支時，獨立的整合測試工作流還會自動安裝 `tests/upstream/provenance.json` 記錄的固定版本 Hermes，實測對本倉庫執行 `tap add` 與 `search`，以及 `install` 和 `list` 全流程。各項檢查的確切版本與限制見[審計文件](docs/project-lineage-audit-20260920.md)。
 
 [tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，從 4096 個 SHA256 種子候選中選出 30 個代表性測試場景，並自動生成核驗覆蓋度報告，分別統計 16 類能力族、倉庫實際的 14 項技能以及 36 項具體任務目標。每項技能至少出現 2 次並覆蓋 2 個不同任務目標，且必須包含該技能的核心目標。
 

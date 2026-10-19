@@ -6,6 +6,12 @@
 
 ## Unreleased
 
+- **On-demand statistical loading (`scripts/mcp_server.py`, `skills/quantitative-paper-audit/scripts/recompute.py`)**: Removed top-level `numpy`, `scipy`, and `statsmodels` imports from `mcp_server.py` and `recompute.py`. Starting the MCP server and running closed-form checks (`academic_check_percentage`, `cohens_d`, `check_sd_possible`, `check_sample_size_from_df`, `check_p_match`, `values_agree`) no longer load the scientific stack until distribution or power recomputation (`scipy.stats` / `statsmodels`) is called, cutting median MCP startup latency by over 90% and startup memory growth from ~123 MiB to ~13 MiB.
+- **Bounded immutable state caching and copy-on-write cloning (`scripts/shared_contracts/evidence.py`, `scripts/ingestion/`, `skills/claim-evidence-graph/`, `skills/decision-ledger/`)**: `FrozenJSONMap` lazily caches canonical JSON bytes (bounded at `<= 16 KiB` to prevent deep-nesting memory amplification) and SHA-256 digests, enforced with exact `type(x) is FrozenJSONMap` checks; `LineageVerificationContext.fingerprint()` caches content SHA-256 digests while byte identities are unchanged; `IngestionKernelState.clone()`, `ClaimEvidenceGraph.__deepcopy__()`, and `DecisionLedger.__deepcopy__()` reuse frozen domain records without redundant re-serialization or single-item batch double-cloning while preserving all tamper-detection invariants.
+- **External protocol and schema alignment (`scripts/mcp_server.py`, `skills/literature-analysis/scripts/interop.py`, `skills/literature-watch/scripts/watch.py`)**: Set default unrequested MCP negotiation to `2024-11-05` while adding compliant `server/discover`, `tools/list`, and `tools/call` responses (`resultType: "complete"`, `supportedVersions`, `ttlMs`, `cacheScope`) and per-request `_meta["io.modelcontextprotocol/protocolVersion"]` validation (`-32022` with `data.requested` and `data.supported` on unsupported versions) for `2026-07-28` callers; ensured CSL-JSON exports always include a collision-resistant `id` (appending an 8-hex canonical metadata SHA-256 suffix when no explicit identifier is present), preserve valid incoming CSL types across round-trips, and map public preprints to valid CSL v1.0.2 `"type": "article"` with `"genre": "preprint"` (`"manuscript"` for unpublished drafts); protected OpenAlex cursor pagination so second-page HTTP/network interruptions retain first-page works with `truncated=True` and status-specific diagnostics.
+- **Onboarding, diagnostics, and report presentation (`README*.md`, `src/academic_research_kernel/cli.py`, `src/academic_research_kernel/research/analysis.py`)**: Separated first-screen quick-start commands for local Agent paper reading versus background MCP client connection; updated OpenAlex tiered rate-limit documentation (10 / 30 / 50 rps); extended `doctor` with accurate `pypdf`/`fontTools` readiness, checkout/installed package root fallback, and specific CLI error `hint` fields; wrapped raw recomputation JSON and SHA-256 file manifests in collapsible `<details class="tech-appendix">` blocks in generated HTML reports.
+- **Orthogonal CI matrix, low-RAM bootstrap chunking, and `[research]` PDF distribution smoke (`.github/workflows/`, `scripts/`, `skills/cross-review-five/`)**: Streamlined `.github/workflows/qa.yml` to a 7-cell orthogonal matrix across Linux/Windows/macOS, x86_64/ARM64, and Python 3.10/3.12/3.14 (removing the legacy `macos-15-intel` bottleneck and duplicate 41-fence subprocess execution across non-baseline cells); added explicit UTF-8 subprocess decoding and `PYTHONUTF8=0` Windows pipe coverage; chunked large `scfabric` bootstrap resampling so peak memory stays within low-RAM laptop budgets; extended `package_acceptance.py` and `distribution_smoke.py` to test both base and `[research]` wheel/sdist installations with real digital PDF page-locator extraction.
+
 ## 2.1.0 — 2026-10-08 paper research workflow
 
 - DOI/URL/local-material preparation with bounded acquisition, source manifests and hashes, stable page/segment locators, and explicit partial failures. Digital PDF parsing is the optional `research` extra (`pypdf==6.19.0`, `fonttools==4.65.0`); the pinned font decoder prevents clean-environment CFF text drift. Structured text and bounded Office XML use the standard library.
@@ -107,7 +113,7 @@
 - **全球学术标准基线 (`docs/standards/`) 与自然术语清单 (`docs/terminology/`)**：
   - 确立 ISO 690:2021、ISO 704:2022、ISO 860:2007、ISO 5127:2017 与 W3C PROV 为全球基线，解耦语言与司法管辖区规范；标准注册表逐项完善 `authority_url`、`verified_at`、`evidence_status` 与 `supersedes` 证据链；
   - 建立机器可读标准清单 `docs/standards/registry.json` 与涵盖 18 组概念、覆盖全部 21 个目标语种自然学术表达的 `docs/terminology/registry.json` 及完整说明指南 `docs/terminology/README.md`；
-  - 建立 AIDetox 公开文档写作契约 `docs/style/aidetox-contract.json` 与涵盖 21 个语种独立规则库的 `docs/style/profiles/`；
+  - 建立公开文档写作契约 `docs/style/style-contract.json` 与涵盖 21 个语种独立规则库的 `docs/style/profiles/`；
   - 落地 21 语种 README 核心能力与结构对齐（全 11 节结构、SLL/MIT 许可边界、13 技能、MCP/Hermes、数据源、longtail 与 scfabric 全覆盖），全语种顶栏导航互联；
   - 全仓 53 篇规范 Markdown 文档密码学级增量同步清册 `docs/i18n/manifest.json`（53 篇源文档 × 21 语种 = 1,113 理论实例；53 canonical_current、22 localized_current、1,038 queued_for_generation），内置代码块感知的章节哈希提取与陈旧度检测，杜绝重跑脚本静默洗白；
   - `scripts/qa.py` 静态门禁强制固化 21 语种 Profile、18×21 术语矩阵、53 篇清单源文件与本地文件双层哈希、以及 `README.zh-CN.md` / `README.zh-TW.md` 中文别名逐字节恒等不变量。
@@ -116,9 +122,9 @@
 
 **验证**：`pytest` 632 项全部通过（0 failures, 0 warnings）；`scripts/qa.py` 静态门禁全部 PASS（40 independent executable fences）。
 
-### 交叉评审加固（五模型盲审第一轮 + 主线程复核，同 PR 内实施）
+### 交叉评审加固（多模型盲审第一轮 + 维护者复核，同 PR 内实施）
 
-五模型 Sparse Deliberation 盲审（kimi-k3/dsv4pro/glm53/gemini38flash/gemini31pro）提出若干发现，主线程逐项实测复核后裁决并修复（假阳性驳回，真缺陷全部修复并补对抗回归）：
+多模型 Sparse Deliberation 独立盲审提出若干发现，维护者逐项实测复核后裁决并修复（假阳性驳回，真缺陷全部修复并补对抗回归）：
 
 - **[P0] 负结果循环证据伪造封死**：`negative_result` 自指（引自身为 claim）与互指（两个负结果互相引为 claim）原本可绕过 E405；新增 E406 自指判错，E405 改为要求依据引用**其他**非负结果决策；混合支撑（伪 claim + 负结果边）同样无法通过。
 - **[P1] 结果修正时序语义**：`outcome_of` 原按内容寻址 ID 字典序取"最新"，哈希随机分布导致时序失真；为 `OutcomeCorrection` 引入台账分配的 `sequence` 单调序号（幂等重放保持不变），`latest_verdict` 反映真实追加历史；schema 同步 `sequence` 必填字段；摘要不变量明确唯一例外：不同修正的到达顺序属于追加历史，合法影响 `ledger_digest`。
@@ -132,7 +138,7 @@
 
 **验证（加固后）**：`pytest` 581 项全部通过；`scripts/qa.py` 40 fences PASS。
 
-### 交叉评审加固第二轮（dsv4pro 深度盲审 + 主线程复核，同 PR 内实施）
+### 交叉评审加固第二轮（深度独立盲审 + 维护者复核，同 PR 内实施）
 
 - **[P1] FrozenDict 哈希缓存失配封死**：惰性缓存的 `_hash` 在越权 slot 写入后不失效，同一对象哈希与内容失配；取消缓存、哈希每次按当前内容现算（条目规模小，开销可忽略），越权写入后哈希立即跟随内容，陈旧哈希无处发生；补 `__eq__`/`__ne__` 规范 Mapping 语义（递归 thaw 比较）。
 - **[P1] 不确定性 item_id 派生与 CEG 对齐**：台账原哈希 `{kind, subject_id, reason}` 三字段，CEG 哈希 `{kind, needs_human, reason, subject_id}` 四字段，同一逻辑项跨内核 ID 不同，PR #12 队列合并将错配；改为与 CEG 逐字节一致的派生公式，并对去重引入负载指纹碰撞防御（不同负载碰撞直接抛错，同内容幂等合并）。
@@ -153,7 +159,7 @@
 
 ### 外部评审集中加固（第三方 P1 簇全清，同 PR 内实施）
 
-外部评审针对合并前 HEAD 提出 6 簇 P1 与 9 项 P2，主线程逐项实测复核后全部属实并实施修复（`pytest` 590→608 项全绿，qa.py 40 fences PASS）：
+外部评审针对合并前 HEAD 提出 6 簇 P1 与 9 项 P2，维护者逐项实测复核后全部属实并实施修复（`pytest` 590→608 项全绿，qa.py 40 fences PASS）：
 
 - **[P1-01] State Ledger 本真化**：`PruneState` 单快照改为追加式 `DecisionStateEvent`（from_state/to_state/reason/caused_by/alternative_ref/receipt_ref/sequence），生命周期状态由事件重放派生；`current_state`/`state_history` 全部就绪；合法迁移闭集（genesis→active|pruned、active→pruned、pruned→reopened、reopened→pruned）强校验，重复同负载调用幂等 no-op，event_id 绑定 内容+序号 保证历史中两次相同迁移互不吞并；`PruneState` 降为派生视图，`set_prune` 保留兼容包装。
 - **[P1-02] FrozenDict 真不可变**：背板从裸 dict 改 `MappingProxyType`，构造后无任何可达的变异路径（slot 写入直接 TypeError）；哈希每次现算。
@@ -168,7 +174,7 @@
 
 ### 合并前全面收口加固（零债务发布，同 PR 内完整实施）
 
-针对合并前终审提出的各项架构完整性、事件历史时序、回放闭环、命名解耦与性能要求，主线程实施彻底加固，完全消解全部 P1/P2/P3，不向后续 PR 遗留任何技术债务：
+针对合并前终审提出的各项架构完整性、事件历史时序、回放闭环、命名解耦与性能要求，维护者实施彻底加固，完全消解全部 P1/P2/P3，不向后续 PR 遗留任何技术债务：
 
 - **[P1] 修正 outcome correction 历史吞噬 bug**：`OutcomeCorrection` 引入单调 sequence 参与 content-addressed ID 派生；严格比对当前最新事件，仅在与当前最新完全相同时才执行幂等 no-op，历史中再次发生的相同结果（如 negative→positive→negative）正确记录为新事件并影响最新 verdict。
 - **[P1] `from_dict()` 补齐 Gate 4 结构校验**：回放结束时无条件执行 `validate_ledger()`，对带环、悬空边或非法证据闭包的自洽伪造导出执行 fail-closed。

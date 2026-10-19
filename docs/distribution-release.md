@@ -16,7 +16,10 @@ optional CFF decoding path from varying between QA and clean `[research]`
 installations. Actual fonttools versions are part of parser identity and cache
 invalidation. HTML/XML and bounded DOCX/XLSX parsing use Python's standard library.
 The base MCP dependencies are unchanged; `qa` includes `research` so source and
-archive tests exercise the parser without global dependencies. Version metadata:
+archive tests exercise the parser without global dependencies. At runtime,
+`mcp_server` and `recompute` load `numpy`, `scipy`, and `statsmodels` lazily on
+first statistical distribution invocation while executing closed-form checks
+with the Python standard library. Version metadata:
 [fonttools 4.65.0](https://pypi.org/pypi/fonttools/4.65.0/json),
 [fonttools 4.66.1](https://pypi.org/pypi/fonttools/4.66.1/json).
 

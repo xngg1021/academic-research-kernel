@@ -143,63 +143,74 @@ def _truncated(data: dict) -> bool:
     return int(total) > len(data.get('results') or [])
 
 
-def fetch_topic_works(topic: str, since: date, max_pages: int = 1):
-    """live: OpenAlex 主题检索，from_publication_date 限定新增窗口。
-    支持受控游标分页 (max_pages)。返回 (items, truncated)。"""
+def _fetch_paged_openalex(query_params: dict, max_pages: int = 1):
+    """受控游标分页：当 page > 1 遇到匿名游标 401/403 或限流 429 耗尽时，
+    保留已取得的首页/前序页面结果并标记 truncated=True，避免整批丢失。"""
     all_results = []
     cursor = "*"
+    seen_cursors = {cursor}
     page = 1
     truncated = False
     while page <= max_pages:
-        params = urlencode({
-            'search': topic,
-            'filter': f'from_publication_date:{since.isoformat()}',
-            'per_page': 100,
-            'select': SELECT,
-            'cursor': cursor,
-        })
-        data = get(f'{OPENALEX}/works?{params}') or {}
+        params = urlencode({**query_params, 'cursor': cursor})
+        try:
+            data = get(f'{OPENALEX}/works?{params}') or {}
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            if page > 1 and all_results:
+                code = getattr(exc, 'code', None)
+                if code in (401, 403):
+                    reason = f'status={code}; 匿名请求继续使用 next_cursor 需配置免费 OPENALEX_API_KEY'
+                elif code == 429:
+                    reason = 'status=429; 触发 OpenAlex 速率或日额度限制'
+                elif code is not None:
+                    reason = f'status={code}; OpenAlex 远端服务异常'
+                else:
+                    reason = f'network_error={getattr(exc, "reason", exc)}; 网络连接中断'
+                print(
+                    f'⚠ OpenAlex 翻页在第 {page} 页中断 ({reason})，已保留前序页面结果。',
+                    file=sys.stderr,
+                )
+                truncated = True
+                break
+            raise
         results = data.get('results') or []
         all_results.extend(results)
         meta = data.get('meta') or {}
         next_cursor = meta.get('next_cursor')
-        count = meta.get('count') or 0
-        if not next_cursor or not results or len(all_results) >= count:
+        raw_count = meta.get('count')
+        count = int(raw_count) if isinstance(raw_count, int) and raw_count > 0 else None
+        if not next_cursor or not results or next_cursor in seen_cursors:
+            truncated = bool(count is not None and len(all_results) < count)
+            break
+        if count is not None and len(all_results) >= count:
             truncated = False
             break
+        seen_cursors.add(next_cursor)
         cursor = next_cursor
         page += 1
         truncated = True
     return all_results, truncated
+
+
+def fetch_topic_works(topic: str, since: date, max_pages: int = 1):
+    """live: OpenAlex 主题检索，from_publication_date 限定新增窗口。
+    支持受控游标分页 (max_pages)。返回 (items, truncated)。"""
+    return _fetch_paged_openalex({
+        'search': topic,
+        'filter': f'from_publication_date:{since.isoformat()}',
+        'per_page': 100,
+        'select': SELECT,
+    }, max_pages=max_pages)
 
 
 def fetch_author_works(author_id: str, since: date, max_pages: int = 1):
     """live: OpenAlex 按 author id 过滤新作。
     支持受控游标分页 (max_pages)。返回 (items, truncated)。"""
-    all_results = []
-    cursor = "*"
-    page = 1
-    truncated = False
-    while page <= max_pages:
-        params = urlencode({
-            'filter': f'authorships.author.id:{author_id},from_publication_date:{since.isoformat()}',
-            'per_page': 100,
-            'select': SELECT,
-            'cursor': cursor,
-        })
-        data = get(f'{OPENALEX}/works?{params}') or {}
-        results = data.get('results') or []
-        all_results.extend(results)
-        meta = data.get('meta') or {}
-        next_cursor = meta.get('next_cursor')
-        count = meta.get('count') or 0
-        if not next_cursor or not results or len(all_results) >= count:
-            truncated = False
-            break
-        cursor = next_cursor
-        page += 1
-        truncated = True
-    return all_results, truncated
+    return _fetch_paged_openalex({
+        'filter': f'authorships.author.id:{author_id},from_publication_date:{since.isoformat()}',
+        'per_page': 100,
+        'select': SELECT,
+    }, max_pages=max_pages)
 
 
 def fetch_citing_works(doi: str, since: date, max_pages: int = 1):
@@ -234,30 +245,11 @@ def fetch_citing_works(doi: str, since: date, max_pages: int = 1):
             'source': 'crossref-fallback-unobservable',
         }
         return [fallback_unobs], False
-    all_results = []
-    cursor = "*"
-    page = 1
-    truncated = False
-    while page <= max_pages:
-        params = urlencode({
-            'filter': f'cites:{wid},from_publication_date:{since.isoformat()}',
-            'per_page': 100,
-            'select': SELECT,
-            'cursor': cursor,
-        })
-        data = get(f'{OPENALEX}/works?{params}') or {}
-        results = data.get('results') or []
-        all_results.extend(results)
-        meta = data.get('meta') or {}
-        next_cursor = meta.get('next_cursor')
-        count = meta.get('count') or 0
-        if not next_cursor or not results or len(all_results) >= count:
-            truncated = False
-            break
-        cursor = next_cursor
-        page += 1
-        truncated = True
-    return all_results, truncated
+    return _fetch_paged_openalex({
+        'filter': f'cites:{wid},from_publication_date:{since.isoformat()}',
+        'per_page': 100,
+        'select': SELECT,
+    }, max_pages=max_pages)
 
 
 def _crossref_year(record: dict):

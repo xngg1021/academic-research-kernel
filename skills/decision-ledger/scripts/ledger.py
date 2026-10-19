@@ -206,6 +206,8 @@ def canonical_ledger_payload_sha256(payload_dict: Mapping[str, Any]) -> str:
     ``receipt_id`` nor ``receipt_digest``. Excluding them here gives the ledger
     the same timestamp-equivalence rule as the ingestion receipt registry.
     """
+    if type(payload_dict) is FrozenJSONMap and payload_dict.get("protocol") != "lineage-receipt-1.0":
+        return payload_dict.sha256()
     payload = _jsonable(payload_dict)
     if isinstance(payload, dict) and payload.get("protocol") == "lineage-receipt-1.0":
         payload = dict(payload)
@@ -460,6 +462,7 @@ def _frozen_meta(metadata: Optional[Mapping[str, Any]]) -> FrozenDict:
 try:
     if __package__ and __package__.startswith("academic_research_kernel"):
         from academic_research_kernel.shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -472,6 +475,7 @@ try:
         )
     else:
         from shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -490,6 +494,7 @@ except ImportError:
         sys.path.insert(0, str(_repo_root / "scripts"))
     if __package__ and __package__.startswith("academic_research_kernel"):
         from academic_research_kernel.shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -502,6 +507,7 @@ except ImportError:
         )
     else:
         from shared_contracts.evidence import (
+            FrozenJSONMap,
             ReceiptRef,
             canonical_receipt_ref_tuple,
             canonical_academic_receipt_payload_sha256,
@@ -1149,6 +1155,42 @@ class DecisionLedger:
         self._corrections_by_decision: Dict[str, List[OutcomeCorrection]] = collections.defaultdict(list)
         self._academic_hash_index: Dict[str, Any] = {}
 
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "DecisionLedger":
+        cloned = object.__new__(DecisionLedger)
+        memo[id(self)] = cloned
+        cloned.verification_context = self.verification_context
+        cloned.ledger_id = self.ledger_id
+        cloned._decisions = dict(self._decisions)
+        cloned._bases = dict(self._bases)
+        cloned._forks = dict(self._forks)
+        cloned._state_events = list(self._state_events)
+        cloned._corrections = dict(self._corrections)
+        cloned._receipts = {
+            k: (v if type(v) is FrozenJSONMap else copy.deepcopy(v, memo))
+            for k, v in self._receipts.items()
+        }
+        cloned._receipt_manifest_modes = dict(self._receipt_manifest_modes)
+        cloned._receipt_manifest_legacy_hashes = dict(self._receipt_manifest_legacy_hashes)
+        cloned._next_correction_sequence = self._next_correction_sequence
+        cloned._next_state_sequence = self._next_state_sequence
+        cloned._bases_by_decision = collections.defaultdict(
+            list, {k: list(v) for k, v in self._bases_by_decision.items()}
+        )
+        cloned._bases_by_target = collections.defaultdict(
+            list, {k: list(v) for k, v in self._bases_by_target.items()}
+        )
+        cloned._state_events_by_decision = collections.defaultdict(
+            list, {k: list(v) for k, v in self._state_events_by_decision.items()}
+        )
+        cloned._corrections_by_decision = collections.defaultdict(
+            list, {k: list(v) for k, v in self._corrections_by_decision.items()}
+        )
+        cloned._academic_hash_index = {
+            k: (v if type(v) is FrozenJSONMap else copy.deepcopy(v, memo))
+            for k, v in self._academic_hash_index.items()
+        }
+        return cloned
+
     # -- registration -------------------------------------------------------
 
     def register_receipt(self, receipt_id: str, receipt_data: Any):
@@ -1161,10 +1203,13 @@ class DecisionLedger:
         if not isinstance(receipt_id, str) or not receipt_id.strip():
             raise ValueError("receipt_id must be a non-empty string.")
         rid = receipt_id.strip()
-        snapshot = copy.deepcopy(receipt_data)
-        # Fail fast: only JSON-domain payloads (or to_dict() objects) may enter
-        # the registry; anything else would poison canonical digests later.
-        _jsonable(snapshot)
+        if rid in self._receipts and self._receipts[rid] is receipt_data and type(receipt_data) is FrozenJSONMap:
+            return
+        if type(receipt_data) is FrozenJSONMap:
+            snapshot = receipt_data
+        else:
+            snapshot = copy.deepcopy(receipt_data)
+            _jsonable(snapshot)
         if rid in self._receipts:
             existing = self._receipts[rid]
             ex_dict = existing.to_dict() if hasattr(existing, "to_dict") else existing
@@ -1183,13 +1228,16 @@ class DecisionLedger:
         self._receipts[rid] = snapshot
         self._receipt_manifest_modes[rid] = "canonical"
         self._receipt_manifest_legacy_hashes.pop(rid, None)
-        snap_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
-        if isinstance(snap_dict, dict):
-            try:
-                p_hash = canonical_academic_receipt_payload_sha256(snap_dict)
-                self._academic_hash_index[p_hash] = snapshot
-            except Exception:
-                pass
+        if type(snapshot) is FrozenJSONMap and snapshot.get("protocol") != "lineage-receipt-1.0":
+            self._academic_hash_index[snapshot.sha256()] = snapshot
+        else:
+            snap_dict = snapshot.to_dict() if hasattr(snapshot, "to_dict") else snapshot
+            if isinstance(snap_dict, dict):
+                try:
+                    p_hash = canonical_academic_receipt_payload_sha256(snap_dict)
+                    self._academic_hash_index[p_hash] = snapshot
+                except Exception:
+                    pass
 
     def _register_node(self, store: Dict[str, Any], obj: Any, obj_id: str, label: str):
         existing = store.get(obj_id)
@@ -2006,7 +2054,7 @@ class DecisionLedger:
                     _legacy_ledger_payload_sha256(_jsonable(r)),
                 )
                 if self._receipt_manifest_modes.get(rid) == "legacy_v1"
-                else canonical_ledger_payload_sha256(_jsonable(r))
+                else canonical_ledger_payload_sha256(r)
             )
             for rid, r in sorted(self._receipts.items())
         }

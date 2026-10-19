@@ -76,6 +76,7 @@ class IngestionEngine:
         target.ingested_artifacts = source.ingested_artifacts
         target.ingestion_receipts = source.ingestion_receipts
         target.ingestion_sources = source.ingestion_sources
+        target._projection_cache = getattr(source, "_projection_cache", {})
 
     def batch_ingest(
         self,
@@ -156,7 +157,7 @@ class IngestionEngine:
                     break
                 continue
 
-            before = staged.clone()
+            before = staged.clone() if index > 0 else None
             try:
                 plan = adapter.plan(env, staged, bindings)
                 if not plan.valid:
@@ -209,7 +210,7 @@ class IngestionEngine:
                     )
                 results[index] = receipt
             except Exception as exc:
-                staged = before
+                staged = before if before is not None else target_state.clone()
                 errors = [str(exc)]
                 results[index] = self._rejected(
                     env,

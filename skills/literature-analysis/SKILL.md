@@ -245,10 +245,13 @@ query = {'filter': 'topics.id:' + w['topics'][0]['id'].split('/')[-1],
          'per_page': 1, 'cursor': '*', 'select': 'id,topics', 'corpus': 'core'}
 first = get('https://api.openalex.org/works?' + urlencode(query))
 assert first['results'] and first['meta']['next_cursor']
-query['cursor'] = first['meta']['next_cursor']
-second = get('https://api.openalex.org/works?' + urlencode(query))
-assert second['results'] and first['results'][0]['id'] != second['results'][0]['id']
-assert all(any(t['id'] == w['topics'][0]['id'] for t in r['topics']) for r in first['results'] + second['results'])
+pages = list(first['results'])
+if os.environ.get('OPENALEX_API_KEY', '').strip():
+    query['cursor'] = first['meta']['next_cursor']
+    second = get('https://api.openalex.org/works?' + urlencode(query))
+    assert second['results'] and first['results'][0]['id'] != second['results'][0]['id']
+    pages.extend(second['results'])
+assert all(any(t['id'] == w['topics'][0]['id'] for t in r['topics']) for r in pages)
 topic_ids = [t['id'].split('/')[-1] for t in w['topics'][:2]]
 both = get('https://api.openalex.org/works?' + urlencode({
     'filter': ','.join('topics.id:' + t for t in topic_ids), 'per_page': 1,

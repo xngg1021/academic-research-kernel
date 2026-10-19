@@ -4,7 +4,7 @@ Status: first-round experiment, 2026-09-17. Proposal provenance and the maintain
 
 ## What it is
 
-scripts/scfabric/ implements five separable concerns, mirroring the THM provider contract in miniature without any THM dependency:
+scripts/scfabric/ implements five separable concerns through a self-contained backend capability contract without external runtime dependencies:
 
 - hardware_probe.py: CPU model, OS-visible cores, process affinity, cgroup quota, RAM, ISA hint, accelerators. Every probe degrades to unknown instead of raising.
 - backends.py: BackendSpec catalog with declared dtype support and lazy executable probes. dtype semantics come before device availability: torch_mps declares float32/float16/bfloat16 only, so any float64 workload can never be routed to MPS.
@@ -18,7 +18,7 @@ Deterministic workloads (matmul, fft, autodiff) compare element-wise relative er
 
 ## First-round measurements (single-machine snapshot)
 
-One workstation: 36 hardware threads with AVX-512, 96 GB RAM, one consumer GPU with throttled FP64, Windows, Python 3.11, float64, gain threshold 1.5x, warmup 2, repeat 5. The receipts stay local and are gitignored; this table is a snapshot of that one machine, not a repository-wide claim. Every machine that runs run_ab_matrix.py produces its own receipts, and the fabric's verdicts are always relative to the machine being measured.
+One reference workstation: multi-core vector-capable CPU, one consumer GPU with throttled FP64, Windows, Python 3.11, float64, gain threshold 1.5x, warmup 2, repeat 5. The receipts stay local and are gitignored; this table is a snapshot of that one machine, not a repository-wide claim. Every machine that runs run_ab_matrix.py produces its own receipts, and the fabric's verdicts are always relative to the machine being measured.
 
 | workload | scale | torch_cpu | torch_cuda |
 | --- | --- | --- | --- |
@@ -41,7 +41,7 @@ One workstation: 36 hardware threads with AVX-512, 96 GB RAM, one consumer GPU w
 Recorded findings:
 
 1. There is no universal fastest backend. Small workloads stay on CPU because accelerator overhead dominates. Element-wise autodiff stays on CPU at every tested scale because the computation is too light.
-2. On the measured machine, the 36-thread AVX-512 CPU beats its consumer GPU for float64 dense linear algebra and FFT: consumer GPUs throttle FP64 throughput relative to FP32, while the workstation CPU's multi-threaded torch kernels win on this specific workload. This confirmed the maintainer's prior expectation on this specific hardware configuration and demonstrates that a naive GPU-first dispatch rule is invalid for double precision on systems with throttled FP64 hardware.
+2. On the measured workstation profile, the multi-core CPU beats the consumer GPU for float64 dense linear algebra and FFT: consumer GPUs throttle FP64 throughput relative to FP32, while the workstation CPU's multi-threaded torch kernels win on this specific workload. This confirmed the maintainer's prior expectation on this specific hardware configuration and demonstrates that a naive GPU-first dispatch rule is invalid for double precision on systems with throttled FP64 hardware.
 3. The GPU wins where the workload is wide and parallel at float32 statistics: Monte Carlo and bootstrap with large resample counts.
 4. The admission gate rejected real cases that a naive router would have shipped: torch_cpu FFT at the largest scale failed the sized parity contract before a complex-dtype comparison bug was fixed; the bug itself (casting complex results to float64 and silently comparing real parts only) is exactly the class of silent semantic drift this layer exists to catch, and it is now pinned by a regression test.
 

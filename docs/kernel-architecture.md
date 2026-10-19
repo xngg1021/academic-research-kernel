@@ -4,11 +4,11 @@
 
 The **Academic Research Kernel** provides an offline-first, deterministic, cryptographically verifiable research-state runtime for autonomous AI agents and scholars.
 
-Rather than treating tools as disconnected utility scripts, the kernel unifies 13 specialized scholarly capabilities around three core state models and a centralized ingestion bridge:
+Rather than treating tools as disconnected utility scripts, the kernel unifies 14 specialized scholarly capabilities around three core state models and a centralized ingestion bridge:
 
 ```mermaid
 flowchart TD
-    A["13 skills and external producers"] --> B["Artifact envelope and adapters"]
+    A["14 skills and external producers"] --> B["Artifact envelope and adapters"]
     B --> C["Research objects"]
     B --> D["Claim-evidence graph"]
     B --> E["Decision ledger"]
@@ -58,6 +58,7 @@ Batch execution is transactional. Plans run against a detached state clone, ever
   - `literature-watch`: Ingests monitoring deltas without mutating decision states.
   - `retraction-watch`: Signals retraction alerts and marks affected evidence as requiring revalidation (never deletes history).
   - `math-computation`: Ingests symbolic/numerical evaluations.
+  - `paper-research`: Ingests verified paper extractions, source-addressed evidence, and two-paper comparability assessments.
 - **Tier 3: Opaque Artifacts (Prose Stays Prose)**
   - `academic-writing`: Manuscripts, submission packages, and drafts are stored with cryptographic hashes. The kernel **strictly forbids** extracting speculative claims or making automated decisions from unannotated prose.
 
@@ -125,7 +126,7 @@ The stdio MCP server ([scripts/mcp_server.py](../scripts/mcp_server.py)) exposes
 7. `claim_evidence_trace`: Traces evidence and receipts for a claim.
 8. `decision_ledger_validate`: Executes four-gate verification on a decision ledger.
 9. `decision_trace`: Traces causal ancestry and corrections for a decision.
-10. `academic_recompute_statistics`: Recomputes statistical claims (t-tests, effect sizes).
+10. `academic_recompute_statistics`: Recomputes statistical claims (t-tests, effect sizes) with on-demand SciPy/statsmodels loading for probability distributions and closed-form standard-library arithmetic.
 11. `academic_check_percentage`: Checks count/percentage compatibility.
 12. `academic_scfabric_hardware_probe`: Probes execution accelerators.
 
@@ -135,7 +136,7 @@ Tool arguments use closed JSON Schemas and are validated before dispatch. Each r
 
 ## Verification and residual boundaries
 
-The remediation baseline is **873 passed, zero skipped** tests plus 40 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
+The current local regression suite covers **1316 passed** tests (1319 total with the optional CPU PyTorch backend) plus 41 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
 
 The complete historical PR/CI ledger, fixed PR #12 review findings, and still-open operational/governance/P3 boundaries are maintained in [the 2026-09-20 project lineage audit](project-lineage-audit-20260920.md).
 

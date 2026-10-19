@@ -201,3 +201,44 @@ def test_no_third_party_imports():
     names.discard('__future__')
     for name in names:
         assert name in sys.stdlib_module_names, f'非标准库依赖: {name}'
+
+
+def test_csl_json_preserves_id_and_maps_preprint_to_valid_csl_type():
+    raw_preprint = {
+        'id': 'preprint-123',
+        'type': 'preprint',
+        'title': 'A Preprint Study',
+        'DOI': '10.1234/preprint.1',
+    }
+    work = interop.from_csl_json(raw_preprint)
+    assert work.work_type == 'preprint'
+    assert work.extra.get('id') == 'preprint-123'
+    exported = interop.to_csl_json(work)
+    assert exported['id'] == 'preprint-123'
+    assert exported['type'] == 'article'
+    assert exported['genre'] == 'preprint'
+    roundtripped = interop.from_csl_json(exported)
+    assert roundtripped.work_type == 'preprint'
+    assert roundtripped.extra.get('id') == 'preprint-123'
+
+    no_id_work = CanonicalWork(work_type='preprint', title='Unpublished Draft', extra={'csl_type': 'manuscript'})
+    exported_ms = interop.to_csl_json(no_id_work)
+    assert exported_ms['id']
+    assert exported_ms['type'] == 'manuscript'
+
+    zh_w1 = CanonicalWork(title='基于教育公平的研究', authors=['张三'], year=2026)
+    zh_w2 = CanonicalWork(title='气候变化与水稻产量', authors=['李四'], year=2026)
+    csl_w1 = interop.to_csl_json(zh_w1)
+    csl_w2 = interop.to_csl_json(zh_w2)
+    assert csl_w1['id'] != csl_w2['id']
+    assert csl_w1['id'].startswith('anon2026work-')
+    assert csl_w2['id'].startswith('anon2026work-')
+
+    generic_article = interop.from_csl_json({'id': 'a', 'type': 'article', 'title': 'A'})
+    assert interop.to_csl_json(generic_article)['type'] == 'article'
+    journal_article = interop.from_csl_json({'id': 'b', 'type': 'article-journal', 'title': 'B'})
+    assert interop.to_csl_json(journal_article)['type'] == 'article-journal'
+    misc_work = CanonicalWork(work_type='misc', title='Dataset or Misc Note')
+    misc_csl = interop.to_csl_json(misc_work)
+    assert misc_csl['type'] == 'document'
+    assert interop.from_csl_json(misc_csl).work_type == 'misc'

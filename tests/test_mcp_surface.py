@@ -265,3 +265,187 @@ def test_mcp_stdio_roundtrip():
     resp = json.loads(line)
     assert resp["id"] == 100
     assert resp["result"]["serverInfo"]["name"] == "academic-research-kernel"
+
+
+def test_mcp_server_discover_and_meta_protocol_version():
+    disc = mcp_server.process_message({"jsonrpc": "2.0", "id": 101, "method": "server/discover", "params": {}})
+    res = disc["result"]
+    assert "protocolVersion" not in res
+    assert res["supportedVersions"] == ["2024-11-05", "2026-07-28"]
+    assert res["resultType"] == "complete"
+    assert res["ttlMs"] == 3600000
+    assert res["cacheScope"] == "public"
+    assert res["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "academic-research-kernel"
+    assert len(res["tools"]) == 12
+
+    bad_cap_meta = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 1015,
+        "method": "tools/list",
+        "params": {"_meta": {"io.modelcontextprotocol/clientCapabilities": "not-an-object"}},
+    })
+    assert bad_cap_meta["error"]["code"] == -32602
+
+    bad_official_meta = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 102,
+        "method": "tools/list",
+        "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2099-01-01"}},
+    })
+    assert bad_official_meta["error"]["code"] == -32022
+    assert bad_official_meta["error"]["data"] == {
+        "requested": "2099-01-01",
+        "supported": ["2024-11-05", "2026-07-28"],
+    }
+
+    ok_official_meta = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 103,
+        "method": "tools/list",
+        "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28", "protocolVersion": "custom-1.0"}},
+    })
+    assert ok_official_meta["result"]["resultType"] == "complete"
+    assert ok_official_meta["result"]["ttlMs"] == 3600000
+    assert ok_official_meta["result"]["cacheScope"] == "public"
+    assert len(ok_official_meta["result"]["tools"]) == 12
+
+    call_resp = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 104,
+        "method": "tools/call",
+        "params": {
+            "name": "academic_check_percentage",
+            "arguments": {"count": 10, "percent": 50.0, "sample_size": 20},
+        },
+    })
+    assert call_resp["result"]["resultType"] == "complete"
+    assert call_resp["result"]["isError"] is False
+
+
+def test_mcp_startup_and_percentage_do_not_import_statistics_stack():
+    code = (
+        "import sys; sys.path.insert(0, 'scripts'); "
+        "import mcp_server; "
+        "r = mcp_server.handle_tool_call('academic_check_percentage', {'count': 10, 'percent': 50.0, 'sample_size': 20}); "
+        "assert r['consistent'] is True; "
+        "assert not any(m in sys.modules for m in ('numpy', 'scipy', 'statsmodels'))"
+    )
+    subprocess.run([sys.executable, "-c", code], cwd=str(ROOT), check=True, timeout=30)
+
+
+def test_recompute_requires_scipy_and_statsmodels_for_distributions_and_power():
+    import pytest
+    recompute_mod = mcp_server.recompute
+    old_scipy, old_power = recompute_mod._SCIPY_STATS, recompute_mod._TTEST_POWER_CLS
+    try:
+        recompute_mod._SCIPY_STATS = None
+        recompute_mod._TTEST_POWER_CLS = None
+        assert recompute_mod.achieved_power_ttest(0.5, 5, 5, 0.05)["recomputed"] == pytest.approx(0.107686, abs=1e-5)
+        assert recompute_mod.achieved_power_ttest(0.0, 2, 2, 0.05)["recomputed"] == pytest.approx(0.05, abs=1e-9)
+        assert recompute_mod.required_n_ttest(2.0, 0.80, 0.05, 1.0)["recomputed"] == pytest.approx(5.089995, abs=1e-5)
+        assert recompute_mod.p_from_chi2(10000, 10000)["recomputed"] == pytest.approx(0.498119365966183, abs=1e-9)
+        assert recompute_mod.p_from_f(1.0, 10_000, 10_000)["recomputed"] == pytest.approx(0.5, abs=1e-6)
+
+        recompute_mod._SCIPY_STATS = False
+        recompute_mod._TTEST_POWER_CLS = False
+        assert recompute_mod.cohens_d(5.0, 2.0, 30, 3.0, 2.0, 30)["recomputed"]["cohens_d"] == pytest.approx(1.0)
+        assert recompute_mod.check_percentage(10, 50.0, 20)["consistent"] is True
+        with pytest.raises(RuntimeError, match="scipy is required"):
+            recompute_mod.p_from_t(2.0, 30)
+        with pytest.raises(RuntimeError, match="scipy is required"):
+            recompute_mod.p_from_chi2(10000, 10000)
+        with pytest.raises(RuntimeError, match="statsmodels is required"):
+            recompute_mod.achieved_power_ttest(0.5, 5, 5, 0.05)
+        with pytest.raises(RuntimeError, match="statsmodels is required"):
+            recompute_mod.required_n_ttest(2.0, 0.80, 0.05, 1.0)
+    finally:
+        recompute_mod._SCIPY_STATS = old_scipy
+        recompute_mod._TTEST_POWER_CLS = old_power
+
+
+def test_frozen_json_map_deep_nesting_memory_and_duck_typed_receipt_isolation():
+    import tracemalloc
+    from shared_contracts.evidence import FrozenJSONMap
+    from ledger import DecisionLedger
+    from graph import ClaimEvidenceGraph
+
+    payload = "a" * (4 * 1024 * 1024)
+    nested = {"leaf": payload}
+    for _ in range(32):
+        nested = {"content": nested}
+    tracemalloc.start()
+    before_cur, _ = tracemalloc.get_traced_memory()
+    fmap = FrozenJSONMap(nested)
+    after_cur, _ = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    retained_mib = (after_cur - before_cur) / (1024 * 1024)
+    assert retained_mib < 1.0
+    assert fmap["content"]["content"]["content"] is not None
+
+    class FakeFrozen(dict):
+        def __init__(self, *a, **kw):
+            super().__init__(*a, **kw)
+            self._canonical_bytes = b'{"score":1}'
+
+        def sha256(self):
+            return "0" * 64
+
+    led = DecisionLedger()
+    ceg = ClaimEvidenceGraph()
+    fake = FakeFrozen(score=1)
+    led.register_receipt("r1", fake)
+    ceg.register_receipt("r1", fake)
+    fake["score"] = 2
+    assert led._receipts["r1"]["score"] == 1
+    assert ceg._receipt_registry["r1"]["score"] == 1
+
+    import ingestion.commitments as commitments_mod
+    from shared_contracts.evidence import LineageVerificationContext
+    import time
+    assert not hasattr(commitments_mod, "_SOURCE_PROJECTION_CACHE")
+
+    ctx_10m = LineageVerificationContext(content_by_entity_id={"e1": b"x" * (10 * 1024 * 1024)})
+    ctx_10m_twin = LineageVerificationContext(content_by_entity_id={"e1": b"x" * (10 * 1024 * 1024)})
+    assert ctx_10m == ctx_10m_twin
+    t0 = time.perf_counter()
+    for _ in range(500):
+        fp = ctx_10m.fingerprint()
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 0.25
+    assert len(fp[1][0][1]) == 64
+    assert ctx_10m == ctx_10m_twin
+
+    import tempfile
+    import pytest
+    from ingestion.engine import IngestionEngine
+    from ingestion.models import ArtifactEnvelope, IngestionKernelState
+    from shared_contracts.evidence import compute_sha256
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        doc = td_path / "artifact.bin"
+        doc.write_bytes(b"before")
+        l_graph = mcp_server.prov_mod.LineageGraph(root_dir=td_path)
+        l_graph.add_entity("artifact", "data_snapshot", locator="artifact.bin", sha256=compute_sha256(b"before"))
+        disk_ctx = LineageVerificationContext(content_root=td_path)
+        produced = mcp_server.prov_mod.trace_origin(l_graph, "artifact", verification_context=disk_ctx)
+        state = IngestionKernelState(
+            ceg=ClaimEvidenceGraph(),
+            ledger=DecisionLedger(),
+            verification_context=disk_ctx,
+        )
+        env = ArtifactEnvelope.create(
+            payload=produced.to_dict(),
+            producer_skill="research-object-identity",
+            producer_version="1.0.0",
+            artifact_kind="lineage_receipt",
+            payload_schema="lineage-receipt-1.0",
+        )
+        eng = IngestionEngine()
+        receipt = eng.ingest(env, state=state)
+        assert receipt.status == "accepted"
+        ck = next(iter(state.ingestion_sources))
+        assert commitments_mod.expected_mutation_inventory(state, ck, receipt)
+        doc.write_bytes(b"after!")
+        with pytest.raises(ValueError, match="independent source planning failed"):
+            commitments_mod.expected_mutation_inventory(state, ck, receipt)

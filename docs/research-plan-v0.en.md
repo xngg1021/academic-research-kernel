@@ -55,7 +55,7 @@ The repository's future capability space is organized into four planes sharing t
 - C. Production plane: computation, writing, review, grants, systematic review, submission.
 - D. Learning plane: prerequisites, retrieval, error taxonomy, feedback, transfer, forgetting.
 
-Decision recorded here: the learning plane is a separate project. It shares primitives with research production but has zero overlap with the existing skill set; folding it into this repository would dilute the repository's identity. A future separate learning project or a Family HF learning zone is the natural home.
+Decision recorded here: the learning plane is a separate project. It shares primitives with research production but has zero overlap with the existing skill set; folding it into this repository would dilute the repository's identity. A future separate learning project is the natural home.
 
 ## 5. Candidate directions
 
@@ -111,7 +111,7 @@ Coverage share alone is not development priority, and coverage counts favor abst
 | Immediate user utility | Medium: normalization and dedup usable standalone | High: writing and review tasks | High: supplement navigation |
 | Downstream unlocks | High: unblocks both other directions | High: consumes resolver | High: consumes resolver and linker |
 
-The recorded judgment: Identity + Lineage has the strongest execution position (deterministic, testable, reusable, low fragility, highest centrality) and remains the recorded starting point. The A-to-B-to-C consumer chain originally proposed by ChatGPT is frozen; any successor direction must pass the audit procedure again (stored grouping, recomputed coverage, leverage judgments) before work starts.
+The recorded judgment: Identity + Lineage has the strongest execution position (deterministic, testable, reusable, low fragility, highest centrality) and remains the recorded starting point. The A-to-B-to-C consumer chain in the initial external proposal is frozen; any successor direction must pass the audit procedure again (stored grouping, recomputed coverage, leverage judgments) before work starts.
 
 ## 7. Design discipline
 
@@ -137,4 +137,4 @@ This structure is the alternative to handing a PDF to a model and asking for ana
 
 ## 9. Relation to other projects
 
-The primitives deliberately overlap with the evidence and provenance thinking in THM and Family HF, but this repository keeps its own boundary: small deterministic skills over research objects, no runtime, no memory architecture, no world model. Nothing from those projects is imported or required here.
+The primitives deliberately overlap with the evidence and provenance thinking in external memory and runtime systems, but this repository keeps its own boundary: small deterministic skills over research objects, no runtime, no memory architecture, no world model. Nothing from those projects is imported or required here.

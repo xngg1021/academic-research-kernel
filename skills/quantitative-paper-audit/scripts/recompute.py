@@ -22,9 +22,65 @@ import re
 
 import math
 
-import numpy as np
-from scipy import stats
-from statsmodels.stats.power import TTestIndPower
+_SCIPY_STATS = None
+_TTEST_POWER_CLS = None
+
+
+def _scipy_stats():
+    global _SCIPY_STATS
+    if _SCIPY_STATS is None:
+        try:
+            from scipy import stats as _st
+            _SCIPY_STATS = _st
+        except ImportError:
+            _SCIPY_STATS = False
+    return _SCIPY_STATS or None
+
+
+def _ttest_ind_power():
+    global _TTEST_POWER_CLS
+    if _TTEST_POWER_CLS is None:
+        try:
+            from statsmodels.stats.power import TTestIndPower as _cls
+            _TTEST_POWER_CLS = _cls
+        except ImportError:
+            _TTEST_POWER_CLS = False
+    return _TTEST_POWER_CLS or None
+
+
+def _require_scipy_stats():
+    st = _scipy_stats()
+    if st is None:
+        raise RuntimeError(
+            "scipy is required for statistical distribution calculations; "
+            "install scipy or run inside the repository environment."
+        )
+    return st
+
+
+def _require_ttest_ind_power():
+    cls = _ttest_ind_power()
+    if cls is None:
+        raise RuntimeError(
+            "statsmodels is required for noncentral-t power calculations; "
+            "install statsmodels or run inside the repository environment."
+        )
+    return cls
+
+
+def __getattr__(name: str):
+    if name == "stats":
+        st = _scipy_stats()
+        if st is not None:
+            return st
+    elif name == "TTestIndPower":
+        cls = _ttest_ind_power()
+        if cls is not None:
+            return cls
+    elif name == "np":
+        import numpy as _np
+        return _np
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 import sys as _sys
 if _sys.platform == "win32":
@@ -137,7 +193,7 @@ def cohens_d(m1, sd1, n1, m2, sd2, n2, reported=None):
     n1, n2 = _integer('n1', n1, 2), _integer('n2', n2, 2)
     _require(sd1 >= 0 and sd2 >= 0, '标准差须非负')
     df = n1 + n2 - 2
-    sp = np.sqrt(((n1 - 1) * sd1**2 + (n2 - 1) * sd2**2) / df)
+    sp = math.sqrt(((n1 - 1) * sd1**2 + (n2 - 1) * sd2**2) / df)
     _require(sp > 0, '合并标准差为 0,效应量无定义')
     d = (m1 - m2) / sp
     j = 1.0 - 3.0 / (4.0 * df - 1.0)
@@ -146,7 +202,7 @@ def cohens_d(m1, sd1, n1, m2, sd2, n2, reported=None):
         {'cohens_d': float(d), 'hedges_g': float(d * j), 'pooled_sd': float(sp), 'df': int(df)},
         {'m1': m1, 'sd1': sd1, 'n1': n1, 'm2': m2, 'sd2': sd2, 'n2': n2},
         "d = (m1-m2)/sqrt(((n1-1)sd1^2+(n2-1)sd2^2)/(n1+n2-2)); g = d*(1-3/(4df-1))",
-        'numpy (closed form)',
+        'math (closed form)',
     )
 
 
@@ -161,7 +217,8 @@ def p_from_t(t, df, reported=None):
     _require(df > 0, '自由度须为正 (允许非整数 Welch 自由度)')
     if reported is not None:
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
-    p = 2.0 * stats.t.sf(abs(t), df)
+    st = _require_scipy_stats()
+    p = 2.0 * st.t.sf(abs(t), df)
     return _result(reported, float(p), {'t': t, 'df': df, 'sided': 2},
                    'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf')
 
@@ -174,7 +231,8 @@ def p_from_f(f, df1, df2, reported=None):
     if reported is not None:
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(f >= 0, 'F 统计量须非负')
-    p = stats.f.sf(f, df1, df2)
+    st = _require_scipy_stats()
+    p = st.f.sf(f, df1, df2)
     return _result(reported, float(p), {'F': f, 'df1': df1, 'df2': df2},
                    'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf')
 
@@ -187,7 +245,8 @@ def p_from_chi2(chi2, df, reported=None):
     if reported is not None:
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(chi2 >= 0, '卡方统计量须非负')
-    p = stats.chi2.sf(chi2, df)
+    st = _require_scipy_stats()
+    p = st.chi2.sf(chi2, df)
     return _result(reported, float(p), {'chi2': chi2, 'df': df},
                    'p = sf_chi2(chi2, df)', 'scipy.stats.chi2.sf')
 
@@ -205,8 +264,9 @@ def z_from_beta_se(beta, se, reported=None):
     """
     _finite_inputs(beta=beta, se=se, reported=reported)
     _require(se > 0, '标准误须为正')
+    st = _require_scipy_stats()
     z = beta / se
-    p = 2.0 * stats.norm.sf(abs(z))
+    p = 2.0 * st.norm.sf(abs(z))
     return _result(
         reported,
         {'z': float(z), 'p': float(p)},
@@ -233,15 +293,17 @@ def check_ci_consistency(estimate, lower, upper, level=0.95, log_scale=False, re
     _require(rel_tol >= 0, 'rel_tol 须非负')
     _require(0 < level < 1, '置信水平须在 (0,1)')
     _require(lower < upper, 'CI 下限须小于上限')
+    st = _require_scipy_stats()
+    z_crit = float(st.norm.ppf(1 - (1 - level) / 2))
     if log_scale:
         _require(lower > 0 and estimate > 0, 'log 尺度要求区间与估计值为正')
-        mid = float(np.sqrt(lower * upper))
-        half_width = (np.log(upper) - np.log(lower)) / 2.0
-        implied_se = float(half_width / stats.norm.ppf(1 - (1 - level) / 2))
+        mid = float(math.sqrt(lower * upper))
+        half_width = (math.log(upper) - math.log(lower)) / 2.0
+        implied_se = float(half_width / z_crit)
         rel_dev = abs(estimate - mid) / mid
     else:
         mid = (lower + upper) / 2.0
-        implied_se = float((upper - lower) / (2.0 * stats.norm.ppf(1 - (1 - level) / 2)))
+        implied_se = float((upper - lower) / (2.0 * z_crit))
         rel_dev = abs(estimate - mid) / (abs(mid) if mid != 0 else max(abs(lower), abs(upper)))
     return {
         'consistent': bool(rel_dev <= rel_tol),
@@ -280,27 +342,28 @@ def or_rr_from_2x2(a, b, c, d, level=0.95, reported=None):
     correction = any(v == 0 for v in cells.values())
     if correction:
         a, b, c, d = a + 0.5, b + 0.5, c + 0.5, d + 0.5
-    z = stats.norm.ppf(1 - (1 - level) / 2)
+    st = _require_scipy_stats()
+    z = float(st.norm.ppf(1 - (1 - level) / 2))
     or_ = (a * d) / (b * c)
-    se_log_or = np.sqrt(1 / a + 1 / b + 1 / c + 1 / d)
-    log_or = np.log(or_)
+    se_log_or = math.sqrt(1 / a + 1 / b + 1 / c + 1 / d)
+    log_or = math.log(or_)
     rr = (a / (a + b)) / (c / (c + d))
-    se_log_rr = np.sqrt(b / (a * (a + b)) + d / (c * (c + d)))
-    log_rr = np.log(rr)
+    se_log_rr = math.sqrt(b / (a * (a + b)) + d / (c * (c + d)))
+    log_rr = math.log(rr)
     return _result(
         reported,
         {
             'odds_ratio': float(or_),
-            'or_ci': [float(np.exp(log_or - z * se_log_or)), float(np.exp(log_or + z * se_log_or))],
+            'or_ci': [float(math.exp(log_or - z * se_log_or)), float(math.exp(log_or + z * se_log_or))],
             'risk_ratio': float(rr),
-            'rr_ci': [float(np.exp(log_rr - z * se_log_rr)), float(np.exp(log_rr + z * se_log_rr))],
+            'rr_ci': [float(math.exp(log_rr - z * se_log_rr)), float(math.exp(log_rr + z * se_log_rr))],
             'risk_exposed': float(a / (a + b)),
             'risk_control': float(c / (c + d)),
             'zero_cell_correction': correction,
         },
         {'a': cells['a'], 'b': cells['b'], 'c': cells['c'], 'd': cells['d'], 'level': level},
         'OR=ad/bc (log-Wald CI); RR=(a/(a+b))/(c/(c+d)) (log-Wald CI)',
-        'scipy.stats.norm.ppf + numpy (closed form)',
+        'scipy.stats.norm.ppf + math (closed form)',
         confidence='medium' if correction else 'high',
     )
 
@@ -321,8 +384,10 @@ def achieved_power_ttest(d, n1, n2=None, alpha=0.05, reported=None):
     _require(0 < alpha < 1, 'alpha 须在 (0,1)')
     n2 = n1 if n2 is None else n2
     n2 = _integer('n2', n2, 2)
-    power = TTestIndPower().solve_power(
-        effect_size=abs(d), nobs1=n1, alpha=alpha, ratio=n2 / n1, alternative='two-sided')
+    cls = _require_ttest_ind_power()
+    power = cls().solve_power(
+        effect_size=abs(d), nobs1=n1, alpha=alpha, ratio=n2 / n1,
+        alternative='two-sided')
     return _result(reported, float(power),
                    {'d': d, 'n1': n1, 'n2': n2, 'alpha': alpha, 'sided': 2},
                    'noncentral-t power, |d|, n1, n2, alpha',
@@ -341,7 +406,8 @@ def required_n_ttest(d, power=0.8, alpha=0.05, ratio=1.0, reported=None):
     _require(d != 0, '效应量须非零')
     _require(0 < power < 1 and 0 < alpha < 1, 'power/alpha 须在 (0,1)')
     _require(ratio > 0, 'ratio 须为正')
-    n = TTestIndPower().solve_power(
+    cls = _require_ttest_ind_power()
+    n = cls().solve_power(
         effect_size=abs(d), nobs1=None, alpha=alpha, power=power, ratio=ratio,
         alternative='two-sided')
     return _result(reported, float(n),
@@ -552,7 +618,7 @@ def check_sd_possible(sd, minimum, maximum, n=None):
     max_pop_sd = (maximum - minimum) / 2.0
     if n is not None:
         n = _integer('n', n, 2)
-        max_sd = max_pop_sd * np.sqrt(n / (n - 1.0))
+        max_sd = max_pop_sd * math.sqrt(n / (n - 1.0))
     else:
         max_sd = max_pop_sd
     return {
@@ -562,7 +628,7 @@ def check_sd_possible(sd, minimum, maximum, n=None):
         'excess': float(sd - max_sd),
         'inputs': {'sd': sd, 'minimum': minimum, 'maximum': maximum, 'n': n},
         'formula': 'max_sd = (max-min)/2 * sqrt(n/(n-1)) (n 省略时取总体界)',
-        'library': 'numpy (closed form)',
+        'library': 'math (closed form)',
         'confidence': 'high',
     }
 

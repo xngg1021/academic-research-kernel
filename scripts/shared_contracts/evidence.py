@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import collections.abc
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 import hashlib
 import heapq
@@ -54,6 +54,7 @@ class LineageVerificationContext:
     content_by_entity_id: Optional[Mapping[str, bytes]] = None
     authorized_paths: Tuple[Path, ...] = ()
     max_content_bytes: int = 10 * 1024 * 1024
+    _fp_cache: Optional[Tuple[Any, Any]] = field(default=None, init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self) -> None:
         if type(self.max_content_bytes) is not int or self.max_content_bytes < 0:
@@ -68,6 +69,30 @@ class LineageVerificationContext:
             if sum(map(len, values.values())) > self.max_content_bytes:
                 raise ValueError("Authorized lineage content exceeds the read-size budget")
             object.__setattr__(self, "content_by_entity_id", MappingProxyType(values))
+        object.__setattr__(self, "_fp_cache", None)
+
+    def fingerprint(self) -> Tuple[Any, ...]:
+        """Return content-addressed context fingerprint, reusing hashes while bytes are unchanged."""
+        content_map = self.content_by_entity_id
+        state_token = (
+            str(self.content_root) if self.content_root is not None else None,
+            tuple(str(p) for p in self.authorized_paths),
+            self.max_content_bytes,
+            tuple((k, id(v), len(v)) for k, v in sorted(content_map.items()))
+            if content_map is not None else None,
+        )
+        cached = self._fp_cache
+        if cached is not None and cached[0] == state_token:
+            return cached[1]
+        fp = (
+            state_token[0],
+            tuple((k, compute_sha256(v)) for k, v in sorted(content_map.items()))
+            if content_map is not None else None,
+            state_token[1],
+            state_token[2],
+        )
+        object.__setattr__(self, "_fp_cache", (state_token, fp))
+        return fp
 
     def __deepcopy__(self, memo: Dict[int, Any]) -> "LineageVerificationContext":
         return self
@@ -88,9 +113,14 @@ class FrozenJSONMap(collections.abc.Mapping):
     retaining a lossless ``to_dict`` representation for schemas and hashing.
     """
 
-    __slots__ = ("_data",)
+    __slots__ = ("_data", "_canonical_bytes", "_sha256")
 
     def __init__(self, value: Optional[Mapping[str, Any]] = None):
+        if type(value) is FrozenJSONMap:
+            object.__setattr__(self, "_data", value._data)
+            object.__setattr__(self, "_canonical_bytes", value._canonical_bytes)
+            object.__setattr__(self, "_sha256", value._sha256)
+            return
         if value is None:
             value = {}
         if not isinstance(value, collections.abc.Mapping):
@@ -100,9 +130,31 @@ class FrozenJSONMap(collections.abc.Mapping):
             if not isinstance(key, str):
                 raise TypeError(f"JSON object keys must be strings, got {type(key).__name__}")
             frozen[key] = freeze_json(item)
-        # Canonical serialization is also the fail-closed check for NaN/Inf.
-        canonical_json_bytes({k: _thaw_val(v) for k, v in frozen.items()})
         object.__setattr__(self, "_data", MappingProxyType(frozen))
+        object.__setattr__(self, "_canonical_bytes", None)
+        object.__setattr__(self, "_sha256", None)
+
+    def canonical_bytes(self) -> bytes:
+        cb = self._canonical_bytes
+        if cb is not None:
+            return cb
+        cb = json.dumps(
+            self.to_dict(),
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        if len(cb) <= 16384:
+            object.__setattr__(self, "_canonical_bytes", cb)
+        return cb
+
+    def sha256(self) -> str:
+        digest = self._sha256
+        if digest is None:
+            digest = compute_sha256(self.canonical_bytes())
+            object.__setattr__(self, "_sha256", digest)
+        return digest
 
     def __setattr__(self, key: str, value: Any) -> None:
         raise TypeError("FrozenJSONMap does not support attribute mutation")
@@ -136,7 +188,7 @@ class FrozenJSONMap(collections.abc.Mapping):
 
 def freeze_json(value: Any) -> Any:
     """Recursively freeze a JSON-domain value and reject custom mutable objects."""
-    if isinstance(value, FrozenJSONMap):
+    if type(value) is FrozenJSONMap:
         return value
     if hasattr(value, "to_dict"):
         return freeze_json(value.to_dict())
@@ -146,7 +198,8 @@ def freeze_json(value: Any) -> Any:
         return tuple(freeze_json(item) for item in value)
     if value is None or isinstance(value, (str, int, float, bool)):
         # Reject non-finite floats through the canonical serializer.
-        canonical_json_bytes(value)
+        if isinstance(value, float):
+            canonical_json_bytes(value)
         return value
     raise TypeError(f"Value of type {type(value).__name__!r} is outside the JSON domain")
 
@@ -183,6 +236,8 @@ def canonical_text(text: str) -> str:
 
 def canonical_json_bytes(obj: Any) -> bytes:
     """Serialize object to strictly canonical UTF-8 JSON bytes."""
+    if type(obj) is FrozenJSONMap:
+        return obj.canonical_bytes()
     return json.dumps(
         _thaw_val(obj),
         sort_keys=True,
