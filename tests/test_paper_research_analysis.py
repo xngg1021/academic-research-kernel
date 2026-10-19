@@ -440,6 +440,7 @@ def test_html_report_collapses_technical_appendix_and_doctor_reports_pdf_readine
 def test_doctor_succeeds_when_package_metadata_is_uninstalled(monkeypatch):
     cli = importlib.import_module(PACKAGE + ".cli")
     orig_version = cli.metadata.version
+    orig_files = cli.resources.files
 
     def fake_version(name):
         if name in ("academic-research-kernel", "academic_research_kernel"):
@@ -447,7 +448,9 @@ def test_doctor_succeeds_when_package_metadata_is_uninstalled(monkeypatch):
         return orig_version(name)
 
     def fake_files(pkg):
-        raise ModuleNotFoundError(f"No module named {pkg!r}")
+        if pkg in ("academic_research_kernel", PACKAGE):
+            raise ModuleNotFoundError(f"No module named {pkg!r}")
+        return orig_files(pkg)
 
     monkeypatch.setattr(cli.metadata, "version", fake_version)
     monkeypatch.setattr(cli.resources, "files", fake_files)
@@ -456,4 +459,3 @@ def test_doctor_succeeds_when_package_metadata_is_uninstalled(monkeypatch):
     assert diag["schema_resources"]["status"] == "ok"
     assert diag["research"]["portable_skill"] == "available"
     assert diag["research"]["pdf_ready"] is True
-

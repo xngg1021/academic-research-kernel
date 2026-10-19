@@ -112,7 +112,11 @@ def doctor():
             Draft202012Validator.check_schema(json.loads(path.read_text(encoding='utf-8')))
         report['schema_resources'] = {'status': 'ok', 'count': len(schemas)}
         matrix = root.joinpath('artifact-adapter-matrix.json')
-        json.loads(matrix.read_text(encoding='utf-8'))
+        try:
+            matrix_text = matrix.read_text(encoding='utf-8')
+        except FileNotFoundError:
+            matrix_text = root.joinpath('docs/artifact-adapter-matrix.json').read_text(encoding='utf-8')
+        json.loads(matrix_text)
         skill = root.joinpath('skills/paper-research/SKILL.md')
         try:
             skill_text = skill.read_text(encoding='utf-8')
