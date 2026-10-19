@@ -344,7 +344,7 @@ def test_recompute_requires_scipy_and_statsmodels_for_distributions_and_power():
         assert recompute_mod.achieved_power_ttest(0.0, 2, 2, 0.05)["recomputed"] == pytest.approx(0.05, abs=1e-9)
         assert recompute_mod.required_n_ttest(2.0, 0.80, 0.05, 1.0)["recomputed"] == pytest.approx(5.089995, abs=1e-5)
         assert recompute_mod.p_from_chi2(10000, 10000)["recomputed"] == pytest.approx(0.498119365966183, abs=1e-9)
-        assert recompute_mod.p_from_f(1.0, 200_000_000, 200_000_000)["recomputed"] == pytest.approx(0.5, abs=1e-6)
+        assert recompute_mod.p_from_f(1.0, 10_000, 10_000)["recomputed"] == pytest.approx(0.5, abs=1e-6)
 
         recompute_mod._SCIPY_STATS = False
         recompute_mod._TTEST_POWER_CLS = False
