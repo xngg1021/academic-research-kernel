@@ -114,7 +114,12 @@ def doctor():
         matrix = root.joinpath('artifact-adapter-matrix.json')
         json.loads(matrix.read_text(encoding='utf-8'))
         skill = root.joinpath('skills/paper-research/SKILL.md')
-        if not skill.read_text(encoding='utf-8').strip():
+        try:
+            skill_text = skill.read_text(encoding='utf-8')
+        except FileNotFoundError:
+            repo_skill = Path(__file__).resolve().parents[2] / 'skills' / 'paper-research' / 'SKILL.md'
+            skill_text = repo_skill.read_text(encoding='utf-8')
+        if not skill_text.strip():
             raise ValueError('portable paper-research skill missing')
         portable_skill_status = 'available'
     except Exception as exc:

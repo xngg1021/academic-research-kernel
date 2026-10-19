@@ -435,3 +435,25 @@ def test_html_report_collapses_technical_appendix_and_doctor_reports_pdf_readine
     assert "not a valid pdf" not in cli._error_hint("prepare", "HTML has insufficient article text (landing/error/login page)").lower()
     assert "budget" not in cli._error_hint("prepare", "HTTP 429 rate limit exceeded").lower()
     assert "[research]" in cli._error_hint("prepare", "PDF requires the research extra: academic-research-kernel[research]")
+
+
+def test_doctor_succeeds_when_package_metadata_is_uninstalled(monkeypatch):
+    cli = importlib.import_module(PACKAGE + ".cli")
+    orig_version = cli.metadata.version
+
+    def fake_version(name):
+        if name in ("academic-research-kernel", "academic_research_kernel"):
+            raise cli.metadata.PackageNotFoundError(name)
+        return orig_version(name)
+
+    def fake_files(pkg):
+        raise ModuleNotFoundError(f"No module named {pkg!r}")
+
+    monkeypatch.setattr(cli.metadata, "version", fake_version)
+    monkeypatch.setattr(cli.resources, "files", fake_files)
+    diag = cli.doctor()
+    assert diag["status"] == "ok"
+    assert diag["schema_resources"]["status"] == "ok"
+    assert diag["research"]["portable_skill"] == "available"
+    assert diag["research"]["pdf_ready"] is True
+
