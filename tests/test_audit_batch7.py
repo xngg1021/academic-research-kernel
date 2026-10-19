@@ -333,3 +333,15 @@ def test_p1_openalex_anonymous_second_page_401_retains_first_page(capsys):
     err_net = capsys.readouterr().err
     assert "网络连接中断" in err_net
     assert "OPENALEX_API_KEY" not in err_net
+
+    def fake_urlopen_timeout(req, timeout=20):
+        url = req.full_url
+        if "cursor=%2A" in url or "cursor=*" in url:
+            resp_body = b'{"meta": {"next_cursor": "cursor_page_2"}, "results": [{"id": "W1", "title": "P1"}]}'
+            return _make_mock_response(resp_body)
+        raise TimeoutError("read timed out")
+
+    with patch.object(lit_watch, "urlopen", side_effect=fake_urlopen_timeout):
+        items_to, truncated_to = lit_watch.fetch_topic_works("agent", date(2026, 1, 1), max_pages=2)
+    assert len(items_to) == 1
+    assert truncated_to is True

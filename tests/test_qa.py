@@ -21,7 +21,9 @@ def test_unexpanded_save_path_rejected():
 def test_personal_paths_and_secret_rejected():
     for value in ['C:' + '/Users/' + 'alice/venv/python.exe', '/' + 'home/alice/venv',
                   '/' + 'Users/alice/plots', 'ghp_' + 'a'*36,
-                  "api_key = '" + 'A'*24 + "'"]:
+                  "api_key = '" + 'A'*24 + "'",
+                  "my_api_key = '" + 'B'*24 + "'",
+                  "_secret = '" + 'C'*24 + "'"]:
         assert qa.hygiene(value)
     assert not qa.hygiene('C:/Users/<user>/python.exe OPENALEX_API_KEY=YOUR_KEY')
 
@@ -67,3 +69,27 @@ def test_inventory_prunes_local_environments_and_binary_garbage(tmp_path):
     subprocess.run(['git', '-C', str(tmp_path), 'add', 'README.md'], check=True)
     (tmp_path / 'random.md').write_bytes(b'\xff')
     assert [p.name for p in qa.source_files(tmp_path)] == ['README.md']
+
+
+def test_command_adapter_utf8_stderr_under_non_utf8_env(tmp_path, monkeypatch):
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / 'skills/cross-review-five/scripts'))
+    from adapters.command_adapter import CommandReviewerAdapter
+    from contracts import ParticipantSpec, ReviewRequest
+
+    monkeypatch.setenv('PYTHONUTF8', '0')
+    task = tmp_path / 'task.md'
+    task.write_text('prompt', encoding='utf-8')
+    child = tmp_path / 'child.py'
+    child.write_text('import sys; sys.stderr.buffer.write("error-研究\\n".encode("utf-8")); raise SystemExit(1)', encoding='utf-8')
+    cmd = f'"{sys.executable}" "{child}"'
+    ad = CommandReviewerAdapter()
+    req = ReviewRequest(
+        participant=ParticipantSpec(id='r1', executor='command', cmd=cmd),
+        task_path=str(task),
+        out_path=str(tmp_path / 'out.md'),
+        findings_path=str(tmp_path / 'findings.json'),
+    )
+    res = ad.review(req)
+    assert 'error-研究' in (res.error or '')

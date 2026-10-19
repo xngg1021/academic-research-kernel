@@ -92,8 +92,19 @@ def reference(workload, inputs):
     if workload == "bootstrap":
         data = inputs["data"]
         rng = np.random.default_rng(1)
-        idx = rng.integers(0, len(data), size=(inputs["resamples"], len(data)))
-        means = data[idx].mean(axis=1)
+        resamples = int(inputs["resamples"])
+        n = len(data)
+        if resamples * n <= 2_000_000:
+            idx = rng.integers(0, n, size=(resamples, n))
+            means = data[idx].mean(axis=1)
+        else:
+            batch = max(1, 2_000_000 // max(1, n))
+            chunks = []
+            for start in range(0, resamples, batch):
+                cur = min(batch, resamples - start)
+                idx = rng.integers(0, n, size=(cur, n))
+                chunks.append(data[idx].mean(axis=1))
+            means = np.concatenate(chunks, axis=0)
         return {"ci_lo": float(np.quantile(means, 0.025)),
                 "ci_hi": float(np.quantile(means, 0.975)),
                 "mean_of_means": float(means.mean())}
@@ -145,9 +156,19 @@ def _candidate_torch(workload, inputs, dtype, device):
     if workload == "bootstrap":
         data = torch.tensor(inputs["data"], dtype=t, device=device)
         gen = torch.Generator(device=device).manual_seed(1)
-        idx = torch.randint(0, data.numel(), (inputs["resamples"], data.numel()),
-                            generator=gen, device=device)
-        means = data[idx].mean(dim=1).cpu().numpy()
+        resamples = int(inputs["resamples"])
+        n = int(data.numel())
+        if resamples * n <= 2_000_000:
+            idx = torch.randint(0, n, (resamples, n), generator=gen, device=device)
+            means = data[idx].mean(dim=1).cpu().numpy()
+        else:
+            batch = max(1, 2_000_000 // max(1, n))
+            chunks = []
+            for start in range(0, resamples, batch):
+                cur = min(batch, resamples - start)
+                idx = torch.randint(0, n, (cur, n), generator=gen, device=device)
+                chunks.append(data[idx].mean(dim=1).cpu().numpy())
+            means = np.concatenate(chunks, axis=0)
         return {"ci_lo": float(np.quantile(means, 0.025)),
                 "ci_hi": float(np.quantile(means, 0.975)),
                 "mean_of_means": float(means.mean())}
@@ -182,8 +203,19 @@ def _candidate_cupy(workload, inputs, dtype):
     if workload == "bootstrap":
         data = cp.asarray(inputs["data"])
         rng = cp.random.RandomState(1)
-        idx = rng.randint(0, data.size, size=(inputs["resamples"], data.size))
-        means = cp.asnumpy(data[idx].mean(axis=1))
+        resamples = int(inputs["resamples"])
+        n = int(data.size)
+        if resamples * n <= 2_000_000:
+            idx = rng.randint(0, n, size=(resamples, n))
+            means = cp.asnumpy(data[idx].mean(axis=1))
+        else:
+            batch = max(1, 2_000_000 // max(1, n))
+            chunks = []
+            for start in range(0, resamples, batch):
+                cur = min(batch, resamples - start)
+                idx = rng.randint(0, n, size=(cur, n))
+                chunks.append(cp.asnumpy(data[idx].mean(axis=1)))
+            means = np.concatenate(chunks, axis=0)
         return {"ci_lo": float(np.quantile(means, 0.025)),
                 "ci_hi": float(np.quantile(means, 0.975)),
                 "mean_of_means": float(means.mean())}

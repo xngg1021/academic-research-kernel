@@ -432,4 +432,6 @@ def test_html_report_collapses_technical_appendix_and_doctor_reports_pdf_readine
     assert "[research]" not in cli._error_hint("prepare", "PDF page budget exceeded")
     assert "not a valid pdf" in cli._error_hint("prepare", "PDF signature missing (HTML/error response is not a PDF)").lower()
     assert "[research]" not in cli._error_hint("prepare", "PDF signature missing (HTML/error response is not a PDF)")
+    assert "not a valid pdf" not in cli._error_hint("prepare", "HTML has insufficient article text (landing/error/login page)").lower()
+    assert "budget" not in cli._error_hint("prepare", "HTTP 429 rate limit exceeded").lower()
     assert "[research]" in cli._error_hint("prepare", "PDF requires the research extra: academic-research-kernel[research]")

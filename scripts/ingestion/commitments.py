@@ -133,7 +133,9 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
         raise ValueError("missing independent ingestion source; reingest the artifact")
     p_cache = getattr(state, "_projection_cache", None)
     proj_key = None
-    if isinstance(p_cache, dict):
+    ctx = state.verification_context
+    has_disk_ctx = ctx is not None and (ctx.content_root is not None or bool(ctx.authorized_paths))
+    if isinstance(p_cache, dict) and not has_disk_ctx:
         try:
             source_sha = record_digest(source)
             if receipt.adapter_id in ("adapter-claim-evidence-graph", "adapter-decision-ledger"):
@@ -145,7 +147,6 @@ def expected_mutation_inventory(state: Any, cache_key: str, receipt: Any) -> Dic
                     for b in receipt.mutation_bindings
                     if b["kind"] == "physical_receipt"
                 )
-            ctx = state.verification_context
             if ctx is None:
                 ctx_fp = None
             elif hasattr(ctx, "fingerprint"):

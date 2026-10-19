@@ -148,13 +148,14 @@ def _fetch_paged_openalex(query_params: dict, max_pages: int = 1):
     保留已取得的首页/前序页面结果并标记 truncated=True，避免整批丢失。"""
     all_results = []
     cursor = "*"
+    seen_cursors = {cursor}
     page = 1
     truncated = False
     while page <= max_pages:
         params = urlencode({**query_params, 'cursor': cursor})
         try:
             data = get(f'{OPENALEX}/works?{params}') or {}
-        except (HTTPError, URLError) as exc:
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
             if page > 1 and all_results:
                 code = getattr(exc, 'code', None)
                 if code in (401, 403):
@@ -176,10 +177,15 @@ def _fetch_paged_openalex(query_params: dict, max_pages: int = 1):
         all_results.extend(results)
         meta = data.get('meta') or {}
         next_cursor = meta.get('next_cursor')
-        count = meta.get('count') or 0
-        if not next_cursor or not results or len(all_results) >= count:
+        raw_count = meta.get('count')
+        count = int(raw_count) if isinstance(raw_count, int) and raw_count > 0 else None
+        if not next_cursor or not results or next_cursor in seen_cursors:
+            truncated = bool(count is not None and len(all_results) < count)
+            break
+        if count is not None and len(all_results) >= count:
             truncated = False
             break
+        seen_cursors.add(next_cursor)
         cursor = next_cursor
         page += 1
         truncated = True

@@ -903,18 +903,26 @@ def process_message(msg: Any) -> dict | None:
     if meta is not None:
         if not isinstance(meta, dict):
             return _rpc_error(msg_id, -32602, "_meta must be an object")
-        for meta_key in ("io.modelcontextprotocol/protocolVersion", "protocolVersion"):
-            if meta_key in meta:
-                meta_version = meta[meta_key]
-                if not isinstance(meta_version, str):
-                    return _rpc_error(msg_id, -32602, f"_meta[{meta_key!r}] must be a string")
-                if meta_version not in SUPPORTED_PROTOCOLS:
-                    return _rpc_error(
-                        msg_id,
-                        -32022,
-                        f"Unsupported protocol version: {meta_version}",
-                        data={"requested": meta_version, "supported": list(SUPPORTED_PROTOCOLS)},
-                    )
+        if "io.modelcontextprotocol/clientCapabilities" in meta and not isinstance(
+            meta["io.modelcontextprotocol/clientCapabilities"], dict
+        ):
+            return _rpc_error(msg_id, -32602, "_meta['io.modelcontextprotocol/clientCapabilities'] must be an object")
+        meta_key = (
+            "io.modelcontextprotocol/protocolVersion"
+            if "io.modelcontextprotocol/protocolVersion" in meta
+            else ("protocolVersion" if "protocolVersion" in meta else None)
+        )
+        if meta_key is not None:
+            meta_version = meta[meta_key]
+            if not isinstance(meta_version, str):
+                return _rpc_error(msg_id, -32602, f"_meta[{meta_key!r}] must be a string")
+            if meta_version not in SUPPORTED_PROTOCOLS:
+                return _rpc_error(
+                    msg_id,
+                    -32022,
+                    f"Unsupported protocol version: {meta_version}",
+                    data={"requested": meta_version, "supported": list(SUPPORTED_PROTOCOLS)},
+                )
 
     if method == "ping":
         return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
@@ -949,6 +957,12 @@ def process_message(msg: Any) -> dict | None:
                 "serverInfo": {
                     "name": "academic-research-kernel",
                     "version": __version__
+                },
+                "_meta": {
+                    "io.modelcontextprotocol/serverInfo": {
+                        "name": "academic-research-kernel",
+                        "version": __version__,
+                    }
                 },
                 "tools": TOOLS,
             }

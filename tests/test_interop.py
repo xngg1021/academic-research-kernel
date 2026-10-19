@@ -238,3 +238,7 @@ def test_csl_json_preserves_id_and_maps_preprint_to_valid_csl_type():
     assert interop.to_csl_json(generic_article)['type'] == 'article'
     journal_article = interop.from_csl_json({'id': 'b', 'type': 'article-journal', 'title': 'B'})
     assert interop.to_csl_json(journal_article)['type'] == 'article-journal'
+    misc_work = CanonicalWork(work_type='misc', title='Dataset or Misc Note')
+    misc_csl = interop.to_csl_json(misc_work)
+    assert misc_csl['type'] == 'document'
+    assert interop.from_csl_json(misc_csl).work_type == 'misc'

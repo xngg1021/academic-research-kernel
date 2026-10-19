@@ -157,7 +157,7 @@ git diff --check
 
 测试套件沿用了固定版本的 Hermes 技能编写规范检查，完整测试本仓库的全部 14 项技能，并对照固定版本的内置与可选技能目录核对引用关系。持续集成环境只在安装依赖包时联网，平时的代码提交测试不会请求外部学术数据库。
 
-GitHub Actions 持续集成覆盖三大操作系统的 x86_64 与 ARM64 架构。测试范围包含运行 Python 3.10 至 3.14 的 Linux x86_64 与 `ubuntu-24.04-arm` 镜像，涵盖 `ubuntu-26.04` 与 `ubuntu-26.04-arm` 预迁移环境，同时覆盖 Windows x86_64 与 `windows-11-arm`，以及 `macos-latest` 与 `macos-15-intel` 环境，并附带针对上游 `main` 分支最新代码的实时加载检验。本地完整回归测试套件共通过 1316 项测试，此前 1165 项基线与覆盖范围记录在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)中，远端测试日志会单独标明所测的代码提交哈希。每当代码推送到 `main` 分支时，独立的集成测试工作流还会自动安装 `tests/upstream/provenance.json` 记录的固定版本 Hermes，实测对本仓库执行 `tap add` 与 `search`，以及 `install` 和 `list` 全流程。各项检查的确切版本与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+GitHub Actions 持续集成覆盖三大操作系统的 x86_64 与 ARM64 架构。测试范围包含运行 Python 3.10、3.12 与 3.14 的 Linux x86_64 与 `ubuntu-24.04-arm` 镜像，同时覆盖 Windows x86_64 与 `windows-11-arm` 以及 `macos-latest` 环境，并附带针对上游 `main` 分支最新代码的实时加载检验。本地完整回归测试套件共通过 1317 项测试，此前 1165 项基线与覆盖范围记录在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)中，远端测试日志会单独标明所测的代码提交哈希。每当代码推送到 `main` 分支时，独立的集成测试工作流还会自动安装 `tests/upstream/provenance.json` 记录的固定版本 Hermes，实测对本仓库执行 `tap add` 与 `search`，以及 `install` 和 `list` 全流程。各项检查的确切版本与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
 
 [tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，从 4096 个 SHA256 种子候选中选出 30 个代表性测试场景，并自动生成核验覆盖度报告，分别统计 16 类能力族、仓库实际的 14 项技能以及 36 项具体任务目标。每项技能至少出现 2 次并覆盖 2 个不同任务目标，且必须包含该技能的核心目标。
 

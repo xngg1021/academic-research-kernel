@@ -10,3 +10,6 @@ dist/
 build/
 *.egg-info/
 .uv-cache/
+
+# Local-only unsanitized project lineage and full historical records
+docs/.local-lineage/

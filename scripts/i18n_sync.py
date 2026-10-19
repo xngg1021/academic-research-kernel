@@ -19,7 +19,7 @@ from typing import Dict, Any, List, Optional
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs" / "i18n" / "manifest.json"
 TERMINOLOGY_PATH = ROOT / "docs" / "terminology" / "registry.json"
-AIDETOX_PATH = ROOT / "docs" / "style" / "aidetox-contract.json"
+STYLE_CONTRACT_PATH = ROOT / "docs" / "style" / "style-contract.json"
 
 TARGET_LOCALES = [
     {"code": "en", "name": "English", "tier": "global_core"},
@@ -93,7 +93,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "source_path": "README.md",
         "source_locale": "en",
         "genre": "user_facing_documentation",
-        "aidetox_intensity": "strong",
+        "style_intensity": "strong",
     })
     docs.append({
         "doc_id": "doc_root_identity",
@@ -101,7 +101,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "source_path": "REPOSITORY-IDENTITY.md",
         "source_locale": "zh-Hans",
         "genre": "technical_and_schema_specifications",
-        "aidetox_intensity": "medium",
+        "style_intensity": "medium",
     })
     docs.append({
         "doc_id": "doc_root_changelog",
@@ -109,7 +109,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "source_path": "CHANGELOG.md",
         "source_locale": "zh-Hans",
         "genre": "historical_and_audit_records",
-        "aidetox_intensity": "audit_safe",
+        "style_intensity": "audit_safe",
     })
     docs.append({
         "doc_id": "doc_root_contributing",
@@ -117,7 +117,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "source_path": "CONTRIBUTING.md",
         "source_locale": "en",
         "genre": "user_facing_documentation",
-        "aidetox_intensity": "strong",
+        "style_intensity": "strong",
     })
     docs.append({
         "doc_id": "doc_root_license_application",
@@ -125,7 +125,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "source_path": "LICENSE-APPLICATION.md",
         "source_locale": "en",
         "genre": "historical_and_audit_records",
-        "aidetox_intensity": "audit_safe",
+        "style_intensity": "audit_safe",
     })
     docs.append({
         "doc_id": "doc_root_license_history",
@@ -133,7 +133,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "source_path": "LICENSE-HISTORY.md",
         "source_locale": "en",
         "genre": "historical_and_audit_records",
-        "aidetox_intensity": "audit_safe",
+        "style_intensity": "audit_safe",
     })
     docs.append({
         "doc_id": "doc_root_source_lineage",
@@ -141,7 +141,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
         "source_path": "SOURCE-LINEAGE.md",
         "source_locale": "en",
         "genre": "historical_and_audit_records",
-        "aidetox_intensity": "audit_safe",
+        "style_intensity": "audit_safe",
     })
 
     # 2. Skills, References, and Skill-internal documentation
@@ -155,7 +155,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                 "source_path": f"skills/{s_name}/SKILL.md",
                 "source_locale": "en" if s_name in ("decision-ledger", "paper-research") else "zh-Hans",
                 "genre": "user_facing_documentation",
-                "aidetox_intensity": "strong",
+                "style_intensity": "strong",
             })
             ref_dir = s_dir / "references"
             if ref_dir.is_dir():
@@ -167,7 +167,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                         "source_path": f"skills/{s_name}/references/{r_file.name}",
                         "source_locale": "en" if s_name == "paper-research" else "zh-Hans",
                         "genre": "user_facing_documentation",
-                        "aidetox_intensity": "strong",
+                        "style_intensity": "strong",
                     })
             s_docs_dir = s_dir / "docs"
             if s_docs_dir.is_dir():
@@ -179,12 +179,14 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                         "source_path": f"skills/{s_name}/docs/{sd_file.name}",
                         "source_locale": "zh-Hans",
                         "genre": "technical_and_schema_specifications",
-                        "aidetox_intensity": "medium",
+                        "style_intensity": "medium",
                     })
 
     # 3. Docs directory (10 canonical documents)
     docs_dir = ROOT / "docs"
     for d_file in sorted(docs_dir.glob("*.md")):
+        if ".local-lineage" in d_file.parts:
+            continue
         d_stem = d_file.stem
         if d_stem in ["pain-atlas-v0.zh", "research-plan-v0.zh"]:
             continue  # localized counterparts of pain-atlas-v0.en and research-plan-v0.en
@@ -194,7 +196,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
             "source_path": f"docs/{d_file.name}",
             "source_locale": "en" if "en" in d_stem or "scfabric" in d_stem else "zh-Hans",
             "genre": "research_plans_and_evaluations" if "plan" in d_stem or "roadmap" in d_stem else "technical_and_schema_specifications",
-            "aidetox_intensity": "medium",
+            "style_intensity": "medium",
         })
 
     for sub in ["standards", "terminology"]:
@@ -206,7 +208,7 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                 "source_path": f"docs/{sub}/README.md",
                 "source_locale": "en",
                 "genre": "technical_and_schema_specifications",
-                "aidetox_intensity": "medium",
+                "style_intensity": "medium",
             })
 
     return docs
@@ -380,7 +382,7 @@ def build_manifest(certify_paths: Optional[List[str]] = None, certify_all_existi
             "source_sha256": src_sha,
             "section_hashes": sec_hashes,
             "genre": item["genre"],
-            "aidetox_intensity": item["aidetox_intensity"],
+            "style_intensity": item["style_intensity"],
             "localized_instances": instances,
         })
 
@@ -392,7 +394,7 @@ def build_manifest(certify_paths: Optional[List[str]] = None, certify_all_existi
         "governing_registries": {
             "standards_registry_version": "1.1.0",
             "terminology_registry_version": "2.0.0",
-            "aidetox_contract_version": "1.0.0",
+            "style_contract_version": "1.0.0",
         },
         "target_locales": TARGET_LOCALES,
         "total_canonical_documents": len(doc_entries),
@@ -415,7 +417,15 @@ def main():
             print("ERROR: manifest.json does not exist.")
             sys.exit(1)
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        expected = build_manifest()
         errors = []
+        reg_sources = [d["source_path"] for d in manifest.get("documents", [])]
+        exp_sources = [d["source_path"] for d in expected.get("documents", [])]
+        if reg_sources != exp_sources:
+            errors.append(f"Canonical document inventory mismatch: registered={len(reg_sources)}, discovered={len(exp_sources)}")
+        if manifest.get("status_summary") != expected.get("status_summary"):
+            errors.append(f"Status summary mismatch: registered={manifest.get('status_summary')}, recomputed={expected.get('status_summary')}")
+        exp_by_id = {d["doc_id"]: d for d in expected.get("documents", [])}
         for doc in manifest.get("documents", []):
             src_file = ROOT / doc["source_path"]
             if not src_file.is_file():
@@ -424,6 +434,9 @@ def main():
             cur_sha = compute_sha256(src_file.read_text(encoding="utf-8"))
             if cur_sha != doc["source_sha256"]:
                 errors.append(f"Stale source SHA for: {doc['source_path']}")
+            exp_doc = exp_by_id.get(doc["doc_id"])
+            if exp_doc and doc.get("section_hashes") != exp_doc.get("section_hashes"):
+                errors.append(f"Stale section_hashes for: {doc['source_path']}")
             for loc, inst in doc.get("localized_instances", {}).items():
                 if inst["status"] in ("localized_current", "localized_stale"):
                     loc_file = ROOT / inst["path"]

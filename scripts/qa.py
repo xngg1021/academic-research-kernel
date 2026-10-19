@@ -20,7 +20,7 @@ KINDS = ('smoke-test: true', 'external-test: true', 'fragment:')
 EXCLUDED_TREES = {'.git', '.venv', 'venv', 'env', '.pytest_cache', '.mypy_cache',
                   '.ruff_cache', '.tox', '.nox', 'build', 'dist', '__pycache__',
                   'node_modules', 'htmlcov', '.cache', '.uv-cache', '.coverage',
-                  '.hermes-upstream', '.hermes-latest'}
+                  '.hermes-upstream', '.hermes-latest', '.local-lineage'}
 SOURCE_ROOTS = {'scripts', 'src', 'skills', 'schemas', 'docs', 'tests', 'i18n',
                 'LICENSES', '.github', 'tools'}
 
@@ -79,7 +79,7 @@ def hygiene(text):
                 r'/(?:Users|home)/(?!<|runner\b)[\w.-]+/',
                 r'\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9]{24,})\b',
                 r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
-                r'''(?i)\b(?:api_key|access_token|secret|password)\s*[:=]\s*["'](?!<|YOUR_|example|placeholder|test)[A-Za-z0-9_-]{16,}["']''']
+                r'''(?i)(?:^|(?<=[^A-Za-z0-9]))(?:api_key|access_token|secret|password)\s*[:=]\s*["'](?!<|YOUR_|example|placeholder|test)[A-Za-z0-9_-]{16,}["']''']
     return [m.group() for pat in patterns for m in re.finditer(pat, text)]
 
 
@@ -171,13 +171,13 @@ def static_checks(root=ROOT):
             for doc_entry in manifest.get("documents", []):
                 doc_meta_by_path[doc_entry["source_path"]] = {
                     "genre": doc_entry.get("genre", "user_facing_documentation"),
-                    "intensity": doc_entry.get("aidetox_intensity", "strong"),
+                    "intensity": doc_entry.get("style_intensity", "strong"),
                     "locale": doc_entry.get("source_locale", "en"),
                 }
                 for loc, inst in doc_entry.get("localized_instances", {}).items():
                     doc_meta_by_path[inst["path"]] = {
                         "genre": doc_entry.get("genre", "user_facing_documentation"),
-                        "intensity": doc_entry.get("aidetox_intensity", "strong"),
+                        "intensity": doc_entry.get("style_intensity", "strong"),
                         "locale": loc,
                     }
         except Exception as e:
@@ -198,7 +198,7 @@ def static_checks(root=ROOT):
         "id", "it", "hi", "ar", "bn", "ur", "vi", "tr", "fa", "sw", "pl"
     }
     if set(locale_profiles.keys()) != EXPECTED_LOCALES:
-        errors.append(f"AIDetox profile invariant failed: expected exactly 21 profiles {sorted(EXPECTED_LOCALES)}, got {sorted(locale_profiles.keys())}")
+        errors.append(f"Style profile invariant failed: expected exactly 21 profiles {sorted(EXPECTED_LOCALES)}, got {sorted(locale_profiles.keys())}")
     for loc_code, prof_data in locale_profiles.items():
         for rule_grp in ("banned_phrases", "step_broadcasting_markers", "redundant_hedges"):
             items = prof_data.get(rule_grp)
@@ -253,12 +253,12 @@ def static_checks(root=ROOT):
         except Exception as e:
             errors.append(f"terminology registry QA check failed: {e}")
 
-    # 2. AIDetox style contract and per-locale profiles gate
-    aidetox_path = root / "docs" / "style" / "aidetox-contract.json"
-    if aidetox_path.is_file():
+    # 2. Style style contract and per-locale profiles gate
+    style_contract_path = root / "docs" / "style" / "style-contract.json"
+    if style_contract_path.is_file():
         try:
-            aidetox_contract = json.loads(aidetox_path.read_text(encoding="utf-8"))
-            prohibited_patterns = aidetox_contract.get("prohibited_patterns", {})
+            style_contract = json.loads(style_contract_path.read_text(encoding="utf-8"))
+            prohibited_patterns = style_contract.get("prohibited_patterns", {})
             for doc_path in (p for p in inventory if p.suffix == ".md"):
                 if '.git' in doc_path.parts or '.pytest_cache' in doc_path.parts:
                     continue
@@ -267,7 +267,7 @@ def static_checks(root=ROOT):
                 intensity = meta["intensity"] if meta else ("audit_safe" if any(k in rel_str for k in ["CHANGELOG", "LICENSE", "SOURCE-LINEAGE", "audit"]) else "strong")
                 loc = meta["locale"] if meta else "en"
 
-                if intensity == "audit_safe" or any(ex in rel_str for ex in ["aidetox-contract", "docs/terminology", "docs/standards"]):
+                if intensity == "audit_safe" or any(ex in rel_str for ex in ["style-contract", "docs/terminology", "docs/standards"]):
                     continue
 
                 doc_text = doc_path.read_text(encoding="utf-8")
@@ -276,11 +276,11 @@ def static_checks(root=ROOT):
                 if loc in ("zh-Hans", "zh-Hant") or any(ord(c) > 127 for c in rel_str):
                     for pat in prohibited_patterns.get("synthetic_hyperbole", []) + prohibited_patterns.get("jargon_stacking", []):
                         if pat in doc_text:
-                            errors.append(f"{rel_str}: AIDetox prohibited pattern detected: '{pat}'")
+                            errors.append(f"{rel_str}: Style prohibited pattern detected: '{pat}'")
                     if intensity == "strong":
                         for pat in prohibited_patterns.get("step_broadcasting", []):
                             if pat in doc_text:
-                                errors.append(f"{rel_str}: AIDetox step broadcasting detected: '{pat}'")
+                                errors.append(f"{rel_str}: Style step broadcasting detected: '{pat}'")
 
                 # Dedicated per-locale profile check for user-facing documentation
                 if intensity == "strong" and loc in locale_profiles:
@@ -295,7 +295,7 @@ def static_checks(root=ROOT):
                         if hedge.lower() in doc_text.lower():
                             errors.append(f"{rel_str}: [{loc}] redundant hedge detected: '{hedge}'")
         except Exception as e:
-            errors.append(f"AIDetox contract QA check failed: {e}")
+            errors.append(f"Style contract QA check failed: {e}")
 
     # 3. Multilingual synchronization manifest integrity gate
     if manifest:
@@ -355,12 +355,13 @@ def static_checks(root=ROOT):
     return errors
 
 
-def run_fence(path, index, code, timeout=120):
+def run_fence(path, index, code, timeout=120, mpl_dir=None):
     with tempfile.TemporaryDirectory(prefix='hermes-qa-') as temp:
         script = Path(temp) / 'example.py'
         script.write_text(code, encoding='utf-8')
         skill = next(p for p in [path.parent, *path.parents] if (p / 'SKILL.md').exists())
-        env = dict(os.environ, MPLBACKEND='Agg', MPLCONFIGDIR=str(Path(temp) / 'mpl'),
+        base_env = {k: v for k, v in os.environ.items() if k not in ('PYTHONOPTIMIZE', 'PYTHONPATH', 'PYTHONHOME')}
+        env = dict(base_env, MPLBACKEND='Agg', MPLCONFIGDIR=str(mpl_dir or (Path(temp) / 'mpl')),
                    SKILL_DIR=str(skill), PLOT_DIR=str(Path(temp) / 'plots'), PYTHONIOENCODING='utf-8', OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1')
         return subprocess.run([sys.executable, str(script)], cwd=skill, env=env,
                               capture_output=True, text=True, encoding='utf-8', timeout=timeout)
@@ -373,17 +374,18 @@ def main():
     errors = static_checks()
     count = 0
     if not args.static_only:
-        for path in (p for p in source_files(ROOT) if p.suffix == '.md' and p.relative_to(ROOT).parts[0] == 'skills'):
-            for i, kind, code in fences(path):
-                if kind != 'smoke-test: true':
-                    continue
-                count += 1
-                try:
-                    result = run_fence(path, i, code)
-                    if result.returncode:
-                        errors.append(f'{path.relative_to(ROOT)}:{i}: {result.stderr}')
-                except subprocess.TimeoutExpired:
-                    errors.append(f'{path.relative_to(ROOT)}:{i}: timeout')
+        with tempfile.TemporaryDirectory(prefix='hermes-qa-mpl-') as shared_mpl:
+            for path in (p for p in source_files(ROOT) if p.suffix == '.md' and p.relative_to(ROOT).parts[0] == 'skills'):
+                for i, kind, code in fences(path):
+                    if kind != 'smoke-test: true':
+                        continue
+                    count += 1
+                    try:
+                        result = run_fence(path, i, code, mpl_dir=shared_mpl)
+                        if result.returncode:
+                            errors.append(f'{path.relative_to(ROOT)}:{i}: {result.stderr}')
+                    except subprocess.TimeoutExpired:
+                        errors.append(f'{path.relative_to(ROOT)}:{i}: timeout')
     if errors:
         print('\n'.join(errors))
         return 1

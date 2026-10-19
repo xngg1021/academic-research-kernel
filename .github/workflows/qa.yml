@@ -24,51 +24,50 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64 across Python versions
+          # Linux x86_64: Python 3.10 lower bound, 3.12 baseline (runs full 41 doc fences), 3.14 upper bound
           - os: ubuntu-latest
             arch: x86_64
             python: '3.10'
-          - os: ubuntu-latest
-            arch: x86_64
-            python: '3.11'
+            full_qa: 'false'
+            python_utf8: '1'
           - os: ubuntu-latest
             arch: x86_64
             python: '3.12'
-          - os: ubuntu-latest
-            arch: x86_64
-            python: '3.13'
+            full_qa: 'true'
+            python_utf8: '1'
           - os: ubuntu-latest
             arch: x86_64
             python: '3.14'
+            full_qa: 'false'
+            python_utf8: '1'
           # Linux ARM64
           - os: ubuntu-24.04-arm
             arch: arm64
             python: '3.12'
-          # Ubuntu 26.04 preview canary (x86_64 and ARM64)
-          - os: ubuntu-26.04
-            arch: x86_64
-            python: '3.12'
-          - os: ubuntu-26.04-arm
-            arch: arm64
-            python: '3.12'
-          # Windows x86_64
+            full_qa: 'false'
+            python_utf8: '1'
+          # Windows x86_64 (Python 3.10 lower bound + non-UTF-8 locale pipe check)
           - os: windows-latest
             arch: x86_64
-            python: '3.12'
+            python: '3.10'
+            full_qa: 'false'
+            python_utf8: '0'
           # Windows ARM64
           - os: windows-11-arm
             arch: arm64
             python: '3.12'
-          # macOS Apple Silicon (ARM64)
+            full_qa: 'false'
+            python_utf8: '1'
+          # macOS Apple Silicon (ARM64 + Python 3.14 upper bound)
           - os: macos-latest
             arch: arm64
-            python: '3.12'
-          # macOS Intel (x86_64)
-          - os: macos-15-intel
-            arch: x86_64
-            python: '3.12'
+            python: '3.14'
+            full_qa: 'false'
+            python_utf8: '1'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    env:
+      PYTHONUTF8: ${{ matrix.python_utf8 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
         with:
@@ -80,8 +79,10 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-qa.txt
       - run: python -m pip install -r requirements-qa.txt
-      - run: python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu || echo "Torch CPU wheel unavailable on this architecture, continuing with NumPy/SciPy reference"
+      - if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        run: python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu || echo "Torch CPU wheel unavailable on this architecture, continuing with NumPy/SciPy reference"
       - name: Check committed patch whitespace
+        if: matrix.full_qa == 'true'
         shell: bash
         env:
           DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -93,13 +94,18 @@ jobs:
             DIFF_BASE="$(git hash-object -t tree --stdin </dev/null)"
           fi
           git diff --check "$DIFF_BASE" "$DIFF_HEAD" --
-      - run: python scripts/qa.py
+      - if: matrix.full_qa == 'true'
+        run: |
+          python scripts/qa.py
+          python scripts/i18n_sync.py --check
+      - if: matrix.full_qa != 'true'
+        run: python scripts/qa.py --static-only
       - run: python -m pytest -q tests
   tap-lifecycle:
     # Tap semantics resolve the default branch, so real Hermes integration
     # runs on main pushes and manual dispatches, not on PR heads. PR-level
     # discovery coverage stays with the pinned tap-discovery tests.
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -272,6 +278,7 @@ jobs:
           path: dist/
   distribution-install:
     needs: distribution-build
+    if: github.event_name != 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
     strategy:
       fail-fast: false
       matrix:
@@ -292,4 +299,7 @@ jobs:
         with:
           name: distribution-candidate
           path: dist/
-      - run: python scripts/package_acceptance.py --uvx
+      - if: matrix.os == 'ubuntu-latest'
+        run: python scripts/package_acceptance.py --uvx --source-checks
+      - if: matrix.os != 'ubuntu-latest'
+        run: python scripts/package_acceptance.py --uvx

@@ -16,8 +16,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workloads", nargs="*", default=None,
                         help="Specific workloads to run (default: all)")
-    parser.add_argument("--scales", nargs="*", default=["small", "medium", "large"],
-                        help="Scales to evaluate (default: small medium large)")
+    parser.add_argument("--scales", nargs="*", default=["small"],
+                        help="Scales to evaluate (default: small; pass small medium large for full sweep)")
     parser.add_argument("--dtype", default="float64", choices=["float32", "float64"],
                         help="Data precision contract (default: float64)")
     parser.add_argument("--gain-threshold", type=float, default=1.5,

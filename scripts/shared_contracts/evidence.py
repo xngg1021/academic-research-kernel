@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import collections.abc
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 import hashlib
 import heapq
@@ -54,7 +54,7 @@ class LineageVerificationContext:
     content_by_entity_id: Optional[Mapping[str, bytes]] = None
     authorized_paths: Tuple[Path, ...] = ()
     max_content_bytes: int = 10 * 1024 * 1024
-    _fp_cache: Optional[Tuple[Any, Any]] = None
+    _fp_cache: Optional[Tuple[Any, Any]] = field(default=None, init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self) -> None:
         if type(self.max_content_bytes) is not int or self.max_content_bytes < 0:

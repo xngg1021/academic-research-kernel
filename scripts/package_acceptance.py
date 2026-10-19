@@ -38,12 +38,16 @@ def main():
             venv = temp / f'env-{i}'
             subprocess.run([uv, 'venv', '--python', sys.executable, str(venv)], check=True, env=env, cwd=temp)
             python = venv / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-            subprocess.run([uv, 'pip', 'install', '--python', str(python), str(artifact)], check=True, env=env, cwd=temp)
+            if artifact.suffix == '.whl':
+                subprocess.run([uv, 'pip', 'install', '--python', str(python), str(artifact)], check=True, env=env, cwd=temp)
+                subprocess.run([str(python), '-I', str(smoke), '--expected-version', __version__], check=True, env=env, cwd=temp)
+            subprocess.run([uv, 'pip', 'install', '--python', str(python), f'{artifact}[research]'], check=True, env=env, cwd=temp)
             subprocess.run([str(python), '-I', str(smoke), '--expected-version', __version__], check=True, env=env, cwd=temp)
             package_file = subprocess.check_output([str(python), '-I', '-c',
                 'import academic_research_kernel; print(academic_research_kernel.__file__)'], text=True, env=env, cwd=temp).strip()
             report['artifacts'].append({'filename': artifact.name, 'sha256': hashlib.sha256(artifact.read_bytes()).hexdigest(),
-                                        'python': str(python), 'import_path': package_file, 'installed_smoke': 'passed'})
+                                        'python': str(python), 'import_path': package_file, 'installed_smoke': 'passed',
+                                        'research_extra_smoke': 'passed'})
             if args.uvx and artifact.suffix == '.whl':
                 isolated = dict(env, UV_CACHE_DIR=str(temp / 'uvx-cache'))
                 subprocess.run([str(python), '-I', str(smoke), '--expected-version', __version__, '--', uv, 'tool', 'run', '--python', sys.executable,

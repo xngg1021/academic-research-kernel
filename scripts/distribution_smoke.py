@@ -19,7 +19,29 @@ EXPECTED_TOOLS = {
 }
 
 
-def research_smoke(execute, directory):
+def _make_minimal_pdf(text_line: str) -> bytes:
+    stream = f'BT /F1 11 Tf 36 720 Td ({text_line}) Tj ET'.encode('ascii')
+    objs = [
+        b'1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+        b'2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+        b'3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
+        b'4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+        f'5 0 obj\n<< /Length {len(stream)} >>\nstream\n'.encode('ascii') + stream + b'\nendstream\nendobj\n',
+    ]
+    out = bytearray(b'%PDF-1.4\n')
+    offsets = []
+    for obj in objs:
+        offsets.append(len(out))
+        out.extend(obj)
+    xref_pos = len(out)
+    out.extend(f'xref\n0 {len(objs) + 1}\n0000000000 65535 f \n'.encode('ascii'))
+    for off in offsets:
+        out.extend(f'{off:010d} 00000 n \n'.encode('ascii'))
+    out.extend(f'trailer\n<< /Size {len(objs) + 1} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n'.encode('ascii'))
+    return bytes(out)
+
+
+def research_smoke(execute, directory, pdf_ready=False):
     """Exercise installed workflow on explicitly synthetic raw source material."""
     from importlib.resources import files
     root = Path(directory)
@@ -87,8 +109,19 @@ def research_smoke(execute, directory):
     replay = json.loads(execute(['research', 'replay', '--project', str(project)]))
     require(replay['reused'] is True and replay['analysis_fingerprint'] == receipt['analysis_fingerprint'],
             'identical installed snapshot replay did not reuse deterministic state')
+    pdf_smoke = 'skipped_no_extra'
+    if pdf_ready:
+        pdf_file = root / 'synthetic-fixture.pdf'
+        pdf_file.write_bytes(_make_minimal_pdf('Explicit synthetic PDF installation fixture for digital text extraction verification. ' * 4))
+        pdf_project = root / 'pdf-project'
+        pdf_prep = json.loads(execute(['research', 'prepare', str(pdf_file), '--project', str(pdf_project)]))
+        require(pdf_prep['parsed'] == 1, 'installed PDF research prepare failed')
+        pdf_docs = json.loads((pdf_project / 'documents.json').read_text(encoding='utf-8'))
+        require(pdf_docs['documents'][0]['segments'][0]['locator'] == 'pdf:page=1', 'installed PDF page locator mismatch')
+        pdf_smoke = 'passed'
     return {'skill_export': 'passed', 'source_path': 'Chinese and spaces', 'computed_checks': 3,
-            'kernel_round_trip': 'passed', 'offline_snapshot_replay': 'passed', 'fixture': 'explicitly synthetic'}
+            'kernel_round_trip': 'passed', 'offline_snapshot_replay': 'passed', 'pdf_smoke': pdf_smoke,
+            'fixture': 'explicitly synthetic'}
 
 
 def require(condition, message):
@@ -176,7 +209,7 @@ def run(command=None, expected_version=None):
         require(json.loads(by_id[100]['result']['content'][0]['text'])['status'] == 'failed', 'incomplete statistics failure state missing')
         require(replies[-1] == {'jsonrpc': '2.0', 'id': 'installed-ping', 'result': {}}, 'ping response mismatch')
         if tuple(map(int, expected_version.split('.'))) >= (2, 1, 0):
-            research = research_smoke(execute, directory)
+            research = research_smoke(execute, directory, pdf_ready=bool(doctor.get('research', {}).get('pdf_ready')))
     print(json.dumps({'installed_e2e': 'PASS', 'version': __version__, 'tools': 12,
                       'calls': [name for name, _ in calls], 'clean_shutdown': True,
                       'arbitrary_cwd': True, 'source_independent': True, 'import_path': str(package_file),

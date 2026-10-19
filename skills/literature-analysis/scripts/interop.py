@@ -112,6 +112,7 @@ _CSL_FROM = {
     'preprint': 'preprint', 'manuscript': 'preprint', 'posted-content': 'preprint',
     'thesis': 'thesis', 'dissertation': 'thesis',
     'report': 'report',
+    'document': 'misc',
 }
 _CSL_TO = {
     'article': 'article-journal',
@@ -121,7 +122,7 @@ _CSL_TO = {
     'preprint': 'article',
     'thesis': 'thesis',
     'report': 'report',
-    'misc': 'article',
+    'misc': 'document',
 }
 
 _CROSSREF_TYPE_FROM = {

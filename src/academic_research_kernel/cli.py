@@ -20,9 +20,11 @@ SERVICES = ('OPENALEX_API_KEY', 'UNPAYWALL_EMAIL', 'SCITE_API_KEY', 'WOS_API_KEY
 
 def _error_hint(step: str, reason: str) -> str:
     lower = reason.lower()
-    if 'signature missing' in lower or 'not a pdf' in lower or 'landing' in lower:
+    if 'signature missing' in lower or 'not a pdf' in lower or ('pdf' in lower and 'landing' in lower):
         return 'File is not a valid PDF (e.g. HTML landing or error page); provide a real PDF or full-text HTML/XML file'
-    if 'budget' in lower or 'exceeded' in lower or 'too large' in lower:
+    if 'budget' in lower or 'too large' in lower or (
+        'exceeded' in lower and any(k in lower for k in ('size', 'page', 'zip', 'archive', 'content', 'file'))
+    ):
         return 'Input exceeds size or page budget; provide a smaller file or extract relevant sections'
     if 'pypdf' in lower or 'fonttools' in lower or 'research extra' in lower or 'academic-research-kernel[research]' in lower or (
         'pdf' in lower and any(k in lower for k in ('install', 'require', 'unavailable', 'support'))
@@ -35,10 +37,44 @@ def _error_hint(step: str, reason: str) -> str:
     return f'Check inputs for step "{step}" or run: academic-research-kernel doctor'
 
 
+def _package_root():
+    for pkg in ('academic_research_kernel', __package__):
+        if not pkg:
+            continue
+        try:
+            candidate = resources.files(pkg)
+            if candidate.joinpath('schemas').is_dir():
+                return candidate
+        except Exception:
+            continue
+    pkg_dir = Path(__file__).resolve().parent
+    if (pkg_dir / 'schemas').is_dir():
+        return pkg_dir
+    return pkg_dir.parents[1]
+
+
+def _safe_find_spec(name: str) -> bool:
+    try:
+        return util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _safe_importable(name: str) -> bool:
+    if not _safe_find_spec(name):
+        return False
+    try:
+        importlib.import_module(name)
+        return True
+    except Exception:
+        return False
+
+
 def doctor():
     """Offline installation check. Values of external configuration never leave here."""
+    root = _package_root()
     report = {'version': __version__, 'python': {'executable': sys.executable,
-              'version': platform.python_version()}, 'package_location': str(resources.files('academic_research_kernel')),
+              'version': platform.python_version()}, 'package_location': str(root),
               'required_dependencies': {}, 'optional_dependencies': {},
               'external_services': {key: 'configured' if os.environ.get(key) else 'unconfigured (optional)' for key in SERVICES},
               'errors': []}
@@ -50,7 +86,7 @@ def doctor():
             report['required_dependencies'][name] = 'unavailable'
             report['errors'].append(f'{name}: {type(exc).__name__}')
     for name in STATS:
-        if util.find_spec(name):
+        if _safe_find_spec(name):
             try:
                 report['required_dependencies'][name] = metadata.version(name)
             except Exception:
@@ -58,10 +94,10 @@ def doctor():
         else:
             report['required_dependencies'][name] = 'not installed (install numpy, scipy, and statsmodels for statistical recomputation)'
     for name in OPTIONAL:
-        report['optional_dependencies'][name] = 'available' if util.find_spec(name) else 'not installed (optional)'
+        report['optional_dependencies'][name] = 'available' if _safe_find_spec(name) else 'not installed (optional)'
     try:
         from jsonschema import Draft202012Validator
-        schemas = list(resources.files('academic_research_kernel').joinpath('schemas').iterdir())
+        schemas = list(root.joinpath('schemas').iterdir())
         schemas = [p for p in schemas if p.name.endswith('.json')]
         expected_schemas = {
             'artifact-ingestion-receipt', 'claim-evidence-graph', 'computation-artifact', 'compute-receipt',
@@ -75,26 +111,35 @@ def doctor():
         for path in schemas:
             Draft202012Validator.check_schema(json.loads(path.read_text(encoding='utf-8')))
         report['schema_resources'] = {'status': 'ok', 'count': len(schemas)}
-        matrix = resources.files('academic_research_kernel').joinpath('artifact-adapter-matrix.json')
+        matrix = root.joinpath('artifact-adapter-matrix.json')
         json.loads(matrix.read_text(encoding='utf-8'))
-        skill = resources.files('academic_research_kernel').joinpath('skills/paper-research/SKILL.md')
+        skill = root.joinpath('skills/paper-research/SKILL.md')
         if not skill.read_text(encoding='utf-8').strip():
             raise ValueError('portable paper-research skill missing')
-        has_pypdf = bool(util.find_spec('pypdf'))
-        has_fonttools = bool(util.find_spec('fontTools') or util.find_spec('fonttools'))
-        pdf_ready = has_pypdf and has_fonttools
-        report['research'] = {
-            'semantic_producer': 'local agent required',
-            'pdf_parser': metadata.version('pypdf') if has_pypdf else 'not installed; use [research]',
-            'font_decoder': metadata.version('fonttools') if has_fonttools else 'not installed; use [research]',
-            'pdf_ready': pdf_ready,
-            'portable_skill': 'available',
-            'schema_count': 3,
-        }
+        portable_skill_status = 'available'
     except Exception as exc:
         report['schema_resources'] = {'status': 'error'}
         report['errors'].append(f'resources: {type(exc).__name__}')
-        pdf_ready = False
+        portable_skill_status = 'unavailable'
+    has_pypdf = _safe_importable('pypdf')
+    has_fonttools = _safe_importable('fontTools') or _safe_importable('fonttools')
+    pdf_ready = has_pypdf and has_fonttools and portable_skill_status == 'available'
+    try:
+        pypdf_ver = metadata.version('pypdf') if has_pypdf else 'not installed; use [research]'
+    except Exception:
+        pypdf_ver = 'available' if has_pypdf else 'not installed; use [research]'
+    try:
+        ft_ver = metadata.version('fonttools') if has_fonttools else 'not installed; use [research]'
+    except Exception:
+        ft_ver = 'available' if has_fonttools else 'not installed; use [research]'
+    report['research'] = {
+        'semantic_producer': 'local agent required',
+        'pdf_parser': pypdf_ver,
+        'font_decoder': ft_ver,
+        'pdf_ready': pdf_ready,
+        'portable_skill': portable_skill_status,
+        'schema_count': 3,
+    }
     try:
         from . import mcp_server
         report['mcp'] = {'importable': True, 'tool_count': len(mcp_server.TOOLS)}
@@ -168,7 +213,7 @@ def main(argv=None):
             else:
                 target = Path(args.output).resolve()
                 target.mkdir(parents=True, exist_ok=True)
-                root = resources.files('academic_research_kernel')
+                root = _package_root()
                 source = root.joinpath('skills/paper-research')
                 def copy_resource(src, dst):
                     dst.mkdir(parents=True, exist_ok=True)

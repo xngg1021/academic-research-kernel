@@ -275,7 +275,16 @@ def test_mcp_server_discover_and_meta_protocol_version():
     assert res["resultType"] == "complete"
     assert res["ttlMs"] == 3600000
     assert res["cacheScope"] == "public"
+    assert res["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "academic-research-kernel"
     assert len(res["tools"]) == 12
+
+    bad_cap_meta = mcp_server.process_message({
+        "jsonrpc": "2.0",
+        "id": 1015,
+        "method": "tools/list",
+        "params": {"_meta": {"io.modelcontextprotocol/clientCapabilities": "not-an-object"}},
+    })
+    assert bad_cap_meta["error"]["code"] == -32602
 
     bad_official_meta = mcp_server.process_message({
         "jsonrpc": "2.0",
@@ -293,7 +302,7 @@ def test_mcp_server_discover_and_meta_protocol_version():
         "jsonrpc": "2.0",
         "id": 103,
         "method": "tools/list",
-        "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28"}},
+        "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28", "protocolVersion": "custom-1.0"}},
     })
     assert ok_official_meta["result"]["resultType"] == "complete"
     assert ok_official_meta["result"]["ttlMs"] == 3600000
@@ -396,9 +405,47 @@ def test_frozen_json_map_deep_nesting_memory_and_duck_typed_receipt_isolation():
     assert not hasattr(commitments_mod, "_SOURCE_PROJECTION_CACHE")
 
     ctx_10m = LineageVerificationContext(content_by_entity_id={"e1": b"x" * (10 * 1024 * 1024)})
+    ctx_10m_twin = LineageVerificationContext(content_by_entity_id={"e1": b"x" * (10 * 1024 * 1024)})
+    assert ctx_10m == ctx_10m_twin
     t0 = time.perf_counter()
     for _ in range(500):
         fp = ctx_10m.fingerprint()
     elapsed = time.perf_counter() - t0
     assert elapsed < 0.25
     assert len(fp[1][0][1]) == 64
+    assert ctx_10m == ctx_10m_twin
+
+    import tempfile
+    import pytest
+    from ingestion.engine import IngestionEngine
+    from ingestion.models import ArtifactEnvelope, IngestionKernelState
+    from shared_contracts.evidence import compute_sha256
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        doc = td_path / "artifact.bin"
+        doc.write_bytes(b"before")
+        l_graph = mcp_server.prov_mod.LineageGraph(root_dir=td_path)
+        l_graph.add_entity("artifact", "data_snapshot", locator="artifact.bin", sha256=compute_sha256(b"before"))
+        disk_ctx = LineageVerificationContext(content_root=td_path)
+        produced = mcp_server.prov_mod.trace_origin(l_graph, "artifact", verification_context=disk_ctx)
+        state = IngestionKernelState(
+            ceg=ClaimEvidenceGraph(),
+            ledger=DecisionLedger(),
+            verification_context=disk_ctx,
+        )
+        env = ArtifactEnvelope.create(
+            payload=produced.to_dict(),
+            producer_skill="research-object-identity",
+            producer_version="1.0.0",
+            artifact_kind="lineage_receipt",
+            payload_schema="lineage-receipt-1.0",
+        )
+        eng = IngestionEngine()
+        receipt = eng.ingest(env, state=state)
+        assert receipt.status == "accepted"
+        ck = next(iter(state.ingestion_sources))
+        assert commitments_mod.expected_mutation_inventory(state, ck, receipt)
+        doc.write_bytes(b"after!")
+        with pytest.raises(ValueError, match="independent source planning failed"):
+            commitments_mod.expected_mutation_inventory(state, ck, receipt)

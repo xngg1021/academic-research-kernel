@@ -73,11 +73,14 @@ def build_isolated_child_env(participant: ParticipantSpec) -> dict[str, str]:
         "PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "TEMP", "TMP",
         "USERPROFILE", "HOME", "LANG", "LC_ALL", "SHELL", "COMSPEC",
         "TERM", "TZ", "HERMES_HOME", "HERMES_CONFIG_DIR",
+        "PYTHONUTF8", "PYTHONIOENCODING",
     }
     env: dict[str, str] = {}
     for k, v in os.environ.items():
         if k in base_allow:
             env[k] = v
+    env.setdefault("PYTHONUTF8", "1")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
 
     prov = (participant.provider or "").strip().lower()
     allowed_keys = PROVIDER_ALLOWED_KEYS.get(prov, [])
