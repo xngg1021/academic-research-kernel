@@ -345,11 +345,11 @@ def main(argv=None):
                     try:
                         intercept, t_val, p_val = meta_mod.egger_test(yi, vi)
                         egger_out = {'status': 'ok', 'intercept': intercept, 't': t_val if math.isfinite(t_val) else None, 'p': p_val if math.isfinite(p_val) else None}
-                    except ValueError as exc:
+                    except (ValueError, ZeroDivisionError) as exc:
                         egger_out = {'status': 'not_estimable', 'reason': str(exc)}
                     try:
                         tf_res = meta_mod.trim_and_fill(yi, vi)
-                    except ValueError as exc:
+                    except (ValueError, ZeroDivisionError) as exc:
                         tf_res = {'status': 'not_estimable', 'reason': str(exc)}
                     bias = {'egger': egger_out, 'trim_and_fill': tf_res}
                 print(json.dumps({
@@ -360,7 +360,7 @@ def main(argv=None):
                     'publication_bias': bias,
                 }, ensure_ascii=False, indent=2, allow_nan=False))
                 return 0
-        except (ValueError, OSError, KeyError, TypeError) as exc:
+        except (ValueError, ZeroDivisionError, OSError, KeyError, TypeError) as exc:
             print(json.dumps({
                 'status': 'error',
                 'command': args.command,

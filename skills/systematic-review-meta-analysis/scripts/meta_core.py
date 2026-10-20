@@ -287,6 +287,8 @@ def egger_test(yi, vi) -> tuple[float, float, float]:
     y, v = _arrays(yi, vi)
     snd = y / np.sqrt(v)
     precision = 1.0 / np.sqrt(v)
+    if float(np.sum((precision - precision.mean()) ** 2)) == 0.0:
+        raise ValueError("Egger regression requires non-identical study variances")
     slope, intercept, _, _, _ = stats.linregress(precision, snd)
     resid = snd - (intercept + slope * precision)
     df = y.size - 2
