@@ -8,19 +8,19 @@ Yazar: Junfu Shi (SJF, xngg1021), Hermes Agent. Geçerli kapsamlı lisans teklif
 
 ## Hızlı başlangıç
 
-2.1.0 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
+2.2.0 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-[2.1.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 12 deterministik aracın tamamı temel kuruluma dahildir.
+[2.2.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 12 deterministik aracın tamamı temel kuruluma dahildir.
 
 ## Kurulumu doğrulama
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 Çevrimdışı tanılama aracı; bağımlılıkları, veri şemalarını ve 12 araç tanımının tamamını kontrol eder. İsteğe bağlı harici hizmetler yapılandırılmadan bırakılabilir. Makine tarafından okunabilir çıktı almak için `doctor --json` komutunu kullanın.
@@ -28,12 +28,12 @@ uvx academic-research-kernel@2.1.0 --version
 ## Paket kurulumu
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.1.0` veya `python -m pip install academic-research-kernel==2.1.0` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==6.19.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
+Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.2.0` veya `python -m pip install academic-research-kernel==2.2.0` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==6.19.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ CI; Linux x86_64 (Python 3.10–3.14), Linux ARM64 (`ubuntu-24.04-arm`), Ubuntu 
 
 ## Yerel bir Ajan ile makale araştırma
 
-`academic-research-kernel[research]==2.1.0` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
+`academic-research-kernel[research]==2.2.0` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

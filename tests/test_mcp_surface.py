@@ -449,3 +449,41 @@ def test_frozen_json_map_deep_nesting_memory_and_duck_typed_receipt_isolation():
         doc.write_bytes(b"after!")
         with pytest.raises(ValueError, match="independent source planning failed"):
             commitments_mod.expected_mutation_inventory(state, ck, receipt)
+
+
+def test_mcp_recompute_extended_statistical_families():
+    import pytest
+    res_f = mcp_server.handle_tool_call("academic_recompute_statistics", {"f_stat": 4.0, "df1": 2, "df2": 27, "p_value": 0.030, "p_value_literal": "0.030"})
+    assert "error" not in res_f
+    assert res_f["recomputed_f_p"] == pytest.approx(0.03009485, abs=1e-5)
+    assert res_f["f_p_match"]["consistent"] is True
+
+    res_chi2 = mcp_server.handle_tool_call("academic_recompute_statistics", {"chi2_stat": 3.8414588, "chi2_df": 1, "p_value": 0.05, "p_value_literal": "0.05"})
+    assert "error" not in res_chi2
+    assert res_chi2["recomputed_chi2_p"] == pytest.approx(0.05, abs=1e-4)
+    assert res_chi2["chi2_p_match"]["consistent"] is True
+
+    res_z = mcp_server.handle_tool_call("academic_recompute_statistics", {"beta": 1.96, "se": 1.0, "p_value": 0.05, "p_value_literal": "0.05"})
+    assert "error" not in res_z
+    assert res_z["recomputed_z"] == pytest.approx(1.96)
+    assert res_z["recomputed_z_p"] == pytest.approx(0.04999579, abs=1e-5)
+    assert res_z["z_p_match"]["consistent"] is True
+
+    res_ci = mcp_server.handle_tool_call("academic_recompute_statistics", {"ci_estimate": 2.0, "ci_lower": 1.0, "ci_upper": 3.0})
+    assert res_ci["ci_consistency"]["consistent"] is True
+    assert res_ci["ci_consistency"]["ci_midpoint"] == pytest.approx(2.0)
+
+    res_or = mcp_server.handle_tool_call("academic_recompute_statistics", {"cell_a": 20, "cell_b": 10, "cell_c": 10, "cell_d": 20})
+    assert res_or["or_rr"]["recomputed"]["odds_ratio"] == pytest.approx(4.0)
+    assert res_or["or_rr"]["recomputed"]["risk_ratio"] == pytest.approx(2.0)
+
+    res_pw = mcp_server.handle_tool_call("academic_recompute_statistics", {"effect_size_d": 0.8, "power_n1": 26, "target_power": 0.80})
+    assert res_pw["achieved_power"]["recomputed"] == pytest.approx(0.807, abs=1e-2)
+    assert res_pw["required_n"]["recomputed"] == pytest.approx(25.52, abs=1e-1)
+
+    res_sd = mcp_server.handle_tool_call("academic_recompute_statistics", {"check_sd": 1.5, "scale_min": 1.0, "scale_max": 5.0, "sample_n": 20})
+    assert res_sd["sd_possible"]["consistent"] is True
+
+    res_df = mcp_server.handle_tool_call("academic_recompute_statistics", {"sample_df": 28, "reported_n": 30, "df_kind": "ttest_2sample"})
+    assert res_df["sample_size_from_df"]["consistent"] is True
+    assert res_df["sample_size_from_df"]["implied_n"] == 30

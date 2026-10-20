@@ -8,19 +8,19 @@ Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Oferta actual: [Source Lineage L
 
 ## Inicio rápido
 
-Ejecute la versión 2.1.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Ejecute la versión 2.2.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-La [versión 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10–3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 12 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
+La [versión 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10–3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 12 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
 
 ## Verificar la instalación
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 El diagnóstico sin conexión comprueba las dependencias, los esquemas y las 12 definiciones de herramientas. Los servicios externos opcionales pueden permanecer sin configurar. Utilice `doctor --json` para obtener una salida legible por máquina.
@@ -28,12 +28,12 @@ El diagnóstico sin conexión comprueba las dependencias, los esquemas y las 12 
 ## Instalación del paquete
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternativamente, puede instalarlo con `pipx install academic-research-kernel==2.1.0` o mediante `python -m pip install academic-research-kernel==2.1.0` dentro de un entorno virtual compatible. `[full]` añade bibliotecas para ejemplos avanzados de cálculo científico; `[qa]` añade las herramientas de validación del repositorio, incluido el analizador de PDF. `[research]` incorpora `pypdf==6.19.0` y `fonttools==4.65.0` para garantizar una decodificación uniforme de fuentes PDF en instalaciones limpias (ambos compatibles con Python 3.10). La lectura de HTML/XML estructurado y de archivos DOCX/XLSX acotados utiliza la biblioteca estándar. Los backends de GPU y los servicios de pago siguen siendo opcionales.
+Alternativamente, puede instalarlo con `pipx install academic-research-kernel==2.2.0` o mediante `python -m pip install academic-research-kernel==2.2.0` dentro de un entorno virtual compatible. `[full]` añade bibliotecas para ejemplos avanzados de cálculo científico; `[qa]` añade las herramientas de validación del repositorio, incluido el analizador de PDF. `[research]` incorpora `pypdf==6.19.0` y `fonttools==4.65.0` para garantizar una decodificación uniforme de fuentes PDF en instalaciones limpias (ambos compatibles con Python 3.10). La lectura de HTML/XML estructurado y de archivos DOCX/XLSX acotados utiliza la biblioteca estándar. Los backends de GPU y los servicios de pago siguen siendo opcionales.
 
 ## Hermes
 
@@ -91,7 +91,7 @@ Las catorce competencias incluyen 22 archivos de referencia Markdown, cargados s
 
 Los estilos de citación, los criterios de presentación de informes y los contratos de metadatos dependen de la revista de destino, la institución, el organismo de financiación, la disciplina y la jurisdicción. El repositorio establece **ISO 690:2021** (referencias bibliográficas), **ISO 5127:2017** (vocabulario de información y documentación) y **W3C PROV** (modelo de datos de procedencia) como bases internacionales, junto con perfiles regionales (como UNE-ISO 690:2024 en España, GB/T 7714-2025 en China continental, DIN ISO 690:2021 en Alemania) y normas disciplinarias (APA 7.ª ed., IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Los requisitos de la entidad o revista de destino tienen siempre prioridad sobre los perfiles predeterminados. Consulte la [Arquitectura de estándares académicos](docs/standards/README.md) y la [Guía de terminología natural](docs/terminology/README.md).
 
-La versión 2.1.0 valida la coherencia de los DOI e identificadores externos, los indicadores booleanos mutuamente excluyentes de veredicto cuantitativo y el contrato de elementos pendientes de verificación compartido entre el núcleo y los registros de verificación. La integridad de la caché se reconstruye a partir de los sobres fuente conservados y las vinculaciones normalizadas, con independencia de las listas de mutaciones del registro; eliminar simultáneamente un registro y su declaración de caché no puede producir una repetición aceptada. Consulte el [cierre de los cuatro bloqueos](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21).
+La versión 2.2.0 valida la coherencia de los DOI e identificadores externos, los indicadores booleanos mutuamente excluyentes de veredicto cuantitativo y el contrato de elementos pendientes de verificación compartido entre el núcleo y los registros de verificación. La integridad de la caché se reconstruye a partir de los sobres fuente conservados y las vinculaciones normalizadas, con independencia de las listas de mutaciones del registro; eliminar simultáneamente un registro y su declaración de caché no puede producir una repetición aceptada. Consulte el [cierre de los cuatro bloqueos](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21).
 
 ## Integración y uso portátil
 
@@ -128,7 +128,7 @@ Véanse [la autenticación de OpenAlex](https://help.openalex.org/api/authentica
 
 ## Incorporación determinista e interfaz pública del núcleo
 
-La versión 2.1.0 proporciona `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (las 14 competencias más el respaldo opaco) y 12 herramientas MCP stdio sin estado. Los registros de incorporación aceptados vinculan cada mutación semántica conservada por tipo, identidad y SHA-256 canónico: objetos de investigación, registros de vínculos entre afirmaciones y evidencias, entradas del registro de decisiones de investigación y ensayos fallidos, elementos pendientes de verificación, registros físicos de verificación y registros de artefactos. La repetición de caché comprueba esos compromisos con independencia de los hashes de las instantáneas de transporte. Los registros vacíos son válidos; los lotes atómicos fallidos no dejan estado parcial.
+La versión 2.2.0 proporciona `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (las 14 competencias más el respaldo opaco) y 12 herramientas MCP stdio sin estado. Los registros de incorporación aceptados vinculan cada mutación semántica conservada por tipo, identidad y SHA-256 canónico: objetos de investigación, registros de vínculos entre afirmaciones y evidencias, entradas del registro de decisiones de investigación y ensayos fallidos, elementos pendientes de verificación, registros físicos de verificación y registros de artefactos. La repetición de caché comprueba esos compromisos con independencia de los hashes de las instantáneas de transporte. Los registros vacíos son válidos; los lotes atómicos fallidos no dejan estado parcial.
 
 La autorización de lectura del contenido de procedencia es explícita y fuera de banda. Los invocadores de Python de confianza pasan `LineageVerificationContext` al reproducir registros de verificación o instantáneas serializados; los invocadores MCP pueden suministrar bytes de contenido acotados, pero nunca una raíz del sistema de archivos anfitrión. El presupuesto de contenido predeterminado es de 10 MiB; un anfitrión de confianza puede autorizar explícitamente artefactos mayores bajo la misma política entre productor y verificador. Sin autorización de contenido, una afirmación `fully_verified` no puede reproducirse de forma independiente y devuelve un resultado estructurado de verificación no válida. El texto no estructurado permanece opaco, las discrepancias siguen siendo visibles y los investigadores conservan el control sobre las confirmaciones, la detención o reapertura de vías, el enrutamiento y los juicios científicos.
 
@@ -160,7 +160,7 @@ scripts/scfabric/ constituye la capa de ejecución del conjunto de herramientas 
 
 ## Investigar un artículo con un Agente local
 
-Instale `academic-research-kernel[research]==2.1.0` y exporte el flujo de trabajo empaquetado:
+Instale `academic-research-kernel[research]==2.2.0` y exporte el flujo de trabajo empaquetado:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

@@ -8,19 +8,19 @@
 
 ## Быстрый старт
 
-Запустите версию 2.1.0 с помощью [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Запустите версию 2.2.0 с помощью [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-В описании [релиза 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) приведены контрольные суммы пакетов и статус публикации. Собранный wheel-пакет также можно запустить локально командой `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. Поддерживаются версии Python 3.10–3.14; параметр `uvx --python 3.12` явно выбирает совместимый интерпретатор. Все 12 детерминированных инструментов, включая статистические модули, входят в базовую установку.
+В описании [релиза 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) приведены контрольные суммы пакетов и статус публикации. Собранный wheel-пакет также можно запустить локально командой `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Поддерживаются версии Python 3.10–3.14; параметр `uvx --python 3.12` явно выбирает совместимый интерпретатор. Все 12 детерминированных инструментов, включая статистические модули, входят в базовую установку.
 
 ## Проверка установки
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 Автономная диагностика проверяет зависимости, схемы данных и описания всех 12 инструментов. Дополнительные внешние сервисы могут оставаться ненастроенными. Используйте `doctor --json` для получения машиночитаемого вывода.
@@ -28,12 +28,12 @@ uvx academic-research-kernel@2.1.0 --version
 ## Установка пакета
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Пакет также можно установить через `pipx install academic-research-kernel==2.1.0` или `python -m pip install academic-research-kernel==2.1.0` в поддерживаемом виртуальном окружении. Профиль `[full]` добавляет библиотеки для расширенных вычислительных примеров; `[qa]` включает инструменты проверки репозитория, в том числе анализатор PDF. Профиль `[research]` устанавливает `pypdf==6.19.0` и `fonttools==4.65.0` для единообразного декодирования шрифтов PDF в чистых окружениях (оба пакета совместимы с Python 3.10). Структурированное чтение HTML/XML и ограниченное по размеру чтение DOCX/XLSX выполняются средствами стандартной библиотеки. Вычислительные бэкенды GPU и платные внешние сервисы остаются необязательными.
+Пакет также можно установить через `pipx install academic-research-kernel==2.2.0` или `python -m pip install academic-research-kernel==2.2.0` в поддерживаемом виртуальном окружении. Профиль `[full]` добавляет библиотеки для расширенных вычислительных примеров; `[qa]` включает инструменты проверки репозитория, в том числе анализатор PDF. Профиль `[research]` устанавливает `pypdf==6.19.0` и `fonttools==4.65.0` для единообразного декодирования шрифтов PDF в чистых окружениях (оба пакета совместимы с Python 3.10). Структурированное чтение HTML/XML и ограниченное по размеру чтение DOCX/XLSX выполняются средствами стандартной библиотеки. Вычислительные бэкенды GPU и платные внешние сервисы остаются необязательными.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ git diff --check
 
 ## Исследование научной статьи с помощью локального агента
 
-Установите пакет `academic-research-kernel[research]==2.1.0` и экспортируйте встроенный рабочий процесс:
+Установите пакет `academic-research-kernel[research]==2.2.0` и экспортируйте встроенный рабочий процесс:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

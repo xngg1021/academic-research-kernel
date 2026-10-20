@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import collections.abc
 import copy
+import math
 import re
 import unicodedata
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Set
@@ -1286,11 +1287,12 @@ class QuantitativePaperAuditAdapter(BaseArtifactAdapter):
                     "needs_human": True,
                 })
 
-            # If caller explicitly provided claim binding, attach edge
-            if bindings and "claim_id" in bindings:
+            # If caller or assertion explicitly provided claim binding, attach edge
+            bound_claim_id = ass.get("claim_id") or (bindings.get("claim_id") if bindings else None)
+            if isinstance(bound_claim_id, str) and bound_claim_id.strip():
                 plan.ceg_edges.append({
                     "evidence_id": ev_id,
-                    "claim_id": bindings["claim_id"],
+                    "claim_id": bound_claim_id.strip(),
                     "support_status": support_status,
                     "rationale": f"Quantitative recalculation of {stat_name}",
                 })

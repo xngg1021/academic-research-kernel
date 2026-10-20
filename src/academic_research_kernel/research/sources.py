@@ -30,7 +30,7 @@ PARSER_VERSION = '1.0.1'
 MAX_FILE = 32 * 1024 * 1024
 MAX_TOTAL = 128 * 1024 * 1024
 MAX_ZIP = 48 * 1024 * 1024
-FORMATS = {'.pdf', '.html', '.htm', '.xml', '.docx', '.xlsx', '.txt', '.md', '.py'}
+FORMATS = {'.pdf', '.html', '.htm', '.xml', '.docx', '.xlsx', '.txt', '.md', '.py', '.tex', '.bib', '.bbl'}
 
 
 def canonical(value):
@@ -280,8 +280,97 @@ def parse(path):
         return h.blocks, h.meta.get('citation_title', h.meta.get('dc.title', ''))
     if suffix == '.xml':
         return parse_xml(path)
+    if suffix == '.tex':
+        return parse_tex(text)
+    if suffix in ('.bib', '.bbl'):
+        return parse_bib(text)
     out = [segment(f'text:line={i + 1}', line) for i, line in enumerate(text.splitlines()) if line.strip()]
     return out, ''
+
+
+def _extract_braced_arg(text: str, cmd_regex: str) -> str:
+    match = re.search(cmd_regex + r'(?:\s*\[[^\]]*\])?\s*\{', text, re.S)
+    if not match:
+        return ''
+    start = match.end()
+    depth = 1
+    pos = start
+    while pos < len(text) and depth > 0:
+        ch = text[pos]
+        if ch == '\\' and pos + 1 < len(text):
+            pos += 2
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+        pos += 1
+    return text[start:pos - 1] if depth == 0 else text[start:]
+
+
+def parse_tex(text: str):
+    lines = []
+    for raw_line in text.splitlines():
+        # Strip unescaped LaTeX line comments while preserving \%
+        stripped = re.sub(r'(?<!\\)%.*$', '', raw_line)
+        lines.append(stripped)
+    cleaned_doc = '\n'.join(lines)
+    raw_title = _extract_braced_arg(cleaned_doc, r'\\title')
+    title = clean(raw_title) if raw_title else ''
+    blocks = []
+    section = None
+    table_count = 0
+    block_count = 0
+    # Tokenize complete table and abstract environments first so internal blank lines or
+    # adjacent environments in the same paragraph do not split or merge them.
+    env_pattern = re.compile(
+        r'(\\begin\{(?:table\*?|abstract)\}.*?\\end\{(?:table\*?|abstract)\})',
+        re.S,
+    )
+    for part in env_pattern.split(cleaned_doc):
+        if not part or not part.strip():
+            continue
+        part_stripped = part.strip()
+        if re.match(r'^\\begin\{table\*?\}', part_stripped):
+            table_count += 1
+            lbl = _extract_braced_arg(part_stripped, r'\\label')
+            tid = lbl.strip() if lbl else f'table-{table_count}'
+            blocks.append(segment(f'tex:table={table_count}', part_stripped, section=section, table_id=tid))
+            continue
+        if re.match(r'^\\begin\{abstract\}', part_stripped):
+            blocks.append(segment('tex:abstract=1', part_stripped, section=section or 'Abstract'))
+            continue
+        for chunk in re.split(r'\n\s*\n+', part_stripped):
+            chunk_str = chunk.strip()
+            if not chunk_str:
+                continue
+            sec_raw = _extract_braced_arg(chunk_str, r'\\(?:sub)*section\*?')
+            if sec_raw:
+                section = clean(sec_raw)
+            block_count += 1
+            blocks.append(segment(f'tex:block={block_count}', chunk_str, section=section))
+    return blocks, title
+
+
+def parse_bib(text: str):
+    blocks = []
+    # Match @entrytype{citekey, ...} (allowing leading indentation) or \bibitem{citekey}
+    entry_matches = list(re.finditer(r'(?:^|\n)\s*(@\w+\s*\{\s*([^,\s]+)\s*,.*?)(?=\n\s*@\w+\s*\{|\Z)', text, re.S))
+    if entry_matches:
+        for m in entry_matches:
+            key = m.group(2).strip()
+            blocks.append(segment(f'bib:entry={key}', m.group(1), section='Bibliography'))
+        return blocks, ''
+    bibitem_matches = list(re.finditer(r'\\bibitem(?:\[[^\]]*\])?\{([^}]+)\}(.*?)(?=\\bibitem|\\end\{thebibliography\}|\Z)', text, re.S))
+    if bibitem_matches:
+        for m in bibitem_matches:
+            key = m.group(1).strip()
+            blocks.append(segment(f'bib:entry={key}', m.group(0), section='Bibliography'))
+        return blocks, ''
+    for idx, line in enumerate(text.splitlines(), 1):
+        if line.strip():
+            blocks.append(segment(f'bib:line={idx}', line, section='Bibliography'))
+    return blocks, ''
 
 
 def public_url(url):
@@ -484,8 +573,30 @@ def input_files(value, project):
     info = json.loads(mf.read_text('utf-8-sig')) if mf and mf.exists() else {}
     entries = info.get('files', info.get('documents', []))
     if not entries:
-        entries = [{'path': p.name, 'role': 'supplement' if re.search(r'supp|attachment', p.name, re.I) else 'main'}
-                   for p in (sorted(source.iterdir()) if source.is_dir() else [source]) if p.suffix.lower() in FORMATS]
+        if source.is_dir():
+            top_files = [p for p in sorted(source.iterdir()) if p.is_file() and p.suffix.lower() in FORMATS]
+            sub_files = [
+                p for p in sorted(source.rglob('*'))
+                if p.is_file() and p.parent != source
+                and p.suffix.lower() in FORMATS
+                and not any(part.startswith('.') or part == '__MACOSX' for part in p.relative_to(source).parts)
+            ]
+            discovered = top_files + sub_files
+            has_non_bib = any(p.suffix.lower() not in ('.bib', '.bbl') for p in discovered)
+            entries = [
+                {
+                    'path': p.relative_to(source).as_posix(),
+                    'role': (
+                        'supplement'
+                        if re.search(r'supp|attachment|appendix', p.name, re.I)
+                        or (has_non_bib and p.suffix.lower() in ('.bib', '.bbl'))
+                        else 'main'
+                    ),
+                }
+                for p in discovered
+            ]
+        elif source.suffix.lower() in FORMATS:
+            entries = [{'path': source.name, 'role': 'main'}]
     result = {**info, 'input': str(source), 'files': [], 'failures': info.get('failures', [])}
     size = 0
     for entry in entries:

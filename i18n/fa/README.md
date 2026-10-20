@@ -8,19 +8,19 @@
 
 ## شروع سریع
 
-نسخه 2.1.0 را با استفاده از [uv](https://docs.astral.sh/uv/getting-started/installation/) اجرا کنید:
+نسخه 2.2.0 را با استفاده از [uv](https://docs.astral.sh/uv/getting-started/installation/) اجرا کنید:
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-[انتشار نسخه 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) هش‌های بسته‌های توزیع و وضعیت انتشار را ثبت می‌کند. بسته wheel منتشرشده را می‌توان به صورت محلی نیز با دستور `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp` اجرا کرد. نسخه‌های Python 3.10 تا 3.14 پشتیبانی می‌شوند؛ گزینه `uvx --python 3.12` به طور صریح یک مفسر پشتیبانی‌شده را انتخاب می‌کند. هر ۱۲ ابزار قطعی، از جمله ابزارهای محاسبات علمی و تحلیل آماری، در نصب پایه گنجانده شده‌اند.
+[انتشار نسخه 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) هش‌های بسته‌های توزیع و وضعیت انتشار را ثبت می‌کند. بسته wheel منتشرشده را می‌توان به صورت محلی نیز با دستور `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp` اجرا کرد. نسخه‌های Python 3.10 تا 3.14 پشتیبانی می‌شوند؛ گزینه `uvx --python 3.12` به طور صریح یک مفسر پشتیبانی‌شده را انتخاب می‌کند. هر ۱۲ ابزار قطعی، از جمله ابزارهای محاسبات علمی و تحلیل آماری، در نصب پایه گنجانده شده‌اند.
 
 ## بررسی نصب
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 ابزار عیب‌یابی آفلاین، وابستگی‌ها، اسکیماها و هر ۱۲ تعریف ابزار را بررسی می‌کند. سرویس‌های خارجی اختیاری می‌توانند پیکربندی‌نشده باقی بمانند. برای دریافت خروجی قابل خواندن توسط ماشین از `doctor --json` استفاده کنید.
@@ -28,12 +28,12 @@ uvx academic-research-kernel@2.1.0 --version
 ## نصب بسته نرم‌افزاری
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-همچنین می‌توانید بسته را با دستور `pipx install academic-research-kernel==2.1.0` یا `python -m pip install academic-research-kernel==2.1.0` در داخل یک محیط مجازی پشتیبانی‌شده نصب کنید. گزینه `[full]` کتابخانه‌های لازم برای مثال‌های علمی گسترده‌تر را اضافه می‌کند؛ گزینه `[qa]` ابزارهای اعتبارسنجی مخزن از جمله تجزیه‌گر PDF را می‌افزاید. گزینه `[research]` بسته‌های `pypdf==6.19.0` و `fonttools==4.65.0` را برای رمزگشایی یکنواخت فونت‌های PDF در محیط‌های نصب تمیز اضافه می‌کند که هر دو از Python 3.10 پشتیبانی می‌کنند. خواندن فایل‌های ساختاریافته HTML/XML و فایل‌های DOCX/XLSX با حجم محدود از کتابخانه استاندارد پایتون بهره می‌برد. بک‌اندهای GPU و سرویس‌های تجاری همچنان اختیاری هستند.
+همچنین می‌توانید بسته را با دستور `pipx install academic-research-kernel==2.2.0` یا `python -m pip install academic-research-kernel==2.2.0` در داخل یک محیط مجازی پشتیبانی‌شده نصب کنید. گزینه `[full]` کتابخانه‌های لازم برای مثال‌های علمی گسترده‌تر را اضافه می‌کند؛ گزینه `[qa]` ابزارهای اعتبارسنجی مخزن از جمله تجزیه‌گر PDF را می‌افزاید. گزینه `[research]` بسته‌های `pypdf==6.19.0` و `fonttools==4.65.0` را برای رمزگشایی یکنواخت فونت‌های PDF در محیط‌های نصب تمیز اضافه می‌کند که هر دو از Python 3.10 پشتیبانی می‌کنند. خواندن فایل‌های ساختاریافته HTML/XML و فایل‌های DOCX/XLSX با حجم محدود از کتابخانه استاندارد پایتون بهره می‌برد. بک‌اندهای GPU و سرویس‌های تجاری همچنان اختیاری هستند.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ git diff --check
 
 ## پژوهش روی مقاله با استفاده از Agent محلی
 
-بسته `academic-research-kernel[research]==2.1.0` را نصب کرده و جریان کاری بسته‌بندی‌شده را استخراج کنید:
+بسته `academic-research-kernel[research]==2.2.0` را نصب کرده و جریان کاری بسته‌بندی‌شده را استخراج کنید:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

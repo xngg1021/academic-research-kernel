@@ -14,7 +14,7 @@ import os
 from importlib import metadata
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Mapping
 from urllib.parse import quote
 
 PIPELINE_VERSION = "paper-research-analysis-1.0"
@@ -216,7 +216,7 @@ def _context_errors(check: dict, fields: dict) -> list[str]:
         return errors
     contexts = [f["context"] for f in selected.values()]
     axes = ["dataset", "timepoint", "analysis_set", "condition"]
-    if check["kind"] != "effect_size":
+    if check["kind"] not in {"effect_size", "hedges_g", "or_rr_2x2", "power_ttest"}:
         axes.append("group")
     for axis in axes:
         if len({c[axis] for c in contexts}) > 1:
@@ -226,7 +226,7 @@ def _context_errors(check: dict, fields: dict) -> list[str]:
         for axis in axes:
             if any(c[axis] != reported["context"][axis] for c in contexts):
                 errors.append(f"论文报告值的 {axis} 与输入不一致")
-    if check["kind"] == "effect_size":
+    if check["kind"] in {"effect_size", "hedges_g"}:
         for suffix in ("1", "2"):
             triplet = [selected.get(key + suffix) for key in ("mean", "sd", "n")]
             if all(triplet) and len({f["context"]["group"] for f in triplet}) > 1:
@@ -237,7 +237,65 @@ def _context_errors(check: dict, fields: dict) -> list[str]:
         for key in ("sd1", "sd2"):
             if key in selected and re.search(r"\bSE\b|standard error|标准误", selected[key]["name"] + " " + (selected[key]["unit"] or ""), re.I):
                 errors.append(f"{key}引用标准误SE，所选函数需要标准差SD")
+    elif check["kind"] == "ci_consistency":
+        units = {selected[key]["unit"] for key in ("estimate", "lower", "upper") if key in selected}
+        if len(units) > 1:
+            errors.append("点估计与置信区间上下界的单位/尺度不一致")
+    elif check["kind"] == "sd_possible":
+        units = {selected[key]["unit"] for key in ("sd", "minimum", "maximum") if key in selected}
+        if len(units) > 1:
+            errors.append("标准差SD与量表上下限的单位/尺度不一致")
+    elif check["kind"] == "z_beta_se":
+        units = {selected[key]["unit"] for key in ("beta", "se") if key in selected}
+        if len(units) > 1:
+            errors.append("回归系数beta与标准误SE的单位/尺度不一致")
+    elif check["kind"] == "or_rr_2x2":
+        for row_label, pair in (("暴露组(a,b)", ("a", "b")), ("对照组(c,d)", ("c", "d"))):
+            cells = [selected.get(k) for k in pair]
+            if all(cells) and len({f["context"]["group"] for f in cells}) > 1:
+                errors.append(f"四格表{row_label}的组别不一致")
     return errors
+
+
+def _compare_p_reported(reported: dict | None, recomputed_p: float | None, kernel, *, precomputed_match: dict | None = None) -> tuple[bool | None, dict | None]:
+    if not reported or recomputed_p is None:
+        return None, None
+    match = re.search(r"(<=|>=|<|>|≤|≥)", reported["literal"])
+    relation = match.group(1) if match else "="
+    if relation != "=":
+        actual, limit = recomputed_p, reported["value"]
+        consistent = {"<": actual < limit, "<=": actual <= limit, "≤": actual <= limit,
+                      ">": actual > limit, ">=": actual >= limit, "≥": actual >= limit}[relation]
+        return consistent, {"relation": relation, "threshold_literal": _literal(reported),
+                            "interpretation": "inequality; no equality or rounding substitution"}
+    precision = precomputed_match or kernel.recompute.check_p_match(
+        reported["value"], recomputed_p, reported_literal=_literal(reported)
+    )
+    return (precision.get("consistent") if precision else None), precision
+
+
+def _compare_numeric_reported(reported: dict | None, recomputed_val: float | None, kernel) -> tuple[bool | None, dict | None]:
+    if not reported or recomputed_val is None:
+        return None, None
+    rep_dec, k, tol, lower, upper, source, literal = kernel.recompute._rounding_spec(
+        reported["value"], reported_literal=_literal(reported)
+    )
+    rec_dec = kernel.recompute._decimal(recomputed_val, "重算值")
+    if rep_dec >= 0:
+        in_interval = bool(lower <= rec_dec < upper)
+    else:
+        in_interval = bool(lower < rec_dec <= upper)
+    return in_interval, {
+        "consistent": in_interval,
+        "reported": float(rep_dec),
+        "recomputed": float(rec_dec),
+        "difference": float(rec_dec - rep_dec),
+        "tolerance": float(tol),
+        "tolerance_decimal": str(tol),
+        "decimals": int(k),
+        "precision_source": source,
+        "reported_literal": literal,
+    }
 
 
 def compute_checks(candidate: dict, documents: dict) -> list[dict]:
@@ -246,11 +304,33 @@ def compute_checks(candidate: dict, documents: dict) -> list[dict]:
     fields = {f["id"]: f for f in candidate["fields"]}
     docs = {d["document_id"]: d for d in documents["documents"]}
     results = []
-    required = {"t_p": {"t_stat", "df"}, "effect_size": {"mean1", "sd1", "n1", "mean2", "sd2", "n2"},
-                "percentage": {"count", "percent", "sample_size"}}
+    required = {
+        "t_p": {"t_stat", "df"},
+        "f_p": {"f_stat", "df1", "df2"},
+        "chi2_p": {"chi2_stat", "df"},
+        "z_beta_se": {"beta", "se"},
+        "ci_consistency": {"estimate", "lower", "upper"},
+        "or_rr_2x2": {"a", "b", "c", "d"},
+        "effect_size": {"mean1", "sd1", "n1", "mean2", "sd2", "n2"},
+        "hedges_g": {"mean1", "sd1", "n1", "mean2", "sd2", "n2"},
+        "percentage": {"count", "percent", "sample_size"},
+        "sd_possible": {"sd", "minimum", "maximum"},
+        "sample_size_df": {"df", "reported_n"},
+        "power_ttest": {"d", "n1"},
+    }
+    optional = {
+        "sd_possible": {"n"},
+        "sample_size_df": {"n_params"},
+        "power_ttest": {"n2", "alpha"},
+        "ci_consistency": {"level"},
+        "or_rr_2x2": {"level"},
+    }
     for check in candidate["checks"]:
-        result = {"id": check["id"], "kind": check["kind"], "note": check["note"],
+        kind = check["kind"]
+        result = {"id": check["id"], "kind": kind, "note": check["note"],
                   "reported": fields[check["reported"]]["literal"] if check["reported"] else None,
+                  "reported_field_id": check["reported"],
+                  "claim_id": check.get("claim_id"),
                   "inputs": {}, "input_chain": {}, "status": "not_computed", "consistent": None}
         for argument, field_id in check["inputs"].items():
             field = fields[field_id]
@@ -259,24 +339,30 @@ def compute_checks(candidate: dict, documents: dict) -> list[dict]:
                 "context": field["context"], "sources": [{**s, "sha256": docs[s["document_id"]]["sha256"],
                 "relative_path": docs[s["document_id"]]["relative_path"]} for s in field["sources"]]}
         errors = _context_errors(check, fields)
-        missing = required[check["kind"]] - set(check["inputs"])
-        unknown = set(check["inputs"]) - required[check["kind"]]
+        req_set = required[kind]
+        allowed_set = req_set | optional.get(kind, set())
+        missing = req_set - set(check["inputs"])
+        unknown = set(check["inputs"]) - allowed_set
         if missing:
             errors.append("缺少输入: " + ", ".join(sorted(missing)))
         if unknown:
             errors.append("未知函数参数: " + ", ".join(sorted(unknown)))
-        if check["kind"] == "t_p" and check["tail"] not in {"two", "one"}:
+        if kind == "t_p" and check["tail"] not in {"two", "one"}:
             errors.append("t/p核对缺少单双尾定义；本次保留报告值")
-        if check["kind"] == "t_p" and check["tail"] == "one" and check.get("alternative") not in {"less", "greater"}:
-            errors.append("单尾t/p核对缺少明确alternative=less/greater；不按统计量符号猜方向")
+        if kind in {"t_p", "z_beta_se"} and check["tail"] == "one" and check.get("alternative") not in {"less", "greater"}:
+            errors.append("单尾核对缺少明确alternative=less/greater；不按统计量符号猜方向")
+        if kind == "power_ttest" and check["tail"] == "one":
+            errors.append("power_ttest当前仅支持双尾功效核对(tail=two或null)")
+        if kind in {"f_p", "chi2_p"} and check["tail"] == "two":
+            errors.append("F检验与卡方检验为右尾分布检验，不支持tail=two双尾设置")
         if errors:
             result["reason"] = "; ".join(errors)
             results.append(result)
             continue
         values = result["inputs"].copy()
+        reported = fields.get(check["reported"])
         try:
-            if check["kind"] == "t_p":
-                reported = fields.get(check["reported"])
+            if kind == "t_p":
                 relation = "="
                 if reported:
                     match = re.search(r"(<=|>=|<|>|≤|≥)", reported["literal"])
@@ -297,26 +383,144 @@ def compute_checks(candidate: dict, documents: dict) -> list[dict]:
                     result["tail_conversion"] = {"alternative": alternative, "two_sided_p": p_two, "one_sided_p": p_one, "formula": conversion}
                     result["recomputed"] = p_one
                     result["formula"] = (result["formula"] or "existing two-sided t probability") + "; " + conversion + "; alternative=" + alternative
-                if reported and relation != "=":
-                    actual, limit = result["recomputed"], reported["value"]
-                    result["consistent"] = {"<": actual < limit, "<=": actual <= limit, "≤": actual <= limit,
-                                             ">": actual > limit, ">=": actual >= limit, "≥": actual >= limit}[relation]
-                    result["precision"] = {"relation": relation, "threshold_literal": _literal(reported),
-                                           "interpretation": "inequality; no equality or rounding substitution"}
-                elif reported:
-                    precision = kernel.recompute.check_p_match(reported["value"], result["recomputed"], reported_literal=_literal(reported)) if check["tail"] == "one" else output.get("p_match")
-                    result["consistent"] = precision.get("consistent") if precision else None
+                consistent, precision = _compare_p_reported(
+                    reported, result["recomputed"], kernel,
+                    precomputed_match=None if check["tail"] == "one" else output.get("p_match"),
+                )
+                if reported:
+                    result["consistent"] = consistent
                     result["precision"] = precision
-            elif check["kind"] == "effect_size":
+            elif kind == "f_p":
+                output = kernel.handle_tool_call("academic_recompute_statistics", values)
+                f_rec = output.get("f_receipt", {})
+                consistent, precision = _compare_p_reported(reported, output.get("recomputed_f_p"), kernel)
+                result.update(tool="academic_recompute_statistics", recomputed=output.get("recomputed_f_p"),
+                              formula=f_rec.get("formula"), library=f_rec.get("library"),
+                              consistent=consistent, precision=precision)
+            elif kind == "chi2_p":
+                call_args = {"chi2_stat": values["chi2_stat"], "chi2_df": values["df"]}
+                output = kernel.handle_tool_call("academic_recompute_statistics", call_args)
+                c_rec = output.get("chi2_receipt", {})
+                consistent, precision = _compare_p_reported(reported, output.get("recomputed_chi2_p"), kernel)
+                result.update(tool="academic_recompute_statistics", recomputed=output.get("recomputed_chi2_p"),
+                              formula=c_rec.get("formula"), library=c_rec.get("library"),
+                              consistent=consistent, precision=precision)
+            elif kind == "z_beta_se":
+                output = kernel.handle_tool_call("academic_recompute_statistics", values)
+                z_rec = output.get("z_receipt", {})
+                z_val = output.get("recomputed_z")
+                p_val = output.get("recomputed_z_p")
+                formula = z_rec.get("formula")
+                if check["tail"] == "one" and p_val is not None and z_val is not None:
+                    alternative = check["alternative"]
+                    aligned = (alternative == "less" and z_val < 0) or (alternative == "greater" and z_val > 0)
+                    p_one = 0.5 if z_val == 0 else p_val / 2.0 if aligned else 1.0 - p_val / 2.0
+                    conversion = "p_one=p_two/2" if aligned else "p_one=1-p_two/2" if z_val else "p_one=0.5 at z=0"
+                    result["tail_conversion"] = {"alternative": alternative, "two_sided_p": p_val, "one_sided_p": p_one, "formula": conversion}
+                    p_val = p_one
+                    formula = (formula or "z=beta/se") + "; " + conversion + "; alternative=" + alternative
+                recomp = {"z": z_val, "p": p_val}
+                if reported:
+                    if reported["type"] == "p_value" or check.get("metric") == "p":
+                        consistent, precision = _compare_p_reported(reported, recomp["p"], kernel)
+                    else:
+                        consistent, precision = _compare_numeric_reported(reported, recomp["z"], kernel)
+                else:
+                    consistent, precision = None, None
+                result.update(tool="academic_recompute_statistics", recomputed=recomp,
+                              formula=formula, library=z_rec.get("library"),
+                              consistent=consistent, precision=precision)
+            elif kind == "ci_consistency":
+                call_args = {"ci_estimate": values["estimate"], "ci_lower": values["lower"], "ci_upper": values["upper"]}
+                if "level" in values:
+                    call_args["ci_level"] = values["level"]
+                explicit_log = check.get("log_scale")
+                if isinstance(explicit_log, bool):
+                    call_args["ci_log_scale"] = explicit_log
+                else:
+                    est_field = fields[check["inputs"]["estimate"]]
+                    if check.get("metric") in {"odds_ratio", "risk_ratio"} or re.search(
+                        r"\b(?:OR|RR|HR|odds\s*ratio|risk\s*ratio|hazard\s*ratio)\b|比值比|优势比|风险比|危险比",
+                        est_field["name"], re.I
+                    ):
+                        call_args["ci_log_scale"] = True
+                output = kernel.handle_tool_call("academic_recompute_statistics", call_args)
+                ci_res = output.get("ci_consistency", {})
+                result.update(tool="academic_recompute_statistics",
+                              recomputed={"ci_midpoint": ci_res.get("ci_midpoint"), "implied_se": ci_res.get("implied_se")},
+                              consistent=ci_res.get("consistent"), formula=ci_res.get("formula"),
+                              library=ci_res.get("library"),
+                              precision={"relative_deviation": ci_res.get("relative_deviation")})
+            elif kind == "or_rr_2x2":
+                call_args = {"cell_a": values["a"], "cell_b": values["b"], "cell_c": values["c"], "cell_d": values["d"]}
+                if "level" in values:
+                    call_args["ci_level"] = values["level"]
+                output = kernel.handle_tool_call("academic_recompute_statistics", call_args)
+                or_res = output.get("or_rr", {}).get("recomputed", {})
+                explicit_metric = check.get("metric")
+                if explicit_metric in {"odds_ratio", "risk_ratio"}:
+                    target_metric = explicit_metric
+                elif reported and re.search(r"\brr\b|risk\s*ratio|相对危险度|风险比", reported["name"], re.I):
+                    target_metric = "risk_ratio"
+                else:
+                    target_metric = "odds_ratio"
+                consistent, precision = _compare_numeric_reported(reported, or_res.get(target_metric), kernel)
+                result.update(tool="academic_recompute_statistics", recomputed=or_res,
+                              formula=output.get("or_rr", {}).get("formula"),
+                              library=output.get("or_rr", {}).get("library"),
+                              consistent=consistent, precision=precision)
+            elif kind in {"effect_size", "hedges_g"}:
                 output = kernel.handle_tool_call("academic_recompute_statistics", values)
                 result.update(tool="academic_recompute_statistics", recomputed={key: output[key] for key in ("cohens_d", "hedges_g", "pooled_sd", "df") if key in output},
                               formula="d=(mean1-mean2)/pooled SD; g=d*(1-3/(4df-1))", library="existing quantitative-paper-audit/recompute.cohens_d")
-                if check["reported"]:
-                    reported = fields[check["reported"]]
-                    # values_agree is the existing general precision comparator.
-                    tolerance = float(Decimal(5).scaleb(Decimal(_literal(reported)).as_tuple().exponent - 1))
-                    precision = kernel.recompute.values_agree(reported["value"], output["cohens_d"], rel_tol=0, abs_tol=tolerance)
-                    result.update(consistent=precision["consistent"], precision=precision)
+                if reported:
+                    explicit_metric = check.get("metric")
+                    if kind == "hedges_g" or explicit_metric == "hedges_g":
+                        use_g = True
+                    elif explicit_metric == "cohens_d":
+                        use_g = False
+                    else:
+                        use_g = bool(re.search(r"\bhedges\b|\bg\b", reported["name"], re.I))
+                    target_val = output.get("hedges_g" if use_g else "cohens_d")
+                    consistent, precision = _compare_numeric_reported(reported, target_val, kernel)
+                    result.update(consistent=consistent, precision=precision)
+            elif kind == "sd_possible":
+                call_args = {"check_sd": values["sd"], "scale_min": values["minimum"], "scale_max": values["maximum"]}
+                if "n" in values:
+                    call_args["sample_n"] = values["n"]
+                output = kernel.handle_tool_call("academic_recompute_statistics", call_args)
+                sd_res = output.get("sd_possible", {})
+                result.update(tool="academic_recompute_statistics",
+                              recomputed={"max_possible_sd": sd_res.get("max_possible_sd"), "excess": sd_res.get("excess")},
+                              consistent=sd_res.get("consistent"), formula=sd_res.get("formula"),
+                              library=sd_res.get("library"))
+            elif kind == "sample_size_df":
+                call_args = {"sample_df": values["df"], "reported_n": values["reported_n"]}
+                explicit_df_kind = check.get("df_kind")
+                if explicit_df_kind:
+                    call_args["df_kind"] = explicit_df_kind
+                if "n_params" in values:
+                    call_args["n_params"] = values["n_params"]
+                    if not explicit_df_kind:
+                        call_args["df_kind"] = "regression"
+                output = kernel.handle_tool_call("academic_recompute_statistics", call_args)
+                df_res = output.get("sample_size_from_df", {})
+                result.update(tool="academic_recompute_statistics",
+                              recomputed=df_res.get("implied_n"), consistent=df_res.get("consistent"),
+                              formula=df_res.get("formula"), library=df_res.get("library"))
+            elif kind == "power_ttest":
+                call_args = {"effect_size_d": values["d"], "power_n1": values["n1"]}
+                if "n2" in values:
+                    call_args["power_n2"] = values["n2"]
+                if "alpha" in values:
+                    call_args["alpha"] = values["alpha"]
+                output = kernel.handle_tool_call("academic_recompute_statistics", call_args)
+                pw_res = output.get("achieved_power", {})
+                consistent, precision = _compare_numeric_reported(reported, pw_res.get("recomputed"), kernel)
+                result.update(tool="academic_recompute_statistics",
+                              recomputed=pw_res.get("recomputed"), consistent=consistent,
+                              formula=pw_res.get("formula"), library=pw_res.get("library"),
+                              precision=precision)
             else:
                 percent = fields[check["inputs"]["percent"]]
                 values["percent"] = _literal(percent)
@@ -371,9 +575,17 @@ def _citations(field_ids: list[str], fields: dict, documents: dict) -> str:
 def _number_display(result: dict) -> str:
     value = result.get("recomputed")
     if isinstance(value, dict):
-        return "，".join(f"{name}={number:.8g}" for name, number in value.items() if isinstance(number, (int, float)))
+        parts = []
+        for name, item in value.items():
+            if isinstance(item, bool):
+                parts.append(f"{name}={'true' if item else 'false'}")
+            elif isinstance(item, (int, float)):
+                parts.append(f"{name}={item:.8g}")
+            elif isinstance(item, list) and len(item) == 2 and all(isinstance(x, (int, float)) for x in item):
+                parts.append(f"{name}=[{item[0]:.8g}, {item[1]:.8g}]")
+        return "，".join(parts)
     if isinstance(value, (int, float)):
-        name = "p" if result["kind"] == "t_p" else "百分比"
+        name = "p" if result["kind"] in {"t_p", "f_p", "chi2_p"} else "N" if result["kind"] == "sample_size_df" else "功效" if result["kind"] == "power_ttest" else "百分比"
         return f"{name}={value:.10g}" + ("%" if result["kind"] == "percentage" else "")
     return str(value)
 
@@ -537,14 +749,50 @@ def _ingest(project: Path, run: Path, candidate: dict, documents: dict, results:
     ingest(lineage, "research-object-identity", "lineage-receipt-1.0", "lineage_receipt")
     ref = ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id=lineage["receipt_id"], receipt_digest=lineage["receipt_digest"])
     ingest(candidate, "paper-research", "paper-extraction-1.0", "paper_extraction", lineage_ref=ref, subject_refs=[object_id])
+    field_to_claim = {
+        clm.metadata.get("field_id"): cid
+        for cid, clm in state.ceg.claims.items()
+        if isinstance(clm.metadata, Mapping) and clm.metadata.get("field_id")
+    }
+    anchor_input_by_kind = {
+        "t_p": "t_stat",
+        "f_p": "f_stat",
+        "chi2_p": "chi2_stat",
+        "z_beta_se": "beta",
+        "ci_consistency": "estimate",
+        "or_rr_2x2": "a",
+        "effect_size": "mean1",
+        "hedges_g": "mean1",
+        "percentage": "percent",
+        "sd_possible": "sd",
+        "sample_size_df": "reported_n",
+        "power_ttest": "d",
+    }
     assertions = []
     for result in results:
         if result["status"] != "computed":
             continue
-        assertions.append({"statistic": result["id"], "reported": result["reported"], "recomputed": result["recomputed"],
-                           "consistent": result["consistent"], "inputs": result["inputs"], "formula": result.get("formula") or "existing tool",
-                           "library": result.get("library") or "existing tool", "locator": f"results.json#{result['id']}",
-                           "note": json.dumps({"input_chain": result["input_chain"], "note": result["note"]}, ensure_ascii=False)})
+        explicit_claim = result.get("claim_id")
+        if explicit_claim:
+            if explicit_claim in state.ceg.claims:
+                target_claim = explicit_claim
+            elif explicit_claim in field_to_claim:
+                target_claim = field_to_claim[explicit_claim]
+            else:
+                raise ValueError(f"{result['id']}: unknown claim_id {explicit_claim!r}")
+        elif result.get("reported_field_id"):
+            target_claim = field_to_claim.get(result["reported_field_id"])
+        else:
+            anchor_arg = anchor_input_by_kind.get(result["kind"])
+            anchor_chain = result.get("input_chain", {}).get(anchor_arg or "")
+            target_claim = field_to_claim.get(anchor_chain.get("field_id")) if anchor_chain else None
+        item = {"statistic": result["id"], "reported": result["reported"], "recomputed": result["recomputed"],
+                "consistent": result["consistent"], "inputs": result["inputs"], "formula": result.get("formula") or "existing tool",
+                "library": result.get("library") or "existing tool", "locator": f"results.json#{result['id']}",
+                "note": json.dumps({"input_chain": result["input_chain"], "note": result["note"]}, ensure_ascii=False)}
+        if target_claim and target_claim in state.ceg.claims:
+            item["claim_id"] = target_claim
+        assertions.append(item)
     if assertions:
         ingest({"paper_title": candidate["paper"]["title"], "assertions": assertions}, "quantitative-paper-audit", "quantitative-audit-1.0", "computed_evidence", lineage_ref=ref, subject_refs=[object_id])
     snapshot = state.to_dict()
@@ -590,6 +838,12 @@ def finish(project: str | Path, candidate_path: str | Path) -> dict:
                       "report_html": str(run / "report.html"), "extraction": str(run / "extraction.json"),
                       "results": str(run / "results.json"), "reused": True}
             _write(project / "latest.json", replay)
+            _write(project / "workflow-state.json", {
+                "stage": "complete", "fingerprint": documents["fingerprint"], "analysis_fingerprint": digest,
+                "reused": True, "changed": False, "semantic_producer_required": False,
+                "report_markdown": str(run / "report.md"), "report_html": str(run / "report.html"),
+                "message": "已完成确定性核查、统计复算、研究状态入库与报告生成（命中缓存复用）。",
+            })
             return replay
     run.mkdir(parents=True, exist_ok=True)
     _write(project / "candidate.json", candidate)
@@ -615,6 +869,12 @@ def finish(project: str | Path, candidate_path: str | Path) -> dict:
     _write(completion, receipt)
     _write(project / "latest.json", receipt)
     _write(run / "stage.json", {"stage": "complete", "analysis_fingerprint": digest})
+    _write(project / "workflow-state.json", {
+        "stage": "complete", "fingerprint": documents["fingerprint"], "analysis_fingerprint": digest,
+        "reused": False, "changed": False, "semantic_producer_required": False,
+        "report_markdown": str(run / "report.md"), "report_html": str(run / "report.html"),
+        "message": "已完成确定性核查、统计复算、研究状态入库与报告生成。",
+    })
     return receipt
 
 

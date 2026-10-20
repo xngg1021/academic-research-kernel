@@ -8,19 +8,19 @@ Mwandishi: Junfu Shi (SJF, xngg1021), Hermes Agent. Ofa ya leseni ya sasa: [Sour
 
 ## Kuanza haraka
 
-Endesha toleo la 2.1.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Endesha toleo la 2.2.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-[Toleo la 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 12 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
+[Toleo la 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 12 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
 
 ## Thibitisha usakinishaji
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data (schemas) na ufafanuzi wa zana zote 12. Huduma za hiari za nje zinaweza kuachwa bila kusanidiwa. Tumia `doctor --json` kupata matokeo yanayosomeka kwa mashine.
@@ -28,12 +28,12 @@ Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data 
 ## Usakinishaji wa kifurushi
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.1.0` au `python -m pip install academic-research-kernel==2.1.0` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==6.19.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
+Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.2.0` au `python -m pip install academic-research-kernel==2.2.0` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==6.19.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ Saraka ya [tools/longtail/](../../tools/longtail/README.md) inashikilia kizalish
 
 ## Fanya utafiti wa makala ukitumia Agent wa ndani
 
-Sakinisha `academic-research-kernel[research]==2.1.0` na uhamishe mtiririko wa kazi uliofungashwa:
+Sakinisha `academic-research-kernel[research]==2.2.0` na uhamishe mtiririko wa kazi uliofungashwa:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

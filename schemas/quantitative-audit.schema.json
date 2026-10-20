@@ -73,7 +73,8 @@
         "recomputed_percent": {"type": "number"},
         "min_possible_denominator": {"type": "integer", "minimum": 1},
         "implied_denominator": {"type": "number"},
-        "nearest_denominator": {"type": "integer", "minimum": 1}
+        "nearest_denominator": {"type": "integer", "minimum": 1},
+        "claim_id": {"type": ["string", "null"]}
       }
     }
   }

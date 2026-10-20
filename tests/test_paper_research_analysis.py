@@ -459,3 +459,201 @@ def test_doctor_succeeds_when_package_metadata_is_uninstalled(monkeypatch):
     assert diag["schema_resources"]["status"] == "ok"
     assert diag["research"]["portable_skill"] == "available"
     assert diag["research"]["pdf_ready"] is True
+
+
+def test_v220_latex_bib_expanded_checks_claim_binding_and_cli_utilities(tmp_path, capsys):
+    tex_pkg = tmp_path / "arxiv-src"
+    (tex_pkg / "sections").mkdir(parents=True)
+    tex_content = r"""% Comment line to be stripped
+\title{Synthetic LaTeX Study on Statistical Verification}
+\begin{abstract}
+We evaluate 30 participants (df = 28) with 90\% completion.
+\end{abstract}
+
+\section{Methods and Results}
+ANOVA yielded F = 4.0 with df1 = 2 and df2 = 27, p = 0.030.
+Chi-square was 3.84 with df = 1, p = 0.050.
+Regression slope beta = 1.96, SE = 1.0, z = 1.96.
+
+\begin{table}
+\label{tab:2x2}
+Exposed events a = 20, non-events b = 10; control events c = 10, non-events d = 20, OR = 4.0.
+Scale min = 1, max = 5, observed SD = 1.5.
+\end{table}
+"""
+    (tex_pkg / "sections" / "main.tex").write_text(tex_content, encoding="utf-8")
+    (tex_pkg / "refs.bib").write_text(
+        "@article{smith2026,\n  title={Reference Work},\n  author={Smith, Alex},\n  year={2026},\n  doi={10.1000/ref}\n}\n",
+        encoding="utf-8",
+    )
+    proj = tmp_path / "tex-project"
+    prep = sources.prepare(str(tex_pkg), str(proj))
+    assert prep["parsed"] == 2
+    docs = json.loads((proj / "documents.json").read_text("utf-8"))
+    tex_doc = next(d for d in docs["documents"] if d["format"] == "tex")
+    bib_doc = next(d for d in docs["documents"] if d["format"] == "bib")
+    assert tex_doc["title"] == "Synthetic LaTeX Study on Statistical Verification"
+    assert any(s["locator"] == "tex:abstract=1" for s in tex_doc["segments"])
+    assert any(s["locator"] == "tex:table=1" and s["table_id"] == "tab:2x2" for s in tex_doc["segments"])
+    assert any(s["locator"] == "bib:entry=smith2026" for s in bib_doc["segments"])
+
+    ctx = {"group": "all", "timepoint": "T1", "dataset": "synth", "analysis_set": "ITT", "condition": "main"}
+    seg_abs = next(s for s in tex_doc["segments"] if s["locator"] == "tex:abstract=1")
+    seg_res = next(s for s in tex_doc["segments"] if s["locator"].startswith("tex:block=") and "ANOVA" in s["text"])
+    seg_tab = next(s for s in tex_doc["segments"] if s["locator"] == "tex:table=1")
+
+    def mk_field(fid, ftype, val, lit, seg):
+        return {
+            "id": fid, "name": fid, "type": ftype, "status": "extracted",
+            "literal": lit, "value": val, "unit": None, "context": ctx.copy(),
+            "sources": [{"document_id": tex_doc["document_id"], "locator": seg["locator"], "quote": seg["text"]}],
+            "reason": None,
+        }
+
+    fields = [
+        mk_field("n_total", "integer", 30, "30", seg_abs),
+        mk_field("df_t", "integer", 28, "28", seg_abs),
+        mk_field("f_val", "number", 4.0, "4.0", seg_res),
+        mk_field("df1", "integer", 2, "2", seg_res),
+        mk_field("df2", "integer", 27, "27", seg_res),
+        mk_field("p_f", "p_value", 0.03, "0.030", seg_res),
+        mk_field("chi2_val", "number", 3.84, "3.84", seg_res),
+        mk_field("df_c", "integer", 1, "1", seg_res),
+        mk_field("p_c", "p_value", 0.05, "0.050", seg_res),
+        mk_field("beta", "number", 1.96, "1.96", seg_res),
+        mk_field("se", "number", 1.0, "1.0", seg_res),
+        mk_field("z_rep", "number", 1.96, "1.96", seg_res),
+        mk_field("a", "integer", 20, "20", seg_tab),
+        mk_field("b", "integer", 10, "10", seg_tab),
+        mk_field("c", "integer", 10, "10", seg_tab),
+        mk_field("d", "integer", 20, "20", seg_tab),
+        mk_field("or_rep", "number", 4.0, "4.0", seg_tab),
+        mk_field("s_min", "integer", 1, "1", seg_tab),
+        mk_field("s_max", "integer", 5, "5", seg_tab),
+        mk_field("sd_obs", "number", 1.5, "1.5", seg_tab),
+    ]
+    stmt = {"text": "LaTeX validation summary.", "field_ids": ["n_total", "f_val"]}
+    candidate = {
+        "schema_version": "1.0",
+        "project_fingerprint": docs["fingerprint"],
+        "paper": {"title": tex_doc["title"], "identifier": "10.1000/synth-tex", "version": "v1"},
+        "producer": {"kind": "agent", "name": "pytest", "model": "test"},
+        "search_scope": [tex_doc["document_id"], bib_doc["document_id"]],
+        "fields": fields,
+        "summary": {"objective": stmt, "design": stmt, "main_results": stmt, "attention": stmt},
+        "checks": [
+            {"id": "chk_f", "kind": "f_p", "inputs": {"f_stat": "f_val", "df1": "df1", "df2": "df2"}, "reported": "p_f", "tail": None, "note": "ANOVA F"},
+            {"id": "chk_chi2", "kind": "chi2_p", "inputs": {"chi2_stat": "chi2_val", "df": "df_c"}, "reported": "p_c", "tail": None, "note": "Chi2"},
+            {"id": "chk_z", "kind": "z_beta_se", "inputs": {"beta": "beta", "se": "se"}, "reported": "z_rep", "tail": None, "note": "Wald z"},
+            {"id": "chk_or", "kind": "or_rr_2x2", "inputs": {"a": "a", "b": "b", "c": "c", "d": "d"}, "reported": "or_rep", "tail": None, "note": "2x2 OR"},
+            {"id": "chk_sd", "kind": "sd_possible", "inputs": {"sd": "sd_obs", "minimum": "s_min", "maximum": "s_max", "n": "n_total"}, "reported": None, "tail": None, "note": "SD bound"},
+            {"id": "chk_df", "kind": "sample_size_df", "inputs": {"df": "df_t", "reported_n": "n_total"}, "reported": "n_total", "tail": None, "note": "df to N"},
+        ],
+    }
+    cand_path = tmp_path / "tex-candidate.json"
+    cand_path.write_text(json.dumps(candidate), encoding="utf-8")
+    receipt = analysis.finish(proj, cand_path)
+    assert receipt["status"] == "complete"
+    assert receipt["computed_checks"] == 6
+    assert receipt["discrepancies"] == 0
+
+    wf = json.loads((proj / "workflow-state.json").read_text("utf-8"))
+    assert wf["stage"] == "complete"
+    assert wf["semantic_producer_required"] is False
+
+    kstate = json.loads((Path(receipt["run_directory"]) / "kernel-state.json").read_text("utf-8"))
+    quant_edges = [e for e in kstate["ceg"]["support_edges"] if e["evidence_id"].startswith("ev-quant-")]
+    assert len(quant_edges) == 6
+    assert all(e["support_status"] == "supported" for e in quant_edges)
+
+    cli = importlib.import_module(PACKAGE + ".cli")
+    capsys.readouterr()
+    assert cli.main(["verify-source", "arXiv:2106.09624", "--normalize-only"]) == 0
+    assert json.loads(capsys.readouterr().out)["type"] == "arxiv"
+
+    assert cli.main(["bibliography", "--from", "bibtex", "--to", "csl", "--input", str(tex_pkg / "refs.bib")]) == 0
+    csl_items = json.loads(capsys.readouterr().out)
+    assert csl_items[0]["DOI"] == "10.1000/ref"
+
+    meta_in = tmp_path / "studies.json"
+    meta_in.write_text(json.dumps({"studies": [{"yi": 0.2, "vi": 0.04}, {"yi": 0.35, "vi": 0.05}, {"yi": 0.25, "vi": 0.03}]}), encoding="utf-8")
+    assert cli.main(["meta-analyze", "--input", str(meta_in)]) == 0
+    meta_out = json.loads(capsys.readouterr().out)
+    assert meta_out["study_count"] == 3
+    assert meta_out["publication_bias"]["trim_and_fill"]["converged"] is True
+
+    # Verify top-level JSON array + equal-variance Egger graceful degradation
+    meta_eq = tmp_path / "studies_eq.json"
+    meta_eq.write_text(json.dumps([{"yi": 0.1, "vi": 0.04}, {"yi": 0.2, "vi": 0.04}, {"yi": 0.3, "vi": 0.04}]), encoding="utf-8")
+    assert cli.main(["meta-analyze", "--input", str(meta_eq)]) == 0
+    meta_eq_out = json.loads(capsys.readouterr().out)
+    assert meta_eq_out["study_count"] == 3
+    assert meta_eq_out["publication_bias"]["egger"]["status"] == "not_estimable"
+
+
+def test_boundary_regressions_for_tex_nested_braces_log_ci_and_semantic_claim_anchor(tmp_path):
+    sources = importlib.import_module(PACKAGE + ".research.sources")
+    analysis = importlib.import_module(PACKAGE + ".research.analysis")
+
+    blocks, title = sources.parse_tex(
+        "\\title{\n  A \\textbf{Nested} Title\n}\n"
+        "\\begin{table}\nRow 1\n\nRow 2\n\\label{tab:one}\n\\end{table}\n"
+        "\\begin{table}\nSecond table\n\\end{table}\n"
+    )
+    assert title == "A \\textbf{Nested} Title"
+    assert [b["locator"] for b in blocks] == ["tex:block=1", "tex:table=1", "tex:table=2"]
+    assert blocks[1]["table_id"] == "tab:one"
+
+    bib_blocks, _ = sources.parse_bib("  @article{indented2026,\n    title={Indented}\n  }\n")
+    assert [b["locator"] for b in bib_blocks] == ["bib:entry=indented2026"]
+
+    # Check log-scale CI auto-detection for Odds Ratio and semantic anchor for sd_possible regardless of input key order
+    src_tex = tmp_path / "anchor.tex"
+    src_tex.write_text(
+        "\\title{Anchor Test}\n\\begin{table}\n\\label{tab:one}\n"
+        "Row 1 OR=2.0 (1.0 to 4.0) SD=3.0 on 1 to 5 scale, df=19, N=20, extra 6 and 7.\n"
+        "\\end{table}\n",
+        encoding="utf-8",
+    )
+    proj = tmp_path / "proj_anchor"
+    sources.prepare(str(src_tex), str(proj))
+    documents = json.loads((proj / "documents.json").read_text("utf-8"))
+    doc_id = documents["documents"][0]["document_id"]
+    quote_txt = next(s["text"] for s in documents["documents"][0]["segments"] if s["locator"] == "tex:table=1")
+    ctx = {"group": "all", "timepoint": "T1", "dataset": "d1", "analysis_set": "ITT", "condition": "c1"}
+    src = [{"document_id": doc_id, "locator": "tex:table=1", "quote": quote_txt}]
+    def f(fid, name, val, lit):
+        return {"id": fid, "name": name, "type": "number", "status": "extracted", "literal": lit, "value": val, "unit": None, "context": ctx.copy(), "sources": src, "reason": None}
+    candidate = {
+        "schema_version": "1.0",
+        "project_fingerprint": documents["fingerprint"],
+        "paper": {"title": "Anchor Test", "identifier": "10.1000/test", "version": "v1"},
+        "producer": {"kind": "agent", "name": "pytest", "model": None},
+        "search_scope": [doc_id],
+        "fields": [
+            f("or_est", "Odds Ratio", 2.0, "2.0"),
+            f("or_lo", "95% CI lower", 1.0, "1.0"),
+            f("or_hi", "95% CI upper", 4.0, "4.0"),
+            f("s_min", "Scale min", 1.0, "1"),
+            f("s_max", "Scale max", 5.0, "5"),
+            f("sd_bad", "Reported SD", 3.0, "3.0"),
+            f("df_1s", "One-sample df", 19.0, "19"),
+            f("n_1s", "Sample size N", 20.0, "20"),
+            f("f9", "Extra 6", 6.0, "6"),
+            f("f10", "Extra 7", 7.0, "7"),
+        ],
+        "summary": {k: {"text": "ok", "field_ids": ["or_est"]} for k in ("objective", "design", "main_results", "attention")},
+        "checks": [
+            {"id": "chk_or_ci", "kind": "ci_consistency", "inputs": {"estimate": "or_est", "lower": "or_lo", "upper": "or_hi"}, "reported": "or_est", "tail": None, "note": "Log-scale OR CI"},
+            {"id": "chk_sd_order", "kind": "sd_possible", "inputs": {"minimum": "s_min", "maximum": "s_max", "sd": "sd_bad"}, "reported": None, "tail": None, "note": "minimum listed before sd"},
+            {"id": "chk_df_1s", "kind": "sample_size_df", "inputs": {"df": "df_1s", "reported_n": "n_1s"}, "reported": "n_1s", "tail": None, "df_kind": "ttest_1sample", "note": "1-sample t"},
+        ],
+    }
+    cand_file = tmp_path / "anchor_cand.json"
+    cand_file.write_text(json.dumps(candidate), encoding="utf-8")
+    receipt = analysis.finish(proj, cand_file)
+    kstate = json.loads((Path(receipt["run_directory"]) / "kernel-state.json").read_text("utf-8"))
+    contradicted = [e for e in kstate["ceg"]["support_edges"] if e["support_status"] == "contradicted"]
+    assert len(contradicted) == 1
+    claims_by_id = {c["id"]: c for c in kstate["ceg"]["claims"]}
+    assert claims_by_id[contradicted[0]["claim_id"]]["metadata"]["field_id"] == "sd_bad"

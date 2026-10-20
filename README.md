@@ -14,20 +14,20 @@ If you want your AI agent to read a paper, check its numbers, and generate a rep
 
 ```bash
 # 1. Read PDF papers and generate reports with your local AI agent
-uv tool install "academic-research-kernel[research]==2.1.0"
+uv tool install "academic-research-kernel[research]==2.2.0"
 academic-research-kernel research skill --output ./paper-research
 
 # 2. Or start the background stdio MCP server for an MCP client
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-Note that running `mcp` in a terminal waits silently for JSON-RPC requests from an MCP client rather than opening an interactive menu. The [2.1.0 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) lists package hashes and publication status. If you download the release wheel, you can also run it locally with `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. The package supports Python 3.10–3.14, and `uvx --python 3.12` selects a specific Python version. The base installation includes all 12 verification tools and loads statistical libraries on demand when statistical recomputation is called.
+Note that running `mcp` in a terminal waits silently for JSON-RPC requests from an MCP client rather than opening an interactive menu. The [2.2.0 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) lists package hashes and publication status. If you download the release wheel, you can also run it locally with `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. The package supports Python 3.10–3.14, and `uvx --python 3.12` selects a specific Python version. The base installation includes all 12 verification tools and loads statistical libraries on demand when statistical recomputation is called.
 
 ## Verify installation
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 The `doctor` command runs offline and checks runtime dependencies, JSON schemas, and all 12 tool definitions. Leaving optional external APIs unconfigured will not fail the check. Pass `doctor --json` if you need machine-readable output.
@@ -35,12 +35,12 @@ The `doctor` command runs offline and checks runtime dependencies, JSON schemas,
 ## Package install
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-You can also install the package with `pipx install academic-research-kernel==2.1.0` or `python -m pip install academic-research-kernel==2.1.0` inside a virtual environment. Installing with `[full]` adds libraries used in extended scientific computing examples. Installing with `[research]` adds `pypdf==6.19.0` and `fonttools==4.65.0` so PDF font decoding behaves identically across clean environments on Python 3.10 and newer. Installing with `[qa]` adds repository test tools on top of those parsing libraries. HTML, XML, DOCX, and XLSX reading use the Python standard library, while GPU backends and paid scholarly databases remain optional.
+You can also install the package with `pipx install academic-research-kernel==2.2.0` or `python -m pip install academic-research-kernel==2.2.0` inside a virtual environment. Installing with `[full]` adds libraries used in extended scientific computing examples. Installing with `[research]` adds `pypdf==6.19.0` and `fonttools==4.65.0` so PDF font decoding behaves identically across clean environments on Python 3.10 and newer. Installing with `[qa]` adds repository test tools on top of those parsing libraries. HTML, XML, DOCX, and XLSX reading use the Python standard library, while GPU backends and paid scholarly databases remain optional.
 
 ## Hermes
 
@@ -139,7 +139,7 @@ The ingestion module uses `ResearchArtifactEnvelope v1` and `ArtifactIngestionRe
 
 Marking a record as `fully_verified` requires access to the underlying source bytes so the check can be reproduced independently. Trusted Python callers provide this through `LineageVerificationContext`, while MCP callers pass bounded file bytes directly rather than exposing host filesystem paths. The default file size limit is 10 MiB, which a trusted host can raise when needed. Without the source bytes, a `fully_verified` claim fails validation. Unstructured notes stay untouched, reviewer disagreements remain visible, and human researchers stay in charge of committing state, dropping or reopening research routes, and making final scholarly judgments.
 
-See [the architecture guide](docs/kernel-architecture.md) for data contracts and [the release guide](docs/distribution-release.md) for packaging details. All 21 root and regional READMEs are synchronized with the 2.1.0 baseline, and [the manifest](docs/i18n/manifest.json) tracks cryptographic synchronization hashes across all locales. Release verification and review records are archived in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342).
+See [the architecture guide](docs/kernel-architecture.md) for data contracts and [the release guide](docs/distribution-release.md) for packaging details. All 21 root and regional READMEs are synchronized with the 2.2.0 baseline, and [the manifest](docs/i18n/manifest.json) tracks cryptographic synchronization hashes across all locales. Release verification and review records are archived in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342).
 
 ## Validation and testing
 
@@ -159,7 +159,7 @@ git diff --check
 
 Our test suite reuses the upstream Hermes skill-authoring rules for each individual skill while validating all 14 skills in this repository against the pinned catalog. CI accesses the network only to install packages; standard pull-request checks never call external scholarly APIs.
 
-GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64 (`windows-latest` with Python 3.10 and non-UTF-8 pipe checks), Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest` with Python 3.14), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1317 tests (extending the 1165-test baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md)). On pushes to `main`, a separate workflow installs the pinned Hermes commit from `tests/upstream/provenance.json` and tests `tap add`, `search`, `install`, and `list` against this repository. See [the project audit](docs/project-lineage-audit-20260920.md) for exact versions and test boundaries.
+GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64 (`windows-latest` with Python 3.10 and non-UTF-8 pipe checks), Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest` with Python 3.14), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1319 tests (extending the 1165-test baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md)). On pushes to `main`, a separate workflow installs the pinned Hermes commit from `tests/upstream/provenance.json` and tests `tap add`, `search`, `install`, and `list` against this repository. See [the project audit](docs/project-lineage-audit-20260920.md) for exact versions and test boundaries.
 
 [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, which draws 4096 SHA256-seeded candidates, selects 30 test scenarios, and outputs a coverage report across 16 capability families (E01), the 14 repository skills (E02), and 36 task goals (E03). Every skill appears at least twice across at least two distinct goals, including its core workflow goal.
 

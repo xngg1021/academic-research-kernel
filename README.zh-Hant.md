@@ -8,24 +8,24 @@
 
 ## 快速開始
 
-如果您想直接讓 AI 助手幫您讀論文、核對統計數字並生成中文報告，請先安裝帶 PDF 解析功能的軟體套件並把 `paper-research` 技能匯出給您的助手；如果您需要將 12 個查核工具掛載為背景 MCP 服務供用戶端自動呼叫，請先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/) 再啟動 2.1.0 版本的 MCP 服務：
+如果您想直接讓 AI 助手幫您讀論文、核對統計數字並生成中文報告，請先安裝帶 PDF 解析功能的軟體套件並把 `paper-research` 技能匯出給您的助手；如果您需要將 12 個查核工具掛載為背景 MCP 服務供用戶端自動呼叫，請先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/) 再啟動 2.2.0 版本的 MCP 服務：
 
 ```bash
 # 方式一：讓 AI 助手直接讀 PDF 論文並生成中文報告
-uv tool install "academic-research-kernel[research]==2.1.0"
+uv tool install "academic-research-kernel[research]==2.2.0"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作為背景 MCP 服務啟動，供用戶端連線呼叫
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-直接在終端機執行 `mcp` 命令會讓程式進入背景靜默等待用戶端連線的狀態，不會彈出互動選單。[2.1.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) 頁面記錄了安裝套件雜湊值與發布狀態。如果您已將發布的 wheel 安裝套件下載到本機，也可以直接執行 `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`。本工具支援 Python 3.10–3.14，`uvx --python 3.12` 命令可顯式指定受支援的 Python 直譯器。基礎安裝套件已內建全部 12 個查核工具，統計計算套件會在呼叫統計重算功能時按需載入。
+直接在終端機執行 `mcp` 命令會讓程式進入背景靜默等待用戶端連線的狀態，不會彈出互動選單。[2.2.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) 頁面記錄了安裝套件雜湊值與發布狀態。如果您已將發布的 wheel 安裝套件下載到本機，也可以直接執行 `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`。本工具支援 Python 3.10–3.14，`uvx --python 3.12` 命令可顯式指定受支援的 Python 直譯器。基礎安裝套件已內建全部 12 個查核工具，統計計算套件會在呼叫統計重算功能時按需載入。
 
 ## 驗證安裝
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 `doctor` 自檢命令預設離線執行，負責檢查執行環境依賴、資料格式定義與全部 12 個工具介面；即使沒有設定可選的外部資料庫金鑰，自檢也不會報錯。執行 `doctor --json` 可輸出供程式讀取的 JSON 結果。
@@ -33,12 +33,12 @@ uvx academic-research-kernel@2.1.0 --version
 ## 安裝軟體套件
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-您也可以使用 `pipx install academic-research-kernel==2.1.0` 安裝，或者在虛擬環境內執行 `python -m pip install academic-research-kernel==2.1.0`。安裝時加上 `[full]` 會一併安裝擴充科學計算範例所需的套件；加上 `[research]` 會安裝 `pypdf==6.19.0` 與 `fonttools==4.65.0`，保證不同機器解析 PDF 字型時結果一致，這兩個套件均支援 Python 3.10；加上 `[qa]` 則會安裝倉庫自檢與測試所需的解析依賴。結構化 HTML/XML 解析和常規 DOCX/XLSX 讀取直接使用 Python 標準函式庫，GPU 加速與付費資料庫均為可選項。
+您也可以使用 `pipx install academic-research-kernel==2.2.0` 安裝，或者在虛擬環境內執行 `python -m pip install academic-research-kernel==2.2.0`。安裝時加上 `[full]` 會一併安裝擴充科學計算範例所需的套件；加上 `[research]` 會安裝 `pypdf==6.19.0` 與 `fonttools==4.65.0`，保證不同機器解析 PDF 字型時結果一致，這兩個套件均支援 Python 3.10；加上 `[qa]` 則會安裝倉庫自檢與測試所需的解析依賴。結構化 HTML/XML 解析和常規 DOCX/XLSX 讀取直接使用 Python 標準函式庫，GPU 加速與付費資料庫均為可選項。
 
 ## Hermes
 
@@ -137,7 +137,7 @@ hermes skills install xngg1021/academic-research-kernel/skills/academic-source-v
 
 如果某條查核紀錄要標記為 `fully_verified` 已完全核實，呼叫方必須提供對應的原始檔案內容，以便系統獨立複核。Python 本機呼叫可透過 `LineageVerificationContext` 傳入原文，MCP 協定呼叫則只允許直接傳入檔案內容位元組流，不允許讀取宿主機任意檔案路徑。單次讀取的檔案大小預設上限為 10 MiB，受信任的本機宿主環境可以按需調高上限。如果沒有提供原文內容，系統不會把結果標為已完全核實。未經提取的自由文本保持原樣儲存，不同審稿模型的分歧意見全部公開保留；何時保存紀錄與放棄哪條路線，以及重開哪項嘗試與最終採納哪條學術結論，始終由研究者自己決定。
 
-資料格式與版本相容規則見[架構文件](docs/kernel-architecture.md)，Python 軟體套件、`uvx` 與官方 MCP Registry 的發布細節見[分發與發布說明](docs/distribution-release.md)。全部 21 個語種的 README 均已更新至 2.1.0 版本，全倉文件的多語言雜湊同步狀態記錄於[多語言清單](docs/i18n/manifest.json)，早期的完整評審與合併存證彙總於[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)。
+資料格式與版本相容規則見[架構文件](docs/kernel-architecture.md)，Python 軟體套件、`uvx` 與官方 MCP Registry 的發布細節見[分發與發布說明](docs/distribution-release.md)。全部 21 個語種的 README 均已更新至 2.2.0 版本，全倉文件的多語言雜湊同步狀態記錄於[多語言清單](docs/i18n/manifest.json)，早期的完整評審與合併存證彙總於[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)。
 
 ## 本機自檢與測試
 
@@ -157,7 +157,7 @@ git diff --check
 
 測試套件沿用了固定版本的 Hermes 技能編寫規範檢查，完整測試本倉庫的全部 14 項技能，並對照固定版本的內建與可選技能目錄核對引用關係。持續整合環境只在安裝依賴套件時連網，平時的程式碼提交測試不會請求外部學術資料庫。
 
-GitHub Actions 持續整合覆蓋三大作業系統的 x86_64 與 ARM64 架構。測試範圍包含執行 Python 3.10、3.12 與 3.14 的 Linux x86_64 與 `ubuntu-24.04-arm` 映像，同時覆蓋 Windows x86_64 與 `windows-11-arm` 以及 `macos-latest` 環境，並附帶針對上游 `main` 分支最新程式碼的即時載入檢驗。本機完整迴歸測試套件共通過 1317 項測試，此前 1165 項基線與覆蓋範圍記錄在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)中，遠端測試日誌會單獨標明所測的程式碼提交雜湊值。每當程式碼推送到 `main` 分支時，獨立的整合測試工作流還會自動安裝 `tests/upstream/provenance.json` 記錄的固定版本 Hermes，實測對本倉庫執行 `tap add` 與 `search`，以及 `install` 和 `list` 全流程。各項檢查的確切版本與限制見[審計文件](docs/project-lineage-audit-20260920.md)。
+GitHub Actions 持續整合覆蓋三大作業系統的 x86_64 與 ARM64 架構。測試範圍包含執行 Python 3.10、3.12 與 3.14 的 Linux x86_64 與 `ubuntu-24.04-arm` 映像，同時覆蓋 Windows x86_64 與 `windows-11-arm` 以及 `macos-latest` 環境，並附帶針對上游 `main` 分支最新程式碼的即時載入檢驗。本機完整迴歸測試套件共通過 1319 項測試，此前 1165 項基線與覆蓋範圍記錄在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)中，遠端測試日誌會單獨標明所測的程式碼提交雜湊值。每當程式碼推送到 `main` 分支時，獨立的整合測試工作流還會自動安裝 `tests/upstream/provenance.json` 記錄的固定版本 Hermes，實測對本倉庫執行 `tap add` 與 `search`，以及 `install` 和 `list` 全流程。各項檢查的確切版本與限制見[審計文件](docs/project-lineage-audit-20260920.md)。
 
 [tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，從 4096 個 SHA256 種子候選中選出 30 個代表性測試場景，並自動生成核驗覆蓋度報告，分別統計 16 類能力族、倉庫實際的 14 項技能以及 36 項具體任務目標。每項技能至少出現 2 次並覆蓋 2 個不同任務目標，且必須包含該技能的核心目標。
 
@@ -165,7 +165,7 @@ GitHub Actions 持續整合覆蓋三大作業系統的 x86_64 與 ARM64 架構�
 
 ## 讓本地 Agent 幫您讀論文寫報告
 
-安裝帶 `[research]` 擴充的 2.1.0 軟體套件後，可以把論文精讀技能直接匯出到您的本機智能體目錄：
+安裝帶 `[research]` 擴充的 2.2.0 軟體套件後，可以把論文精讀技能直接匯出到您的本機智能體目錄：
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

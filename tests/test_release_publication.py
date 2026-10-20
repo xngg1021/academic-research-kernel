@@ -50,6 +50,9 @@ def packages(directory, internal_version=VERSION, runtime_version=None, version=
                 archive.writestr(name, '# portable workflow fixture\n')
             for name in ('research/sources.py', 'research/analysis.py', 'ingestion/paper_research.py'):
                 archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
+        if tuple(map(int, version.split('.'))) >= (2, 2, 0):
+            for name in ('normalize_identifier.py', 'verify_work.py', 'interop.py', 'meta_core.py'):
+                archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
     sdist = directory / f'academic_research_kernel-{version}.tar.gz'
     with tarfile.open(sdist, 'w:gz') as archive:
         members = {'PKG-INFO': metadata(internal_version),
