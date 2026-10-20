@@ -39,3 +39,21 @@ def test_current_official_registry_metadata_schema():
     schema = json.loads((ROOT / 'tests/fixtures/mcp-registry-server.schema.json').read_text(encoding='utf-8'))
     Draft7Validator(schema).validate(json.loads((ROOT / 'server.json').read_text(encoding='utf-8')))
     assert 'mcp-name: io.github.xngg1021/academic-research-kernel' in (ROOT / 'README.md').read_text(encoding='utf-8')
+
+
+def test_standalone_copied_skills_import_outside_repo(tmp_path, monkeypatch):
+    import shutil
+    monkeypatch.syspath_prepend(str(ROOT / 'scripts'))
+    for skill_name, script_name, mod_name in (
+        ('research-object-identity', 'provenance.py', 'standalone_prov'),
+        ('claim-evidence-graph', 'graph.py', 'standalone_ceg'),
+        ('decision-ledger', 'ledger.py', 'standalone_ledger'),
+    ):
+        dest = tmp_path / skill_name
+        shutil.copytree(ROOT / 'skills' / skill_name, dest)
+        script_path = dest / 'scripts' / script_name
+        spec = importlib.util.spec_from_file_location(mod_name, script_path)
+        mod = importlib.util.module_from_spec(spec)
+        monkeypatch.setitem(sys.modules, mod_name, mod)
+        spec.loader.exec_module(mod)
+        assert mod is not None

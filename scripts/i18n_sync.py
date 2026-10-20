@@ -182,20 +182,18 @@ def discover_canonical_documents() -> List[Dict[str, Any]]:
                         "style_intensity": "medium",
                     })
 
-    # 3. Docs directory (10 canonical documents)
+    # 3. Docs directory
     docs_dir = ROOT / "docs"
     for d_file in sorted(docs_dir.glob("*.md")):
         if ".local-lineage" in d_file.parts:
             continue
         d_stem = d_file.stem
-        if d_stem in ["pain-atlas-v0.zh", "research-plan-v0.zh"]:
-            continue  # localized counterparts of pain-atlas-v0.en and research-plan-v0.en
         docs.append({
             "doc_id": f"doc_{d_stem.replace('-', '_').replace('.', '_')}",
             "canonical_title": f"Documentation: {d_stem}",
             "source_path": f"docs/{d_file.name}",
             "source_locale": "en" if "en" in d_stem or "scfabric" in d_stem else "zh-Hans",
-            "genre": "research_plans_and_evaluations" if "plan" in d_stem or "roadmap" in d_stem else "technical_and_schema_specifications",
+            "genre": "technical_and_schema_specifications",
             "style_intensity": "medium",
         })
 
@@ -226,10 +224,6 @@ def resolve_localized_path(item: Dict[str, Any], loc: str) -> str:
             return f"README.{loc}.md"
         else:
             return f"i18n/{loc}/README.md"
-    elif src == "docs/pain-atlas-v0.en.md" and loc == "zh-Hans":
-        return "docs/pain-atlas-v0.zh.md"
-    elif src == "docs/research-plan-v0.en.md" and loc == "zh-Hans":
-        return "docs/research-plan-v0.zh.md"
     elif src.startswith("docs/"):
         base_name = src.replace("docs/", "")
         return f"i18n/{loc}/docs/{base_name}"
