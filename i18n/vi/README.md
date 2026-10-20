@@ -8,19 +8,19 @@ Tác giả: Junfu Shi (SJF, xngg1021), Hermes Agent. Phạm vi cấp phép hiệ
 
 ## Bắt đầu nhanh
 
-Chạy phiên bản 2.1.0 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Chạy phiên bản 2.2.0 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-[Bản phát hành 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 12 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
+[Bản phát hành 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 12 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
 
 ## Kiểm tra cài đặt
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, lược đồ dữ liệu và toàn bộ 12 định nghĩa công cụ. Các dịch vụ bên ngoài tùy chọn có thể để trống mà không gây lỗi. Sử dụng `doctor --json` để nhận kết quả ở định dạng máy đọc được.
@@ -28,12 +28,12 @@ Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, 
 ## Cài đặt gói phần mềm
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.1.0` hoặc chạy `python -m pip install academic-research-kernel==2.1.0` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==6.19.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
+Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.2.0` hoặc chạy `python -m pip install academic-research-kernel==2.2.0` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==6.19.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ Thư mục `scripts/scfabric/` là tầng thực thi của bộ công cụ tính
 
 ## Nghiên cứu bài báo khoa học với Agent cục bộ
 
-Cài đặt `academic-research-kernel[research]==2.1.0` và xuất quy trình làm việc đóng gói sẵn:
+Cài đặt `academic-research-kernel[research]==2.2.0` và xuất quy trình làm việc đóng gói sẵn:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

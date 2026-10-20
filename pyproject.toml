@@ -53,6 +53,10 @@ packages = ["src/academic_research_kernel"]
 "skills/claim-evidence-graph/scripts/graph.py" = "academic_research_kernel/graph.py"
 "skills/decision-ledger/scripts/ledger.py" = "academic_research_kernel/ledger.py"
 "skills/quantitative-paper-audit/scripts/recompute.py" = "academic_research_kernel/recompute.py"
+"skills/academic-source-verification/scripts/normalize_identifier.py" = "academic_research_kernel/normalize_identifier.py"
+"skills/academic-source-verification/scripts/verify_work.py" = "academic_research_kernel/verify_work.py"
+"skills/literature-analysis/scripts/interop.py" = "academic_research_kernel/interop.py"
+"skills/systematic-review-meta-analysis/scripts/meta_core.py" = "academic_research_kernel/meta_core.py"
 "schemas/artifact-ingestion-receipt.schema.json" = "academic_research_kernel/schemas/artifact-ingestion-receipt.schema.json"
 "schemas/claim-evidence-graph.schema.json" = "academic_research_kernel/schemas/claim-evidence-graph.schema.json"
 "schemas/computation-artifact.schema.json" = "academic_research_kernel/schemas/computation-artifact.schema.json"
@@ -84,4 +88,4 @@ packages = ["src/academic_research_kernel"]
 
 [tool.hatch.build.targets.sdist]
 include = ["/examples", "/CHANGELOG.md", "/REPOSITORY-IDENTITY.md", "/src", "/tools", "/scripts", "/skills", "/schemas", "/docs", "/tests", "/i18n", "/LICENSE*", "/LICENSES", "/SOURCE-LINEAGE.md", "/SLL-APPLICATION.json", "/CONTRIBUTING.md", "/README*", "/plugin.json", "/mcp.json", "/server.json", "/pyproject.toml", "/uv.lock", "/requirements-qa.txt", "/.gitignore", "/.github/workflows"]
-exclude = ["**/__pycache__", "**/*.pyc", "**/.venv", "**/venv", "**/env", "**/.env*", "**/.pytest_cache", "**/.mypy_cache", "**/.ruff_cache", "**/.tox", "**/.nox", "**/build", "**/dist", "**/node_modules", "**/*.log", "**/receipts-*.json"]
+exclude = ["**/__pycache__", "**/*.pyc", "**/.venv", "**/venv", "**/env", "**/.env*", "**/.pytest_cache", "**/.mypy_cache", "**/.ruff_cache", "**/.tox", "**/.nox", "**/build", "**/dist", "**/node_modules", "**/*.log", "**/receipts-*.json", "**/.local-lineage"]

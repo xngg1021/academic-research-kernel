@@ -154,6 +154,10 @@ def inspect_artifact(path, version=None):
             require(all('academic_research_kernel/' + name in files for name in
                         ('research/sources.py', 'research/analysis.py', 'ingestion/paper_research.py')),
                     'wheel paper research runtime files missing')
+        if tuple(map(int, version.split('.'))) >= (2, 2, 0):
+            require(all('academic_research_kernel/' + name in files for name in
+                        ('normalize_identifier.py', 'verify_work.py', 'interop.py', 'meta_core.py')),
+                    'wheel 2.2.0 bundled scholarly utility files missing')
         require('academic_research_kernel/artifact-adapter-matrix.json' in files, 'wheel adapter matrix missing')
         require(all('academic_research_kernel/' + name in files for name in ('cli.py', 'mcp_server.py', 'recompute.py', 'ingestion/engine.py')),
                 'wheel runtime files missing')

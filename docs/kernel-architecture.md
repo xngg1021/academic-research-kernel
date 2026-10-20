@@ -126,7 +126,7 @@ The stdio MCP server ([scripts/mcp_server.py](../scripts/mcp_server.py)) exposes
 7. `claim_evidence_trace`: Traces evidence and receipts for a claim.
 8. `decision_ledger_validate`: Executes four-gate verification on a decision ledger.
 9. `decision_trace`: Traces causal ancestry and corrections for a decision.
-10. `academic_recompute_statistics`: Recomputes statistical claims (t-tests, effect sizes) with on-demand SciPy/statsmodels loading for probability distributions and closed-form standard-library arithmetic.
+10. `academic_recompute_statistics`: Recomputes statistical claims (t/F/chi-square/Wald-z tests, Cohen's d and Hedges' g, 2x2 OR/RR, CI consistency, statistical power, SD bounds, and df-implied sample sizes) with on-demand SciPy/statsmodels loading for probability distributions and closed-form standard-library arithmetic.
 11. `academic_check_percentage`: Checks count/percentage compatibility.
 12. `academic_scfabric_hardware_probe`: Probes execution accelerators.
 
@@ -136,7 +136,7 @@ Tool arguments use closed JSON Schemas and are validated before dispatch. Each r
 
 ## Verification and residual boundaries
 
-The current local regression suite covers **1316 passed** tests (1319 total with the optional CPU PyTorch backend) plus 41 executable documentation fences. Cross-platform CI covers Python 3.10–3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, macOS ARM64/Intel, Ubuntu 26.04 canaries, and current-upstream loading.
+The current local regression suite covers **1319 passed** tests (1322 total with the optional CPU PyTorch backend) plus 41 executable documentation fences. Cross-platform CI runs a 7-cell orthogonal matrix across Python 3.10/3.12/3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, and macOS ARM64, alongside isolated wheel/sdist/[research] installation smoke and current-upstream loading.
 
 The complete historical PR/CI ledger, fixed PR #12 review findings, and still-open operational/governance/P3 boundaries are maintained in [the 2026-09-20 project lineage audit](project-lineage-audit-20260920.md).
 

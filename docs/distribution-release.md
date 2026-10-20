@@ -1,3 +1,9 @@
+# Distribution and unified workflow release 2.2.0
+
+Release 2.2.0 unifies the statistical audit library, LaTeX/BibTeX source package reading, and high-frequency scholarly CLI utilities (`verify-source`, `bibliography`, `meta-analyze`) into the installed wheel while preserving all 12 public MCP tool names and existing schema contracts. The wheel bundles `normalize_identifier.py`, `verify_work.py`, `interop.py`, and `meta_core.py` alongside `paper-research` and the deterministic ingestion kernel.
+
+---
+
 # Distribution and paper research release 2.1.0
 
 The backward-compatible paper workflow adds `research prepare`, `research finish`,

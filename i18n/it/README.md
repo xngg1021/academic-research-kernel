@@ -8,19 +8,19 @@ Autore: Junfu Shi (SJF, xngg1021), Hermes Agent. Offerta di licenza attuale: [So
 
 ## Avvio rapido
 
-Eseguire la versione 2.1.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Eseguire la versione 2.2.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-La [release 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) riporta gli hash di distribuzione e lo stato di pubblicazione. Il pacchetto wheel di rilascio può essere eseguito anche localmente con `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. È supportato Python 3.10–3.14; `uvx --python 3.12` seleziona esplicitamente un interprete compatibile. Tutti i 12 strumenti deterministici, inclusi i moduli statistici, sono compresi nell'installazione di base.
+La [release 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) riporta gli hash di distribuzione e lo stato di pubblicazione. Il pacchetto wheel di rilascio può essere eseguito anche localmente con `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. È supportato Python 3.10–3.14; `uvx --python 3.12` seleziona esplicitamente un interprete compatibile. Tutti i 12 strumenti deterministici, inclusi i moduli statistici, sono compresi nell'installazione di base.
 
 ## Verifica dell'installazione
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 La diagnostica offline controlla dipendenze, schemi e le definizioni di tutti i 12 strumenti. I servizi esterni facoltativi possono restare non configurati. Utilizzare `doctor --json` per ottenere un output leggibile dalle macchine.
@@ -28,12 +28,12 @@ La diagnostica offline controlla dipendenze, schemi e le definizioni di tutti i 
 ## Installazione del pacchetto
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-In alternativa, è possibile installare il pacchetto con `pipx install academic-research-kernel==2.1.0` oppure con `python -m pip install academic-research-kernel==2.1.0` all'interno di un ambiente virtuale supportato. L'opzione `[full]` aggiunge le librerie per gli esempi scientifici estesi; `[qa]` include gli strumenti di validazione del repository, compreso il parser PDF. L'opzione `[research]` aggiunge `pypdf==6.19.0` e `fonttools==4.65.0` per garantire una decodifica uniforme dei font PDF nelle installazioni pulite, entrambi compatibili con Python 3.10. La lettura strutturata di HTML/XML e di file DOCX/XLSX con limiti di dimensione utilizza la libreria standard. I backend GPU e i servizi a pagamento restano facoltativi.
+In alternativa, è possibile installare il pacchetto con `pipx install academic-research-kernel==2.2.0` oppure con `python -m pip install academic-research-kernel==2.2.0` all'interno di un ambiente virtuale supportato. L'opzione `[full]` aggiunge le librerie per gli esempi scientifici estesi; `[qa]` include gli strumenti di validazione del repository, compreso il parser PDF. L'opzione `[research]` aggiunge `pypdf==6.19.0` e `fonttools==4.65.0` per garantire una decodifica uniforme dei font PDF nelle installazioni pulite, entrambi compatibili con Python 3.10. La lettura strutturata di HTML/XML e di file DOCX/XLSX con limiti di dimensione utilizza la libreria standard. I backend GPU e i servizi a pagamento restano facoltativi.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ Il modulo `scripts/scfabric/` rappresenta l'infrastruttura per gli strumenti di 
 
 ## Analizzare un articolo scientifico con un Agente locale
 
-Installare `academic-research-kernel[research]==2.1.0` ed esportare il flusso di lavoro incluso nel pacchetto:
+Installare `academic-research-kernel[research]==2.2.0` ed esportare il flusso di lavoro incluso nel pacchetto:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

@@ -8,19 +8,19 @@ Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Oferta de licença atual: [Sourc
 
 ## Início rápido
 
-Execute a versão 2.1.0 com o [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Execute a versão 2.2.0 com o [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-O [lançamento 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) registra os hashes de distribuição e o status de publicação. O pacote wheel distribuído também pode ser executado localmente com `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. Há suporte para Python 3.10–3.14, e `uvx --python 3.12` seleciona explicitamente um interpretador compatível. Todas as 12 ferramentas determinísticas, incluindo os módulos estatísticos, fazem parte da instalação básica.
+O [lançamento 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) registra os hashes de distribuição e o status de publicação. O pacote wheel distribuído também pode ser executado localmente com `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Há suporte para Python 3.10–3.14, e `uvx --python 3.12` seleciona explicitamente um interpretador compatível. Todas as 12 ferramentas determinísticas, incluindo os módulos estatísticos, fazem parte da instalação básica.
 
 ## Verificar instalação
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 O diagnóstico offline verifica dependências, esquemas e as definições das 12 ferramentas. Serviços externos opcionais podem permanecer não configurados sem impedir o uso. Utilize `doctor --json` para obter saída estruturada legível por máquina.
@@ -28,12 +28,12 @@ O diagnóstico offline verifica dependências, esquemas e as definições das 12
 ## Instalação do pacote
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Como alternativa, instale com `pipx install academic-research-kernel==2.1.0` ou `python -m pip install academic-research-kernel==2.1.0` dentro de um ambiente virtual compatível. O extra `[full]` adiciona bibliotecas para exemplos científicos estendidos; `[qa]` instala as ferramentas de validação do repositório, incluindo o analisador de PDF. O extra `[research]` adiciona `pypdf==6.19.0` e `fonttools==4.65.0` para decodificação consistente de fontes em arquivos PDF em instalações limpas, ambos compatíveis com Python 3.10. A leitura estruturada de HTML/XML e de arquivos DOCX/XLSX delimitados utiliza apenas a biblioteca padrão. Backends de GPU e serviços pagos permanecem opcionais.
+Como alternativa, instale com `pipx install academic-research-kernel==2.2.0` ou `python -m pip install academic-research-kernel==2.2.0` dentro de um ambiente virtual compatível. O extra `[full]` adiciona bibliotecas para exemplos científicos estendidos; `[qa]` instala as ferramentas de validação do repositório, incluindo o analisador de PDF. O extra `[research]` adiciona `pypdf==6.19.0` e `fonttools==4.65.0` para decodificação consistente de fontes em arquivos PDF em instalações limpas, ambos compatíveis com Python 3.10. A leitura estruturada de HTML/XML e de arquivos DOCX/XLSX delimitados utiliza apenas a biblioteca padrão. Backends de GPU e serviços pagos permanecem opcionais.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ O módulo `scripts/scfabric/` implementa o conjunto de ferramentas de cálculo c
 
 ## Pesquisar um artigo com um Agente local
 
-Instale `academic-research-kernel[research]==2.1.0` e exporte o fluxo de trabalho empacotado:
+Instale `academic-research-kernel[research]==2.2.0` e exporte o fluxo de trabalho empacotado:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

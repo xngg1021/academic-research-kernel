@@ -8,19 +8,19 @@
 
 ## البدء السريع
 
-شغّل الإصدار 2.1.0 باستخدام أداة [uv](https://docs.astral.sh/uv/getting-started/installation/):
+شغّل الإصدار 2.2.0 باستخدام أداة [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-يوثق [إصدار 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) بصمات التوزيع (hashes) وحالة النشر. يمكن أيضًا تشغيل حزمة wheel محليًا عبر الأمر `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. يدعم النظام إصدارات Python من 3.10 إلى 3.14؛ ويتيح الخيار `uvx --python 3.12` تحديد مفسر مدعوم بشكل صريح. تتضمن الحزمة الأساسية جميع الأدوات الحتمية الاثنتي عشرة، بما فيها مجموعة أدوات الحساب العلمي والإحصاء.
+يوثق [إصدار 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) بصمات التوزيع (hashes) وحالة النشر. يمكن أيضًا تشغيل حزمة wheel محليًا عبر الأمر `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. يدعم النظام إصدارات Python من 3.10 إلى 3.14؛ ويتيح الخيار `uvx --python 3.12` تحديد مفسر مدعوم بشكل صريح. تتضمن الحزمة الأساسية جميع الأدوات الحتمية الاثنتي عشرة، بما فيها مجموعة أدوات الحساب العلمي والإحصاء.
 
 ## التحقق من التثبيت
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 يفحص التشخيص غير المتصل بالشبكة الاعتماديات البرمجية والمخططات (schemas) وتعريفات الأدوات الاثنتي عشرة كلها. يمكن ترك الخدمات الخارجية الاختيارية دون إعداد. استخدم `doctor --json` للحصول على مخرجات مقروءة آليًا.
@@ -28,12 +28,12 @@ uvx academic-research-kernel@2.1.0 --version
 ## تثبيت الحزمة
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-بدلاً من ذلك، يمكنك التثبيت عبر `pipx install academic-research-kernel==2.1.0` أو `python -m pip install academic-research-kernel==2.1.0` داخل بيئة افتراضية مدعومة. تضيف المجموعة الاختيارية `[full]` مكتبات للأمثلة العلمية الموسعة؛ وتضيف `[qa]` أدوات التحقق من المستودع بما فيها محلل ملفات PDF. أما `[research]` فتضيف `pypdf==6.19.0` و`fonttools==4.65.0` لضمان فك ترميز خطوط PDF باتساق عبر التثبيتات النظيفة، وكلاهما يدعم Python 3.10. تعتمد قراءة HTML/XML المهيكلة وملفات DOCX/XLSX محدودة الحجم على المكتبة القياسية. تظل واجهات GPU والخدمات المدفوعة اختيارية.
+بدلاً من ذلك، يمكنك التثبيت عبر `pipx install academic-research-kernel==2.2.0` أو `python -m pip install academic-research-kernel==2.2.0` داخل بيئة افتراضية مدعومة. تضيف المجموعة الاختيارية `[full]` مكتبات للأمثلة العلمية الموسعة؛ وتضيف `[qa]` أدوات التحقق من المستودع بما فيها محلل ملفات PDF. أما `[research]` فتضيف `pypdf==6.19.0` و`fonttools==4.65.0` لضمان فك ترميز خطوط PDF باتساق عبر التثبيتات النظيفة، وكلاهما يدعم Python 3.10. تعتمد قراءة HTML/XML المهيكلة وملفات DOCX/XLSX محدودة الحجم على المكتبة القياسية. تظل واجهات GPU والخدمات المدفوعة اختيارية.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ git diff --check
 
 ## دراسة ورقة بحثية باستخدام وكيل محلي (Agent)
 
-ثبّت الحزمة `academic-research-kernel[research]==2.1.0` وصدّر مسار العمل المدمج:
+ثبّت الحزمة `academic-research-kernel[research]==2.2.0` وصدّر مسار العمل المدمج:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

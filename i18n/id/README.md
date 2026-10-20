@@ -8,19 +8,19 @@ Penulis: Junfu Shi (SJF, xngg1021), Hermes Agent. Penawaran lisensi saat ini: [S
 
 ## Mulai cepat
 
-Jalankan versi 2.1.0 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Jalankan versi 2.2.0 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-Catatan [rilis 2.1.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 12 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
+Catatan [rilis 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 12 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
 
 ## Verifikasi instalasi
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-12 alat. Layanan eksternal opsional dapat dibiarkan tanpa konfigurasi. Gunakan `doctor --json` untuk menghasilkan keluaran yang dapat dibaca mesin.
@@ -28,12 +28,12 @@ Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-12 alat. L
 ## Instalasi paket
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.1.0` atau `python -m pip install academic-research-kernel==2.1.0` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==6.19.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
+Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.2.0` atau `python -m pip install academic-research-kernel==2.2.0` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==6.19.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
 
 ## Hermes
 
@@ -160,7 +160,7 @@ Direktori `scripts/scfabric/` berisi perangkat alat komputasi ilmiah dan statist
 
 ## Meneliti makalah dengan Agen lokal
 
-Instal `academic-research-kernel[research]==2.1.0` dan ekspor alur kerja terpaket:
+Instal `academic-research-kernel[research]==2.2.0` dan ekspor alur kerja terpaket:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

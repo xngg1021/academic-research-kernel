@@ -8,19 +8,19 @@
 
 ## त्वरित शुरुआत
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) के साथ संस्करण 2.1.0 चलाएं:
+[uv](https://docs.astral.sh/uv/getting-started/installation/) के साथ संस्करण 2.2.0 चलाएं:
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-[2.1.0 रिलीज़](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) वितरण हैश और प्रकाशन स्थिति को रिकॉर्ड करता है। रिलीज़ व्हील को स्थानीय रूप से `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp` के माध्यम से भी चलाया जा सकता है। Python 3.10–3.14 समर्थित है; `uvx --python 3.12` स्पष्ट रूप से समर्थित इंटरप्रेटर का चयन करता है। वैज्ञानिक गणना और सांख्यिकी उपकरण सहित सभी 12 नियतात्मक उपकरण मूल इंस्टॉलेशन में शामिल हैं।
+[2.2.0 रिलीज़](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) वितरण हैश और प्रकाशन स्थिति को रिकॉर्ड करता है। रिलीज़ व्हील को स्थानीय रूप से `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp` के माध्यम से भी चलाया जा सकता है। Python 3.10–3.14 समर्थित है; `uvx --python 3.12` स्पष्ट रूप से समर्थित इंटरप्रेटर का चयन करता है। वैज्ञानिक गणना और सांख्यिकी उपकरण सहित सभी 12 नियतात्मक उपकरण मूल इंस्टॉलेशन में शामिल हैं।
 
 ## इंस्टॉलेशन की जांच करें
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 ऑफ़लाइन डायग्नोस्टिक निर्भरताओं, स्कीमा और सभी 12 टूल परिभाषाओं की जांच करता है। वैकल्पिक बाहरी सेवाएं बिना कॉन्फ़िगर किए रह सकती हैं। मशीन-पठनीय आउटपुट के लिए `doctor --json` का उपयोग करें।
@@ -28,12 +28,12 @@ uvx academic-research-kernel@2.1.0 --version
 ## पैकेज इंस्टॉलेशन
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-वैकल्पिक रूप से, समर्थित वर्चुअल एनवायरनमेंट के भीतर `pipx install academic-research-kernel==2.1.0` या `python -m pip install academic-research-kernel==2.1.0` के साथ इंस्टॉल करें। `[full]` विस्तारित वैज्ञानिक कौशल उदाहरणों के लिए लाइब्रेरी जोड़ता है; `[qa]` पीडीएफ पार्सर सहित रिपॉजिटरी सत्यापन उपकरण जोड़ता है। `[research]` स्वच्छ इंस्टॉलेशन में सुसंगत पीडीएफ फ़ॉन्ट डिकोडिंग के लिए `pypdf==6.19.0` और `fonttools==4.65.0` जोड़ता है; दोनों Python 3.10 का समर्थन करते हैं। संरचित HTML/XML और सीमित आकार के DOCX/XLSX पठन के लिए मानक लाइब्रेरी का उपयोग किया जाता है। GPU बैकएंड और सशुल्क सेवाएं वैकल्पिक रहती हैं।
+वैकल्पिक रूप से, समर्थित वर्चुअल एनवायरनमेंट के भीतर `pipx install academic-research-kernel==2.2.0` या `python -m pip install academic-research-kernel==2.2.0` के साथ इंस्टॉल करें। `[full]` विस्तारित वैज्ञानिक कौशल उदाहरणों के लिए लाइब्रेरी जोड़ता है; `[qa]` पीडीएफ पार्सर सहित रिपॉजिटरी सत्यापन उपकरण जोड़ता है। `[research]` स्वच्छ इंस्टॉलेशन में सुसंगत पीडीएफ फ़ॉन्ट डिकोडिंग के लिए `pypdf==6.19.0` और `fonttools==4.65.0` जोड़ता है; दोनों Python 3.10 का समर्थन करते हैं। संरचित HTML/XML और सीमित आकार के DOCX/XLSX पठन के लिए मानक लाइब्रेरी का उपयोग किया जाता है। GPU बैकएंड और सशुल्क सेवाएं वैकल्पिक रहती हैं।
 
 ## Hermes
 
@@ -160,7 +160,7 @@ CI Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.
 
 ## स्थानीय Agent के साथ शोध-पत्र का अध्ययन करें
 
-`academic-research-kernel[research]==2.1.0` इंस्टॉल करें और पैकेज्ड कार्यप्रवाह निर्यात करें:
+`academic-research-kernel[research]==2.2.0` इंस्टॉल करें और पैकेज्ड कार्यप्रवाह निर्यात करें:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

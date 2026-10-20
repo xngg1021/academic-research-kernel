@@ -109,6 +109,33 @@ def research_smoke(execute, directory, pdf_ready=False):
     replay = json.loads(execute(['research', 'replay', '--project', str(project)]))
     require(replay['reused'] is True and replay['analysis_fingerprint'] == receipt['analysis_fingerprint'],
             'identical installed snapshot replay did not reuse deterministic state')
+    wf_state = json.loads((project / 'workflow-state.json').read_text(encoding='utf-8'))
+    require(wf_state.get('stage') == 'complete' and wf_state.get('semantic_producer_required') is False,
+            'workflow-state.json did not transition to complete')
+    import io
+    from contextlib import redirect_stdout
+    from academic_research_kernel import cli as installed_cli
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc = installed_cli.main(['verify-source', 'https://doi.org/10.1038/nature14539', '--normalize-only'])
+    require(rc == 0 and json.loads(buf.getvalue()).get('value') == '10.1038/nature14539',
+            'installed verify-source CLI failed')
+    bib_file = root / 'fixture.bib'
+    bib_file.write_text('@misc{ark2026,\n  title = {Synthetic Fixture},\n  author = {Shi, Junfu},\n  year = {2026}\n}\n', encoding='utf-8')
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc = installed_cli.main(['bibliography', '--from', 'bibtex', '--to', 'csl', '--input', str(bib_file)])
+    csl_out = json.loads(buf.getvalue())
+    require(rc == 0 and isinstance(csl_out, list) and csl_out[0].get('type') == 'document',
+            'installed bibliography CLI failed')
+    meta_file = root / 'meta-studies.json'
+    meta_file.write_text(json.dumps({'studies': [{'yi': 0.4, 'vi': 0.04}, {'yi': 0.5, 'vi': 0.05}, {'yi': 0.3, 'vi': 0.03}]}), encoding='utf-8')
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc = installed_cli.main(['meta-analyze', '--input', str(meta_file)])
+    meta_out = json.loads(buf.getvalue())
+    require(rc == 0 and meta_out.get('study_count') == 3 and 'random_effects_dl' in meta_out,
+            'installed meta-analyze CLI failed')
     pdf_smoke = 'skipped_no_extra'
     if pdf_ready:
         pdf_file = root / 'synthetic-fixture.pdf'

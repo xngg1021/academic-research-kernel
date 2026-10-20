@@ -8,19 +8,19 @@
 
 ## দ্রুত শুরু
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) ব্যবহার করে সংস্করণ 2.1.0 চালান:
+[uv](https://docs.astral.sh/uv/getting-started/installation/) ব্যবহার করে সংস্করণ 2.2.0 চালান:
 
 ```bash
-uvx academic-research-kernel@2.1.0 mcp
+uvx academic-research-kernel@2.2.0 mcp
 ```
 
-[2.1.0 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.1.0) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.1.0-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10–3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১২টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
+[2.2.0 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10–3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১২টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
 
 ## ইনস্টলেশন যাচাই
 
 ```bash
-uvx academic-research-kernel@2.1.0 doctor
-uvx academic-research-kernel@2.1.0 --version
+uvx academic-research-kernel@2.2.0 doctor
+uvx academic-research-kernel@2.2.0 --version
 ```
 
 অফলাইন ডায়াগনস্টিক প্রক্রিয়াটি ডিপেন্ডেন্সি, স্কিমা এবং ১২টি টুলের সংজ্ঞা পরীক্ষা করে। ঐচ্ছিক বাহ্যিক পরিষেবাগুলো কনফিগার না করলেও সমস্যা হয় না। মেশিন-পাঠযোগ্য আউটপুটের জন্য `doctor --json` ব্যবহার করুন।
@@ -28,12 +28,12 @@ uvx academic-research-kernel@2.1.0 --version
 ## প্যাকেজ ইনস্টল
 
 ```bash
-uv tool install academic-research-kernel==2.1.0
+uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-বিকল্পভাবে, সমর্থিত ভার্চুয়াল এনভায়রনমেন্টের ভেতরে `pipx install academic-research-kernel==2.1.0` অথবা `python -m pip install academic-research-kernel==2.1.0` দিয়ে ইনস্টল করা যাবে। `[full]` অপশনটি বর্ধিত বৈজ্ঞানিক উদাহরণের জন্য অতিরিক্ত লাইব্রেরি যোগ করে; `[qa]` অপশনটি পিডিএফ পার্সারসহ রিপোজিটরি যাচাইকরণ টুল যোগ করে। `[research]` অপশনটি নতুন ইনস্টলেশনে পিডিএফ ফন্ট ডিকোডিং সুসংগত রাখতে `pypdf==6.19.0` এবং `fonttools==4.65.0` যুক্ত করে; দুটিই Python 3.10 সমর্থন করে। কাঠামোগত HTML/XML এবং নির্ধারিত আকারের DOCX/XLSX পাঠের কাজে স্ট্যান্ডার্ড লাইব্রেরি ব্যবহৃত হয়। GPU ব্যাকএন্ড এবং অর্থপ্রদত্ত পরিষেবাগুলো ঐচ্ছিক থাকে।
+বিকল্পভাবে, সমর্থিত ভার্চুয়াল এনভায়রনমেন্টের ভেতরে `pipx install academic-research-kernel==2.2.0` অথবা `python -m pip install academic-research-kernel==2.2.0` দিয়ে ইনস্টল করা যাবে। `[full]` অপশনটি বর্ধিত বৈজ্ঞানিক উদাহরণের জন্য অতিরিক্ত লাইব্রেরি যোগ করে; `[qa]` অপশনটি পিডিএফ পার্সারসহ রিপোজিটরি যাচাইকরণ টুল যোগ করে। `[research]` অপশনটি নতুন ইনস্টলেশনে পিডিএফ ফন্ট ডিকোডিং সুসংগত রাখতে `pypdf==6.19.0` এবং `fonttools==4.65.0` যুক্ত করে; দুটিই Python 3.10 সমর্থন করে। কাঠামোগত HTML/XML এবং নির্ধারিত আকারের DOCX/XLSX পাঠের কাজে স্ট্যান্ডার্ড লাইব্রেরি ব্যবহৃত হয়। GPU ব্যাকএন্ড এবং অর্থপ্রদত্ত পরিষেবাগুলো ঐচ্ছিক থাকে।
 
 ## Hermes
 
@@ -160,7 +160,7 @@ CI Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.
 
 ## স্থানীয় Agent দিয়ে গবেষণাপত্র বিশ্লেষণ
 
-`academic-research-kernel[research]==2.1.0` ইনস্টল করুন এবং প্যাকেজকৃত কর্মপ্রবাহটি এক্সপোর্ট করুন:
+`academic-research-kernel[research]==2.2.0` ইনস্টল করুন এবং প্যাকেজকৃত কর্মপ্রবাহটি এক্সপোর্ট করুন:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

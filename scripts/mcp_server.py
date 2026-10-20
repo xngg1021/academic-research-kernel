@@ -342,12 +342,19 @@ TOOLS = [
     # -------------------------------------------------------------------------
     {
         "name": "academic_recompute_statistics",
-        "description": "Recompute a t-test p-value and/or two-group Cohen's d and Hedges' g. Optional reported p-value comparison uses decimal round-half-up intervals; input or partial execution failures are tool errors, statistical mismatches are successful results.",
+        "description": "Recompute t/F/chi2/z p-values, two-group Cohen's d and Hedges' g, 2x2 OR/RR, CI consistency, statistical power, SD bounds, and df-implied sample sizes. Optional reported p-value comparison uses decimal round-half-up intervals; input or partial execution failures are tool errors, statistical mismatches are successful results.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "t_stat": {"type": "number", "description": "Reported t-statistic"},
                 "df": {"type": "number", "description": "Degrees of freedom (integer or Welch fractional)"},
+                "f_stat": {"type": "number", "description": "Reported F-statistic (right-tail ANOVA/regression)"},
+                "df1": {"type": "number", "description": "Numerator degrees of freedom for F-test"},
+                "df2": {"type": "number", "description": "Denominator degrees of freedom for F-test"},
+                "chi2_stat": {"type": "number", "description": "Reported chi-square statistic (right-tail)"},
+                "chi2_df": {"type": "number", "description": "Degrees of freedom for chi-square test"},
+                "beta": {"type": "number", "description": "Reported regression coefficient beta"},
+                "se": {"type": "number", "description": "Reported standard error SE (> 0)"},
                 "p_value": {"type": "number", "description": "Reported p-value"},
                 "p_value_literal": {"type": "string", "description": "Optional exact reported decimal/scientific literal, preserving trailing zeros; must agree with p_value and any explicit decimals."},
                 "p_value_decimals": {"type": "integer", "minimum": 0, "maximum": 10000, "description": "Optional decimal-place precision; must agree with a supplied literal."},
@@ -356,7 +363,31 @@ TOOLS = [
                 "n1": {"type": "integer", "description": "Group 1 size"},
                 "mean2": {"type": "number", "description": "Group 2 mean"},
                 "sd2": {"type": "number", "description": "Group 2 SD"},
-                "n2": {"type": "integer", "description": "Group 2 size"}
+                "n2": {"type": "integer", "description": "Group 2 size"},
+                "ci_estimate": {"type": "number", "description": "Point estimate for CI consistency check"},
+                "ci_lower": {"type": "number", "description": "Lower bound of confidence interval"},
+                "ci_upper": {"type": "number", "description": "Upper bound of confidence interval"},
+                "ci_level": {"type": "number", "description": "Confidence level in (0, 1), default 0.95"},
+                "ci_log_scale": {"type": "boolean", "description": "Use geometric midpoint for ratio estimates (OR/RR/HR)"},
+                "ci_rel_tol": {"type": "number", "description": "Relative midpoint tolerance, default 0.02"},
+                "cell_a": {"type": "integer", "description": "2x2 table exposed/treated event count"},
+                "cell_b": {"type": "integer", "description": "2x2 table exposed/treated non-event count"},
+                "cell_c": {"type": "integer", "description": "2x2 table control event count"},
+                "cell_d": {"type": "integer", "description": "2x2 table control non-event count"},
+                "effect_size_d": {"type": "number", "description": "Cohen's d for t-test power or sample-size calculation"},
+                "power_n1": {"type": "integer", "description": "Group 1 sample size for achieved power"},
+                "power_n2": {"type": "integer", "description": "Optional Group 2 sample size for achieved power"},
+                "target_power": {"type": "number", "description": "Target statistical power in (0, 1) for required sample size"},
+                "alpha": {"type": "number", "description": "Significance level alpha in (0, 1), default 0.05"},
+                "sample_ratio": {"type": "number", "description": "Group size ratio n2/n1 for required sample size, default 1.0"},
+                "check_sd": {"type": "number", "description": "Reported SD for bounded-scale feasibility check"},
+                "scale_min": {"type": "number", "description": "Minimum possible value of the bounded scale"},
+                "scale_max": {"type": "number", "description": "Maximum possible value of the bounded scale"},
+                "sample_n": {"type": "integer", "description": "Optional sample size for bounded-scale SD check"},
+                "sample_df": {"type": "number", "description": "Reported degrees of freedom for N-consistency check"},
+                "reported_n": {"type": "integer", "description": "Reported total sample size N"},
+                "df_kind": {"type": "string", "enum": ["ttest_2sample", "ttest_1sample", "ttest_paired", "ttest_2sample_welch", "regression"], "description": "Test family for df-to-N check"},
+                "n_params": {"type": "integer", "description": "Number of regression parameters (including intercept) when df_kind='regression'"}
             }
         }
     },
@@ -796,7 +827,11 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
             res = {}
             failures = {}
             t_keys = ("t_stat", "df")
-            requested_t = any(key in arguments for key in (*t_keys, "p_value", "p_value_literal", "p_value_decimals"))
+            has_other_p_test = any(key in arguments for key in ("f_stat", "df1", "df2", "chi2_stat", "chi2_df", "beta", "se"))
+            requested_t = (
+                any(key in arguments for key in t_keys)
+                or (not has_other_p_test and any(key in arguments for key in ("p_value", "p_value_literal", "p_value_decimals")))
+            ) and not ("chi2_stat" in arguments and "t_stat" not in arguments)
             if requested_t and (t is None or df is None):
                 failures["t_test"] = "t_stat and df are required together"
             if ("p_value_literal" in arguments or "p_value_decimals" in arguments) and p is None:
@@ -815,6 +850,61 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                 except Exception as exc:
                     res["t_test_error"] = str(exc)
                     failures["t_test"] = str(exc)
+
+            f_keys = ("f_stat", "df1", "df2")
+            provided_f_keys = [k for k in f_keys if k in arguments and arguments[k] is not None]
+            if provided_f_keys:
+                missing_f = [k for k in f_keys if k not in arguments or arguments[k] is None]
+                if missing_f:
+                    failures["f_test"] = f"Missing required parameters for F-test: {', '.join(missing_f)}"
+                else:
+                    try:
+                        f_rec = recompute_mod.p_from_f(arguments["f_stat"], arguments["df1"], arguments["df2"], reported=p)
+                        res["recomputed_f_p"] = f_rec["recomputed"]
+                        res["f_receipt"] = f_rec
+                        if p is not None:
+                            res["f_p_match"] = recompute_mod.check_p_match(
+                                p, f_rec["recomputed"], decimals=arguments.get("p_value_decimals"),
+                                reported_literal=arguments.get("p_value_literal"),
+                            )
+                    except Exception as exc:
+                        failures["f_test"] = str(exc)
+
+            if "chi2_stat" in arguments or "chi2_df" in arguments:
+                chi2_val = arguments.get("chi2_stat")
+                chi2_df_val = arguments.get("chi2_df", arguments.get("df"))
+                if chi2_val is None or chi2_df_val is None:
+                    failures["chi2_test"] = "chi2_stat and chi2_df (or df) are required together"
+                else:
+                    try:
+                        c_rec = recompute_mod.p_from_chi2(chi2_val, chi2_df_val, reported=p)
+                        res["recomputed_chi2_p"] = c_rec["recomputed"]
+                        res["chi2_receipt"] = c_rec
+                        if p is not None:
+                            res["chi2_p_match"] = recompute_mod.check_p_match(
+                                p, c_rec["recomputed"], decimals=arguments.get("p_value_decimals"),
+                                reported_literal=arguments.get("p_value_literal"),
+                            )
+                    except Exception as exc:
+                        failures["chi2_test"] = str(exc)
+
+            if "beta" in arguments or "se" in arguments:
+                beta_val, se_val = arguments.get("beta"), arguments.get("se")
+                if beta_val is None or se_val is None:
+                    failures["z_test"] = "beta and se are required together"
+                else:
+                    try:
+                        z_rec = recompute_mod.z_from_beta_se(beta_val, se_val, reported=p)
+                        res["recomputed_z"] = z_rec["recomputed"]["z"]
+                        res["recomputed_z_p"] = z_rec["recomputed"]["p"]
+                        res["z_receipt"] = z_rec
+                        if p is not None:
+                            res["z_p_match"] = recompute_mod.check_p_match(
+                                p, z_rec["recomputed"]["p"], decimals=arguments.get("p_value_decimals"),
+                                reported_literal=arguments.get("p_value_literal"),
+                            )
+                    except Exception as exc:
+                        failures["z_test"] = str(exc)
 
             d_keys = ("mean1", "sd1", "n1", "mean2", "sd2", "n2")
             provided_d_keys = [k for k in d_keys if k in arguments and arguments[k] is not None]
@@ -837,11 +927,93 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                     except Exception as exc:
                         res["cohens_d_error"] = str(exc)
                         failures["cohens_d"] = str(exc)
-            if not requested_t and not provided_d_keys:
+
+            ci_keys = ("ci_estimate", "ci_lower", "ci_upper")
+            if any(k in arguments for k in ci_keys):
+                if any(arguments.get(k) is None for k in ci_keys):
+                    failures["ci_consistency"] = "ci_estimate, ci_lower, and ci_upper are required together"
+                else:
+                    try:
+                        res["ci_consistency"] = recompute_mod.check_ci_consistency(
+                            arguments["ci_estimate"], arguments["ci_lower"], arguments["ci_upper"],
+                            level=arguments.get("ci_level", 0.95),
+                            log_scale=bool(arguments.get("ci_log_scale", False)),
+                            rel_tol=arguments.get("ci_rel_tol", 0.02),
+                        )
+                    except Exception as exc:
+                        failures["ci_consistency"] = str(exc)
+
+            cell_keys = ("cell_a", "cell_b", "cell_c", "cell_d")
+            if any(k in arguments for k in cell_keys):
+                if any(arguments.get(k) is None for k in cell_keys):
+                    failures["or_rr"] = "cell_a, cell_b, cell_c, and cell_d are required together"
+                else:
+                    try:
+                        res["or_rr"] = recompute_mod.or_rr_from_2x2(
+                            arguments["cell_a"], arguments["cell_b"], arguments["cell_c"], arguments["cell_d"],
+                            level=arguments.get("ci_level", 0.95),
+                        )
+                    except Exception as exc:
+                        failures["or_rr"] = str(exc)
+
+            if "effect_size_d" in arguments or "power_n1" in arguments or "target_power" in arguments:
+                es_d = arguments.get("effect_size_d")
+                if es_d is None or ("power_n1" not in arguments and "target_power" not in arguments):
+                    failures["power"] = "effect_size_d with power_n1 or target_power is required"
+                else:
+                    try:
+                        if arguments.get("power_n1") is not None:
+                            res["achieved_power"] = recompute_mod.achieved_power_ttest(
+                                es_d, arguments["power_n1"], arguments.get("power_n2"),
+                                alpha=arguments.get("alpha", 0.05),
+                            )
+                        if arguments.get("target_power") is not None:
+                            res["required_n"] = recompute_mod.required_n_ttest(
+                                es_d, power=arguments["target_power"],
+                                alpha=arguments.get("alpha", 0.05),
+                                ratio=arguments.get("sample_ratio", 1.0),
+                            )
+                    except Exception as exc:
+                        failures["power"] = str(exc)
+
+            sd_keys = ("check_sd", "scale_min", "scale_max")
+            if any(k in arguments for k in sd_keys):
+                if any(arguments.get(k) is None for k in sd_keys):
+                    failures["sd_possible"] = "check_sd, scale_min, and scale_max are required together"
+                else:
+                    try:
+                        res["sd_possible"] = recompute_mod.check_sd_possible(
+                            arguments["check_sd"], arguments["scale_min"], arguments["scale_max"],
+                            n=arguments.get("sample_n"),
+                        )
+                    except Exception as exc:
+                        failures["sd_possible"] = str(exc)
+
+            if "sample_df" in arguments or "reported_n" in arguments:
+                if arguments.get("sample_df") is None or arguments.get("reported_n") is None:
+                    failures["sample_size_from_df"] = "sample_df and reported_n are required together"
+                else:
+                    try:
+                        res["sample_size_from_df"] = recompute_mod.check_sample_size_from_df(
+                            arguments["sample_df"], arguments["reported_n"],
+                            kind=arguments.get("df_kind", "ttest_2sample"),
+                            n_params=arguments.get("n_params"),
+                        )
+                    except Exception as exc:
+                        failures["sample_size_from_df"] = str(exc)
+
+            computed_any = any(
+                k in res for k in (
+                    "recomputed_p", "recomputed_f_p", "recomputed_chi2_p", "recomputed_z",
+                    "cohens_d", "ci_consistency", "or_rr", "achieved_power", "required_n",
+                    "sd_possible", "sample_size_from_df",
+                )
+            )
+            if not computed_any and not failures:
                 failures["input"] = "Provide t_stat and df, or all six two-group effect-size parameters"
             if failures:
                 res.update(error="Statistical computation failed", failures=failures,
-                           status="partial_failure" if "recomputed_p" in res or "cohens_d" in res else "failed")
+                           status="partial_failure" if computed_any else "failed")
             return res
 
         # 11. academic_check_percentage
