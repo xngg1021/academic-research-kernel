@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-这是一套给科研人员和 AI 助手使用的学术核查与文献研究工具包。平时用大模型读论文或写综述，最怕模型编造参考文献与算错统计数字，或者读完几十篇文献后找不到某句结论出自哪一页。为了解决这些问题，本仓库把 14 项常用科研工作流与 12 个确定性核查工具封装成标准 MCP 服务和命令行工具，用来核对文献真伪与撤稿状态，重算论文里的统计结果，精读论文并生成带原文页码的中文报告，管理文献综述筛选记录，以及把每一条研究结论和背后的证据及失败尝试对应保存下来。所有工具均可在 Claude Code 与 Cursor 中直接调用，也原生支持 Codex、Gemini CLI 与 Hermes Agent。详细的验证范围与外部接口限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+这是一套给科研人员和 AI 助手使用的学术核查与文献研究工具包。平时用大模型读论文或写综述，最怕模型编造参考文献与算错统计数字，或者读完几十篇文献后找不到某句结论出自哪一页。为了解决这些问题，本仓库把 14 项常用科研工作流与 12 个确定性核查工具封装成标准 MCP 服务和命令行工具，用来核对文献真伪与撤稿状态，重算论文里的统计结果，精读论文并生成带原文页码的中文报告，管理文献综述筛选记录，以及把每一条研究结论和背后的证据及失败尝试对应保存下来。所有工具均可在 Claude Code 与 Cursor 中直接调用，也原生支持 Codex、Gemini CLI 与 Hermes Agent。详细的验证范围与外部接口限制见[审计文档](docs/kernel-architecture.md)。
 
 作者为 Junfu Shi，笔名 SJF，GitHub 账号 xngg1021，联合 Hermes Agent 共同完成。当前授权范围适用 [Source Lineage License 1.0](LICENSE)。
 
@@ -96,7 +96,7 @@ SLL 许可证允许自由使用与研究，支持修改代码与商业应用，�
 
 参考文献格式、统计报告要求与元数据规范因目标期刊与资助机构而异，同时取决于所属学科与所在地区。本仓库以国际标准 **ISO 690:2021** 参考文献与引文指南、**ISO 5127:2017** 文献与信息词汇，以及 **W3C PROV** 来源追溯模型作为通用基线，同时内置中国大陆 GB/T 7714-2025、西班牙 UNE-ISO 690:2024 与德国 DIN ISO 690:2021 等地区规范，并支持 APA 与 IEEE，以及 PRISMA 2020 和 ICMJE 等学科标准。实际写作时，目标投稿期刊或学校的具体规定始终优先于默认规则，详见[学术规范架构](docs/standards/README.md)与[自然学术术语指南](docs/terminology/README.md)。
 
-系统保存研究状态时会自动检查 DOI 等文献编号前后是否一致，防止同一项统计核查同时出现互相矛盾的判定结果，并把尚待人工确认的疑点统一收进待核实清单。缓存校验会直接根据保存下来的原始材料与哈希记录重新核对完整性，哪怕同时删掉状态记录和核验声明，重放时也会报错拦下而不会误判通过。具体修复细节见[四项阻塞收尾说明](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21)。
+系统保存研究状态时会自动检查 DOI 等文献编号前后是否一致，防止同一项统计核查同时出现互相矛盾的判定结果，并把尚待人工确认的疑点统一收进待核实清单。缓存校验会直接根据保存下来的原始材料与哈希记录重新核对完整性，哪怕同时删掉状态记录和核验声明，重放时也会报错拦下而不会误判通过。具体修复细节见[四项阻塞收尾说明](docs/kernel-architecture.md)。
 
 ## 安装与集成
 
@@ -157,7 +157,7 @@ git diff --check
 
 测试套件沿用了固定版本的 Hermes 技能编写规范检查，完整测试本仓库的全部 14 项技能，并对照固定版本的内置与可选技能目录核对引用关系。持续集成环境只在安装依赖包时联网，平时的代码提交测试不会请求外部学术数据库。
 
-GitHub Actions 持续集成覆盖三大操作系统的 x86_64 与 ARM64 架构。测试范围包含运行 Python 3.10、3.12 与 3.14 的 Linux x86_64 与 `ubuntu-24.04-arm` 镜像，同时覆盖 Windows x86_64 与 `windows-11-arm` 以及 `macos-latest` 环境，并附带针对上游 `main` 分支最新代码的实时加载检验。本地完整回归测试套件共通过 1319 项测试，此前 1165 项基线与覆盖范围记录在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)中，远端测试日志会单独标明所测的代码提交哈希。每当代码推送到 `main` 分支时，独立的集成测试工作流还会自动安装 `tests/upstream/provenance.json` 记录的固定版本 Hermes，实测对本仓库执行 `tap add` 与 `search`，以及 `install` 和 `list` 全流程。各项检查的确切版本与限制见[审计文档](docs/project-lineage-audit-20260920.md)。
+GitHub Actions 持续集成覆盖三大操作系统的 x86_64 与 ARM64 架构。测试范围包含运行 Python 3.10、3.12 与 3.14 的 Linux x86_64 与 `ubuntu-24.04-arm` 镜像，同时覆盖 Windows x86_64 与 `windows-11-arm` 以及 `macos-latest` 环境，并附带针对上游 `main` 分支最新代码的实时加载检验。本地完整回归测试套件共通过 1319 项测试，此前 1165 项基线与覆盖范围记录在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)中，远端测试日志会单独标明所测的代码提交哈希。每当代码推送到 `main` 分支时，独立的集成测试工作流还会自动安装 `tests/upstream/provenance.json` 记录的固定版本 Hermes，实测对本仓库执行 `tap add` 与 `search`，以及 `install` 和 `list` 全流程。各项检查的确切版本与限制见[审计文档](docs/kernel-architecture.md)。
 
 [tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，从 4096 个 SHA256 种子候选中选出 30 个代表性测试场景，并自动生成核验覆盖度报告，分别统计 16 类能力族、仓库实际的 14 项技能以及 36 项具体任务目标。每项技能至少出现 2 次并覆盖 2 个不同任务目标，且必须包含该技能的核心目标。
 
@@ -202,10 +202,3 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ```
 
 `--source-checks` 参数会把构建出的源码包解包到仓库目录之外的临时文件夹，设置 `ARK_REPO` 与 `ARK_SDIST` 环境变量，并对解包后的文件依次运行单元测试与静态自检，同时执行代码示例检查与多语言同步校验。wheel 包与源码包各自在全新的虚拟环境中测试安装，`uvx` 则使用本地 wheel 包配合独立缓存目录完成验证。定时运行的轻量级 Hermes 兼容性检查会分别汇报固定基线版本与最新上游主分支的被测提交哈希；外部接口检查报告与任务摘要明确区分 `healthy`、`degraded` 与 `failed` 三种状态，并单独列出跳过的检查项。
-
-## 早期研究与规划文档
-
-下面两份文档是项目立项阶段的探索性设计笔记，不是强制开发路线图；文内的研究方向编号均根据 `docs/direction-primitive-mapping.json` 保存的分组关系自动重算得出。
-
-- [问题图集 v0 英文版](docs/pain-atlas-v0.en.md)与[问题图集 v0 中文版](docs/pain-atlas-v0.zh.md)：梳理日常科研工作各环节的常见阻碍，并为文中的定量说法标注核实状态。
-- [研究计划 v0 英文版](docs/research-plan-v0.en.md)与[研究计划 v0 中文版](docs/research-plan-v0.zh.md)：说明研究对象模型与核心能力划分，并列出候选研究方向及第一阶段的长尾场景分解表。

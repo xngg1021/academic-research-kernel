@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-特定の実行環境に依存しない、自律型エージェント研究ワークフロー向けの決定論的学術研究状態管理・検証ツールセットです。研究成果・資料の取り込み基盤と汎用 Model Context Protocol（MCP）サーバーを通じて、研究対象の識別と来歴・トレーサビリティ、実証的な証拠記録・検証記録、主張と根拠の対応関係、および追記専用の研究上の意思決定と失敗記録を一元的に結び付けます。14 の専門学術スキルが検証済み研究状態の生成と利用を担い、Claude Code、Cursor、Codex、Gemini CLI、Hermes Agent をネイティブにサポートします。検証範囲と外部サービスの制約は[監査文書](docs/project-lineage-audit-20260920.md)に記録されています。
+特定の実行環境に依存しない、自律型エージェント研究ワークフロー向けの決定論的学術研究状態管理・検証ツールセットです。研究成果・資料の取り込み基盤と汎用 Model Context Protocol（MCP）サーバーを通じて、研究対象の識別と来歴・トレーサビリティ、実証的な証拠記録・検証記録、主張と根拠の対応関係、および追記専用の研究上の意思決定と失敗記録を一元的に結び付けます。14 の専門学術スキルが検証済み研究状態の生成と利用を担い、Claude Code、Cursor、Codex、Gemini CLI、Hermes Agent をネイティブにサポートします。検証範囲と外部サービスの制約は[監査文書](docs/kernel-architecture.md)に記録されています。
 
 著者：Junfu Shi（SJF、xngg1021）、Hermes Agent。現在の提供範囲：[Source Lineage License 1.0](LICENSE)。
 
@@ -91,7 +91,7 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 
 引用スタイル、報告ガイドライン、メタデータ規約は対象ジャーナル、助成機関、学問分野、法域に依存します。本リポジトリは **ISO 690:2021**（書誌参照および引用指針）、**ISO 5127:2017**（情報・ドキュメンテーション用語）、**W3C PROV**（来歴データモデル）を国際基準として確立し、各国の地域プロファイル（日本の学協会指針・JIS X 0807 参考、中国大陸 GB/T 7714-2025、スペイン UNE-ISO 690:2024、ドイツ DIN ISO 690:2021 など）および分野別標準（APA 第 7 版、IEEE、ACM、Vancouver、Chicago、PRISMA 2020、ICMJE）に対応しています。投稿先機関・学会の要求事項が既定プロファイルより常に優先されます。詳細は[学術標準アーキテクチャ](docs/standards/README.md)および[自然な学術用語ガイド](docs/terminology/README.md)を参照してください。
 
-バージョン 2.2.0 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21)を参照してください。
+バージョン 2.2.0 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/kernel-architecture.md)を参照してください。
 
 ## 統合とポータブル利用
 
@@ -152,7 +152,7 @@ QA はメタデータ、リファレンス、個人パス・既知シークレ�
 
 固定バージョンの Hermes オーサリングテストは、スキルごとの規則を変えずに再利用されます。上流の全体配布チェックはこの tap には適用されず、本リポジトリのテストハーネスは 14 のスキルすべてを検査し、固定されたバンドル・任意カタログに対してリファレンスを解決します。これは完全な Hermes インストールテストではありません。CI は依存関係のインストールにのみネットワークを使用し、通常のテストは外部の学術 API を呼び出しません。
 
-CI は GitHub Actions により Linux x86_64（Python 3.10–3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 プレビュー Canary（ubuntu-26.04 および ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）、macOS Intel（macos-15-intel）の全プラットフォーム・全アーキテクチャを網羅し、上流の最新ブランチに対するリアルタイム Canary 検証も実行します。ベースライン候補のローカル検証では 1165 件のテストが通過しており、現在の修正結果とカバレッジ境界は[正確性修復記録](docs/maintenance/correctness-repair-20261008.md)に記録されています（リモート証跡は検証対象の HEAD を個別に識別します）。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、本リポジトリに対して tap add、search、install、list を検証します。正確なバージョン、チェック項目、制約は[監査文書](docs/project-lineage-audit-20260920.md)に記載されています。
+CI は GitHub Actions により Linux x86_64（Python 3.10–3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 プレビュー Canary（ubuntu-26.04 および ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）、macOS Intel（macos-15-intel）の全プラットフォーム・全アーキテクチャを網羅し、上流の最新ブランチに対するリアルタイム Canary 検証も実行します。ベースライン候補のローカル検証では 1165 件のテストが通過しており、現在の修正結果とカバレッジ境界は[正確性修復記録](docs/maintenance/correctness-repair-20261008.md)に記録されています（リモート証跡は検証対象の HEAD を個別に識別します）。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、本リポジトリに対して tap add、search、install、list を検証します。正確なバージョン、チェック項目、制約は[監査文書](docs/kernel-architecture.md)に記載されています。
 
 [tools/longtail/](tools/longtail/README.md) には決定論的な長尾因子生成器が格納されています：4096 個の SHA256 シード候補から 30 シナリオを選出し、機械計算による検証カバレッジ報告を出力します。v3 モデルでは能力ファミリー（E01）、リポジトリの実際の 14 スキル（E02）、タスク目標（E03）を個別に集計します。各シナリオは 1 つの主要スキル、サポートされるタスク目標、互換性のある能力を持ち、すべてのスキルは宣言された中核目標を含む少なくとも 2 つの異なる目標の下で 2 回以上出現する必要があります。スキルディレクトリの不一致は検証失敗となります。セマンティック展開（タスクチェーン、オラクル、実行イベント注入）は別段階であり、因子カバレッジはワークフロー実行カバレッジを証明するものではありません。
 
@@ -197,10 +197,3 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ```
 
 `--source-checks` は候補 sdist をリポジトリ外にそのまま展開し、`ARK_REPO` と `ARK_SDIST` をその候補に設定してテスト、静的 QA、実行可能コードブロック、i18n チェックを実行します。wheel と sdist のインストールはそれぞれ新しい環境を使用し、uvx はローカル wheel と独立したキャッシュを使用します。レポートには成果物ハッシュと実際のインポートパスが記録されます。定期実行される軽量な Hermes チェックは固定版と最新版、およびテスト対象の SHA を個別に報告します。外部契約 JSON とジョブサマリーは `healthy`、`degraded`、`failed` を使用し、スキップされたプローブも明示的に記録します。
-
-## 研究・計画文書
-
-以下の 2 文書は探索的な計画リファレンスであり、拘束力のあるロードマップではありません。文書内の方向番号は docs/direction-primitive-mapping.json に保存されたグループ分けから再計算されます。
-
-- [ペインポイント図鑑 v0（英語）](docs/pain-atlas-v0.en.md)、[中文版](docs/pain-atlas-v0.zh.md)：学術知識作業のライフサイクル上の摩擦点。定量主張には出典検証状態を付しています。
-- [研究計画 v0（英語）](docs/research-plan-v0.en.md)、[中文版](docs/research-plan-v0.zh.md)：Research Object モデル、中核機能領域、候補方向、第 1 段階の因子分解行列。

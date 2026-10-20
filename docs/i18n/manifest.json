@@ -117,13 +117,13 @@
       "tier": "european_academic"
     }
   ],
-  "total_canonical_documents": 58,
-  "total_theoretical_instances": 1218,
+  "total_canonical_documents": 50,
+  "total_theoretical_instances": 1050,
   "status_summary": {
-    "canonical_current": 58,
-    "localized_current": 22,
+    "canonical_current": 50,
+    "localized_current": 20,
     "localized_stale": 0,
-    "queued_for_generation": 1138
+    "queued_for_generation": 980
   },
   "documents": [
     {
@@ -131,9 +131,9 @@
       "canonical_title": "Academic Research Kernel Readme",
       "source_path": "README.md",
       "source_locale": "en",
-      "source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+      "source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
       "section_hashes": {
-        "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+        "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
         "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
         "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
         "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -141,16 +141,15 @@
         "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
         "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
         "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-        "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+        "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
         "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
         "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
         "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
         "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-        "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+        "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
         "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-        "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-        "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+        "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
       },
       "genre": "user_facing_documentation",
       "style_intensity": "strong",
@@ -158,10 +157,10 @@
         "en": {
           "path": "README.md",
           "status": "canonical_current",
-          "localized_file_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -169,16 +168,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -186,10 +184,10 @@
         "zh-Hans": {
           "path": "README.zh-Hans.md",
           "status": "localized_current",
-          "localized_file_sha256": "55c90ae9879a896cd1b4381a89e358b13fcbbb87ebf5771970665bbfef5fad86",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "a186b636fb6b64dbc3716174462dc668b9a187b9633137d1292d8ef64df827d3",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -197,16 +195,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -214,10 +211,10 @@
         "zh-Hant": {
           "path": "README.zh-Hant.md",
           "status": "localized_current",
-          "localized_file_sha256": "d014665964318ea488e3751539c34cb124b0a0ae77726424427990a7d33a1b85",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "de2dfce085fcd05c4dce644f4aef6e201d1cbd19abf45fe6d26b8b4f74a4796a",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -225,16 +222,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -242,10 +238,10 @@
         "es": {
           "path": "README.es.md",
           "status": "localized_current",
-          "localized_file_sha256": "1815d05ccf9db08d3b9b6df072d53610f2b9646203f2490d7c628e84c959ce9e",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "41c1330f0912815d4466f64a146055ac2e109b1bb838b9d03375c14efae8f94a",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -253,16 +249,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -270,10 +265,10 @@
         "pt": {
           "path": "i18n/pt/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "015319291abc50b3b8bd6f17223ade3c253d5bb834f76e9043ff14b6ebc7604f",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "f33050b68b17087dbe6f4d7d27522a94b5c954af256d11d4125d004a2b896d23",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -281,16 +276,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -298,10 +292,10 @@
         "fr": {
           "path": "README.fr.md",
           "status": "localized_current",
-          "localized_file_sha256": "d4173ef0db6df5f9d1f6cde24f269b40b14d39e73693ccf8c19c7205866dab5b",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "dafd621a6f2e1312a5d43c1d1c21f53a969b4f834b2df5f4c3ef2a50f7db3cca",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -309,16 +303,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -326,10 +319,10 @@
         "de": {
           "path": "README.de.md",
           "status": "localized_current",
-          "localized_file_sha256": "b36ed2db534237f9f3597408b888456eefe69aaf54e5f115357d933f402214b7",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "4bc5ef6b02954dacf75a2eb7b1fa835250fe75c2dc92581e5629ef625410c4f6",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -337,16 +330,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -354,10 +346,10 @@
         "ru": {
           "path": "i18n/ru/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "430860b1f72377e8e193b7d24986012c9bae6bc89720970fd0676e74116cd4aa",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "6e858d68dfd2cdb053052bffc0d95bb90c4cc0771b03033ab7f103ae4b672f2a",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -365,16 +357,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -382,10 +373,10 @@
         "ja": {
           "path": "README.ja.md",
           "status": "localized_current",
-          "localized_file_sha256": "be22e50cb1e74109e9164ded0dc53496cd95a686c8dbf312345d7e56153ee190",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "32af7a9a581f405b96096dfc1f5ed2e66ec6c790564370dd9e798929f7d5f12f",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -393,16 +384,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -410,10 +400,10 @@
         "ko": {
           "path": "README.ko.md",
           "status": "localized_current",
-          "localized_file_sha256": "2e2ae745f74dcd96ce41ae79c4d7765bf43b3ce56f903f7d9a55f9c7375d1b80",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "efb9bcb801259a462d29e5dae77d4f083064ad6bbd9d96138b7a0d6e06733956",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -421,16 +411,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -438,10 +427,10 @@
         "id": {
           "path": "i18n/id/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "a31cec1215fd3448da0db73a218c0a9d8c1c8a4b8b01f65e919fb23851816fd5",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "6570c657b62d1c920f85dc8339d72bd58579ec353a7a332dc91e7bd16c5801f2",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -449,16 +438,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -466,10 +454,10 @@
         "it": {
           "path": "i18n/it/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "c8e1cdbdea791861529a85000b21bad9f8d105f438e6a998b5879cdd4f0ce5c7",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "6786655b673b0c37f36a62d19b83c3159a5a07ef28a1fa9cdbf13ecf7e498891",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -477,16 +465,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -494,10 +481,10 @@
         "hi": {
           "path": "i18n/hi/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "d02678cd7f2cb7f48da365717874dd17ddf7057da9fefc627dcfa30de0fc2882",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "fb65ea4ec8a5fe44f8cc0e4083647d0e3648eaa393157d397e969b9e403afd2a",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -505,16 +492,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -522,10 +508,10 @@
         "ar": {
           "path": "i18n/ar/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "b8e31b9824a753c36e44b3a1c907b38d8d259d322c7df289a2e19b2a71cc693b",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "be990735ad0bbd6d8587566e12481fffc5a00a71f14dd3a36c1ed2f6cc8be754",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -533,16 +519,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -550,10 +535,10 @@
         "bn": {
           "path": "i18n/bn/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "e854709abd4a808a146b37b7600de43769a124b25e1c05bc23dbca7f413332c3",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "22db6c7561cafae68b0f5138214a5bcb6cb7f774f05c45270feb1af99ac0ec53",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -561,16 +546,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -578,10 +562,10 @@
         "ur": {
           "path": "i18n/ur/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "411c1f95723b62b9355110a358b94393d142d2b0b28cd7ead17b1019e7317038",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "9917c03269c42e9d3d4aa89b28538b233002841143840626f93f575ab723fca8",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -589,16 +573,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -606,10 +589,10 @@
         "vi": {
           "path": "i18n/vi/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "fbeaa94f5f55fdcf83813fda2e9fce4ebb870c371777791d7ca50d87fa4c75e4",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "349007701081f21f8fb62b7f63fbd5badb132f1164aea9188e13508d4b76d00f",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -617,16 +600,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -634,10 +616,10 @@
         "tr": {
           "path": "i18n/tr/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "0524a8c6e8a3e0bcfadb84745a85fe8b04a4956b963c56f13c966efddc044353",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "abd8f7fe9a99a89e67d1151e64e77357c5c09f4b47a18600dcd6355feed63b6b",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -645,16 +627,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -662,10 +643,10 @@
         "fa": {
           "path": "i18n/fa/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "b6d0fd297cba0e72050fc2e7a9ea47c80b943a613a064360b075b19da880fd9d",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "22148e6e303152333fd78ec6b715d069d0320e52e6b443d08cc4fa09d7316bd1",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -673,16 +654,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -690,10 +670,10 @@
         "sw": {
           "path": "i18n/sw/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "6875f5596862bbee12cacc1d206e4991749b413f76aac1c2ee065a27f75b71cf",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "b7b60dfdc022bf7160169d3a7474e4748dbf570c861177e8b0d0e57977d2eda8",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -701,16 +681,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -718,10 +697,10 @@
         "pl": {
           "path": "i18n/pl/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "57e5d9b38dc4d3b975b54c7c2a144f849fee67f53a68aab370f101e006503d38",
-          "translated_from_source_sha256": "af4d035264eaa95eef5cddbde2e05fe4e07a703445124ed3c2d621a6f80a6c72",
+          "localized_file_sha256": "c81cfd9df1ff2ba9281c91ae618dbb68412d41004de12536274cbafb7d9ac959",
+          "translated_from_source_sha256": "21fa6dffc4cf33b96edb9dbfe34bd7a939352ad6c893560fbf5696f6919a4352",
           "translated_from_section_hashes": {
-            "academic-research-kernel": "99c5d91561ce185ca97cc4d04d1623e3cc336bd5b2c08b21fb1e3114aaae9e4d",
+            "academic-research-kernel": "1a4a93db1a99a7f3aadb65daf69a51706b044b688b61b9b3eababe90613fd924",
             "Quick start": "f456cfc6a86a7350153f1c8fefe5d992756562ac6d658c0a9d6371ac12b30584",
             "Verify installation": "6690c3ba53d38d44e8c8eafa005bdbbf5f04b9522185da5ccba8ce8e07461c71",
             "Package install": "b4a13db14c5e5d43088b8d91a6e0a17b3c65c6c6b8d039c00f0992b080c8ef49",
@@ -729,16 +708,15 @@
             "Run from source": "707893ba70b0a8fbc25c17abcea987d0b60cf7ea5e96bde957ea46bf922fa191",
             "License": "2d2c6e916be7a7458204210565f72c0a84094f63beeb9118e3f733e504d4140c",
             "Skills": "f0032bfc4f97f414cf2a3d8f5b4a6434269b35082f4ac0182b4c8fbbd941075b",
-            "Scholarly Standards & Multi-Profile Baseline": "be6db1e05f05319b6af67c877feb869fd2afb1ccd68d3ce007230e9ec161ddd3",
+            "Scholarly Standards & Multi-Profile Baseline": "4b4683875fb5b9ef6d52c74d88d42b4d9bd4238e103fa47b9a722e93273f3621",
             "Integration & Portable Usage": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "1. Universal Agent Plugins v1 & Model Context Protocol (MCP)": "a8e98034d72af1024f8902f864c759a9b62d032090676468ad526c4577752a96",
             "2. Native Hermes Installation": "1b110659f4c886ebecbaaff32f12bca6cdb44357be42459d470543eb23771884",
             "Data-source access": "5cf1bc2b614c57bbce3b5926f69636abc3318eee364e8e46e4565393af2e210f",
             "Research state storage and verification boundaries": "3dedb4a5724d36d37a9a4dbbef3db754cbcfd1bc0c121b04dab6dc3df3155af5",
-            "Validation and testing": "100c39f11886fdb57a5aba5454e27a5f42b453e3b99f9e245420932a9d749ca4",
+            "Validation and testing": "f37e931e65530aa284223d007b90e7f0c663cbaf3db9ad9e922ae823fd2ddbfc",
             "Read and compare papers with a local Agent": "b79a81428488780e037fd4c662ed35afd0106a7f595a49d777bd52a7f80beaaa",
-            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d",
-            "Research and planning documents": "531ab5e7ff85b93c474556132b240d9a938a4d0292c24632b58667e970d867b7"
+            "Statistical precision, retraction tracking, and package verification": "e8bb30d91d763b97b5dffa93ece53a5d64c91b9c4a22432edd04bd654c34ae4d"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -10434,444 +10412,6 @@
       }
     },
     {
-      "doc_id": "doc_agenda_audit_20260917",
-      "canonical_title": "Documentation: agenda-audit-20260917",
-      "source_path": "docs/agenda-audit-20260917.md",
-      "source_locale": "en",
-      "source_sha256": "1f4fcc6e47ec3581a3023174848bf9116c6c299292d572c3c4581e8d35ed5991",
-      "section_hashes": {
-        "议程审计总裁决：hermes-academic-skills 与外部多轮架构提案": "f18fb1120588124cd4e608d019ddebf9b1ab1fa8526fa998f02b2ae05e68a96b",
-        "判定": "3ed8f0bc8ee855ffdd5506eb0d467ae97c567aefe563ab10a2af95ceaf6a6860",
-        "最硬的证据:三个方向数字不可复算": "70a4b81ac21501018d575d25b8f3398285eda53b6487a8959e7917ac27bfddea",
-        "修复清单(五人共识的合并,按成本排序)": "240b42bfbdb49299d4324c3eb7dca440f0015e68a6a2f9722e525c037d5f0e80",
-        "值得肯定的部分": "31076dc3417704f05c1213a267f7ec733dc728934d57e1b47f2cccbdaef1c005",
-        "一句话": "930c8cf10cfc92125b2351ce58ac646b4239c414db92a1340faf1e4f0d92e697"
-      },
-      "genre": "technical_and_schema_specifications",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "docs/agenda-audit-20260917.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "1f4fcc6e47ec3581a3023174848bf9116c6c299292d572c3c4581e8d35ed5991",
-          "translated_from_source_sha256": "1f4fcc6e47ec3581a3023174848bf9116c6c299292d572c3c4581e8d35ed5991",
-          "translated_from_section_hashes": {
-            "议程审计总裁决：hermes-academic-skills 与外部多轮架构提案": "f18fb1120588124cd4e608d019ddebf9b1ab1fa8526fa998f02b2ae05e68a96b",
-            "判定": "3ed8f0bc8ee855ffdd5506eb0d467ae97c567aefe563ab10a2af95ceaf6a6860",
-            "最硬的证据:三个方向数字不可复算": "70a4b81ac21501018d575d25b8f3398285eda53b6487a8959e7917ac27bfddea",
-            "修复清单(五人共识的合并,按成本排序)": "240b42bfbdb49299d4324c3eb7dca440f0015e68a6a2f9722e525c037d5f0e80",
-            "值得肯定的部分": "31076dc3417704f05c1213a267f7ec733dc728934d57e1b47f2cccbdaef1c005",
-            "一句话": "930c8cf10cfc92125b2351ce58ac646b4239c414db92a1340faf1e4f0d92e697"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "i18n/zh-Hans/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/agenda-audit-20260917.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
-      "doc_id": "doc_audit_20260906",
-      "canonical_title": "Documentation: audit-20260906",
-      "source_path": "docs/audit-20260906.md",
-      "source_locale": "zh-Hans",
-      "source_sha256": "b75e24228f3eef96acdff56f2263f887e21b858e729fa9a74d00b58a63df5f72",
-      "section_hashes": {
-        "Correctness hardening audit — 2026-09-06": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Authority and scope": "83ed0a64e77d3443954c949e8252096f0fb099b930d52b0e2d50de33b671691a",
-        "Initial audit seeds": "ec5c02dcf398e7cdbb00eb009ce67e3f37e2753a44a7f1bcc6ff4ca3cd2684a5",
-        "Findings": "ee62bb56c974b7ad6f7806f0ad80198276cfd507ef8e2cdf69c887fe8c716327",
-        "Executed validation": "cea3eca92092b9198ceac0ae0b45f657cd39ab1ac65b406d305a661c938b6ef8",
-        "Hostile self-review and corrections to the first patch": "edb5741094ebd0186e10c17afaec42eb06011f76d6048860f2740e7b88f9a2e7",
-        "Version decisions": "08051dc18e42e6e897bb0de64ad11b9ba69ee3b50970e148ba3217aa489bc3db",
-        "Top five highest-impact fixes": "cd6ad2dce642e7367160293594523bb948d94fb8eb6eed3821c96a6fdb886c0d",
-        "Top five remaining risks": "9dd494e33486b8cc4d668a3ff0916d640d3e8f910e87b84c18986cd1cad8d8c0",
-        "Official source ledger": "3ba9baca387554af902ed507cd10566ab18bb143555bb63e55869b06af277198"
-      },
-      "genre": "technical_and_schema_specifications",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "i18n/en/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "docs/audit-20260906.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "b75e24228f3eef96acdff56f2263f887e21b858e729fa9a74d00b58a63df5f72",
-          "translated_from_source_sha256": "b75e24228f3eef96acdff56f2263f887e21b858e729fa9a74d00b58a63df5f72",
-          "translated_from_section_hashes": {
-            "Correctness hardening audit — 2026-09-06": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "Authority and scope": "83ed0a64e77d3443954c949e8252096f0fb099b930d52b0e2d50de33b671691a",
-            "Initial audit seeds": "ec5c02dcf398e7cdbb00eb009ce67e3f37e2753a44a7f1bcc6ff4ca3cd2684a5",
-            "Findings": "ee62bb56c974b7ad6f7806f0ad80198276cfd507ef8e2cdf69c887fe8c716327",
-            "Executed validation": "cea3eca92092b9198ceac0ae0b45f657cd39ab1ac65b406d305a661c938b6ef8",
-            "Hostile self-review and corrections to the first patch": "edb5741094ebd0186e10c17afaec42eb06011f76d6048860f2740e7b88f9a2e7",
-            "Version decisions": "08051dc18e42e6e897bb0de64ad11b9ba69ee3b50970e148ba3217aa489bc3db",
-            "Top five highest-impact fixes": "cd6ad2dce642e7367160293594523bb948d94fb8eb6eed3821c96a6fdb886c0d",
-            "Top five remaining risks": "9dd494e33486b8cc4d668a3ff0916d640d3e8f910e87b84c18986cd1cad8d8c0",
-            "Official source ledger": "3ba9baca387554af902ed507cd10566ab18bb143555bb63e55869b06af277198"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/audit-20260906.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
       "doc_id": "doc_distribution_release",
       "canonical_title": "Documentation: distribution-release",
       "source_path": "docs/distribution-release.md",
@@ -11095,225 +10635,15 @@
       }
     },
     {
-      "doc_id": "doc_external_proposal_priors_20260917_scfabric",
-      "canonical_title": "Documentation: external-proposal-priors-20260917-scfabric",
-      "source_path": "docs/external-proposal-priors-20260917-scfabric.md",
-      "source_locale": "en",
-      "source_sha256": "9069f4c69d295e61be7e0970760f90674f759704832ccd1756ce178dec691792",
-      "section_hashes": {
-        "先验记录：Scientific Compute Fabric 提案（2026-09-17）": "9ab102d55e7e1ea524d0bca0849a8fc84cdc062fe5f1dc3e953fec068649e73e",
-        "采纳范围": "eb2d0211918752f932dcbd86bf1fad301564b4096c84188b20e8d2fff0b968f1",
-        "先验预期（动手前）": "a81e7ba3eedd6e1f61f9ef51d596ee550592cef4c488629f8431e09abc3ca43c",
-        "被拒绝的部分": "afb4d96659c294ecf96cc4d9fd2d78eea3eefcabab65ae9255642a3fbcb4452d"
-      },
-      "genre": "technical_and_schema_specifications",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "9069f4c69d295e61be7e0970760f90674f759704832ccd1756ce178dec691792",
-          "translated_from_source_sha256": "9069f4c69d295e61be7e0970760f90674f759704832ccd1756ce178dec691792",
-          "translated_from_section_hashes": {
-            "先验记录：Scientific Compute Fabric 提案（2026-09-17）": "9ab102d55e7e1ea524d0bca0849a8fc84cdc062fe5f1dc3e953fec068649e73e",
-            "采纳范围": "eb2d0211918752f932dcbd86bf1fad301564b4096c84188b20e8d2fff0b968f1",
-            "先验预期（动手前）": "a81e7ba3eedd6e1f61f9ef51d596ee550592cef4c488629f8431e09abc3ca43c",
-            "被拒绝的部分": "afb4d96659c294ecf96cc4d9fd2d78eea3eefcabab65ae9255642a3fbcb4452d"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "i18n/zh-Hans/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/external-proposal-priors-20260917-scfabric.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
       "doc_id": "doc_kernel_architecture",
       "canonical_title": "Documentation: kernel-architecture",
       "source_path": "docs/kernel-architecture.md",
       "source_locale": "zh-Hans",
-      "source_sha256": "477b6b08bda789e028b4050c314937ae80110beb29ad22630315828b3dbbcaf1",
+      "source_sha256": "ad0afb280762bc7a97f733dcc1558ad10489c76381610a233118b781538211dc",
       "section_hashes": {
         "Research-State Kernel Architecture & Ingestion Bridge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Overview": "14d37d7fa579cb9b83080d442adf52f1793e4810c6db8d75fdc3baefdf90c710",
+        "Five-Step Paper Research Workflow & Irreducible Scope": "d7b44db7c69836f9754d063116c877907833423b860b4e8ee8515d1adf8aacf6",
         "The Three Core State Layers": "467462b8eb023b8d0cc55aad801d13b5942b51d88bb6a2be5b90b052374148f8",
         "Research Artifact Ingestion Bridge v1": "2e860abe4c746ced8950081b01692b06671d111cc9f3ef9bc711449fe6023f32",
         "Ingestion Adapters (3 Tiers)": "68f71f09d554c4858ce5cd1c1f8a3790046a32535150d64994d3c9e3224238a2",
@@ -11323,7 +10653,7 @@
         "Closure contract rules": "17486bb4af30cf1e5692a9388ccde712014899ea2a1d3bf5f2a15752f88e8d54",
         "Trusted lineage verification context": "704e564fc7902afa4cd8a058233f8d59def30cc07392da6b213211a05e65d1c8",
         "Universal MCP Interface (12 Tools)": "530d8029508a935e4a3c5279bfc229a066cffd2feb08119eb1af1846c66f3e3a",
-        "Verification and residual boundaries": "28b02a42a96445828a3d5ec7b48b8c4b1979bf8d810207acdafc9f9fedbc9db1"
+        "Verification and residual boundaries": "3dd614bcb086f7f12ded80d6160a3ce41b727877fc40a4f3038457b224b3c2e1"
       },
       "genre": "technical_and_schema_specifications",
       "style_intensity": "medium",
@@ -11340,11 +10670,12 @@
         "zh-Hans": {
           "path": "docs/kernel-architecture.md",
           "status": "canonical_current",
-          "localized_file_sha256": "477b6b08bda789e028b4050c314937ae80110beb29ad22630315828b3dbbcaf1",
-          "translated_from_source_sha256": "477b6b08bda789e028b4050c314937ae80110beb29ad22630315828b3dbbcaf1",
+          "localized_file_sha256": "ad0afb280762bc7a97f733dcc1558ad10489c76381610a233118b781538211dc",
+          "translated_from_source_sha256": "ad0afb280762bc7a97f733dcc1558ad10489c76381610a233118b781538211dc",
           "translated_from_section_hashes": {
             "Research-State Kernel Architecture & Ingestion Bridge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "Overview": "14d37d7fa579cb9b83080d442adf52f1793e4810c6db8d75fdc3baefdf90c710",
+            "Five-Step Paper Research Workflow & Irreducible Scope": "d7b44db7c69836f9754d063116c877907833423b860b4e8ee8515d1adf8aacf6",
             "The Three Core State Layers": "467462b8eb023b8d0cc55aad801d13b5942b51d88bb6a2be5b90b052374148f8",
             "Research Artifact Ingestion Bridge v1": "2e860abe4c746ced8950081b01692b06671d111cc9f3ef9bc711449fe6023f32",
             "Ingestion Adapters (3 Tiers)": "68f71f09d554c4858ce5cd1c1f8a3790046a32535150d64994d3c9e3224238a2",
@@ -11354,7 +10685,7 @@
             "Closure contract rules": "17486bb4af30cf1e5692a9388ccde712014899ea2a1d3bf5f2a15752f88e8d54",
             "Trusted lineage verification context": "704e564fc7902afa4cd8a058233f8d59def30cc07392da6b213211a05e65d1c8",
             "Universal MCP Interface (12 Tools)": "530d8029508a935e4a3c5279bfc229a066cffd2feb08119eb1af1846c66f3e3a",
-            "Verification and residual boundaries": "28b02a42a96445828a3d5ec7b48b8c4b1979bf8d810207acdafc9f9fedbc9db1"
+            "Verification and residual boundaries": "3dd614bcb086f7f12ded80d6160a3ce41b727877fc40a4f3038457b224b3c2e1"
           },
           "stale_sections": [],
           "last_verified": "2026-09-19"
@@ -11533,1229 +10864,13 @@
       }
     },
     {
-      "doc_id": "doc_pain_atlas_v0_en",
-      "canonical_title": "Documentation: pain-atlas-v0.en",
-      "source_path": "docs/pain-atlas-v0.en.md",
-      "source_locale": "en",
-      "source_sha256": "ce7f423fac13d613f3f5d9e003f19879de5ffe41c362c3ca35176c77a9f8264c",
-      "section_hashes": {
-        "Academic Knowledge Work Pain Atlas, Version 0": "14833f2c98b3b1b0076e1ca6df332bcaf4681d112a453b0181aa32b3694b2a93",
-        "1. Scope and method": "122990307487b26d564b00218e3cf03441de7acb24ab92223303edbd5172a5d1",
-        "2. Source verification record": "8e5b308ace855d3fbf36d42669d39d2745bd6a90ed6c24ec75d077744efb9ed8",
-        "3. Pain inventory": "aef8e69ec12785fd0766498e1ec1d4c5769989ee16fb64982f950d0c5ae0516f",
-        "Discovery": "afba64bf10658e0ac9500eb8cdf03b705d9bbabce3c4afed37724bcc136593a3",
-        "Reading queue": "b14972402abbf98f96ef48b43ccc8d26fe3f992a0a8af0fb8385f5ee4780625a",
-        "Bibliographic identity": "1f765d5f2531edd9c45faa8c4608b1c15e146b18765f78a7e66dab53a2659d59",
-        "Full-text acquisition": "f962c8ec134a5ad2896b6a6e1e84f92b3f67737b99ab702001ef8db5af7573e9",
-        "PDF and document parsing": "63a8c965f41dd2e355cfe594fd848cff3dc43d62c1dce9ac47085e6d0ee8a27a",
-        "Notes": "2219a8f62510cad9c84826e56ecbcb98a6e0df6fe211b1fdfb7ae83eb710e189",
-        "Citation and evidence": "eaf3bb8f47f14679083e1ed79f6ee5b1f3b5bf30ba786370c7b2c3bc8d007dbf",
-        "Concepts and terminology": "10fdf64679904f14b0d382e3321cfb0c53368036dffd3b7013538d581ee80fd3",
-        "Research gaps": "0b2772d45bcf5498bbcf198955e9de62b74a07bfac356a178ffa38fdc1cd2ba5",
-        "Method extraction": "6218302410063b82ee6e742d145bef682ff1a008d0888c690858fcbe09717893",
-        "Experiment records": "b99525f820ebc5133f4cc616ed7a30f3a88a39ef1765b23f38f36d5b6b6c2345",
-        "Data management": "dda45462720f973873d4b4f0944278165df71420374a867053a44dbed53d032c",
-        "Quantitative analysis": "e5888e3e619e93225eb7383ce300fc155ae6c624bfa9d43cd75fad9ff8ee02ac",
-        "Systematic review": "3821f2d99c615fe66e3e2af5357e62099191c17dd2571fe6e685e1b541eb8a33",
-        "Qualitative research": "1d7e8626714afce790778df275674cb317be1f9b7aa53051c634b9180044e392",
-        "Code reproduction": "8f6acdf0b6bd9f57d3792623893e58c09044bed93624aa617b90563f15709322",
-        "Computational artifacts": "6da56335a38207c087317ecfbc8382a2517f22e8e6f97647ad9efc8631b085a9",
-        "Collaboration": "566316f8df70b22c7028dfc5aed5097c839759ae90dc8afdbb34f81ec0eccc29",
-        "Writing": "864014a6157262e5b7ba305647ae5a41c583947a87b760f821e2c6c7d16fea8c",
-        "Submission": "958b83ff90acb58e477888da56dc694d084761d490e7a80a670b2f3fdf91a2c3",
-        "Peer review and rebuttal": "adc3d4b84f699641f75449aac59f047e474030adb48ed8f8ddf5c97ff65846a3",
-        "Reviewing others' work": "4056ea912b2c75295c77826423abea4bf70d87eaee587537c34102afdbd0c018",
-        "Grants": "93ac41f8631584ee8172fd78b087e792db54d0b3f29caf6831b63fe4d6abef85",
-        "Thesis": "d55f32322fe00418fbc29c5e569b4743812ef50973b25fefd22fafb4a80f4045",
-        "Long-term maintenance": "e8ad0e86e49bad9c5c4f3da0e1a04babe53cca8336d064976edd23b7eb5441f4",
-        "Learning material intake": "4fd154c202d80d1038142f7dccc66993ab5a760c18e461d140378cb7ff3d6537",
-        "Learning state": "464cf2e88c2b3b0f25fcf36842e351ce8b9ace00b97c6af1ce46acca18f2c733",
-        "Learning feedback": "f0f94568a34ff4caffe1462c5eacf094171a125143514792eb3ec9cdca61ddf3",
-        "Transfer": "e5e47d7a70008090fa2454a295388c2a927ef8b1cf5347edc62471f84f5bf930",
-        "Metacognition": "85a097ecff8d10a42eac17a28f7889d011cf6bb2647600e105678159a1f8389e",
-        "4. Method notes": "1eb478f2e0fc6e4dce6d9de3a736502804e7029f3eb7e2fb4be689adbe4c4488"
-      },
-      "genre": "technical_and_schema_specifications",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "docs/pain-atlas-v0.en.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "ce7f423fac13d613f3f5d9e003f19879de5ffe41c362c3ca35176c77a9f8264c",
-          "translated_from_source_sha256": "ce7f423fac13d613f3f5d9e003f19879de5ffe41c362c3ca35176c77a9f8264c",
-          "translated_from_section_hashes": {
-            "Academic Knowledge Work Pain Atlas, Version 0": "14833f2c98b3b1b0076e1ca6df332bcaf4681d112a453b0181aa32b3694b2a93",
-            "1. Scope and method": "122990307487b26d564b00218e3cf03441de7acb24ab92223303edbd5172a5d1",
-            "2. Source verification record": "8e5b308ace855d3fbf36d42669d39d2745bd6a90ed6c24ec75d077744efb9ed8",
-            "3. Pain inventory": "aef8e69ec12785fd0766498e1ec1d4c5769989ee16fb64982f950d0c5ae0516f",
-            "Discovery": "afba64bf10658e0ac9500eb8cdf03b705d9bbabce3c4afed37724bcc136593a3",
-            "Reading queue": "b14972402abbf98f96ef48b43ccc8d26fe3f992a0a8af0fb8385f5ee4780625a",
-            "Bibliographic identity": "1f765d5f2531edd9c45faa8c4608b1c15e146b18765f78a7e66dab53a2659d59",
-            "Full-text acquisition": "f962c8ec134a5ad2896b6a6e1e84f92b3f67737b99ab702001ef8db5af7573e9",
-            "PDF and document parsing": "63a8c965f41dd2e355cfe594fd848cff3dc43d62c1dce9ac47085e6d0ee8a27a",
-            "Notes": "2219a8f62510cad9c84826e56ecbcb98a6e0df6fe211b1fdfb7ae83eb710e189",
-            "Citation and evidence": "eaf3bb8f47f14679083e1ed79f6ee5b1f3b5bf30ba786370c7b2c3bc8d007dbf",
-            "Concepts and terminology": "10fdf64679904f14b0d382e3321cfb0c53368036dffd3b7013538d581ee80fd3",
-            "Research gaps": "0b2772d45bcf5498bbcf198955e9de62b74a07bfac356a178ffa38fdc1cd2ba5",
-            "Method extraction": "6218302410063b82ee6e742d145bef682ff1a008d0888c690858fcbe09717893",
-            "Experiment records": "b99525f820ebc5133f4cc616ed7a30f3a88a39ef1765b23f38f36d5b6b6c2345",
-            "Data management": "dda45462720f973873d4b4f0944278165df71420374a867053a44dbed53d032c",
-            "Quantitative analysis": "e5888e3e619e93225eb7383ce300fc155ae6c624bfa9d43cd75fad9ff8ee02ac",
-            "Systematic review": "3821f2d99c615fe66e3e2af5357e62099191c17dd2571fe6e685e1b541eb8a33",
-            "Qualitative research": "1d7e8626714afce790778df275674cb317be1f9b7aa53051c634b9180044e392",
-            "Code reproduction": "8f6acdf0b6bd9f57d3792623893e58c09044bed93624aa617b90563f15709322",
-            "Computational artifacts": "6da56335a38207c087317ecfbc8382a2517f22e8e6f97647ad9efc8631b085a9",
-            "Collaboration": "566316f8df70b22c7028dfc5aed5097c839759ae90dc8afdbb34f81ec0eccc29",
-            "Writing": "864014a6157262e5b7ba305647ae5a41c583947a87b760f821e2c6c7d16fea8c",
-            "Submission": "958b83ff90acb58e477888da56dc694d084761d490e7a80a670b2f3fdf91a2c3",
-            "Peer review and rebuttal": "adc3d4b84f699641f75449aac59f047e474030adb48ed8f8ddf5c97ff65846a3",
-            "Reviewing others' work": "4056ea912b2c75295c77826423abea4bf70d87eaee587537c34102afdbd0c018",
-            "Grants": "93ac41f8631584ee8172fd78b087e792db54d0b3f29caf6831b63fe4d6abef85",
-            "Thesis": "d55f32322fe00418fbc29c5e569b4743812ef50973b25fefd22fafb4a80f4045",
-            "Long-term maintenance": "e8ad0e86e49bad9c5c4f3da0e1a04babe53cca8336d064976edd23b7eb5441f4",
-            "Learning material intake": "4fd154c202d80d1038142f7dccc66993ab5a760c18e461d140378cb7ff3d6537",
-            "Learning state": "464cf2e88c2b3b0f25fcf36842e351ce8b9ace00b97c6af1ce46acca18f2c733",
-            "Learning feedback": "f0f94568a34ff4caffe1462c5eacf094171a125143514792eb3ec9cdca61ddf3",
-            "Transfer": "e5e47d7a70008090fa2454a295388c2a927ef8b1cf5347edc62471f84f5bf930",
-            "Metacognition": "85a097ecff8d10a42eac17a28f7889d011cf6bb2647600e105678159a1f8389e",
-            "4. Method notes": "1eb478f2e0fc6e4dce6d9de3a736502804e7029f3eb7e2fb4be689adbe4c4488"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "docs/pain-atlas-v0.zh.md",
-          "status": "localized_current",
-          "localized_file_sha256": "45c7cd27b985c3c111973dd89238aa94ad8eb5a9e6a96230644005ec34c3caae",
-          "translated_from_source_sha256": "ce7f423fac13d613f3f5d9e003f19879de5ffe41c362c3ca35176c77a9f8264c",
-          "translated_from_section_hashes": {
-            "Academic Knowledge Work Pain Atlas, Version 0": "14833f2c98b3b1b0076e1ca6df332bcaf4681d112a453b0181aa32b3694b2a93",
-            "1. Scope and method": "122990307487b26d564b00218e3cf03441de7acb24ab92223303edbd5172a5d1",
-            "2. Source verification record": "8e5b308ace855d3fbf36d42669d39d2745bd6a90ed6c24ec75d077744efb9ed8",
-            "3. Pain inventory": "aef8e69ec12785fd0766498e1ec1d4c5769989ee16fb64982f950d0c5ae0516f",
-            "Discovery": "afba64bf10658e0ac9500eb8cdf03b705d9bbabce3c4afed37724bcc136593a3",
-            "Reading queue": "b14972402abbf98f96ef48b43ccc8d26fe3f992a0a8af0fb8385f5ee4780625a",
-            "Bibliographic identity": "1f765d5f2531edd9c45faa8c4608b1c15e146b18765f78a7e66dab53a2659d59",
-            "Full-text acquisition": "f962c8ec134a5ad2896b6a6e1e84f92b3f67737b99ab702001ef8db5af7573e9",
-            "PDF and document parsing": "63a8c965f41dd2e355cfe594fd848cff3dc43d62c1dce9ac47085e6d0ee8a27a",
-            "Notes": "2219a8f62510cad9c84826e56ecbcb98a6e0df6fe211b1fdfb7ae83eb710e189",
-            "Citation and evidence": "eaf3bb8f47f14679083e1ed79f6ee5b1f3b5bf30ba786370c7b2c3bc8d007dbf",
-            "Concepts and terminology": "10fdf64679904f14b0d382e3321cfb0c53368036dffd3b7013538d581ee80fd3",
-            "Research gaps": "0b2772d45bcf5498bbcf198955e9de62b74a07bfac356a178ffa38fdc1cd2ba5",
-            "Method extraction": "6218302410063b82ee6e742d145bef682ff1a008d0888c690858fcbe09717893",
-            "Experiment records": "b99525f820ebc5133f4cc616ed7a30f3a88a39ef1765b23f38f36d5b6b6c2345",
-            "Data management": "dda45462720f973873d4b4f0944278165df71420374a867053a44dbed53d032c",
-            "Quantitative analysis": "e5888e3e619e93225eb7383ce300fc155ae6c624bfa9d43cd75fad9ff8ee02ac",
-            "Systematic review": "3821f2d99c615fe66e3e2af5357e62099191c17dd2571fe6e685e1b541eb8a33",
-            "Qualitative research": "1d7e8626714afce790778df275674cb317be1f9b7aa53051c634b9180044e392",
-            "Code reproduction": "8f6acdf0b6bd9f57d3792623893e58c09044bed93624aa617b90563f15709322",
-            "Computational artifacts": "6da56335a38207c087317ecfbc8382a2517f22e8e6f97647ad9efc8631b085a9",
-            "Collaboration": "566316f8df70b22c7028dfc5aed5097c839759ae90dc8afdbb34f81ec0eccc29",
-            "Writing": "864014a6157262e5b7ba305647ae5a41c583947a87b760f821e2c6c7d16fea8c",
-            "Submission": "958b83ff90acb58e477888da56dc694d084761d490e7a80a670b2f3fdf91a2c3",
-            "Peer review and rebuttal": "adc3d4b84f699641f75449aac59f047e474030adb48ed8f8ddf5c97ff65846a3",
-            "Reviewing others' work": "4056ea912b2c75295c77826423abea4bf70d87eaee587537c34102afdbd0c018",
-            "Grants": "93ac41f8631584ee8172fd78b087e792db54d0b3f29caf6831b63fe4d6abef85",
-            "Thesis": "d55f32322fe00418fbc29c5e569b4743812ef50973b25fefd22fafb4a80f4045",
-            "Long-term maintenance": "e8ad0e86e49bad9c5c4f3da0e1a04babe53cca8336d064976edd23b7eb5441f4",
-            "Learning material intake": "4fd154c202d80d1038142f7dccc66993ab5a760c18e461d140378cb7ff3d6537",
-            "Learning state": "464cf2e88c2b3b0f25fcf36842e351ce8b9ace00b97c6af1ce46acca18f2c733",
-            "Learning feedback": "f0f94568a34ff4caffe1462c5eacf094171a125143514792eb3ec9cdca61ddf3",
-            "Transfer": "e5e47d7a70008090fa2454a295388c2a927ef8b1cf5347edc62471f84f5bf930",
-            "Metacognition": "85a097ecff8d10a42eac17a28f7889d011cf6bb2647600e105678159a1f8389e",
-            "4. Method notes": "1eb478f2e0fc6e4dce6d9de3a736502804e7029f3eb7e2fb4be689adbe4c4488"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/pain-atlas-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
-      "doc_id": "doc_post_pr6_roadmap_reevaluation",
-      "canonical_title": "Documentation: post-pr6-roadmap-reevaluation",
-      "source_path": "docs/post-pr6-roadmap-reevaluation.md",
-      "source_locale": "zh-Hans",
-      "source_sha256": "352f4ef151fe6c91f88120111da422708a7c9eb87b92373fd09d73f2be2c7255",
-      "section_hashes": {
-        "PR #6 后续建设方向解冻与审计重估裁定 (Post-PR6 Roadmap Re-evaluation)": "c5668ad82a5727a92303bcba2442ed1b2be93fea774236f17aa05f4bd99b5026",
-        "1. 既有落地资产盘点 (Implemented Foundations)": "b36211f80a3b27b05975ec2d60ab03200dbf8ee579f9c82f6fbe6ab764f63031",
-        "2. 候选方向敏感性重算 (Sensitivity Analysis over 235 Pain Items)": "f063cc83bc52ff90b5f4c78927e2dd31697778b6f820661aca3f2672dc9c8973",
-        "3. 杠杆比与工程风险评估": "2257af049eeb2d9d799e51d523d5a2e132c2c72dc371b8638af54a71c64878e7",
-        "4. 最终审计裁定与 PR #9 施工纪律": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "审计结论：": "df5c4007fe8ff8faabfd2b1beaae7eb00b3bc397dcea607a71f068c94421572e",
-        "PR #9 架构边界纪律：": "039ac8436147da32de84f36c752e3ba5ad747b3bf50db00f7b4e4c5fa49f59e5"
-      },
-      "genre": "research_plans_and_evaluations",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "i18n/en/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "docs/post-pr6-roadmap-reevaluation.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "352f4ef151fe6c91f88120111da422708a7c9eb87b92373fd09d73f2be2c7255",
-          "translated_from_source_sha256": "352f4ef151fe6c91f88120111da422708a7c9eb87b92373fd09d73f2be2c7255",
-          "translated_from_section_hashes": {
-            "PR #6 后续建设方向解冻与审计重估裁定 (Post-PR6 Roadmap Re-evaluation)": "c5668ad82a5727a92303bcba2442ed1b2be93fea774236f17aa05f4bd99b5026",
-            "1. 既有落地资产盘点 (Implemented Foundations)": "b36211f80a3b27b05975ec2d60ab03200dbf8ee579f9c82f6fbe6ab764f63031",
-            "2. 候选方向敏感性重算 (Sensitivity Analysis over 235 Pain Items)": "f063cc83bc52ff90b5f4c78927e2dd31697778b6f820661aca3f2672dc9c8973",
-            "3. 杠杆比与工程风险评估": "2257af049eeb2d9d799e51d523d5a2e132c2c72dc371b8638af54a71c64878e7",
-            "4. 最终审计裁定与 PR #9 施工纪律": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "审计结论：": "df5c4007fe8ff8faabfd2b1beaae7eb00b3bc397dcea607a71f068c94421572e",
-            "PR #9 架构边界纪律：": "039ac8436147da32de84f36c752e3ba5ad747b3bf50db00f7b4e4c5fa49f59e5"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/post-pr6-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
-      "doc_id": "doc_post_pr9_roadmap_reevaluation",
-      "canonical_title": "Documentation: post-pr9-roadmap-reevaluation",
-      "source_path": "docs/post-pr9-roadmap-reevaluation.md",
-      "source_locale": "zh-Hans",
-      "source_sha256": "5c2253cb7c99684a910449fda610abe7e6987dfa45acfc7f2d966637a90addf8",
-      "section_hashes": {
-        "PR #9 后续建设方向审计重估与 PR #11 立项裁定 (Post-PR9 Roadmap Re-evaluation)": "4a7c6c39a35ac07803a144399b99aeb9af37a4d00b697ddf220728f56171f2f6",
-        "1. 既有落地资产盘点 (Implemented Foundations)": "6a7a91abfafaadc8fc2e37f4a97c4e3f52f65dac6b91228d4e27efb3c3b82a31",
-        "2. 痛点矩阵最新重算核验 (Sensitivity Verification over 235 Pain Items)": "be84852fba2321944ed1d0d22e4812fe26baab4c5ac8b14ad5ba00f49fc8b917",
-        "矩阵数据审计结论：": "882224ca20e29e6cc1663186979d8eb3fcda7734e7f5cb8a512ec398afe52c4b",
-        "3. 杠杆比与工程风险深度评估": "30c1a7e753620ee590256125c9968a5b09283009227321a0aff270347077bf27",
-        "4. 后续建设顺序与治理规划 (Roadmap Phasing)": "dede118f98e346bf80aaa0ac12e4c441fdedf262252a8113e91e31b366b83045",
-        "5. 最终裁定": "12946c5fb52a61a7878c558f6952f5aa931a0fc3ee177b69de4824ccb2a659f2",
-        "6. Post-PR11 执行备忘与 PR #12 全面启动 (PR #12 Execution Memo)": "62bd42dc9090715eba886e727d930c542d5f622312c827e4cdefe2902b6d881f",
-        "7. PR #12 最终候选事实对账（2026-09-20）": "60f43acf8149298137b75a36fde9de5cfd99b5185e63ceaf3eaef526f0e48aa5"
-      },
-      "genre": "research_plans_and_evaluations",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "i18n/en/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "docs/post-pr9-roadmap-reevaluation.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "5c2253cb7c99684a910449fda610abe7e6987dfa45acfc7f2d966637a90addf8",
-          "translated_from_source_sha256": "5c2253cb7c99684a910449fda610abe7e6987dfa45acfc7f2d966637a90addf8",
-          "translated_from_section_hashes": {
-            "PR #9 后续建设方向审计重估与 PR #11 立项裁定 (Post-PR9 Roadmap Re-evaluation)": "4a7c6c39a35ac07803a144399b99aeb9af37a4d00b697ddf220728f56171f2f6",
-            "1. 既有落地资产盘点 (Implemented Foundations)": "6a7a91abfafaadc8fc2e37f4a97c4e3f52f65dac6b91228d4e27efb3c3b82a31",
-            "2. 痛点矩阵最新重算核验 (Sensitivity Verification over 235 Pain Items)": "be84852fba2321944ed1d0d22e4812fe26baab4c5ac8b14ad5ba00f49fc8b917",
-            "矩阵数据审计结论：": "882224ca20e29e6cc1663186979d8eb3fcda7734e7f5cb8a512ec398afe52c4b",
-            "3. 杠杆比与工程风险深度评估": "30c1a7e753620ee590256125c9968a5b09283009227321a0aff270347077bf27",
-            "4. 后续建设顺序与治理规划 (Roadmap Phasing)": "dede118f98e346bf80aaa0ac12e4c441fdedf262252a8113e91e31b366b83045",
-            "5. 最终裁定": "12946c5fb52a61a7878c558f6952f5aa931a0fc3ee177b69de4824ccb2a659f2",
-            "6. Post-PR11 执行备忘与 PR #12 全面启动 (PR #12 Execution Memo)": "62bd42dc9090715eba886e727d930c542d5f622312c827e4cdefe2902b6d881f",
-            "7. PR #12 最终候选事实对账（2026-09-20）": "60f43acf8149298137b75a36fde9de5cfd99b5185e63ceaf3eaef526f0e48aa5"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/post-pr9-roadmap-reevaluation.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
-      "doc_id": "doc_project_lineage_audit_20260920",
-      "canonical_title": "Documentation: project-lineage-audit-20260920",
-      "source_path": "docs/project-lineage-audit-20260920.md",
-      "source_locale": "zh-Hans",
-      "source_sha256": "e2b6418392c5a08177ade3d06eed67072057ce2dbe04826028ccc0e5762126e6",
-      "section_hashes": {
-        "Project Lineage, PR/CI, and Residual-Risk Audit — 2026-09-20": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "Scope and evidence boundary": "5c4309b1c717cd064e39db4752e860398bd4d2a6474e42dd8c3a2d7f2a106e2d",
-        "Executive result": "6ef784fc0e5f3549d01c80d0caca334273a1b4c7ff3fc285f089dd12a8651823",
-        "Complete PR and exact-head CI ledger": "2a3883d15a6d6b5038583c32403facee68a4fe6bfd5e31bb2fbf7a30575a8410",
-        "CI interpretation": "1b60a98269ca4a239d85807f94159a6d957fbe7c013fa61fd78132308054e7a7",
-        "PR #12 remediation ledger": "07b544a13ac7c6559ea341425e5e1f5c3c9c1e02f4d3567f95c05df994462cf9",
-        "Consolidated final-candidate ledger": "b4922a79a6156437907c67162c9285038631a182a6b1226e4bd8bfb8da1e6c78",
-        "Final review round 1 and the single closure repair": "8f6b51cb72661df25196b0c343ad970a7d5d14a388237dc270d36ad6f01843f6",
-        "Four-blocker successor — 2026-09-21": "3d56778f17b1c638b89c00390b6d21c8b4def97b238c4d91c4fbdf3af27e677e",
-        "Necessary adjacent repair after automatic review — 2026-09-21": "6a73b38aeef2e2de9df6a5a922ff7977b70e9f28cdebf43fcc17782af3a0d21c",
-        "Project-planning audit": "da79c8873d72faa52987fb70013f284044944736e46daa25aff5b50c5baa722e",
-        "Code census and accepted historical/operational residuals": "975cd0eaacd932e342bf29523074bf899fbe42e92886f5dc2339f9d9d3a6c8d2",
-        "Verification performed for this remediation": "75c70ddfebdafed5f7f77c5472ddc362ef3f7a7d05b3c53f6ae2ee98c514f3fa"
-      },
-      "genre": "technical_and_schema_specifications",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "i18n/en/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "docs/project-lineage-audit-20260920.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "e2b6418392c5a08177ade3d06eed67072057ce2dbe04826028ccc0e5762126e6",
-          "translated_from_source_sha256": "e2b6418392c5a08177ade3d06eed67072057ce2dbe04826028ccc0e5762126e6",
-          "translated_from_section_hashes": {
-            "Project Lineage, PR/CI, and Residual-Risk Audit — 2026-09-20": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "Scope and evidence boundary": "5c4309b1c717cd064e39db4752e860398bd4d2a6474e42dd8c3a2d7f2a106e2d",
-            "Executive result": "6ef784fc0e5f3549d01c80d0caca334273a1b4c7ff3fc285f089dd12a8651823",
-            "Complete PR and exact-head CI ledger": "2a3883d15a6d6b5038583c32403facee68a4fe6bfd5e31bb2fbf7a30575a8410",
-            "CI interpretation": "1b60a98269ca4a239d85807f94159a6d957fbe7c013fa61fd78132308054e7a7",
-            "PR #12 remediation ledger": "07b544a13ac7c6559ea341425e5e1f5c3c9c1e02f4d3567f95c05df994462cf9",
-            "Consolidated final-candidate ledger": "b4922a79a6156437907c67162c9285038631a182a6b1226e4bd8bfb8da1e6c78",
-            "Final review round 1 and the single closure repair": "8f6b51cb72661df25196b0c343ad970a7d5d14a388237dc270d36ad6f01843f6",
-            "Four-blocker successor — 2026-09-21": "3d56778f17b1c638b89c00390b6d21c8b4def97b238c4d91c4fbdf3af27e677e",
-            "Necessary adjacent repair after automatic review — 2026-09-21": "6a73b38aeef2e2de9df6a5a922ff7977b70e9f28cdebf43fcc17782af3a0d21c",
-            "Project-planning audit": "da79c8873d72faa52987fb70013f284044944736e46daa25aff5b50c5baa722e",
-            "Code census and accepted historical/operational residuals": "975cd0eaacd932e342bf29523074bf899fbe42e92886f5dc2339f9d9d3a6c8d2",
-            "Verification performed for this remediation": "75c70ddfebdafed5f7f77c5472ddc362ef3f7a7d05b3c53f6ae2ee98c514f3fa"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/project-lineage-audit-20260920.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
-      "doc_id": "doc_research_plan_v0_en",
-      "canonical_title": "Documentation: research-plan-v0.en",
-      "source_path": "docs/research-plan-v0.en.md",
-      "source_locale": "en",
-      "source_sha256": "7c2c616cdefbd1a19b4bac65379acd406f7b205be58755ed6807e6d73e227687",
-      "section_hashes": {
-        "Research Plan, Version 0: Primitive-Based Architecture": "d3f24e88e71dc7007d4f959e360635bfc7bdf606733171aa4fba5662c571abca",
-        "1. Motivation": "5845b27f56a3098866bcef584a0e59eef5eae3bc82c2f7fa3f6046caed27424a",
-        "2. Fourteen primitives": "cc5f021f4ad42ddfa7f860c82fd6fa8c59f86523672e8939b6ec5f1dd12def3a",
-        "3. Research Object model": "8c94cddd0797cb274d9d4580935dc4a84e60c1fcdc15366cf9ed1e797c3afbf3",
-        "4. Four planes": "44fffb429718b6168df964a9327693132e68929834a19787470fbc94403b54aa",
-        "5. Candidate directions": "1bf25e1157cc4cc11a01e7d9d5ee589a5f278cb9173eb46da5db8020f1802607",
-        "6. Phase 1: factor decomposition matrix": "b416a08a9bea452397afc0873d378c033dd224147cb12112da7ef36925f7f344",
-        "6.1 Phase 1 result, recomputed from stored grouping (2026-09-17)": "0663915167e8c4ed982615656a786eb87d50806816511effbdfc18a415f260b0",
-        "6.2 Phase 1.5: leverage judgments, downgraded from a gate (2026-09-17)": "0441fbd187f8a92cecabb2a880a8319778e1882dde17515df1ec64715a9a9b75",
-        "7. Design discipline": "e9ea6e38421b28ddba35af850599b98f4af0a57ccc19228012a6fcf73d1e70fc",
-        "8. Acceptance criteria for subsequent rounds": "fb30615c0b10493f6cbebe8f6a3d69eb8a436a0384f74daa3a4f6598a04b594b",
-        "9. Relation to other projects": "f9cbf2bab8a7fc83a9c1f0c37956ac0cef87da1f79ff173d31d5eb7df05b5eda"
-      },
-      "genre": "research_plans_and_evaluations",
-      "style_intensity": "medium",
-      "localized_instances": {
-        "en": {
-          "path": "docs/research-plan-v0.en.md",
-          "status": "canonical_current",
-          "localized_file_sha256": "7c2c616cdefbd1a19b4bac65379acd406f7b205be58755ed6807e6d73e227687",
-          "translated_from_source_sha256": "7c2c616cdefbd1a19b4bac65379acd406f7b205be58755ed6807e6d73e227687",
-          "translated_from_section_hashes": {
-            "Research Plan, Version 0: Primitive-Based Architecture": "d3f24e88e71dc7007d4f959e360635bfc7bdf606733171aa4fba5662c571abca",
-            "1. Motivation": "5845b27f56a3098866bcef584a0e59eef5eae3bc82c2f7fa3f6046caed27424a",
-            "2. Fourteen primitives": "cc5f021f4ad42ddfa7f860c82fd6fa8c59f86523672e8939b6ec5f1dd12def3a",
-            "3. Research Object model": "8c94cddd0797cb274d9d4580935dc4a84e60c1fcdc15366cf9ed1e797c3afbf3",
-            "4. Four planes": "44fffb429718b6168df964a9327693132e68929834a19787470fbc94403b54aa",
-            "5. Candidate directions": "1bf25e1157cc4cc11a01e7d9d5ee589a5f278cb9173eb46da5db8020f1802607",
-            "6. Phase 1: factor decomposition matrix": "b416a08a9bea452397afc0873d378c033dd224147cb12112da7ef36925f7f344",
-            "6.1 Phase 1 result, recomputed from stored grouping (2026-09-17)": "0663915167e8c4ed982615656a786eb87d50806816511effbdfc18a415f260b0",
-            "6.2 Phase 1.5: leverage judgments, downgraded from a gate (2026-09-17)": "0441fbd187f8a92cecabb2a880a8319778e1882dde17515df1ec64715a9a9b75",
-            "7. Design discipline": "e9ea6e38421b28ddba35af850599b98f4af0a57ccc19228012a6fcf73d1e70fc",
-            "8. Acceptance criteria for subsequent rounds": "fb30615c0b10493f6cbebe8f6a3d69eb8a436a0384f74daa3a4f6598a04b594b",
-            "9. Relation to other projects": "f9cbf2bab8a7fc83a9c1f0c37956ac0cef87da1f79ff173d31d5eb7df05b5eda"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hans": {
-          "path": "docs/research-plan-v0.zh.md",
-          "status": "localized_current",
-          "localized_file_sha256": "dbe0685ec8dbb8d822875f79182d2419f5ea03b93cb5b36e0db707e0001b11d4",
-          "translated_from_source_sha256": "7c2c616cdefbd1a19b4bac65379acd406f7b205be58755ed6807e6d73e227687",
-          "translated_from_section_hashes": {
-            "Research Plan, Version 0: Primitive-Based Architecture": "d3f24e88e71dc7007d4f959e360635bfc7bdf606733171aa4fba5662c571abca",
-            "1. Motivation": "5845b27f56a3098866bcef584a0e59eef5eae3bc82c2f7fa3f6046caed27424a",
-            "2. Fourteen primitives": "cc5f021f4ad42ddfa7f860c82fd6fa8c59f86523672e8939b6ec5f1dd12def3a",
-            "3. Research Object model": "8c94cddd0797cb274d9d4580935dc4a84e60c1fcdc15366cf9ed1e797c3afbf3",
-            "4. Four planes": "44fffb429718b6168df964a9327693132e68929834a19787470fbc94403b54aa",
-            "5. Candidate directions": "1bf25e1157cc4cc11a01e7d9d5ee589a5f278cb9173eb46da5db8020f1802607",
-            "6. Phase 1: factor decomposition matrix": "b416a08a9bea452397afc0873d378c033dd224147cb12112da7ef36925f7f344",
-            "6.1 Phase 1 result, recomputed from stored grouping (2026-09-17)": "0663915167e8c4ed982615656a786eb87d50806816511effbdfc18a415f260b0",
-            "6.2 Phase 1.5: leverage judgments, downgraded from a gate (2026-09-17)": "0441fbd187f8a92cecabb2a880a8319778e1882dde17515df1ec64715a9a9b75",
-            "7. Design discipline": "e9ea6e38421b28ddba35af850599b98f4af0a57ccc19228012a6fcf73d1e70fc",
-            "8. Acceptance criteria for subsequent rounds": "fb30615c0b10493f6cbebe8f6a3d69eb8a436a0384f74daa3a4f6598a04b594b",
-            "9. Relation to other projects": "f9cbf2bab8a7fc83a9c1f0c37956ac0cef87da1f79ff173d31d5eb7df05b5eda"
-          },
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "zh-Hant": {
-          "path": "i18n/zh-Hant/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "es": {
-          "path": "i18n/es/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pt": {
-          "path": "i18n/pt/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fr": {
-          "path": "i18n/fr/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "de": {
-          "path": "i18n/de/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ru": {
-          "path": "i18n/ru/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ja": {
-          "path": "i18n/ja/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ko": {
-          "path": "i18n/ko/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "id": {
-          "path": "i18n/id/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "it": {
-          "path": "i18n/it/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "hi": {
-          "path": "i18n/hi/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ar": {
-          "path": "i18n/ar/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "bn": {
-          "path": "i18n/bn/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "ur": {
-          "path": "i18n/ur/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "vi": {
-          "path": "i18n/vi/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "tr": {
-          "path": "i18n/tr/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "fa": {
-          "path": "i18n/fa/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "sw": {
-          "path": "i18n/sw/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        },
-        "pl": {
-          "path": "i18n/pl/docs/research-plan-v0.en.md",
-          "status": "queued_for_generation",
-          "localized_file_sha256": null,
-          "translated_from_source_sha256": null,
-          "translated_from_section_hashes": null,
-          "stale_sections": [],
-          "last_verified": "2026-09-19"
-        }
-      }
-    },
-    {
       "doc_id": "doc_scientific_compute_fabric",
       "canonical_title": "Documentation: scientific-compute-fabric",
       "source_path": "docs/scientific-compute-fabric.md",
       "source_locale": "en",
-      "source_sha256": "386e225f1b667ba20303536ba84eabcacbe9f36d806562da9046c3d071fc5a92",
+      "source_sha256": "d588eacc10efcbdf65fbbd7372eea050563c24c9e431518804dece7a7ddc8702",
       "section_hashes": {
-        "Scientific Compute Fabric, v0.1": "22b73a8e7e97546517b147a2daa366502a42f960bc8e040acf986d5ff2b8b6d1",
+        "Scientific Compute Fabric, v0.1": "b61e99f9f2a112f1c35515cceb42b2a2ecff89fdb14c25392386440a2e1e5326",
         "What it is": "78b95d65073734670d7ffcdcc7d2f9b00d8c0dfe44073645878ecab7ac5e7bba",
         "Parity contract": "e7e80c958e4eaa17e3ca72fd2af7ca7e9342d1bba9203929299392d8cadbad7b",
         "First-round measurements (single-machine snapshot)": "49b7421ba126865bb567ee00db288aebfe3738b24bfb320041d18acbc13033cd",
@@ -12768,10 +10883,10 @@
         "en": {
           "path": "docs/scientific-compute-fabric.md",
           "status": "canonical_current",
-          "localized_file_sha256": "386e225f1b667ba20303536ba84eabcacbe9f36d806562da9046c3d071fc5a92",
-          "translated_from_source_sha256": "386e225f1b667ba20303536ba84eabcacbe9f36d806562da9046c3d071fc5a92",
+          "localized_file_sha256": "d588eacc10efcbdf65fbbd7372eea050563c24c9e431518804dece7a7ddc8702",
+          "translated_from_source_sha256": "d588eacc10efcbdf65fbbd7372eea050563c24c9e431518804dece7a7ddc8702",
           "translated_from_section_hashes": {
-            "Scientific Compute Fabric, v0.1": "22b73a8e7e97546517b147a2daa366502a42f960bc8e040acf986d5ff2b8b6d1",
+            "Scientific Compute Fabric, v0.1": "b61e99f9f2a112f1c35515cceb42b2a2ecff89fdb14c25392386440a2e1e5326",
             "What it is": "78b95d65073734670d7ffcdcc7d2f9b00d8c0dfe44073645878ecab7ac5e7bba",
             "Parity contract": "e7e80c958e4eaa17e3ca72fd2af7ca7e9342d1bba9203929299392d8cadbad7b",
             "First-round measurements (single-machine snapshot)": "49b7421ba126865bb567ee00db288aebfe3738b24bfb320041d18acbc13033cd",

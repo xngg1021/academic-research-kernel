@@ -1,6 +1,6 @@
 # Scientific Compute Fabric, v0.1
 
-Status: first-round experiment, 2026-09-17. Proposal provenance and the maintainer's prior expectations are recorded in docs/external-proposal-priors-20260917-scfabric.md. This layer is thin by design: it does not replace NumPy/SciPy/PyTorch, and it never re-wraps their optimized BLAS.
+Status: first-round experiment, 2026-09-17. This layer is thin by design: it does not replace NumPy/SciPy/PyTorch, and it never re-wraps their optimized BLAS.
 
 ## What it is
 

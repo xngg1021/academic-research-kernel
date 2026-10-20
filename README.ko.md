@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-특정 실행 환경에 종속되지 않는 자율 에이전트 연구 워크플로용 결정론적 학술 연구 상태 관리 및 검증 도구 모음입니다. 연구 자료 수집 및 파싱 계층과 범용 Model Context Protocol(MCP) 서버를 통해 연구 객체 식별과 이력·추적성, 실증적 근거 기록 및 검증 기록, 주장과 근거의 연결, 그리고 추가 전용 연구 의사결정 및 실패 시도 기록을 하나로 통합합니다. 14개의 전문 학술 스킬이 검증된 연구 상태의 생산자이자 소비자로 작동하며, Claude Code, Cursor, Codex, Gemini CLI, Hermes Agent를 기본 지원합니다. 검증 범위와 외부 서비스 제약은 [감사 문서](docs/project-lineage-audit-20260920.md)에 기록되어 있습니다.
+특정 실행 환경에 종속되지 않는 자율 에이전트 연구 워크플로용 결정론적 학술 연구 상태 관리 및 검증 도구 모음입니다. 연구 자료 수집 및 파싱 계층과 범용 Model Context Protocol(MCP) 서버를 통해 연구 객체 식별과 이력·추적성, 실증적 근거 기록 및 검증 기록, 주장과 근거의 연결, 그리고 추가 전용 연구 의사결정 및 실패 시도 기록을 하나로 통합합니다. 14개의 전문 학술 스킬이 검증된 연구 상태의 생산자이자 소비자로 작동하며, Claude Code, Cursor, Codex, Gemini CLI, Hermes Agent를 기본 지원합니다. 검증 범위와 외부 서비스 제약은 [감사 문서](docs/kernel-architecture.md)에 기록되어 있습니다.
 
 저자: Junfu Shi (SJF, xngg1021), Hermes Agent. 현재 제공 범위: [Source Lineage License 1.0](LICENSE).
 
@@ -91,7 +91,7 @@ SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사
 
 인용 양식, 보고 지침, 메타데이터 규약은 대상 학술지, 연구지원기관, 학문 분야, 관할권에 따라 달라집니다. 본 저장소는 **ISO 690:2021**(서지 참조 및 인용 지침), **ISO 5127:2017**(정보 및 문헌 용어), **W3C PROV**(이력 및 출처 데이터 모델)를 국제 기준으로 삼고, 한국 KS X ISO 690 참조, 중국 대륙 GB/T 7714-2025, 스페인 UNE-ISO 690:2024, 독일 DIN ISO 690:2021 등 지역 프로필과 APA 7판, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE 등 학문 분야별 표준을 지원합니다. 투고 대상 기관이나 학술지의 공식 요건이 기본 프로필보다 항상 우선합니다. 자세한 내용은 [학술 표준 아키텍처](docs/standards/README.md) 및 [자연스러운 학술 용어 가이드](docs/terminology/README.md)를 참조하십시오.
 
-버전 2.2.0은 DOI 및 외부 식별자 일관성, 상호 배타적인 정량 판정 플래그, 그리고 커널과 검증 기록이 공유하는 확인 필요 항목 규약을 검증합니다. 캐시 완전성은 보관된 원본 엔벌로프와 정규화된 바인딩으로부터 독립적으로 재구성되므로, 상태 레코드와 캐시 선언을 동시에 삭제하더라도 잘못된 캐시 재생이 승인되지 않습니다. 자세한 내용은 [4대 차단 요소 해결 기록](docs/project-lineage-audit-20260920.md#four-blocker-successor--2026-09-21)을 참조하십시오.
+버전 2.2.0은 DOI 및 외부 식별자 일관성, 상호 배타적인 정량 판정 플래그, 그리고 커널과 검증 기록이 공유하는 확인 필요 항목 규약을 검증합니다. 캐시 완전성은 보관된 원본 엔벌로프와 정규화된 바인딩으로부터 독립적으로 재구성되므로, 상태 레코드와 캐시 선언을 동시에 삭제하더라도 잘못된 캐시 재생이 승인되지 않습니다. 자세한 내용은 [4대 차단 요소 해결 기록](docs/kernel-architecture.md)을 참조하십시오.
 
 ## 통합 및 이식 가능한 사용
 
@@ -152,7 +152,7 @@ QA는 메타데이터, 참조 파일, 개인 경로·알려진 시크릿 패턴,
 
 고정된 Hermes 저작 테스트는 스킬별 규칙을 바꾸지 않고 재사용됩니다. 상류 전체 배포 개체군 검사는 이 tap에 적용되지 않으며, 본 저장소 테스트 하네스는 14개 스킬 전체를 검사하고 고정된 번들·선택 카탈로그에 대해 참조를 해석합니다. 이는 완전한 Hermes 설치 테스트가 아닙니다. CI는 의존성 설치에만 네트워크를 사용하며 일반 테스트는 학술 API를 호출하지 않습니다.
 
-CI는 GitHub Actions를 통해 Linux x86_64(Python 3.10–3.14), Linux ARM64(ubuntu-24.04-arm), Ubuntu 26.04 프리뷰 Canary(ubuntu-26.04 및 ubuntu-26.04-arm), Windows x86_64, Windows ARM64(windows-11-arm), macOS ARM64(macos-latest), macOS Intel(macos-15-intel) 전 플랫폼과 아키텍처에서 전체 QA 스위트를 실행하며, 실시간 상류 Canary 검증을 포함합니다. 기준 후보 로컬 검증은 1165개 테스트를 통과했으며, 현재 수정 결과와 커버리지 경계는 [정확성 복구 기록](docs/maintenance/correctness-repair-20261008.md)에 기록되어 있습니다(원격 근거는 테스트된 HEAD를 별도로 식별합니다). 별도의 tap 통합 워크플로가 main 푸시 시 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 본 저장소에 대해 tap add, search, install, list를 수행합니다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/project-lineage-audit-20260920.md)에 있습니다.
+CI는 GitHub Actions를 통해 Linux x86_64(Python 3.10–3.14), Linux ARM64(ubuntu-24.04-arm), Ubuntu 26.04 프리뷰 Canary(ubuntu-26.04 및 ubuntu-26.04-arm), Windows x86_64, Windows ARM64(windows-11-arm), macOS ARM64(macos-latest), macOS Intel(macos-15-intel) 전 플랫폼과 아키텍처에서 전체 QA 스위트를 실행하며, 실시간 상류 Canary 검증을 포함합니다. 기준 후보 로컬 검증은 1165개 테스트를 통과했으며, 현재 수정 결과와 커버리지 경계는 [정확성 복구 기록](docs/maintenance/correctness-repair-20261008.md)에 기록되어 있습니다(원격 근거는 테스트된 HEAD를 별도로 식별합니다). 별도의 tap 통합 워크플로가 main 푸시 시 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 본 저장소에 대해 tap add, search, install, list를 수행합니다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/kernel-architecture.md)에 있습니다.
 
 [tools/longtail/](tools/longtail/README.md)에는 결정론적 롱테일 요인 생성기가 포함되어 있습니다: 4096개의 SHA256 시드 후보, 30개의 선택된 시나리오 및 기계가 계산한 검증 적용 범위 보고서를 제공합니다. v3 모델은 역량군(E01), 실제 저장소의 14개 스킬(E02), 과제 목표(E03)를 별도로 집계합니다. 각 시나리오는 하나의 주요 스킬, 지원되는 과제 목표 및 호환 역량을 가지며, 모든 스킬은 선언된 핵심 목표를 포함해 최소 두 개의 서로 다른 목표 아래에서 두 번 이상 등장해야 합니다. 스킬 디렉터리 불일치는 검증 실패로 처리됩니다. 의미론적 확장(과제 체인, 오라클 및 실행 이벤트 주입)은 별도 단계로 유지되며, 요인 커버리지가 워크플로 실행 커버리지를 증명하지는 않습니다.
 
@@ -197,10 +197,3 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ```
 
 `--source-checks`는 후보 sdist를 체크아웃 외부에 변경 없이 압축 해제하고, `ARK_REPO`와 `ARK_SDIST`를 해당 후보로 설정한 뒤 테스트, 정적 QA, 실행 코드 블록 및 i18n 검사를 실행합니다. wheel과 sdist 설치는 각각 새로운 환경을 사용하며, uvx는 독립된 캐시와 함께 로컬 wheel을 사용합니다. 보고서에는 산출물 해시와 설치된 임포트 경로가 기록됩니다. 정기 실행되는 경량 고정/최신 Hermes 점검은 테스트된 SHA를 독립적으로 보고합니다. 외부 계약 JSON과 작업 요약은 `healthy`, `degraded`, `failed`를 사용하며 건너뛴 프로브도 명시적으로 남깁니다.
-
-## 연구 및 계획 문서
-
-이 두 문서는 탐색적 계획 참고 자료이며 구속력 있는 로드맵이 아닙니다. 문서의 방향 번호는 docs/direction-primitive-mapping.json에 저장된 그룹화에서 재계산됩니다.
-
-- [고통 지도 v0 (영어)](docs/pain-atlas-v0.en.md), [中文版](docs/pain-atlas-v0.zh.md): 학술 지식 작업 생애주기의 마찰점과 정량 주장에 부여된 검증 상태.
-- [연구 계획 v0 (영어)](docs/research-plan-v0.en.md), [中文版](docs/research-plan-v0.zh.md): Research Object 모델, 핵심 역량 영역, 후보 방향 및 1단계 요인 분해 행렬.

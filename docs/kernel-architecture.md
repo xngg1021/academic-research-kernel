@@ -20,6 +20,20 @@ flowchart TD
 
 ---
 
+## Five-Step Paper Research Workflow & Irreducible Scope
+
+For end-to-end paper reading and verification (`academic-research-kernel research` and `skills/paper-research`), the kernel executes a five-step deterministic pipeline around five irreducible components:
+
+1. **Source Acquisition & Identity Verification (`normalize_identifier.py`, `verify_work.py`, `roi_core.py`)**: Normalize DOIs, arXiv IDs, PMIDs, and OpenAlex IDs; cross-check bibliographic identity and retraction/correction states across OpenAlex, Crossref, Semantic Scholar, and Retraction Watch.
+2. **Document Segmentation & Exact Provenance (`research/sources.py`, `prov_core.py`)**: Hash raw PDF, HTML, XML/JATS, DOCX, XLSX, and LaTeX/BibTeX (`.tex`, `.bib`, `.bbl`) source bundles; index passages with page numbers, printed page labels, or structural locators (`tex:abstract=1`, `tex:table=N`, `tex:block=N`, `bib:entry=<citekey>`).
+3. **Context-Bound Extraction Validation (`research/analysis.py`, `schemas/paper-extraction.schema.json`)**: Verify that every extracted number, literal, unit, group, timepoint, and analysis set is backed by a continuous substring quote at its declared document locator.
+4. **Deterministic Statistical Recomputation & Cross-Paper Comparison (`recompute.py`, `meta_core.py`)**: Recompute 12 statistical checks (`t_p`, `f_p`, `chi2_p`, `z_beta_se`, `ci_consistency`, `or_rr_2x2`, `effect_size`, `hedges_g`, `percentage`, `sd_possible`, `sample_size_df`, `power_ttest`), fixed/random-effects meta-analyses, and two-paper comparability matrices using exact decimal half-open rounding intervals.
+5. **Claim-Evidence Graph Binding & Replayable Reporting (`ceg_core.py`, `ledger_core.py`)**: Automatically attach `supported` or `contradicted` evidence edges to target claims in `ClaimEvidenceGraph`, record analytical decisions in `DecisionLedger`, update `workflow-state.json`, and render traceable Chinese Markdown/HTML reports with offline snapshot replay.
+
+**Scope discipline**: Deterministic code in this repository covers the 86 verification, locator-anchoring, statistical-recomputation, meta-analytic, and provenance invariants where probabilistic language models hallucinate or miscalculate. Pure prose summarization and terminology explanation remain native agent reading tasks, while reference library management, collaborative typesetting, wet-lab LIMS, and spaced-repetition learning belong to external tools (such as Zotero, Overleaf, or dedicated learning systems).
+
+---
+
 ## The Three Core State Layers
 
 1. **Research Object Identity & Lineage (`skills/research-object-identity`)**:
@@ -136,8 +150,6 @@ Tool arguments use closed JSON Schemas and are validated before dispatch. Each r
 
 ## Verification and residual boundaries
 
-The current local regression suite covers **1319 passed** tests (1322 total with the optional CPU PyTorch backend) plus 41 executable documentation fences. Cross-platform CI runs a 7-cell orthogonal matrix across Python 3.10/3.12/3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, and macOS ARM64, alongside isolated wheel/sdist/[research] installation smoke and current-upstream loading.
-
-The complete historical PR/CI ledger, fixed PR #12 review findings, and still-open operational/governance/P3 boundaries are maintained in [the 2026-09-20 project lineage audit](project-lineage-audit-20260920.md).
+The current local regression suite covers **1316 passed** tests (1319 total with the optional CPU PyTorch backend) plus 41 executable documentation fences. Cross-platform CI runs a 7-cell orthogonal matrix across Python 3.10/3.12/3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, and macOS ARM64, alongside isolated wheel/sdist/[research] installation smoke and current-upstream loading.
 
 Final candidate SHA/tree, exact-head CI and cumulative review evidence are bound in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151); historical CI is not substituted for the new candidate.

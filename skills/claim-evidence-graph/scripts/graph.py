@@ -289,17 +289,30 @@ try:
             verify_receipt_reference,
         )
     else:
-        from shared_contracts.evidence import (
-            FrozenJSONMap,
-            ReceiptRef,
-            canonical_receipt_ref_tuple,
-            canonical_academic_receipt_payload_sha256,
-            LineageVerificationContext,
-            require_unique_snapshot_records,
-            validate_lineage_receipt_contract,
-            validate_academic_receipt_contract,
-            verify_receipt_reference,
-        )
+        try:
+            from shared_contracts.evidence import (
+                FrozenJSONMap,
+                ReceiptRef,
+                canonical_receipt_ref_tuple,
+                canonical_academic_receipt_payload_sha256,
+                LineageVerificationContext,
+                require_unique_snapshot_records,
+                validate_lineage_receipt_contract,
+                validate_academic_receipt_contract,
+                verify_receipt_reference,
+            )
+        except ImportError:
+            from academic_research_kernel.shared_contracts.evidence import (
+                FrozenJSONMap,
+                ReceiptRef,
+                canonical_receipt_ref_tuple,
+                canonical_academic_receipt_payload_sha256,
+                LineageVerificationContext,
+                require_unique_snapshot_records,
+                validate_lineage_receipt_contract,
+                validate_academic_receipt_contract,
+                verify_receipt_reference,
+            )
 except ImportError:
     import sys
     from pathlib import Path
@@ -319,17 +332,30 @@ except ImportError:
             verify_receipt_reference,
         )
     else:
-        from shared_contracts.evidence import (
-            FrozenJSONMap,
-            ReceiptRef,
-            canonical_receipt_ref_tuple,
-            canonical_academic_receipt_payload_sha256,
-            LineageVerificationContext,
-            require_unique_snapshot_records,
-            validate_lineage_receipt_contract,
-            validate_academic_receipt_contract,
-            verify_receipt_reference,
-        )
+        try:
+            from shared_contracts.evidence import (
+                FrozenJSONMap,
+                ReceiptRef,
+                canonical_receipt_ref_tuple,
+                canonical_academic_receipt_payload_sha256,
+                LineageVerificationContext,
+                require_unique_snapshot_records,
+                validate_lineage_receipt_contract,
+                validate_academic_receipt_contract,
+                verify_receipt_reference,
+            )
+        except ImportError:
+            from academic_research_kernel.shared_contracts.evidence import (
+                FrozenJSONMap,
+                ReceiptRef,
+                canonical_receipt_ref_tuple,
+                canonical_academic_receipt_payload_sha256,
+                LineageVerificationContext,
+                require_unique_snapshot_records,
+                validate_lineage_receipt_contract,
+                validate_academic_receipt_contract,
+                verify_receipt_reference,
+            )
 
 
 @dataclass(frozen=True)
