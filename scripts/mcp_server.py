@@ -387,7 +387,25 @@ TOOLS = [
                 "sample_df": {"type": "number", "description": "Reported degrees of freedom for N-consistency check"},
                 "reported_n": {"type": "integer", "description": "Reported total sample size N"},
                 "df_kind": {"type": "string", "enum": ["ttest_2sample", "ttest_1sample", "ttest_paired", "ttest_2sample_welch", "regression"], "description": "Test family for df-to-N check"},
-                "n_params": {"type": "integer", "description": "Number of regression parameters (including intercept) when df_kind='regression'"}
+                "n_params": {"type": "integer", "description": "Number of regression parameters (including intercept) when df_kind='regression'"},
+                "partition_total": {"type": "integer", "description": "Declared total count for dataset split conservation check"},
+                "partition_parts": {"type": "array", "items": {"type": "integer"}, "description": "Subset counts (e.g. [train, val, test])"},
+                "partition_reported_shares": {"type": "array", "items": {"type": "number"}, "description": "Optional reported subset shares or percentages"},
+                "partition_tol": {"type": "integer", "description": "Allowed integer rounding tolerance for partition sum, default 0"},
+                "partition_share_tol_pct": {"type": "number", "description": "Allowed percentage-point tolerance for reported shares, default 0.5"},
+                "partition_share_unit": {"type": "string", "enum": ["auto", "percent", "fraction"], "description": "Unit for reported shares, default auto"},
+                "ablation_matrix": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}, "description": "2D numeric matrix (rows=methods/tasks, cols=settings) for constant-offset regularity check"},
+                "ablation_baseline_col": {"type": "integer", "description": "Baseline column index for ablation delta check, default 0"},
+                "ablation_min_rows": {"type": "integer", "description": "Minimum row count for ablation delta check, default 3"},
+                "ablation_tol": {"type": "number", "description": "Tolerance for constant delta check, default 1e-9"},
+                "bandwidth_item_count": {"type": "integer", "description": "Total vector/item count for storage & bandwidth bound check"},
+                "bandwidth_vector_dim": {"type": "integer", "description": "Embedding dimension for storage & bandwidth bound check"},
+                "bandwidth_bytes_per_element": {"type": "integer", "description": "Bytes per element (default 4 for float32)"},
+                "bandwidth_reported_size_mb": {"type": "number", "description": "Optional reported storage footprint in MB or MiB"},
+                "bandwidth_reported_latency_us": {"type": "number", "description": "Optional reported full-scan latency in microseconds"},
+                "bandwidth_max_gbps": {"type": "number", "description": "Hardware memory bandwidth ceiling in GB/s, default 4000.0"},
+                "bandwidth_rel_tol": {"type": "number", "description": "Relative tolerance for storage size comparison, default 0.01"},
+                "bandwidth_claims_full_system": {"type": "boolean", "description": "Whether reported size claims to include full system text/metadata, default true"}
             }
         }
     },
@@ -1002,11 +1020,55 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                     except Exception as exc:
                         failures["sample_size_from_df"] = str(exc)
 
+            if "partition_total" in arguments or "partition_parts" in arguments:
+                if arguments.get("partition_total") is None or arguments.get("partition_parts") is None:
+                    failures["partition_conservation"] = "partition_total and partition_parts are required together"
+                else:
+                    try:
+                        res["partition_conservation"] = recompute_mod.check_partition_conservation(
+                            arguments["partition_total"], arguments["partition_parts"],
+                            reported_shares=arguments.get("partition_reported_shares"),
+                            tol=arguments.get("partition_tol", 0),
+                            share_tol_pct=arguments.get("partition_share_tol_pct", 0.5),
+                            share_unit=arguments.get("partition_share_unit", "auto"),
+                        )
+                    except Exception as exc:
+                        failures["partition_conservation"] = str(exc)
+
+            if "ablation_matrix" in arguments:
+                try:
+                    res["ablation_delta_regularity"] = recompute_mod.check_ablation_delta_regularity(
+                        arguments["ablation_matrix"],
+                        baseline_col=arguments.get("ablation_baseline_col", 0),
+                        min_rows=arguments.get("ablation_min_rows", 3),
+                        tol=arguments.get("ablation_tol", 1e-9),
+                    )
+                except Exception as exc:
+                    failures["ablation_delta_regularity"] = str(exc)
+
+            if "bandwidth_item_count" in arguments or "bandwidth_vector_dim" in arguments:
+                if arguments.get("bandwidth_item_count") is None or arguments.get("bandwidth_vector_dim") is None:
+                    failures["storage_bandwidth_bounds"] = "bandwidth_item_count and bandwidth_vector_dim are required together"
+                else:
+                    try:
+                        res["storage_bandwidth_bounds"] = recompute_mod.check_storage_bandwidth_bounds(
+                            arguments["bandwidth_item_count"], arguments["bandwidth_vector_dim"],
+                            bytes_per_element=arguments.get("bandwidth_bytes_per_element", 4),
+                            reported_size_mb=arguments.get("bandwidth_reported_size_mb"),
+                            reported_latency_us=arguments.get("bandwidth_reported_latency_us"),
+                            max_bandwidth_gbps=arguments.get("bandwidth_max_gbps", 4000.0),
+                            rel_tol=arguments.get("bandwidth_rel_tol", 1e-2),
+                            claims_full_system_storage=arguments.get("bandwidth_claims_full_system", True),
+                        )
+                    except Exception as exc:
+                        failures["storage_bandwidth_bounds"] = str(exc)
+
             computed_any = any(
                 k in res for k in (
                     "recomputed_p", "recomputed_f_p", "recomputed_chi2_p", "recomputed_z",
                     "cohens_d", "ci_consistency", "or_rr", "achieved_power", "required_n",
-                    "sd_possible", "sample_size_from_df",
+                    "sd_possible", "sample_size_from_df", "partition_conservation",
+                    "ablation_delta_regularity", "storage_bandwidth_bounds",
                 )
             )
             if not computed_any and not failures:

@@ -133,8 +133,22 @@ python "${HERMES_SKILL_DIR}/scripts/verify_pdf_identity.py" --pdf <路径> --tit
 | `scripts/normalize_identifier.py` | DOI/arXiv/PMID/OpenAlex ID 归一（纯离线） |
 | `scripts/verify_work.py` | OpenAlex/Crossref 身份核对与字段级对照（可离线） |
 | `scripts/check_updates.py` | Crossref update-to 撤稿/更正反向查询与信号分类 |
-| `scripts/locate_oa.py` | Unpaywall OA 定位（is_oa + best_oa_location） |
+| `scripts/locate_oa.py` | Unpaywall/arXiv/OpenAlex/S2/EuropePMC 多源 OA 定位与摘要回退 |
 | `scripts/verify_pdf_identity.py` | PDF 首页文字/元数据与声明标题、DOI 核对 |
+| `scripts/openreview_audit.py` | OpenReview API v2 单篇评审核查、镜像解析与会刊全量统计 |
+| `scripts/github_repo_forensics.py` | 代码仓库非第三方源码行数、提交活跃度与 README 宣称核查 |
+
+### 会议放榜与 OpenReview 评审核查
+
+先查官方会议公告、统计说明及论文 forum，再确定访问方式；官方 API 遇到访问验证时，可以使用已取得的第三方镜像作带来源和快照时间的替代数据，但不得称为官方实时直连或已核验完整审稿讨论。对镜像抽取脚本，先核对 `--help`、当前入口和镜像字段：
+
+```bash
+python "${HERMES_SKILL_DIR}/scripts/openreview_audit.py" --forum-id <ID> --mirror-json <镜像路径>
+python "${HERMES_SKILL_DIR}/scripts/openreview_audit.py" --venue-stats <镜像路径> --topic-regex "<正则>"
+python "${HERMES_SKILL_DIR}/scripts/github_repo_forensics.py" --repo-dir <本地仓库路径>
+```
+
+每个数字先固定会议年份、快照阶段、原始记录集合和分母：总记录、有效投稿、已出分稿件、留存终审稿件不是同一对象；审稿人的推荐分档、最终决定和论文录用率也须分列。程序化核对分类计数合计、评分条数、逐篇均分和总体分布；跨年比较须用同定义记录与相近阶段。单篇稿件先保存 forum 的原始评审、决定和作者回复；镜像中的零回复字数只说明该字段未计到回复，不能断言作者没有回复。精确分位数须用全体逐篇记录重算，列出严格低于、等于、高于目标均分的人数及并列区间。
 
 ## Procedure
 

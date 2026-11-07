@@ -67,7 +67,29 @@ metadata:
 2. `web_extract` 抓取指南页，提取：字数/页数限制、摘要结构要求、正文结构、参考文献风格、图表规范（分辨率、格式）、投稿系统入口、审稿周期说明。
 3. 输出"投稿清单"（逐项要求 + 来源链接 + 检索日期）。指南页若为动态渲染抓不到，检查当前浏览器后端：默认用 `browser_navigate` → `browser_snapshot`；browser-use 后端用其实际暴露的 `browser_exec`，不混用两套 schema，或如实说明只能拿到部分信息。
 
-注意：投稿指南频繁改版，输出必须注明检索日期，并建议用户投稿前对照官网最终确认。
+注意：投稿指南频繁改版，输出必须注明检索日期和具体条款来源；只有该届政策明示程序性拒稿后果时才称某项缺失会导致该结果。
+
+## 工作流 C2：发表路线与第三方投稿建议核查
+
+1. 先把待核建议拆成可核对象：当前与往届截止、摘要或登记前置条件、时区、并行投稿与扩展稿限制、审稿公开阶段、代码及附件公开政策、录用后注册与展示义务、统计数字与研究方向匹配。把会刊年份、研究轨、短文轨、期刊专轨和 J2C 展示通道分别列行；不把一次检索说成核完全部清单。
+2. 每一行优先打开对应年份的会刊官网政策原文并记录具体链接和检索日。摘要无法替代作者指南；将已按原文核实、仅搜到片段、往届参考与尚未核实分开。凡涉及拒稿后转投、扩展稿与公开风险，查政策生效范围、阶段与例外，避免用某会刊规则概括其他目标。
+3. 数字逐项建立分子和分母：有效投稿、进入最终决定的投稿、撤稿、程序性拒稿与录用论文可能是不同集合。用计算工具重算比率；若官方正文自己的标注与算术不合，明确区分原文标注与独立计算。时区先核对当届原文写的 AoE、UTC 或当地时间，再按对应日期的夏令时换算。
+4. 将投稿、外审、拒稿、撤稿与录用后的可见性分阶段核对，尤其是 OpenReview 提交材料与评审意见的公开节点。对只收录不现场展示的通道，分别核实当届注册费、出版资格与展示方式，往届政策不自动延续。
+5. 讨论复现包时先从论文每项核心结论倒推所需数据、代码、环境与许可证，再检查隐私、保密与版权边界。将研究方向、待证命题、已证明定理、已有实验结果和拟补实验分别列示；先核对代码与原始结果，再说某项材料已经齐备。
+
+## 工作流 C3：投稿前模拟评议与确定性门禁
+
+1. 先确定稿件版本、贡献类型与目标会刊届次；从该届官方审稿指南及实际表单核对评价维度、文字锚点、政策和适用阶段。把跨会刊共通的问题与各会刊当届规则分层，不将镜像字段、二手评论或往届量表写成当前官方硬规则。机器可读的会刊规则、贡献赛道与审稿透镜载于 `references/venue-specs.json`。
+2. 建立原文主张到方法、实验和引用的可定位证据清单，分别检查论断是否成立、比较是否公平、报告是否完整、读者能否理解，以及研究意义是否清楚。不同论文类型需要不同证据；这些维度是待检问题，不预设独立、不可约或固定权重，更不把关联统计包装成自动录用门槛。
+3. 若参考著名学者或学派的审稿特色，先找其本人可定位的论文、公开讲座或明确写出的研究方法，再提炼成具来源的核查问题；将借鉴该公开方法与模拟本人会怎样评价这篇未读稿件分开。不要凭学科名把若干人归为同一口味，或编造他们的个人语气、评分与动机。
+4. 只读模拟评议先列决定性疑点及相应原文位置、所需反证或补充实验、可能改变判断的条件，并把确定性核验结果与审稿人主观判断分列。确定性检查与模板管理已抽为 `scripts/` 下的独立工具：
+
+```bash
+python "${HERMES_SKILL_DIR}/scripts/double_blind_sanitizer.py" <文稿路径或PDF>
+python "${HERMES_SKILL_DIR}/scripts/receipt_to_latex_table.py" --input <收据JSON> --rows <行键> --cols <列键>
+python "${HERMES_SKILL_DIR}/scripts/pre_submission_linter.py" --tex <主tex路径> --venue <会刊键> --contribution-type <赛道键>
+python "${HERMES_SKILL_DIR}/scripts/venue_template_manager.py" --action list-venues
+```
 
 ## 工作流 D：AI 生成成分检测（渠道聚合）
 
@@ -116,8 +138,10 @@ base = Path(os.environ.get('SKILL_DIR', '.')).expanduser().resolve()
 text = (base / 'references/citation-styles.md').read_text(encoding='utf-8')
 for style in ('ISO 690', 'APA', 'MLA', 'Chicago', 'IEEE', 'AMA', 'GB/T 7714'):
     assert style in text, f'引用风格 {style} 缺失'
-for ref in ('submission-letters.md', 'china-academia.md', 'mainland-china-academia.md'):
+for ref in ('submission-letters.md', 'china-academia.md', 'mainland-china-academia.md', 'venue-specs.json'):
     assert (base / 'references' / ref).is_file(), f'{ref} 缺失'
+for scr in ('double_blind_sanitizer.py', 'receipt_to_latex_table.py', 'pre_submission_linter.py', 'venue_template_manager.py'):
+    assert (base / 'scripts' / scr).is_file(), f'{scr} 缺失'
 print('academic-writing reference verification passed')
 ```
 

@@ -57,6 +57,8 @@ Inspect the returned validation, calculations, ingestion receipt and reports. Re
 
 Before handing over a report, have a separate subagent/context read the original key regions and produce its reference fields before viewing your candidate or report. Without a second context, reread the original regions in a separate review stage and describe that scope accurately. Check at least ten applicable fields per paper, including numeric context and locators; record the fields actually reviewed. Recompute at least one eligible numeric chain using an independent formula/reference when available. Correct demonstrated extraction or interpretation errors and regenerate the report. Do not treat ten fields as verification of every sentence.
 
+For a batch audit, first define the selection frame and per-paper inclusion list. Build one row per included paper and one locator-backed record per audited claim before writing any aggregate summary.
+
 Deliver the Chinese Markdown and HTML report, extraction JSON, numeric result JSON and source manifest together. Lead with the research question, methods, results, actual checks and the most consequential supported issue. Separate author reports, computed values and Agent interpretation. Cite actual file/page or segment positions and show specific missing inputs. If no anomaly is found, report the values actually checked.
 
 ## Compare two papers
