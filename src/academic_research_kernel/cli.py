@@ -210,6 +210,43 @@ def main(argv=None):
     bib_cmd.add_argument('--input', required=True, help='input file path')
     meta_cmd = commands.add_parser('meta-analyze', help='run fixed/random-effects pooling, heterogeneity, and publication-bias checks')
     meta_cmd.add_argument('--input', required=True, help='JSON file with {"studies": [{"yi": float, "vi": float, ...}]}')
+    tf_cmd = commands.add_parser('table-forensics', help='audit AI/CS paper tables for partition conservation, constant-offset deltas, and bandwidth bounds')
+    tf_cmd.add_argument('--input', required=True, help='JSON file specifying partition, ablation_matrix, or storage_bandwidth parameters')
+    or_cmd = commands.add_parser('openreview-audit', help='audit OpenReview submission status, decision, rating distribution, or venue stats')
+    or_cmd.add_argument('--forum-id', help='OpenReview forum ID')
+    or_cmd.add_argument('--input-json', help='offline OpenReview notes JSON file')
+    or_cmd.add_argument('--mirror-json', help='optional OpenReview mirror JSON list for 403 fallback')
+    or_cmd.add_argument('--venue-stats', help='compute macro statistics over a venue mirror JSON list')
+    or_cmd.add_argument('--topic-regex', help='optional regex filter for --venue-stats')
+    rf_cmd = commands.add_parser('repo-forensics', help='audit code repository structure (first-party core vs vendored vs unit tests)')
+    rf_cmd.add_argument('--local-repo', '--repo-dir', dest='local_repo', help='local repository path')
+    rf_cmd.add_argument('--tree-json', help='offline GitHub git/trees JSON file')
+    rf_cmd.add_argument('--github-repo', help='remote GitHub owner/repo')
+    ltx_cmd = commands.add_parser('receipt-to-latex', help='render a deterministic booktabs LaTeX table from a JSON receipt')
+    ltx_cmd.add_argument('--input', required=True, help='JSON table specification file')
+    ltx_cmd.add_argument('--output', help='optional output .tex path')
+    sb_cmd = commands.add_parser('sanitize-blind', help='scan a manuscript or reproduction bundle for double-blind anonymity leaks')
+    sb_cmd.add_argument('target_pos', nargs='?', help='manuscript file or directory to scan (positional)')
+    sb_cmd.add_argument('--target', dest='target_opt', help='manuscript file or directory to scan')
+    sb_cmd.add_argument('--forbidden-token', action='append', default=[], help='forbidden author/repo/issue token (repeatable)')
+    ps_cmd = commands.add_parser('pre-submission-lint', help='audit manuscript for venue formatting, required sections, dispersion, and CEG bindings')
+    ps_cmd.add_argument('--tex', required=True, help='path to main .tex entry file')
+    ps_cmd.add_argument('--venue', default='iclr', help='target venue key')
+    ps_cmd.add_argument('--phase', choices=['submission', 'rebuttal', 'camera_ready'], default='submission', help='submission phase')
+    ps_cmd.add_argument('--contribution-type', default='general_empirical', help='contribution type key')
+    ps_cmd.add_argument('--pdf', help='optional compiled PDF path')
+    ps_cmd.add_argument('--ceg', help='optional ClaimEvidenceGraph JSON path')
+    ps_cmd.add_argument('--require-ceg-binding', action='store_true', help='flag ungrounded quantitative claims in abstract/conclusion')
+    ps_cmd.add_argument('--output', help='optional output JSON path')
+    vt_cmd = commands.add_parser('venue-template', help='list target venue contracts or scaffold an external manuscript workspace')
+    vt_cmd.add_argument('--action', choices=['list-venues', 'scaffold', 'verify-styles'], default='list-venues')
+    vt_cmd.add_argument('--workspace-dir', help='target parent workspace directory for scaffold')
+    vt_cmd.add_argument('--slug', help='project directory slug')
+    vt_cmd.add_argument('--venue', default='iclr', help='venue key')
+    vt_cmd.add_argument('--year', type=int, default=2027, help='target publication year')
+    vt_cmd.add_argument('--contribution-type', default='general_empirical', help='contribution type key')
+    vt_cmd.add_argument('--force', action='store_true', help='overwrite existing workspace if venue differs')
+    vt_cmd.add_argument('--manuscript-dir', help='manuscript directory for verify-styles')
     research = commands.add_parser('research', help='prepare/read/verify/recompute/report with a local agent')
     steps = research.add_subparsers(dest='step', required=True)
     prep = steps.add_parser('prepare', help='acquire and locate raw materials; agent continues semantic reading')
@@ -238,6 +275,126 @@ def main(argv=None):
                 if key not in ('version', 'status'):
                     print(f'{key}: {json.dumps(value, ensure_ascii=False)}')
         return 0 if report['status'] == 'ok' else 1
+    if args.command in ('table-forensics', 'openreview-audit', 'repo-forensics', 'receipt-to-latex', 'sanitize-blind', 'pre-submission-lint', 'venue-template'):
+        try:
+            if args.command == 'table-forensics':
+                recomp_mod = _load_bundled_module('recompute', 'skills/quantitative-paper-audit/scripts/recompute.py')
+                spec = json.loads(Path(args.input).read_text(encoding='utf-8'))
+                if not isinstance(spec, dict):
+                    raise ValueError('table-forensics input must be a JSON object')
+                out = {}
+                if 'partition' in spec:
+                    p = spec['partition']
+                    out['partition_conservation'] = recomp_mod.check_partition_conservation(
+                        p['total'], p['parts'], reported_shares=p.get('reported_shares'),
+                        tol=p.get('tol', 0), share_tol_pct=p.get('share_tol_pct', 0.5),
+                        share_unit=p.get('share_unit', 'auto'),
+                    )
+                if 'ablation_matrix' in spec:
+                    ab = spec['ablation_matrix']
+                    if isinstance(ab, dict):
+                        out['ablation_delta_regularity'] = recomp_mod.check_ablation_delta_regularity(
+                            ab['matrix'], baseline_col=ab.get('baseline_col', spec.get('baseline_col', 0)),
+                            min_rows=ab.get('min_rows', spec.get('min_rows', 3)),
+                            tol=ab.get('tol', spec.get('tol', 1e-9)),
+                        )
+                    else:
+                        out['ablation_delta_regularity'] = recomp_mod.check_ablation_delta_regularity(
+                            ab, baseline_col=spec.get('baseline_col', 0),
+                            min_rows=spec.get('min_rows', 3),
+                            tol=spec.get('tol', 1e-9),
+                        )
+                if 'storage_bandwidth' in spec:
+                    sb = spec['storage_bandwidth']
+                    out['storage_bandwidth_bounds'] = recomp_mod.check_storage_bandwidth_bounds(
+                        sb['item_count'], sb['vector_dim'],
+                        bytes_per_element=sb.get('bytes_per_element', 4),
+                        reported_size_mb=sb.get('reported_size_mb'),
+                        reported_latency_us=sb.get('reported_latency_us'),
+                        max_bandwidth_gbps=sb.get('max_bandwidth_gbps', 4000.0),
+                        rel_tol=sb.get('rel_tol', 1e-2),
+                        claims_full_system_storage=sb.get('claims_full_system_storage', True),
+                    )
+                if not out:
+                    raise ValueError('table-forensics input must contain at least one of: partition, ablation_matrix, storage_bandwidth')
+                out['consistent'] = all(v.get('consistent') is True for v in out.values() if isinstance(v, dict))
+                print(json.dumps(out, ensure_ascii=False, indent=2))
+                return 0
+            if args.command == 'openreview-audit':
+                if not (args.forum_id or args.input_json or args.venue_stats):
+                    raise ValueError('openreview-audit requires --forum-id, --input-json, or --venue-stats')
+                or_mod = _load_bundled_module('openreview_audit', 'skills/academic-source-verification/scripts/openreview_audit.py')
+                sub_argv = []
+                if args.forum_id:
+                    sub_argv.extend(['--forum-id', args.forum_id])
+                if args.input_json:
+                    sub_argv.extend(['--input-json', args.input_json])
+                if args.mirror_json:
+                    sub_argv.extend(['--mirror-json', args.mirror_json])
+                if args.venue_stats:
+                    sub_argv.extend(['--venue-stats', args.venue_stats])
+                if args.topic_regex:
+                    sub_argv.extend(['--topic-regex', args.topic_regex])
+                return or_mod.main(sub_argv)
+            if args.command == 'repo-forensics':
+                if not (args.local_repo or args.tree_json or args.github_repo):
+                    raise ValueError('repo-forensics requires one of --local-repo, --tree-json, or --github-repo')
+                rf_mod = _load_bundled_module('github_repo_forensics', 'skills/academic-source-verification/scripts/github_repo_forensics.py')
+                sub_argv = []
+                if args.local_repo:
+                    sub_argv.extend(['--local-repo', args.local_repo])
+                if args.tree_json:
+                    sub_argv.extend(['--tree-json', args.tree_json])
+                if args.github_repo:
+                    sub_argv.extend(['--github-repo', args.github_repo])
+                return rf_mod.main(sub_argv)
+            if args.command == 'receipt-to-latex':
+                ltx_mod = _load_bundled_module('receipt_to_latex_table', 'skills/academic-writing/scripts/receipt_to_latex_table.py')
+                sub_argv = ['--input', args.input]
+                if args.output:
+                    sub_argv.extend(['--output', args.output])
+                return ltx_mod.main(sub_argv)
+            if args.command == 'sanitize-blind':
+                sb_target = args.target_opt or args.target_pos
+                if not sb_target:
+                    raise ValueError('sanitize-blind requires --target <path> or a positional target path')
+                sb_mod = _load_bundled_module('double_blind_sanitizer', 'skills/academic-writing/scripts/double_blind_sanitizer.py')
+                sub_argv = ['--target', sb_target]
+                for tok in args.forbidden_token:
+                    sub_argv.extend(['--forbidden-token', tok])
+                return sb_mod.main(sub_argv)
+            if args.command == 'pre-submission-lint':
+                ps_mod = _load_bundled_module('pre_submission_linter', 'skills/academic-writing/scripts/pre_submission_linter.py')
+                sub_argv = ['--tex', args.tex, '--venue', args.venue, '--phase', args.phase, '--contribution-type', args.contribution_type]
+                if args.pdf:
+                    sub_argv.extend(['--pdf', args.pdf])
+                if args.ceg:
+                    sub_argv.extend(['--ceg', args.ceg])
+                if args.require_ceg_binding:
+                    sub_argv.append('--require-ceg-binding')
+                if args.output:
+                    sub_argv.extend(['--output', args.output])
+                return ps_mod.main(sub_argv)
+            if args.command == 'venue-template':
+                vt_mod = _load_bundled_module('venue_template_manager', 'skills/academic-writing/scripts/venue_template_manager.py')
+                sub_argv = ['--action', args.action, '--venue', args.venue, '--year', str(args.year), '--contribution-type', args.contribution_type]
+                if args.workspace_dir:
+                    sub_argv.extend(['--workspace-dir', args.workspace_dir])
+                if args.slug:
+                    sub_argv.extend(['--slug', args.slug])
+                if args.force:
+                    sub_argv.append('--force')
+                if args.manuscript_dir:
+                    sub_argv.extend(['--manuscript-dir', args.manuscript_dir])
+                return vt_mod.main(sub_argv)
+        except Exception as exc:
+            print(json.dumps({
+                'status': 'error',
+                'command': args.command,
+                'error': str(exc),
+                'hint': _error_hint(args.command, str(exc)),
+            }, ensure_ascii=False, indent=2))
+            return 1
     if args.command in ('verify-source', 'bibliography', 'meta-analyze'):
         try:
             if args.command == 'verify-source':

@@ -219,16 +219,15 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
         with:
           python-version: '3.14'
-      - name: Install latest Hermes and test CLI smoke
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ./.hermes-latest
-          hermes --version
-          hermes chat --help | grep -E -- '--query-file'
-          hermes chat --help | grep -E -- '--ignore-rules'
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
           version: '0.12.17'
+      - name: Install latest Hermes and test CLI smoke
+        run: |
+          (cd .hermes-latest && uv pip install --system -e .)
+          hermes --version
+          hermes chat --help | grep -E -- '--query-file'
+          hermes chat --help | grep -E -- '--ignore-rules'
       - run: python scripts/hermes_runtime_smoke.py
       - name: Validate Agent Plugins v1 live loading under Hermes loader
         run: |

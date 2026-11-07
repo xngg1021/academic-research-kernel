@@ -424,6 +424,60 @@ def fetch(url, path):
     raise RuntimeError('download exhausted')
 
 
+def discover_oa_fallback_urls(doi: str) -> list[tuple[str, str, str]]:
+    """Query OpenAlex when a direct publisher DOI request is blocked (e.g. 403 WAF)."""
+    from urllib.parse import quote
+    clean_doi = re.sub(r'^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)', '', str(doi or '').strip(), flags=re.I).strip('/')
+    if not clean_doi:
+        return []
+    api_url = 'https://api.openalex.org/works/https://doi.org/' + quote(clean_doi, safe='')
+    public_url(api_url)
+    opener = build_opener(PublicRedirect())
+    req = Request(api_url, headers={'User-Agent': 'academic-research-kernel/2.2', 'Accept': 'application/json'})
+    try:
+        with opener.open(req, timeout=15) as resp:
+            raw_bytes = resp.read(2 * 1024 * 1024 + 1)
+            if len(raw_bytes) > 2 * 1024 * 1024:
+                return []
+            work = json.loads(raw_bytes.decode('utf-8'))
+    except Exception:
+        return []
+    if not isinstance(work, dict):
+        return []
+    rec_doi = re.sub(r'^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)', '', str(work.get('doi') or '').strip(), flags=re.I).strip('/')
+    if rec_doi and rec_doi.lower() != clean_doi.lower():
+        return []
+    found = []
+    seen = set()
+    repo_idx = 0
+    for loc in work.get('locations') or []:
+        if not isinstance(loc, dict) or not loc.get('is_oa'):
+            continue
+        src = loc.get('source') if isinstance(loc.get('source'), dict) else {}
+        u = loc.get('pdf_url')
+        if src.get('type') == 'repository' and isinstance(u, str) and u.startswith(('http://', 'https://')) and u not in seen:
+            seen.add(u)
+            fname = 'oa-repository.pdf' if repo_idx == 0 else f'oa-repository-{repo_idx + 1}.pdf'
+            repo_idx += 1
+            found.append((u, fname, 'main'))
+            if len(found) >= 2:
+                break
+    oa_meta = work.get('open_access') if isinstance(work.get('open_access'), dict) else {}
+    work_is_oa = bool(oa_meta.get('is_oa'))
+    best = work.get('best_oa_location') if isinstance(work.get('best_oa_location'), dict) else {}
+    best_u = best.get('pdf_url')
+    if (
+        best.get('is_oa') is not False
+        and (best.get('is_oa') or work_is_oa)
+        and isinstance(best_u, str)
+        and best_u.startswith(('http://', 'https://'))
+        and best_u not in seen
+    ):
+        seen.add(best_u)
+        found.append((best_u, 'oa-best.pdf', 'main'))
+    return found[:3]
+
+
 def acquire(value, project):
     """Fetch a DOI or URL and discover linked publisher full text/supplements.
 
@@ -543,6 +597,45 @@ def acquire(value, project):
                         # PLOS supplement headers carry their original filename.
                         suffix = '.bin'
                     urls.append((full, f'supplement-{len(urls)}{suffix}', 'supplement'))
+        state['failures'] = list(failures.values())
+        atomic_json(existing, state)
+    def _has_verified_main() -> bool:
+        for f in state['files']:
+            if f.get('role') != 'main':
+                continue
+            p = inside(project, f['path'])
+            if p.exists() and digest(p) == f.get('sha256'):
+                return True
+        return False
+
+    if is_doi and not _has_verified_main():
+        for fb_url, fb_name, fb_role in discover_oa_fallback_urls(doi):
+            if len(state['files']) + len(failures) >= 12:
+                break
+            cached = done.get(fb_url)
+            fb_path = inside(project, cached['path']) if cached else (raw / fb_name)
+            if cached and fb_path.exists() and digest(fb_path) == cached.get('sha256'):
+                break
+            failure = failures.get(fb_url, {})
+            if failure.get('attempts', 0) >= 3:
+                continue
+            if failure.get('next_retry_at') and datetime.now(timezone.utc) < datetime.fromisoformat(failure['next_retry_at']):
+                continue
+            try:
+                final, _ = fetch(fb_url, fb_path)
+                if fb_path.read_bytes().startswith(b'%PDF-') and not fb_path.name.endswith('.pdf'):
+                    fb_path = fb_path.rename(fb_path.with_suffix('.pdf'))
+                    fb_name = fb_path.name
+                parse(fb_path)
+                item = {'path': 'raw/' + fb_path.name, 'role': fb_role, 'source_url': final,
+                        'requested_url': fb_url, 'sha256': digest(fb_path),
+                        'acquired_at': datetime.now(timezone.utc).isoformat()}
+                state['files'] = [f for f in state['files'] if f['requested_url'] != fb_url] + [item]
+                done[fb_url] = item
+                failures.pop(fb_url, None)
+                break
+            except Exception as exc:
+                failures[fb_url] = {'url': fb_url, 'reason': str(exc), 'attempts': failure.get('attempts', 0) + 1}
         state['failures'] = list(failures.values())
         atomic_json(existing, state)
     state.setdefault('identifier', doi if is_doi else value)

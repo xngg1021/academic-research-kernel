@@ -730,3 +730,262 @@ def values_agree(value_a, value_b, rel_tol=1e-3, abs_tol=None):
         'library': 'pure python',
         'confidence': 'high',
     }
+
+
+@_finite_output
+def check_partition_conservation(total, parts, reported_shares=None, tol=0,
+                                 share_tol_pct=0.5, share_unit='auto'):
+    """检验数据集划分表(如 Train + Val + Test == Total)的加法守恒与比例自洽。
+
+    total: 声明的总样本数(正整数)
+    parts: 各子集样本数列表(非负整数列表)
+    reported_shares: 可选, 正文或表格声明的各子集占比(支持 [0,1] 小数或 [0,100] 百分比)
+    tol: 允许的整数舍入容差(默认 0, 要求精确守恒)
+    share_tol_pct: 声明占比与实际占比的百分点容差(默认 0.5 个百分点)
+    share_unit: 'auto' | 'percent' | 'fraction'
+    """
+    total = _integer('total', total, 1)
+    _require(isinstance(parts, (list, tuple)) and len(parts) >= 1, 'parts 须为非空列表')
+    clean_parts = [_integer(f'parts[{i}]', p, 0) for i, p in enumerate(parts)]
+    tol = _integer('tol', tol, 0)
+    _finite('share_tol_pct', share_tol_pct)
+    _require(share_tol_pct >= 0, 'share_tol_pct 须非负')
+    _require(share_unit in ('auto', 'percent', 'fraction'),
+             "share_unit 须为 'auto'、'percent' 或 'fraction'")
+
+    sum_parts = sum(clean_parts)
+    missing_or_excess = total - sum_parts
+    sum_consistent = abs(missing_or_excess) <= tol
+    actual_shares_pct = [100.0 * p / total for p in clean_parts]
+
+    share_mismatches = []
+    normalized_reported_pct = None
+    resolved_unit = None
+    if reported_shares is not None:
+        _require(isinstance(reported_shares, (list, tuple)) and len(reported_shares) == len(clean_parts),
+                 'reported_shares 长度须与 parts 一致')
+        raw_shares = []
+        for i, s in enumerate(reported_shares):
+            _finite(f'reported_shares[{i}]', s)
+            _require(0 <= s <= 100, f'reported_shares[{i}] 须在 [0, 100]')
+            raw_shares.append(float(s))
+        if share_unit == 'fraction':
+            _require(all(s <= 1.0 for s in raw_shares), 'share_unit=fraction 时所有占比须 <= 1.0')
+            scale = 100.0
+            resolved_unit = 'fraction'
+        elif share_unit == 'percent':
+            scale = 1.0
+            resolved_unit = 'percent'
+        else:
+            if any(s > 1.0 for s in raw_shares):
+                scale = 1.0
+                resolved_unit = 'percent'
+            else:
+                err_frac = sum(abs(s * 100.0 - a) for s, a in zip(raw_shares, actual_shares_pct))
+                err_pct = sum(abs(s - a) for s, a in zip(raw_shares, actual_shares_pct))
+                if err_frac <= err_pct:
+                    scale = 100.0
+                    resolved_unit = 'fraction'
+                else:
+                    scale = 1.0
+                    resolved_unit = 'percent'
+        normalized_reported_pct = [s * scale for s in raw_shares]
+        for i, (act_pct, rep_pct) in enumerate(zip(actual_shares_pct, normalized_reported_pct)):
+            if abs(act_pct - rep_pct) > share_tol_pct + 1e-12:
+                share_mismatches.append({
+                    'index': i,
+                    'part_count': clean_parts[i],
+                    'actual_percent': float(act_pct),
+                    'reported_percent': float(rep_pct),
+                    'difference_pct': float(act_pct - rep_pct),
+                })
+
+    return {
+        'consistent': bool(sum_consistent and not share_mismatches),
+        'sum_consistent': bool(sum_consistent),
+        'total': int(total),
+        'parts': clean_parts,
+        'sum_parts': int(sum_parts),
+        'missing_or_excess': int(missing_or_excess),
+        'actual_shares_percent': [float(x) for x in actual_shares_pct],
+        'reported_shares_percent': normalized_reported_pct,
+        'resolved_share_unit': resolved_unit,
+        'share_mismatches': share_mismatches,
+        'formula': 'sum(parts) == total 且 |100*part/total - reported_pct| <= share_tol_pct',
+        'library': 'pure python',
+        'confidence': 'high',
+    }
+
+
+@_finite_output
+def check_ablation_delta_regularity(matrix, baseline_col=0, min_rows=3, tol=1e-9):
+    """检验多模型/多任务超参数敏感性或消融矩阵是否存在零方差常数平移(疑似人工加减造表)。
+
+    matrix: R x C 二维数值矩阵(R >= min_rows, C >= 2), 每行代表一个独立模型或任务组合
+    baseline_col: 基准列索引(0 <= baseline_col < C)
+    min_rows: 触发常数平移告警的最小独立行数(默认 3)
+    tol: 判定跨行差分恒定的数值容差(默认 1e-9, 不对原始差分做粗粒度预舍入)
+    """
+    min_rows = _integer('min_rows', min_rows, 2)
+    _finite('tol', tol)
+    _require(tol >= 0, 'tol 须非负')
+    _require(isinstance(matrix, (list, tuple)) and len(matrix) >= min_rows,
+             f'matrix 至少需要 {min_rows} 行独立实验数据')
+    col_count = len(matrix[0]) if isinstance(matrix[0], (list, tuple)) else 0
+    _require(col_count >= 2, 'matrix 至少需要 2 列以计算差分')
+    baseline_col = _integer('baseline_col', baseline_col, 0)
+    _require(baseline_col < col_count, 'baseline_col 超出列数范围')
+
+    clean_matrix = []
+    for r_idx, row in enumerate(matrix):
+        _require(isinstance(row, (list, tuple)) and len(row) == col_count,
+                 f'matrix 第 {r_idx} 行列数不一致')
+        clean_row = []
+        for c_idx, val in enumerate(row):
+            _finite(f'matrix[{r_idx}][{c_idx}]', val)
+            clean_row.append(float(val))
+        clean_matrix.append(clean_row)
+
+    row_count = len(clean_matrix)
+    column_deltas = {}
+    constant_offset_columns = []
+    for c_idx in range(col_count):
+        if c_idx == baseline_col:
+            continue
+        raw_deltas = [clean_matrix[r][c_idx] - clean_matrix[r][baseline_col] for r in range(row_count)]
+        span = max(raw_deltas) - min(raw_deltas)
+        is_const = bool(span <= tol)
+        if is_const:
+            const_val = float(round(sum(raw_deltas) / row_count, 12))
+            if abs(const_val) == 0.0 and any(d != 0.0 for d in raw_deltas):
+                const_val = float(sum(raw_deltas) / row_count)
+            mean_d = const_val
+            var_d = 0.0
+            unique_d = [const_val]
+            out_deltas = [const_val for _ in raw_deltas]
+        else:
+            mean_d = sum(raw_deltas) / row_count
+            var_d = sum((d - mean_d) ** 2 for d in raw_deltas) / (row_count - 1) if row_count > 1 else 0.0
+            rounded_u = sorted({float(round(d, 12)) for d in raw_deltas})
+            if len(rounded_u) >= 2:
+                unique_d = rounded_u
+                out_deltas = [float(round(d, 12)) for d in raw_deltas]
+            else:
+                unique_d = sorted({float(d) for d in raw_deltas})
+                out_deltas = [float(d) for d in raw_deltas]
+
+        col_info = {
+            'column_index': c_idx,
+            'deltas': out_deltas,
+            'raw_deltas': [float(d) for d in raw_deltas],
+            'mean_delta': float(mean_d),
+            'sample_variance': float(var_d),
+            'unique_deltas': unique_d,
+            'is_constant_offset': is_const,
+            'is_zero_offset': bool(is_const and abs(mean_d) <= tol),
+        }
+        column_deltas[str(c_idx)] = col_info
+        if is_const:
+            constant_offset_columns.append({
+                'column_index': c_idx,
+                'constant_delta': float(mean_d),
+                'is_zero_offset': bool(abs(mean_d) <= tol),
+                'row_count': row_count,
+            })
+
+    return {
+        'consistent': len(constant_offset_columns) == 0,
+        'suspicious_constant_offset': len(constant_offset_columns) > 0,
+        'row_count': row_count,
+        'col_count': col_count,
+        'baseline_col': baseline_col,
+        'column_deltas': column_deltas,
+        'constant_offset_columns': constant_offset_columns,
+        'formula': 'Var_r(M[r,c] - M[r,baseline_col]) > 0 across independent rows',
+        'library': 'pure python',
+        'confidence': 'high',
+    }
+
+
+@_finite_output
+def check_storage_bandwidth_bounds(item_count, vector_dim, bytes_per_element=4,
+                                   reported_size_mb=None, reported_latency_us=None,
+                                   max_bandwidth_gbps=4000.0, rel_tol=1e-2,
+                                   claims_full_system_storage=True):
+    """检验向量/记忆系统报告的存储体积是否低于物理下界或仅计裸向量数组,以及报告延迟是否突破物理内存带宽上限。
+
+    item_count: 条目总数(正整数, 如 1000000)
+    vector_dim: 向量维度(正整数, 如 384)
+    bytes_per_element: 每个元素字节数(默认 float32 为 4)
+    reported_size_mb: 论文报告的存储体积(MB 或 MiB)
+    reported_latency_us: 论文报告的全库扫描检索耗时(微秒 us, 须 >= 1e-6)
+    max_bandwidth_gbps: 硬件合理物理内存带宽上限(GB/s, 默认 4000.0 GB/s 对应顶级 HBM3e)
+    claims_full_system_storage: 若论文声明该体积为含原文/元数据的完整记忆系统总体积则为 True(默认)
+    """
+    item_count = _integer('item_count', item_count, 1)
+    vector_dim = _integer('vector_dim', vector_dim, 1)
+    bytes_per_element = _integer('bytes_per_element', bytes_per_element, 1)
+    _finite_inputs(max_bandwidth_gbps=max_bandwidth_gbps, rel_tol=rel_tol)
+    _require(max_bandwidth_gbps > 0 and 0 <= rel_tol < 1.0, 'max_bandwidth_gbps 须为正且 rel_tol 在 [0, 1)')
+    _require(reported_size_mb is not None or reported_latency_us is not None,
+             '至少须提供 reported_size_mb 或 reported_latency_us 之一以执行核验')
+
+    raw_bytes = item_count * vector_dim * bytes_per_element
+    raw_mib = raw_bytes / (1024.0 ** 2)
+    raw_mb = raw_bytes / (1000.0 ** 2)
+
+    bare_vector_only_match = False
+    below_raw_vector_bound = False
+    matched_unit = None
+    checks_performed = []
+    if reported_size_mb is not None:
+        _finite('reported_size_mb', reported_size_mb)
+        _require(reported_size_mb > 0, 'reported_size_mb 须为正')
+        checks_performed.append('storage_size')
+        min_raw_bound = min(raw_mib, raw_mb)
+        if reported_size_mb < min_raw_bound * (1.0 - rel_tol):
+            below_raw_vector_bound = True
+        elif abs(reported_size_mb - raw_mib) <= rel_tol * raw_mib:
+            bare_vector_only_match = True
+            matched_unit = 'MiB'
+        elif abs(reported_size_mb - raw_mb) <= rel_tol * raw_mb:
+            bare_vector_only_match = True
+            matched_unit = 'MB'
+
+    implied_bw_gbps = None
+    bandwidth_exceeds_limit = False
+    if reported_latency_us is not None:
+        _finite('reported_latency_us', reported_latency_us)
+        _require(reported_latency_us >= 1e-6, 'reported_latency_us 须 >= 1e-6 微秒')
+        checks_performed.append('bandwidth')
+        implied_bw_gbps = (raw_bytes / 1e9) / (reported_latency_us * 1e-6)
+        bandwidth_exceeds_limit = bool(implied_bw_gbps > max_bandwidth_gbps)
+
+    # Exact match to raw_mib/raw_mb (within 1e-6 relative) when claiming full system storage indicates omitted metadata overhead
+    exact_bare_match = (
+        reported_size_mb is not None
+        and (
+            abs(reported_size_mb - raw_mib) <= 1e-6 * raw_mib
+            or abs(reported_size_mb - raw_mb) <= 1e-6 * raw_mb
+        )
+    )
+    size_inconsistent = below_raw_vector_bound or (bool(claims_full_system_storage) and exact_bare_match)
+    return {
+        'consistent': not (size_inconsistent or bandwidth_exceeds_limit),
+        'checks_performed': checks_performed,
+        'raw_vector_bytes': int(raw_bytes),
+        'raw_mib': float(raw_mib),
+        'raw_mb': float(raw_mb),
+        'reported_size_mb': float(reported_size_mb) if reported_size_mb is not None else None,
+        'bare_vector_only_match': bool(bare_vector_only_match),
+        'below_raw_vector_bound': bool(below_raw_vector_bound),
+        'claims_full_system_storage': bool(claims_full_system_storage),
+        'matched_unit': matched_unit,
+        'reported_latency_us': float(reported_latency_us) if reported_latency_us is not None else None,
+        'implied_fullscan_bandwidth_gbps': float(implied_bw_gbps) if implied_bw_gbps is not None else None,
+        'max_bandwidth_gbps': float(max_bandwidth_gbps),
+        'bandwidth_exceeds_limit': bool(bandwidth_exceeds_limit),
+        'formula': 'raw_bytes = N * dim * elem_bytes; BW_GB/s = (raw_bytes/1e9) / (latency_us*1e-6)',
+        'library': 'pure python',
+        'confidence': 'high',
+    }
