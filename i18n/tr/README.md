@@ -8,19 +8,23 @@ Yazar: Junfu Shi (SJF, xngg1021), Hermes Agent. Geçerli kapsamlı lisans teklif
 
 ## Hızlı başlangıç
 
-2.2.0 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
+2.3.0 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-[2.2.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 12 deterministik aracın tamamı temel kuruluma dahildir.
+[2.3.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 12 deterministik aracın tamamı temel kuruluma dahildir.
 
 ## Kurulumu doğrulama
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 Çevrimdışı tanılama aracı; bağımlılıkları, veri şemalarını ve 12 araç tanımının tamamını kontrol eder. İsteğe bağlı harici hizmetler yapılandırılmadan bırakılabilir. Makine tarafından okunabilir çıktı almak için `doctor --json` komutunu kullanın.
@@ -28,12 +32,12 @@ uvx academic-research-kernel@2.2.0 --version
 ## Paket kurulumu
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.2.0` veya `python -m pip install academic-research-kernel==2.2.0` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==6.19.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
+Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.3.0` veya `python -m pip install academic-research-kernel==2.3.0` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==6.19.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
 
 ## Hermes
 
@@ -70,11 +74,11 @@ SLL; geçerli lisans, bildirim ve kaynak kökeni koşullarına tabi olmak kaydı
 
 | Beceri | Sürüm | İşlevi |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Yayın kimliğini ve kaynağa özgü atıf sayılarını çapraz kontrol etme; güncelleme ve geri çekme (retraction) sinyallerini inceleme; açık erişim tam metinleri bulma ve PDF kimliğini doğrulama |
+| `skills/academic-source-verification` | 1.3.0 | Yayın kimliğini ve kaynağa özgü atıf sayılarını çapraz kontrol etme; güncelleme ve geri çekme (retraction) sinyallerini inceleme; açık erişim tam metinleri bulma ve PDF kimliğini doğrulama |
 | `skills/literature-analysis` | 1.3.0 | On iki analiz iş akışı: konu benzerliği, yerel metin örtüşmesi, karşıt kanıtlar, yazar profilleri, deneme hakemliği, mantık hatası kontrolü, inceleme matrisi, aday dergiler, BibTeX, iki dilli okuma, araştırma boşluğu taraması ve yeniden üretim |
-| `skills/academic-writing` | 1.1.1 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler |
+| `skills/academic-writing` | 1.2.0 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler |
 | `skills/math-computation` | 1.2.1 | Düzeltilmiş sayısal ve istatistiksel örneklerle mevcut alan/görev yönlendirmesi; dört adet alana özgü ileri düzey referans dosyası |
-| `skills/quantitative-paper-audit` | 1.1.0 | Makalelerde bildirilen istatistikleri (etki büyüklüğü, p değerleri, güven aralıkları, OR/RR, ulaşılan istatistiksel güç) yeniden hesaplama ve sayısal uyuşmazlıkları tespit etme |
+| `skills/quantitative-paper-audit` | 1.2.0 | Makalelerde bildirilen istatistikleri (etki büyüklüğü, p değerleri, güven aralıkları, OR/RR, ulaşılan istatistiksel güç) yeniden hesaplama ve sayısal uyuşmazlıkları tespit etme |
 | `skills/research-reproducibility` | 1.0.1 | Yapılandırılmış doğrulama kontrol listeleri, beş olgu doğrulama katmanı ve yeniden üretilebilir denetim kayıtları içeren on dört aşamalı tekrarlanabilirlik denetim hattı |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA arama kayıtları, literatür tarama ve eleme kaydı, etki büyüklüğü dönüştürme, heterojenlik, sabit/rastgele etkili birleştirme, duyarlılık ve yayın yanlılığı tanılama |
 | `skills/literature-watch` | 1.1.0 | Haftalık izleme: OpenAlex ve Crossref üzerinde konuları, yazarları ve DOI'ye atıf yapan çalışmaları izleme; mükerrer kayıtları ayıklama ve yalnızca yeni yayınları raporlama |
@@ -82,8 +86,8 @@ SLL; geçerli lisans, bildirim ve kaynak kökeni koşullarına tabi olmak kaydı
 | `skills/research-object-identity` | 1.1.0 | Deterministik araştırma kaynağı tanımlama ve kaynak / izlenebilirlik takibi: tanımlayıcı normalleştirme, 5 durumlu doğrulama, içerik adresli türetme çizgeleri, nedensel DAG doğrulaması ve 100 ms altında soy izleme |
 | `skills/claim-evidence-graph` | 1.0.0 | Bilimsel savları, kanıt kayıtlarını ve hesaplamalı kökeni birbirine bağlayan deterministik iddia ve kanıt ilişkileri |
 | `skills/decision-ledger` | 1.0.0 | Araştırma kararları ve başarısız denemeler günlüğü: bilimsel seçimlerin, olumsuz sonuçların, araştırma rotası durumu / bu yönün durdurulma nedeni kayıtlarının ve sonuç revizyonlarının deterministik, yalnızca eklemeli günlüğü |
-| `skills/paper-research` | 1.0.0 | Doğrulanmış alan adayları, istatistiksel kontroller, kalıcı araştırma durumu, kaynağa bağlı Çince raporlar ve iki makale karşılaştırması ile DOI/URL/yerel makale ve ek materyal okuma |
-| `skills/cross-review-five` | 2.0.0 | Keyfi modelleri ve alt ajanları (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini vb.) destekleyen dinamik çoklu hakem paneli orkestrasyonu: Kuhn-Munkres Macar ataması, sav düzeyinde kümeleme, hedefli anonim itiraz ve P0–P3 ciddiyet derecelendirmesi içeren v2 Sparse Deliberation hattı |
+| `skills/paper-research` | 1.1.0 | Doğrulanmış alan adayları, istatistiksel kontroller, kalıcı araştırma durumu, kaynağa bağlı Çince raporlar ve iki makale karşılaştırması ile DOI/URL/yerel makale ve ek materyal okuma |
+| `skills/cross-review-five` | 2.0.1 | Keyfi modelleri ve alt ajanları (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini vb.) destekleyen dinamik çoklu hakem paneli orkestrasyonu: Kuhn-Munkres Macar ataması, sav düzeyinde kümeleme, hedefli anonim itiraz ve P0–P3 ciddiyet derecelendirmesi içeren v2 Sparse Deliberation hattı |
 
 On dört beceri genelinde 22 adet Markdown referans dosyası bulunmaktadır. Referans dosyaları yalnızca ihtiyaç duyulduğunda yüklenir.
 
@@ -160,7 +164,7 @@ CI; Linux x86_64 (Python 3.10–3.14), Linux ARM64 (`ubuntu-24.04-arm`), Ubuntu 
 
 ## Yerel bir Ajan ile makale araştırma
 
-`academic-research-kernel[research]==2.2.0` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
+`academic-research-kernel[research]==2.3.0` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

@@ -1,7 +1,7 @@
 ---
 name: academic-source-verification
-description: 核查文献真实性:交叉核对被引数、撤稿状态、开放获取全文与原文内容.
-version: 1.2.0
+description: 核查文献真伪：被引、撤稿、OA 全文、OpenReview 审稿与代码仓取证.
+version: 1.3.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms:
@@ -145,7 +145,7 @@ python "${HERMES_SKILL_DIR}/scripts/verify_pdf_identity.py" --pdf <路径> --tit
 ```bash
 python "${HERMES_SKILL_DIR}/scripts/openreview_audit.py" --forum-id <ID> --mirror-json <镜像路径>
 python "${HERMES_SKILL_DIR}/scripts/openreview_audit.py" --venue-stats <镜像路径> --topic-regex "<正则>"
-python "${HERMES_SKILL_DIR}/scripts/github_repo_forensics.py" --repo-dir <本地仓库路径>
+python "${HERMES_SKILL_DIR}/scripts/github_repo_forensics.py" --local-repo <本地仓库路径>
 ```
 
 每个数字先固定会议年份、快照阶段、原始记录集合和分母：总记录、有效投稿、已出分稿件、留存终审稿件不是同一对象；审稿人的推荐分档、最终决定和论文录用率也须分列。程序化核对分类计数合计、评分条数、逐篇均分和总体分布；跨年比较须用同定义记录与相近阶段。单篇稿件先保存 forum 的原始评审、决定和作者回复；镜像中的零回复字数只说明该字段未计到回复，不能断言作者没有回复。精确分位数须用全体逐篇记录重算，列出严格低于、等于、高于目标均分的人数及并列区间。

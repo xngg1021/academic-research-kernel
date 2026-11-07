@@ -1,7 +1,7 @@
 ---
 name: paper-research
-description: 读取论文及附件、核对数字并生成可追溯中文报告.
-version: 1.0.0
+description: 读取论文及附件、核对统计数字与审稿证据并生成可追溯报告.
+version: 1.1.0
 author: Junfu Shi
 license: LicenseRef-Source-Lineage-1.0
 platforms:
@@ -27,7 +27,7 @@ The installed program handles acquisition, parsing, source validation, determini
 
 ## Prepare and read
 
-Install the optional PDF parser with `python -m pip install 'academic-research-kernel[research]==2.2.0'` in a project environment if it is absent. Keep the existing `doctor`, `mcp`, `verify-source`, `bibliography` and `meta-analyze` entrypoints available.
+Install the optional PDF parser with `python -m pip install 'academic-research-kernel[research]==2.3.0'` in a project environment if it is absent. Keep the existing `doctor`, `mcp`, `verify-source`, `locate-oa`, `openreview-audit`, `repo-forensics`, `bibliography`, `meta-analyze`, `receipt-to-latex`, `double-blind-sanitize`, `pre-submission-lint` and `venue-template` entrypoints available.
 
 ```sh
 academic-research-kernel research prepare INPUT --project PROJECT

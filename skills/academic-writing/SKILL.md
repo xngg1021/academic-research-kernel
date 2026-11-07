@@ -1,7 +1,7 @@
 ---
 name: academic-writing
-description: 学术写作:润色编辑、引用规范生成、期刊投稿格式检索、AI 生成成分检测.
-version: 1.1.1
+description: 学术写作与投稿门禁：版式检查、双盲脱敏、收据转三线表、模板与润色引用.
+version: 1.2.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms:
@@ -85,8 +85,8 @@ metadata:
 4. 只读模拟评议先列决定性疑点及相应原文位置、所需反证或补充实验、可能改变判断的条件，并把确定性核验结果与审稿人主观判断分列。确定性检查与模板管理已抽为 `scripts/` 下的独立工具：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/double_blind_sanitizer.py" <文稿路径或PDF>
-python "${HERMES_SKILL_DIR}/scripts/receipt_to_latex_table.py" --input <收据JSON> --rows <行键> --cols <列键>
+python "${HERMES_SKILL_DIR}/scripts/double_blind_sanitizer.py" --target <文稿路径或PDF>
+python "${HERMES_SKILL_DIR}/scripts/receipt_to_latex_table.py" --input <收据JSON> --caption "<表题>" --label "<标签>"
 python "${HERMES_SKILL_DIR}/scripts/pre_submission_linter.py" --tex <主tex路径> --venue <会刊键> --contribution-type <赛道键>
 python "${HERMES_SKILL_DIR}/scripts/venue_template_manager.py" --action list-venues
 ```

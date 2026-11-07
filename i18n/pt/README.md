@@ -8,19 +8,23 @@ Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Oferta de licença atual: [Sourc
 
 ## Início rápido
 
-Execute a versão 2.2.0 com o [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Execute a versão 2.3.0 com o [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-O [lançamento 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) registra os hashes de distribuição e o status de publicação. O pacote wheel distribuído também pode ser executado localmente com `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Há suporte para Python 3.10–3.14, e `uvx --python 3.12` seleciona explicitamente um interpretador compatível. Todas as 12 ferramentas determinísticas, incluindo os módulos estatísticos, fazem parte da instalação básica.
+O [lançamento 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) registra os hashes de distribuição e o status de publicação. O pacote wheel distribuído também pode ser executado localmente com `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Há suporte para Python 3.10–3.14, e `uvx --python 3.12` seleciona explicitamente um interpretador compatível. Todas as 12 ferramentas determinísticas, incluindo os módulos estatísticos, fazem parte da instalação básica.
 
 ## Verificar instalação
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 O diagnóstico offline verifica dependências, esquemas e as definições das 12 ferramentas. Serviços externos opcionais podem permanecer não configurados sem impedir o uso. Utilize `doctor --json` para obter saída estruturada legível por máquina.
@@ -28,12 +32,12 @@ O diagnóstico offline verifica dependências, esquemas e as definições das 12
 ## Instalação do pacote
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Como alternativa, instale com `pipx install academic-research-kernel==2.2.0` ou `python -m pip install academic-research-kernel==2.2.0` dentro de um ambiente virtual compatível. O extra `[full]` adiciona bibliotecas para exemplos científicos estendidos; `[qa]` instala as ferramentas de validação do repositório, incluindo o analisador de PDF. O extra `[research]` adiciona `pypdf==6.19.0` e `fonttools==4.65.0` para decodificação consistente de fontes em arquivos PDF em instalações limpas, ambos compatíveis com Python 3.10. A leitura estruturada de HTML/XML e de arquivos DOCX/XLSX delimitados utiliza apenas a biblioteca padrão. Backends de GPU e serviços pagos permanecem opcionais.
+Como alternativa, instale com `pipx install academic-research-kernel==2.3.0` ou `python -m pip install academic-research-kernel==2.3.0` dentro de um ambiente virtual compatível. O extra `[full]` adiciona bibliotecas para exemplos científicos estendidos; `[qa]` instala as ferramentas de validação do repositório, incluindo o analisador de PDF. O extra `[research]` adiciona `pypdf==6.19.0` e `fonttools==4.65.0` para decodificação consistente de fontes em arquivos PDF em instalações limpas, ambos compatíveis com Python 3.10. A leitura estruturada de HTML/XML e de arquivos DOCX/XLSX delimitados utiliza apenas a biblioteca padrão. Backends de GPU e serviços pagos permanecem opcionais.
 
 ## Hermes
 
@@ -70,11 +74,11 @@ A SLL permite amplamente o uso, estudo, modificação, uso comercial, distribui�
 
 | Habilidade | Versão | O que faz |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Verificação cruzada de identidade e contagens de citações específicas por fonte; inspeção de sinais de atualização e retratação; localização de textos em acesso aberto e verificação de identidade de PDF |
+| `skills/academic-source-verification` | 1.3.0 | Verificação cruzada de identidade e contagens de citações específicas por fonte; inspeção de sinais de atualização e retratação; localização de textos em acesso aberto e verificação de identidade de PDF |
 | `skills/literature-analysis` | 1.3.0 | Doze fluxos de análise: similaridade temática, sobreposição textual local, contra-evidências, perfis de autores, revisão simulada, checagem de falácias, matriz de revisão, periódicos candidatos, BibTeX, leitura bilíngue, triagem de lacunas e reprodução |
-| `skills/academic-writing` | 1.1.1 | Edição acadêmica, diretrizes de citação (ISO 690, APA, MLA, Chicago, IEEE, AMA e perfis regionais), instruções de periódicos, serviços opcionais de detecção, materiais de submissão e requisitos institucionais |
+| `skills/academic-writing` | 1.2.0 | Edição acadêmica, diretrizes de citação (ISO 690, APA, MLA, Chicago, IEEE, AMA e perfis regionais), instruções de periódicos, serviços opcionais de detecção, materiais de submissão e requisitos institucionais |
 | `skills/math-computation` | 1.2.1 | Roteamento por domínio e tarefa matemática com exemplos numéricos e estatísticos revisados; quatro arquivos de referência especializada |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recálculo de estatísticas relatadas (tamanho de efeito, valores p, intervalos de confiança, OR/RR, poder estatístico obtido) e detecção de inconsistências numéricas |
+| `skills/quantitative-paper-audit` | 1.2.0 | Recálculo de estatísticas relatadas (tamanho de efeito, valores p, intervalos de confiança, OR/RR, poder estatístico obtido) e detecção de inconsistências numéricas |
 | `skills/research-reproducibility` | 1.0.1 | Auditoria de reprodutibilidade em quatorze etapas com listas de verificação estruturadas, cinco níveis de evidência factual e registros de auditoria reproduzíveis |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | Registros de busca PRISMA, registro de triagem de literatura, conversão de tamanho de efeito, heterogeneidade, agrupamento por efeitos fixos ou aleatórios, análise de sensibilidade e viés de publicação |
 | `skills/literature-watch` | 1.1.0 | Monitoramento semanal: acompanhamento de temas, autores e obras que citam DOIs no OpenAlex e Crossref, com desduplicação e relato exclusivo de novos itens |
@@ -82,8 +86,8 @@ A SLL permite amplamente o uso, estudo, modificação, uso comercial, distribui�
 | `skills/research-object-identity` | 1.1.0 | Identificação determinística de recursos científicos e proveniência / rastreabilidade de artefatos: normalização de identificadores, verificação em cinco estados, grafos de derivação endereçados por conteúdo, validação de DAG causal e rastreamento de linhagem em menos de 100 ms |
 | `skills/claim-evidence-graph` | 1.0.0 | Vinculação determinística de relações entre alegações e evidências, conectando asserções científicas, registros empíricos e proveniência computacional |
 | `skills/decision-ledger` | 1.0.0 | Registro de decisões de pesquisa e tentativas falhas: log determinístico e somente de anexação para escolhas científicas, resultados negativos, status da rota / por que a rota foi descontinuada e revisões de conclusões |
-| `skills/paper-research` | 1.0.0 | Leitura de artigos e materiais suplementares via DOI, URL ou arquivos locais com validação de campos candidatos, checagens estatísticas, estado persistente de pesquisa, relatórios em chinês vinculados às fontes e comparação entre dois artigos |
-| `skills/cross-review-five` | 2.0.0 | Orquestração dinâmica de painel multirrevisor compatível com modelos e subagentes arbitrários (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini etc.): pipeline Sparse Deliberation v2 com atribuição húngara de Kuhn-Munkres, agrupamento de asserções, contestação anônima direcionada e classificação de gravidade P0–P3 |
+| `skills/paper-research` | 1.1.0 | Leitura de artigos e materiais suplementares via DOI, URL ou arquivos locais com validação de campos candidatos, checagens estatísticas, estado persistente de pesquisa, relatórios em chinês vinculados às fontes e comparação entre dois artigos |
+| `skills/cross-review-five` | 2.0.1 | Orquestração dinâmica de painel multirrevisor compatível com modelos e subagentes arbitrários (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini etc.): pipeline Sparse Deliberation v2 com atribuição húngara de Kuhn-Munkres, agrupamento de asserções, contestação anônima direcionada e classificação de gravidade P0–P3 |
 
 Existem 22 arquivos de referência Markdown distribuídos entre as quatorze habilidades. Os arquivos de referência são carregados apenas quando necessários.
 
@@ -160,7 +164,7 @@ O módulo `scripts/scfabric/` implementa o conjunto de ferramentas de cálculo c
 
 ## Pesquisar um artigo com um Agente local
 
-Instale `academic-research-kernel[research]==2.2.0` e exporte o fluxo de trabalho empacotado:
+Instale `academic-research-kernel[research]==2.3.0` e exporte o fluxo de trabalho empacotado:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

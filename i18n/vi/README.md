@@ -8,19 +8,23 @@ Tác giả: Junfu Shi (SJF, xngg1021), Hermes Agent. Phạm vi cấp phép hiệ
 
 ## Bắt đầu nhanh
 
-Chạy phiên bản 2.2.0 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Chạy phiên bản 2.3.0 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-[Bản phát hành 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 12 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
+[Bản phát hành 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 12 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
 
 ## Kiểm tra cài đặt
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, lược đồ dữ liệu và toàn bộ 12 định nghĩa công cụ. Các dịch vụ bên ngoài tùy chọn có thể để trống mà không gây lỗi. Sử dụng `doctor --json` để nhận kết quả ở định dạng máy đọc được.
@@ -28,12 +32,12 @@ Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, 
 ## Cài đặt gói phần mềm
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.2.0` hoặc chạy `python -m pip install academic-research-kernel==2.2.0` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==6.19.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
+Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.3.0` hoặc chạy `python -m pip install academic-research-kernel==2.3.0` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==6.19.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
 
 ## Hermes
 
@@ -70,11 +74,11 @@ SLL cho phép rộng rãi việc sử dụng, nghiên cứu, sửa đổi, khai 
 
 | Kỹ năng | Phiên bản | Chức năng |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Đối chiếu chéo định danh và số lượt trích dẫn theo từng nguồn; kiểm tra tín hiệu cập nhật hoặc rút bài; định vị toàn văn truy cập mở (OA) và xác minh tệp PDF |
+| `skills/academic-source-verification` | 1.3.0 | Đối chiếu chéo định danh và số lượt trích dẫn theo từng nguồn; kiểm tra tín hiệu cập nhật hoặc rút bài; định vị toàn văn truy cập mở (OA) và xác minh tệp PDF |
 | `skills/literature-analysis` | 1.3.0 | Mười hai quy trình: độ tương đồng chủ đề, trùng lặp văn bản cục bộ, bằng chứng phản biện, hồ sơ tác giả, phản biện mô phỏng, kiểm tra ngụy biện, ma trận tổng quan, gợi ý tạp chí, BibTeX, đọc song ngữ, rà soát khoảng trống nghiên cứu, tái lập kết quả |
-| `skills/academic-writing` | 1.1.1 | Biên tập học thuật, hướng dẫn trích dẫn (ISO 690, APA, MLA, Chicago, IEEE, AMA và hồ sơ khu vực), thể lệ tạp chí, dịch vụ kiểm tra tùy chọn, hồ sơ nộp bài và yêu cầu thẩm định khuyết danh của cơ sở đào tạo |
+| `skills/academic-writing` | 1.2.0 | Biên tập học thuật, hướng dẫn trích dẫn (ISO 690, APA, MLA, Chicago, IEEE, AMA và hồ sơ khu vực), thể lệ tạp chí, dịch vụ kiểm tra tùy chọn, hồ sơ nộp bài và yêu cầu thẩm định khuyết danh của cơ sở đào tạo |
 | `skills/math-computation` | 1.2.1 | Định tuyến bài toán theo lĩnh vực và nhiệm vụ với các ví dụ giải tích số và thống kê đã hiệu chỉnh; bốn tệp tham chiếu chuyên sâu |
-| `skills/quantitative-paper-audit` | 1.1.0 | Tính toán lại các chỉ số thống kê trong bài báo (độ lớn hiệu ứng, giá trị p, khoảng tin cậy, OR/RR, lực kiểm định thực tế) và phát hiện sai lệch số liệu |
+| `skills/quantitative-paper-audit` | 1.2.0 | Tính toán lại các chỉ số thống kê trong bài báo (độ lớn hiệu ứng, giá trị p, khoảng tin cậy, OR/RR, lực kiểm định thực tế) và phát hiện sai lệch số liệu |
 | `skills/research-reproducibility` | 1.0.1 | Quy trình kiểm định khả năng tái lập gồm 14 giai đoạn với bộ kiểm tra quy tắc tái lập có cấu trúc, năm tầng dữ kiện và hồ sơ kiểm định có thể tái lập |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | Nhật ký tìm kiếm PRISMA, nhật ký sàng lọc tài liệu, quy đổi độ lớn hiệu ứng, kiểm định tính không đồng nhất, gộp hiệu ứng cố định/ngẫu nhiên, phân tích độ nhạy và chẩn đoán sai lệch xuất bản |
 | `skills/literature-watch` | 1.1.0 | Kịch bản theo dõi hàng tuần: giám sát chủ đề, tác giả và công trình trích dẫn DOI mới trên OpenAlex và Crossref; khử trùng lặp và chỉ báo cáo mục mới |
@@ -82,8 +86,8 @@ SLL cho phép rộng rãi việc sử dụng, nghiên cứu, sửa đổi, khai 
 | `skills/research-object-identity` | 1.1.0 | Định danh tài nguyên nghiên cứu tất định và nguồn gốc / khả năng truy xuất nguồn gốc: chuẩn hóa mã định danh, xác minh 5 trạng thái, đồ thị dẫn xuất định địa chỉ theo nội dung, kiểm tra DAG nhân quả và truy vết ngược dưới 100 ms |
 | `skills/claim-evidence-graph` | 1.0.0 | Thiết lập tất định mối quan hệ giữa luận điểm và bằng chứng khoa học, kết nối nhận định học thuật, bản ghi bằng chứng / xác minh và nguồn gốc tính toán |
 | `skills/decision-ledger` | 1.0.0 | Nhật ký quyết định nghiên cứu và thử nghiệm thất bại: ghi nhận tuần tự chỉ ghi thêm đối với các lựa chọn học thuật, kết quả âm tính, trạng thái hướng đi / lý do dừng hướng nghiên cứu này và lịch sử hiệu chỉnh kết quả |
-| `skills/paper-research` | 1.0.0 | Đọc bài báo và tài liệu bổ sung qua DOI, URL hoặc tệp cục bộ với bước kiểm tra trường thông tin ứng viên, đối chiếu thống kê, lưu trạng thái nghiên cứu bền vững, xuất báo cáo tiếng Trung có dẫn nguồn và so sánh hai bài báo |
-| `skills/cross-review-five` | 2.0.0 | Điều phối hội đồng phản biện chéo đa mô hình/tác tử phụ động (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, v.v.): quy trình thảo luận thưa v2 với thuật toán ghép cặp Hungary Kuhn-Munkres, gom cụm theo luận điểm, chất vấn ẩn danh có mục tiêu và phân loại mức độ nghiêm trọng P0–P3 |
+| `skills/paper-research` | 1.1.0 | Đọc bài báo và tài liệu bổ sung qua DOI, URL hoặc tệp cục bộ với bước kiểm tra trường thông tin ứng viên, đối chiếu thống kê, lưu trạng thái nghiên cứu bền vững, xuất báo cáo tiếng Trung có dẫn nguồn và so sánh hai bài báo |
+| `skills/cross-review-five` | 2.0.1 | Điều phối hội đồng phản biện chéo đa mô hình/tác tử phụ động (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, v.v.): quy trình thảo luận thưa v2 với thuật toán ghép cặp Hungary Kuhn-Munkres, gom cụm theo luận điểm, chất vấn ẩn danh có mục tiêu và phân loại mức độ nghiêm trọng P0–P3 |
 
 Mười bốn kỹ năng bao gồm tổng cộng 22 tệp tham chiếu Markdown. Các tệp tham chiếu chỉ được nạp khi nhiệm vụ thực sự cần đến.
 
@@ -160,7 +164,7 @@ Thư mục `scripts/scfabric/` là tầng thực thi của bộ công cụ tính
 
 ## Nghiên cứu bài báo khoa học với Agent cục bộ
 
-Cài đặt `academic-research-kernel[research]==2.2.0` và xuất quy trình làm việc đóng gói sẵn:
+Cài đặt `academic-research-kernel[research]==2.3.0` và xuất quy trình làm việc đóng gói sẵn:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

@@ -13,6 +13,11 @@ import tempfile
 from _version import __version__
 
 
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dist', type=Path, default=Path('dist'))
@@ -21,28 +26,39 @@ def main():
     parser.add_argument('--cpu-torch', action='store_true', help='Include the optional CPU backend in raw sdist tests')
     parser.add_argument('--report', type=Path, help='Persist hashes and actual installed import paths')
     args = parser.parse_args()
-    artifacts = sorted(args.dist.resolve().glob('*'))
-    artifacts = [p for p in artifacts if p.name.endswith(('.whl', '.tar.gz'))]
-    assert len(artifacts) == 2, artifacts
-    assert sum(p.suffix == '.whl' for p in artifacts) == 1, 'exactly one wheel is required'
-    assert sum(p.name.endswith('.tar.gz') for p in artifacts) == 1, 'exactly one sdist is required'
+    dist_dir = args.dist.resolve()
+    require(dist_dir.is_dir(), f'distribution directory missing: {dist_dir}')
+    sidecars = {'release-manifest.json', 'SHA256SUMS', 'server.json', '.gitignore'}
+    all_entries = sorted(p for p in dist_dir.iterdir() if p.is_file() and p.name not in sidecars)
+    artifacts = [p for p in all_entries if p.name.endswith(('.whl', '.tar.gz'))]
+    require(len(artifacts) == 2 and len(all_entries) == 2, f'expected exactly 1 wheel and 1 sdist, got {[p.name for p in all_entries]}')
+    require(sum(p.suffix == '.whl' for p in artifacts) == 1, 'exactly one wheel is required')
+    require(sum(p.name.endswith('.tar.gz') for p in artifacts) == 1, 'exactly one sdist is required')
     uv = shutil.which('uv')
-    assert uv, 'uv is required by this acceptance driver'
+    require(bool(uv), 'uv is required by this acceptance driver')
     report = {'artifacts': [], 'source_checks': 'not_requested'}
     with tempfile.TemporaryDirectory(prefix='ark-package-') as directory:
         temp = Path(directory)
         smoke = temp / 'distribution_smoke.py'
         shutil.copyfile(Path(__file__).with_name('distribution_smoke.py'), smoke)
         env = {k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'PYTHONHOME', 'VIRTUAL_ENV', 'ARK_REPO', 'ARK_SDIST')}
+        from release_manifest import inspect_artifact
         for i, artifact in enumerate(artifacts):
-            venv = temp / f'env-{i}'
-            subprocess.run([uv, 'venv', '--python', sys.executable, str(venv)], check=True, env=env, cwd=temp)
-            python = venv / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-            if artifact.suffix == '.whl':
-                subprocess.run([uv, 'pip', 'install', '--python', str(python), str(artifact)], check=True, env=env, cwd=temp)
-                subprocess.run([str(python), '-I', str(smoke), '--expected-version', __version__], check=True, env=env, cwd=temp)
+            inspect_artifact(artifact, __version__)
+            base_venv = temp / f'env-{i}-base'
+            subprocess.run([uv, 'venv', '--python', sys.executable, str(base_venv)], check=True, env=env, cwd=temp)
+            base_py = base_venv / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+            subprocess.run([uv, 'pip', 'install', '--python', str(base_py), str(artifact)], check=True, env=env, cwd=temp)
+            base_out = json.loads(subprocess.check_output([str(base_py), '-I', str(smoke), '--expected-version', __version__], text=True, env=env, cwd=temp))
+            require(base_out.get('installed_e2e') == 'PASS', 'base installed smoke did not report PASS')
+
+            res_venv = temp / f'env-{i}-research'
+            subprocess.run([uv, 'venv', '--python', sys.executable, str(res_venv)], check=True, env=env, cwd=temp)
+            python = res_venv / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
             subprocess.run([uv, 'pip', 'install', '--python', str(python), f'{artifact}[research]'], check=True, env=env, cwd=temp)
-            subprocess.run([str(python), '-I', str(smoke), '--expected-version', __version__], check=True, env=env, cwd=temp)
+            res_out = json.loads(subprocess.check_output([str(python), '-I', str(smoke), '--expected-version', __version__, '--require-pdf'], text=True, env=env, cwd=temp))
+            require(res_out.get('installed_e2e') == 'PASS' and res_out.get('research', {}).get('pdf_smoke') == 'passed',
+                    'research extra smoke did not pass PDF verification')
             package_file = subprocess.check_output([str(python), '-I', '-c',
                 'import academic_research_kernel; print(academic_research_kernel.__file__)'], text=True, env=env, cwd=temp).strip()
             report['artifacts'].append({'filename': artifact.name, 'sha256': hashlib.sha256(artifact.read_bytes()).hexdigest(),

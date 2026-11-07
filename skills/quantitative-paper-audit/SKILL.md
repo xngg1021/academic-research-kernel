@@ -1,7 +1,7 @@
 ---
 name: quantitative-paper-audit
-description: 论文定量 claim 反算与数值体检:效应量、p 值、CI、OR/RR、功效错配检测.
-version: 1.1.0
+description: 论文定量反算与体检：效应量、p 值、CI、分区守恒、消融偏移与物理带宽下界.
+version: 1.2.0
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms:
@@ -96,6 +96,9 @@ print(result['recomputed'], result['difference'])
 - `check_sd_possible(sd, minimum, maximum, n=None)`:有界量表 SD 是否超出理论上界(不可能的 SD)。
 - `check_sample_size_from_df(df, reported_n, kind=...)`:由自由度反推样本量,与声明 N 核对,支持单样本/配对/双样本 t 与回归残差自由度。
 - `values_agree(a, b, rel_tol=1e-3, abs_tol=None)`:正文与表格、摘要与结果两处报告值一致性。
+- `check_partition_conservation(total, parts, reported_shares=None, tol=0)`:样本总数与各互斥子集计数及占比之和的守恒核对。
+- `check_ablation_delta_regularity(matrix, baseline_col=0, min_rows=3, tol=1e-9)`:多指标消融表中是否存在高度可疑的恒定差值平移。
+- `check_storage_bandwidth_bounds(item_count, vector_dim, bytes_per_element=4, reported_size_mb=None, reported_latency_us=None, max_bandwidth_gbps=4000.0)`:向量索引体积与检索延迟是否违背裸浮点体积或内存带宽物理下界。
 
 八类错配的判定规则、容差依据与报告模板见 `references/mismatch-catalog.md`;多重比较表述含糊没有可编程判定,按该文件的核对清单人工标注。
 

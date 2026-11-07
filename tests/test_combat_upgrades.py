@@ -79,8 +79,8 @@ def test_ablation_delta_regularity_catches_constant_offset_and_preserves_precisi
 
 def test_storage_bandwidth_bounds_catches_bare_vector_below_bound_and_impossible_bandwidth():
     res = recompute.check_storage_bandwidth_bounds(
-        1000000, 384, bytes_per_element=4,
-        reported_size_mb=1464.84, reported_latency_us=3.70, max_bandwidth_gbps=4000.0,
+        1024000, 256, bytes_per_element=4,
+        reported_size_mb=1000.0, reported_latency_us=2.0, max_bandwidth_gbps=4000.0,
     )
     assert res["consistent"] is False
     assert res["bare_vector_only_match"] is True
@@ -88,9 +88,9 @@ def test_storage_bandwidth_bounds_catches_bare_vector_below_bound_and_impossible
     assert res["bandwidth_exceeds_limit"] is True
     assert res["implied_fullscan_bandwidth_gbps"] > 400000.0
 
-    # Cross-audit counterexample: reported_size_mb=1.0 (far below 1464.84 MiB physical bound) must fail!
+    # Cross-audit counterexample: reported_size_mb=1.0 (far below 1000.0 MiB physical bound) must fail!
     below = recompute.check_storage_bandwidth_bounds(
-        1000000, 384, bytes_per_element=4, reported_size_mb=1.0,
+        1024000, 256, bytes_per_element=4, reported_size_mb=1.0,
     )
     assert below["below_raw_vector_bound"] is True
     assert below["consistent"] is False
@@ -117,10 +117,10 @@ def test_mcp_recompute_statistics_wires_new_forensic_checks(monkeypatch):
         "partition_parts": [800, 100, 100],
         "ablation_matrix": [[0.50, 0.51], [0.60, 0.61], [0.70, 0.71]],
         "ablation_baseline_col": 0,
-        "bandwidth_item_count": 1000000,
-        "bandwidth_vector_dim": 384,
-        "bandwidth_reported_size_mb": 1464.84,
-        "bandwidth_reported_latency_us": 3.70,
+        "bandwidth_item_count": 1024000,
+        "bandwidth_vector_dim": 256,
+        "bandwidth_reported_size_mb": 1000.0,
+        "bandwidth_reported_latency_us": 2.0,
         "bandwidth_max_gbps": 2000.0,
     })
     assert "error" not in out

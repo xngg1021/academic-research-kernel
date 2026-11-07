@@ -8,19 +8,23 @@ Mwandishi: Junfu Shi (SJF, xngg1021), Hermes Agent. Ofa ya leseni ya sasa: [Sour
 
 ## Kuanza haraka
 
-Endesha toleo la 2.2.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Endesha toleo la 2.3.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-[Toleo la 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 12 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
+[Toleo la 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 12 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
 
 ## Thibitisha usakinishaji
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data (schemas) na ufafanuzi wa zana zote 12. Huduma za hiari za nje zinaweza kuachwa bila kusanidiwa. Tumia `doctor --json` kupata matokeo yanayosomeka kwa mashine.
@@ -28,12 +32,12 @@ Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data 
 ## Usakinishaji wa kifurushi
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.2.0` au `python -m pip install academic-research-kernel==2.2.0` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==6.19.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
+Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.3.0` au `python -m pip install academic-research-kernel==2.3.0` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==6.19.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
 
 ## Hermes
 
@@ -70,11 +74,11 @@ SLL inaruhusu kwa upana matumizi, uchunguzi, marekebisho, matumizi ya kibiashara
 
 | Ujuzi | Toleo | Kinachofanyika |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Uhakiki mtambuka wa utambulisho na idadi ya nukuu kulingana na chanzo; ukaguzi wa ishara za masasisho au kuondolewa kwa chapisho; utafutaji wa maandishi ya ufikiaji wazi (OA) na uhakiki wa faili za PDF |
+| `skills/academic-source-verification` | 1.3.0 | Uhakiki mtambuka wa utambulisho na idadi ya nukuu kulingana na chanzo; ukaguzi wa ishara za masasisho au kuondolewa kwa chapisho; utafutaji wa maandishi ya ufikiaji wazi (OA) na uhakiki wa faili za PDF |
 | `skills/literature-analysis` | 1.3.0 | Mitiririko kumi na miwili ya kazi: ulinganifu wa mada, mwingiliano wa maandishi, ushahidi kinzani, wasifu wa waandishi, tathmini ya mfano, ukaguzi wa upotoshaji wa kimantiki, jedwali la mapitio, mapendekezo ya majarida, BibTeX, usomaji wa lugha mbili, uchunguzi wa mapengo ya utafiti na urudiaji |
-| `skills/academic-writing` | 1.1.1 | Uhariri wa kitaaluma, mwongozo wa nukuu (ISO 690, APA, MLA, Chicago, IEEE, AMA na wasifu wa kikanda), maelekezo ya majarida, huduma za hiari za ugunduzi, nyaraka za uwasilishaji na mahitaji ya taasisi |
+| `skills/academic-writing` | 1.2.0 | Uhariri wa kitaaluma, mwongozo wa nukuu (ISO 690, APA, MLA, Chicago, IEEE, AMA na wasifu wa kikanda), maelekezo ya majarida, huduma za hiari za ugunduzi, nyaraka za uwasilishaji na mahitaji ya taasisi |
 | `skills/math-computation` | 1.2.1 | Uelekezaji wa kazi na nyanja za kihesabu ukiwa na mifano iliyosahihishwa ya namba na takwimu; faili nne za marejeleo ya kina |
-| `skills/quantitative-paper-audit` | 1.1.0 | Ukokotoaji upya wa takwimu zilizoripotiwa (ukubwa wa athari, thamani za p, vipindi vya uaminifu, OR/RR, nguvu ya takwimu iliyofikiwa) na utambuzi wa tofauti za namba |
+| `skills/quantitative-paper-audit` | 1.2.0 | Ukokotoaji upya wa takwimu zilizoripotiwa (ukubwa wa athari, thamani za p, vipindi vya uaminifu, OR/RR, nguvu ya takwimu iliyofikiwa) na utambuzi wa tofauti za namba |
 | `skills/research-reproducibility` | 1.0.1 | Mfumo wa hatua kumi na nne wa ukaguzi wa uwezo wa kurudia matokeo wenye kikagua sheria za kurudiwa kwa matokeo, ngazi tano za ukweli na rekodi za ukaguzi zinazoweza kurudiwa |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | Kumbukumbu za utafutaji za PRISMA, kumbukumbu ya uchunguzi wa machapisho, ubadilishaji wa ukubwa wa athari, uchambuzi wa utofauti, ujumuishaji wa athari maalum/nasibu, unyeti na uchunguzi wa upendeleo wa uchapishaji |
 | `skills/literature-watch` | 1.1.0 | Mpango wa kila wiki: fuatilia mada, waandishi na kazi mpya zinazonukuu DOI kwenye OpenAlex na Crossref; ondoa marudio na uripoti vipengele vipya pekee |
@@ -82,8 +86,8 @@ SLL inaruhusu kwa upana matumizi, uchunguzi, marekebisho, matumizi ya kibiashara
 | `skills/research-object-identity` | 1.1.0 | Utambulisho thabiti wa rasilimali za utafiti na asili / ufuatiliaji wa mabaki ya utafiti: usanifishaji wa vitambulisho, uthibitishaji wa hali 5, grafu za mnyambuliko zinazolenga maudhui, uhakiki wa DAG ya kisababishi na ufuatiliaji wa chini ya 100ms |
 | `skills/claim-evidence-graph` | 1.0.0 | Uunganishaji thabiti wa uhusiano kati ya madai na ushahidi wa kisayansi unaounganisha hoja, kumbukumbu ya ushahidi / uthibitisho na asili ya kimahesabu |
 | `skills/decision-ledger` | 1.0.0 | Kumbukumbu ya maamuzi ya utafiti na majaribio yasiyofanikiwa: rekodi thabiti inayoongezwa tu ya chaguzi za utafiti, matokeo hasi, hali ya mwelekeo / kwa nini njia hii ilisitishwa na marekebisho ya matokeo |
-| `skills/paper-research` | 1.0.0 | Usomaji wa makala na nyongeza kupitia DOI/URL/faili za ndani ukiwa na uhakiki wa sehemu zilizopendekezwa, ukaguzi wa takwimu, uhifadhi wa hali ya utafiti, ripoti za Kichina zenye vyanzo na ulinganishaji wa makala mbili |
-| `skills/cross-review-five` | 2.0.0 | Uratibu wa jopo la wakaguzi wengi linalotumia miundo na maajenti mbalimbali (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, n.k.): mtiririko wa Sparse Deliberation v2 wenye ugawaji wa Kuhn-Munkres Hungarian, uwekaji wa hoja katika makundi, maswali lengwa yasiyomtaja mwandishi na upangaji wa ukali wa P0–P3 |
+| `skills/paper-research` | 1.1.0 | Usomaji wa makala na nyongeza kupitia DOI/URL/faili za ndani ukiwa na uhakiki wa sehemu zilizopendekezwa, ukaguzi wa takwimu, uhifadhi wa hali ya utafiti, ripoti za Kichina zenye vyanzo na ulinganishaji wa makala mbili |
+| `skills/cross-review-five` | 2.0.1 | Uratibu wa jopo la wakaguzi wengi linalotumia miundo na maajenti mbalimbali (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, n.k.): mtiririko wa Sparse Deliberation v2 wenye ugawaji wa Kuhn-Munkres Hungarian, uwekaji wa hoja katika makundi, maswali lengwa yasiyomtaja mwandishi na upangaji wa ukali wa P0–P3 |
 
 Kuna faili 22 za marejeleo ya Markdown katika stadi kumi na nne. Marejeleo hupakiwa pale tu yanapohitajika.
 
@@ -160,7 +164,7 @@ Saraka ya [tools/longtail/](../../tools/longtail/README.md) inashikilia kizalish
 
 ## Fanya utafiti wa makala ukitumia Agent wa ndani
 
-Sakinisha `academic-research-kernel[research]==2.2.0` na uhamishe mtiririko wa kazi uliofungashwa:
+Sakinisha `academic-research-kernel[research]==2.3.0` na uhamishe mtiririko wa kazi uliofungashwa:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

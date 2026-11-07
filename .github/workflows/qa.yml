@@ -89,9 +89,9 @@ jobs:
           DIFF_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          # New branches and manual runs have no previous commit: check the full tree.
-          if [[ -z "$DIFF_BASE" || "$DIFF_BASE" =~ ^0+$ ]]; then
-            DIFF_BASE="$(git hash-object -t tree --stdin </dev/null)"
+          # New branches, manual runs, and rewritten tips where DIFF_BASE is unreachable check the full tree.
+          if [[ -z "$DIFF_BASE" || "$DIFF_BASE" =~ ^0+$ ]] || ! git cat-file -e "$DIFF_BASE^{commit}" 2>/dev/null; then
+            DIFF_BASE="$(git hash-object -w -t tree --stdin </dev/null)"
           fi
           git diff --check "$DIFF_BASE" "$DIFF_HEAD" --
       - if: matrix.full_qa == 'true'
