@@ -8,19 +8,23 @@ Penulis: Junfu Shi (SJF, xngg1021), Hermes Agent. Penawaran lisensi saat ini: [S
 
 ## Mulai cepat
 
-Jalankan versi 2.2.0 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Jalankan versi 2.3.0 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-Catatan [rilis 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 12 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
+Catatan [rilis 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 12 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
 
 ## Verifikasi instalasi
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-12 alat. Layanan eksternal opsional dapat dibiarkan tanpa konfigurasi. Gunakan `doctor --json` untuk menghasilkan keluaran yang dapat dibaca mesin.
@@ -28,12 +32,12 @@ Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-12 alat. L
 ## Instalasi paket
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.2.0` atau `python -m pip install academic-research-kernel==2.2.0` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==6.19.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
+Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.3.0` atau `python -m pip install academic-research-kernel==2.3.0` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==6.19.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
 
 ## Hermes
 
@@ -70,11 +74,11 @@ SLL secara luas mengizinkan penggunaan, pembelajaran, modifikasi, pemanfaatan ko
 
 | Keahlian | Versi | Fungsi utama |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Memeriksa silang identitas publikasi dan jumlah sitasi spesifik per sumber; memeriksa sinyal pembaruan atau penarikan artikel; menemukan naskah Open Access dan memverifikasi keaslian PDF |
+| `skills/academic-source-verification` | 1.3.0 | Memeriksa silang identitas publikasi dan jumlah sitasi spesifik per sumber; memeriksa sinyal pembaruan atau penarikan artikel; menemukan naskah Open Access dan memverifikasi keaslian PDF |
 | `skills/literature-analysis` | 1.3.0 | Dua belas alur kerja analisis: kemiripan topik, tumpang tindih teks lokal, bukti tandingan, profil penulis, simulasi telaah sejawat, pemeriksaan sesat pikir, matriks tinjauan, kandidat jurnal, BibTeX, pembacaan dwibahasa, pemetaan celah riset, dan reproduksi |
-| `skills/academic-writing` | 1.1.1 | Penyuntingan naskah ilmiah, panduan gaya sitasi (ISO 690, APA, MLA, Chicago, IEEE, AMA, dan profil regional), petunjuk penulis jurnal, layanan deteksi opsional, berkas pengajuan naskah, dan persyaratan institusional |
+| `skills/academic-writing` | 1.2.0 | Penyuntingan naskah ilmiah, panduan gaya sitasi (ISO 690, APA, MLA, Chicago, IEEE, AMA, dan profil regional), petunjuk penulis jurnal, layanan deteksi opsional, berkas pengajuan naskah, dan persyaratan institusional |
 | `skills/math-computation` | 1.2.1 | Perutean domain dan tugas komputasi dengan contoh numerik serta statistik yang telah dikoreksi; empat berkas referensi lanjutan per bidang |
-| `skills/quantitative-paper-audit` | 1.1.0 | Menghitung ulang statistik yang dilaporkan dalam makalah (ukuran efek, nilai p, interval kepercayaan, OR/RR, daya statistik tercapai) dan mendeteksi ketidaksesuaian angka |
+| `skills/quantitative-paper-audit` | 1.2.0 | Menghitung ulang statistik yang dilaporkan dalam makalah (ukuran efek, nilai p, interval kepercayaan, OR/RR, daya statistik tercapai) dan mendeteksi ketidaksesuaian angka |
 | `skills/research-reproducibility` | 1.0.1 | Alur audit reproduktibilitas empat belas tahap dengan daftar periksa terstruktur, lima tingkatan verifikasi fakta, dan catatan audit yang dapat direproduksi |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | Log pencarian PRISMA, catatan penapisan literatur, konversi ukuran efek, analisis heterogenitas, penggabungan efek tetap maupun acak, analisis sensitivitas, dan diagnostik bias publikasi |
 | `skills/literature-watch` | 1.1.0 | Pemantauan mingguan: melacak topik, penulis, dan karya pengutip DOI di OpenAlex serta Crossref; menghapus duplikat dan hanya melaporkan publikasi baru |
@@ -82,8 +86,8 @@ SLL secara luas mengizinkan penggunaan, pembelajaran, modifikasi, pemanfaatan ko
 | `skills/research-object-identity` | 1.1.0 | Identifikasi sumber daya riset deterministik dan asal-usul / ketertelusuran artefak: normalisasi pengenal, verifikasi 5 status, graf turunan beralamat konten, validasi DAG kausal, dan pelacakan silsilah di bawah 100 md |
 | `skills/claim-evidence-graph` | 1.0.0 | Penautan deterministik hubungan klaim dan bukti yang menghubungkan pernyataan ilmiah, catatan bukti empiris, dan asal-usul komputasi |
 | `skills/decision-ledger` | 1.0.0 | Catatan keputusan penelitian dan kegagalan: log deterministik tambah-saja untuk pilihan metodologis, hasil negatif, status rute / alasan rute dihentikan, dan revisi kesimpulan |
-| `skills/paper-research` | 1.0.0 | Pembacaan makalah dan suplemen melalui DOI, URL, atau berkas lokal disertai validasi kandidat bidang, pemeriksaan statistik, penyimpanan status riset persisten, laporan bahasa Mandarin tertaut sumber, serta perbandingan dua makalah |
-| `skills/cross-review-five` | 2.0.0 | Orkestrasi panel multi-peninjau dinamis yang mendukung beragam model dan sub-agen (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, dll.): alur Sparse Deliberation v2 dengan penugasan Kuhn-Munkres Hungarian, pengelompokan tingkat asersi, sanggahan anonim terarah, dan pemeringkatan tingkat keparahan P0–P3 |
+| `skills/paper-research` | 1.1.0 | Pembacaan makalah dan suplemen melalui DOI, URL, atau berkas lokal disertai validasi kandidat bidang, pemeriksaan statistik, penyimpanan status riset persisten, laporan bahasa Mandarin tertaut sumber, serta perbandingan dua makalah |
+| `skills/cross-review-five` | 2.0.1 | Orkestrasi panel multi-peninjau dinamis yang mendukung beragam model dan sub-agen (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, dll.): alur Sparse Deliberation v2 dengan penugasan Kuhn-Munkres Hungarian, pengelompokan tingkat asersi, sanggahan anonim terarah, dan pemeringkatan tingkat keparahan P0–P3 |
 
 Terdapat 22 berkas referensi Markdown yang tersebar di keempat belas keahlian tersebut. Berkas referensi hanya dimuat ketika diperlukan.
 
@@ -160,7 +164,7 @@ Direktori `scripts/scfabric/` berisi perangkat alat komputasi ilmiah dan statist
 
 ## Meneliti makalah dengan Agen lokal
 
-Instal `academic-research-kernel[research]==2.2.0` dan ekspor alur kerja terpaket:
+Instal `academic-research-kernel[research]==2.3.0` dan ekspor alur kerja terpaket:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

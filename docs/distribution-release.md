@@ -1,3 +1,24 @@
+# Distribution and manuscript engineering release 2.3.0
+
+Release 2.3.0 extends the unified wheel, CLI, and MCP runtime with pre-submission manuscript engineering gates (`receipt-to-latex`, `double-blind-sanitize`, `pre-submission-lint`, `venue-template`, and `venue-specs.json`), external forensic utilities (`locate-oa`, `openreview-audit`, `repo-forensics`), and four additional statistical/physical-bound checks (`partition_conservation`, `ablation_delta_regularity`, `storage_bandwidth_bounds`, `nonparametric_test`) while preserving all 12 public MCP tool names, 26 JSON schemas, and `>= 2.2.0` historical artifact compatibility.
+
+Install the current release with digital PDF support using:
+
+```bash
+uv tool install "academic-research-kernel[research]==2.3.0"
+academic-research-kernel doctor
+```
+
+Build and verify candidate and release distributions in fresh environments outside the checkout:
+
+```bash
+uv build --no-create-gitignore
+python scripts/release_manifest.py --dist dist --output dist/release-manifest.json
+python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
+```
+
+---
+
 # Distribution and unified workflow release 2.2.0
 
 Release 2.2.0 unifies the statistical audit library, LaTeX/BibTeX source package reading, and high-frequency scholarly CLI utilities (`verify-source`, `bibliography`, `meta-analyze`) into the installed wheel while preserving all 12 public MCP tool names and existing schema contracts. The wheel bundles `normalize_identifier.py`, `verify_work.py`, `interop.py`, and `meta_core.py` alongside `paper-research` and the deterministic ingestion kernel.

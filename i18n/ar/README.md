@@ -8,19 +8,23 @@
 
 ## البدء السريع
 
-شغّل الإصدار 2.2.0 باستخدام أداة [uv](https://docs.astral.sh/uv/getting-started/installation/):
+شغّل الإصدار 2.3.0 باستخدام أداة [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-يوثق [إصدار 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) بصمات التوزيع (hashes) وحالة النشر. يمكن أيضًا تشغيل حزمة wheel محليًا عبر الأمر `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. يدعم النظام إصدارات Python من 3.10 إلى 3.14؛ ويتيح الخيار `uvx --python 3.12` تحديد مفسر مدعوم بشكل صريح. تتضمن الحزمة الأساسية جميع الأدوات الحتمية الاثنتي عشرة، بما فيها مجموعة أدوات الحساب العلمي والإحصاء.
+يوثق [إصدار 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) بصمات التوزيع (hashes) وحالة النشر. يمكن أيضًا تشغيل حزمة wheel محليًا عبر الأمر `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. يدعم النظام إصدارات Python من 3.10 إلى 3.14؛ ويتيح الخيار `uvx --python 3.12` تحديد مفسر مدعوم بشكل صريح. تتضمن الحزمة الأساسية جميع الأدوات الحتمية الاثنتي عشرة، بما فيها مجموعة أدوات الحساب العلمي والإحصاء.
 
 ## التحقق من التثبيت
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 يفحص التشخيص غير المتصل بالشبكة الاعتماديات البرمجية والمخططات (schemas) وتعريفات الأدوات الاثنتي عشرة كلها. يمكن ترك الخدمات الخارجية الاختيارية دون إعداد. استخدم `doctor --json` للحصول على مخرجات مقروءة آليًا.
@@ -28,12 +32,12 @@ uvx academic-research-kernel@2.2.0 --version
 ## تثبيت الحزمة
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-بدلاً من ذلك، يمكنك التثبيت عبر `pipx install academic-research-kernel==2.2.0` أو `python -m pip install academic-research-kernel==2.2.0` داخل بيئة افتراضية مدعومة. تضيف المجموعة الاختيارية `[full]` مكتبات للأمثلة العلمية الموسعة؛ وتضيف `[qa]` أدوات التحقق من المستودع بما فيها محلل ملفات PDF. أما `[research]` فتضيف `pypdf==6.19.0` و`fonttools==4.65.0` لضمان فك ترميز خطوط PDF باتساق عبر التثبيتات النظيفة، وكلاهما يدعم Python 3.10. تعتمد قراءة HTML/XML المهيكلة وملفات DOCX/XLSX محدودة الحجم على المكتبة القياسية. تظل واجهات GPU والخدمات المدفوعة اختيارية.
+بدلاً من ذلك، يمكنك التثبيت عبر `pipx install academic-research-kernel==2.3.0` أو `python -m pip install academic-research-kernel==2.3.0` داخل بيئة افتراضية مدعومة. تضيف المجموعة الاختيارية `[full]` مكتبات للأمثلة العلمية الموسعة؛ وتضيف `[qa]` أدوات التحقق من المستودع بما فيها محلل ملفات PDF. أما `[research]` فتضيف `pypdf==6.19.0` و`fonttools==4.65.0` لضمان فك ترميز خطوط PDF باتساق عبر التثبيتات النظيفة، وكلاهما يدعم Python 3.10. تعتمد قراءة HTML/XML المهيكلة وملفات DOCX/XLSX محدودة الحجم على المكتبة القياسية. تظل واجهات GPU والخدمات المدفوعة اختيارية.
 
 ## Hermes
 
@@ -70,11 +74,11 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 | المهارة | الإصدار | الوظيفة |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | المطابقة المتقاطعة للهوية وعدد الاستشهادات حسب المصدر؛ وفحص إشارات التحديث أو سحب الأبحاث؛ وتحديد النصوص الكاملة ذات الوصول المفتوح (OA) والتحقق من ملفات PDF |
+| `skills/academic-source-verification` | 1.3.0 | المطابقة المتقاطعة للهوية وعدد الاستشهادات حسب المصدر؛ وفحص إشارات التحديث أو سحب الأبحاث؛ وتحديد النصوص الكاملة ذات الوصول المفتوح (OA) والتحقق من ملفات PDF |
 | `skills/literature-analysis` | 1.3.0 | اثنا عشر مسار عمل: تشابه الموضوعات، والتداخل النصي المحلي، والأدلة المضادة، وملفات المؤلفين، والتحكيم التجريبي، وفحص المغالطات، ومصفوفة المراجعة، وترشيح المجلات، وBibTeX، والقراءة ثنائية اللغة، وفحص الفجوات البحثية، وإعادة الإنتاج |
-| `skills/academic-writing` | 1.1.1 | التحرير الأكاديمي، وإرشادات التوثيق (ISO 690 وAPA وMLA وChicago وIEEE وAMA والملفات الإقليمية)، وتعليمات المجلات، وخدمات الفحص الاختيارية، ومواد التقديم، ومتطلبات التحكيم المؤسسية |
+| `skills/academic-writing` | 1.2.0 | التحرير الأكاديمي، وإرشادات التوثيق (ISO 690 وAPA وMLA وChicago وIEEE وAMA والملفات الإقليمية)، وتعليمات المجلات، وخدمات الفحص الاختيارية، ومواد التقديم، ومتطلبات التحكيم المؤسسية |
 | `skills/math-computation` | 1.2.1 | توجيه المسائل حسب المجال والمهمة مع أمثلة عددية وإحصائية مصححة؛ وأربعة ملفات مرجعية متقدمة |
-| `skills/quantitative-paper-audit` | 1.1.0 | إعادة حساب الإحصاءات المنشورة في الأبحاث (حجم الأثر، وقيم p، وفترات الثقة، وOR/RR، والقوة الإحصائية المحققة) وكشف التضارب الرقمي |
+| `skills/quantitative-paper-audit` | 1.2.0 | إعادة حساب الإحصاءات المنشورة في الأبحاث (حجم الأثر، وقيم p، وفترات الثقة، وOR/RR، والقوة الإحصائية المحققة) وكشف التضارب الرقمي |
 | `skills/research-reproducibility` | 1.0.1 | مسار تدقيق قابلية التكرار المكون من 14 مرحلة مع مدقق قواعد قابلية التكرار وقوائم فحص مهيكلة، وخمس مستويات للحقائق، وسجلات تدقيق قابلة للتكرار |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | سجلات بحث PRISMA، وسجل فرز الأدبيات، وتحويل حجم الأثر، وتحليل عدم التجانس، والتجميع الثابت/العشوائي، وتحليل الحساسية وتشخيص تحيز النشر |
 | `skills/literature-watch` | 1.1.0 | مخطط رصد أسبوعي: متابعة الموضوعات والمؤلفين والأعمال المستشهدة بمعرفات DOI عبر OpenAlex وCrossref؛ وإزالة التكرار والإبلاغ عن العناصر الجديدة فقط |
@@ -82,8 +86,8 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 | `skills/research-object-identity` | 1.1.0 | التحديد الحتمي لموارد البحث والمنشأ / إمكانية التتبع: تطبيع المعرفات، والتحقق خماسي الحالات، ومخططات الاشتقاق المعنونة بالمحتوى، وفحص مخطط DAG السببي، وتتبع النسب في أقل من 100 مللي ثانية |
 | `skills/claim-evidence-graph` | 1.0.0 | بناء حتمي يوثق الروابط بين الادعاءات والأدلة العلمية، ويربط الفرضيات بسجل الأدلة / التحقق والنسب الحسابي |
 | `skills/decision-ledger` | 1.0.0 | سجل قرارات البحث والنتائج السلبية: سجل حتمي للإلحاق فقط يوثق الخيارات البحثية، والمحاولات غير الناجحة، وحالة المسار / أسباب إيقاف هذا الاتجاه، وتعديلات النتائج |
-| `skills/paper-research` | 1.0.0 | قراءة الأبحاث والملاحق عبر DOI أو الرابط أو الملفات المحلية مع التحقق من الحقول المرشحة، والفحوص الإحصائية، وحفظ حالة البحث المستديمة، وإصدار تقارير صينية مرتبطة بالمصادر، والمقارنة بين ورقتين بحثيتين |
-| `skills/cross-review-five` | 2.0.0 | تنسيق ديناميكي للجنة تحكيم متعددة النماذج والوكلاء الفرعيين (Kimi K3 وDeepSeek V4 Pro وGLM 5.3 وClaude وGemini وغيرها): مسار مداولة متناثرة v2 مع تخصيص كوهن-مانكرس الهنغاري، وتجميع الادعاءات، والمساءلة المجهولة الموجهة، وتصنيف الخطورة P0–P3 |
+| `skills/paper-research` | 1.1.0 | قراءة الأبحاث والملاحق عبر DOI أو الرابط أو الملفات المحلية مع التحقق من الحقول المرشحة، والفحوص الإحصائية، وحفظ حالة البحث المستديمة، وإصدار تقارير صينية مرتبطة بالمصادر، والمقارنة بين ورقتين بحثيتين |
+| `skills/cross-review-five` | 2.0.1 | تنسيق ديناميكي للجنة تحكيم متعددة النماذج والوكلاء الفرعيين (Kimi K3 وDeepSeek V4 Pro وGLM 5.3 وClaude وGemini وغيرها): مسار مداولة متناثرة v2 مع تخصيص كوهن-مانكرس الهنغاري، وتجميع الادعاءات، والمساءلة المجهولة الموجهة، وتصنيف الخطورة P0–P3 |
 
 يوجد 22 ملفًا مرجعيًا بصيغة Markdown موزعة على المهارات الأربع عشرة. لا يتم تحميل المراجع إلا عند الحاجة إليها.
 
@@ -160,7 +164,7 @@ git diff --check
 
 ## دراسة ورقة بحثية باستخدام وكيل محلي (Agent)
 
-ثبّت الحزمة `academic-research-kernel[research]==2.2.0` وصدّر مسار العمل المدمج:
+ثبّت الحزمة `academic-research-kernel[research]==2.3.0` وصدّر مسار العمل المدمج:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

@@ -163,15 +163,25 @@ def render_booktabs_table(spec: dict, source_sha256: str | None = None) -> str:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", required=True, help="实验收据表规格 JSON 文件路径")
+    parser.add_argument("input_pos", nargs="?", help="实验收据表规格 JSON 文件路径（可选位置参数）")
+    parser.add_argument("--input", dest="input_opt", help="实验收据表规格 JSON 文件路径")
     parser.add_argument("--output", help="可选，输出 .tex 文件路径")
     parser.add_argument("--rows", help="可选，JSON 路径（当输入为嵌套字典时提取指定行列表键）")
     parser.add_argument("--cols", help="可选，逗号分隔的列名覆盖列表")
+    parser.add_argument("--caption", help="可选，覆盖表题 caption")
+    parser.add_argument("--label", help="可选，覆盖表标签 label")
     args = parser.parse_args(argv)
+    input_path = args.input_opt or args.input_pos
+    if not input_path:
+        parser.error("必须提供 --input <path> 或位置参数 <path>")
     try:
-        raw_bytes = Path(args.input).read_bytes()
+        raw_bytes = Path(input_path).read_bytes()
         sha = hashlib.sha256(raw_bytes).hexdigest()
         spec = json.loads(raw_bytes.decode("utf-8"))
+        if args.caption and isinstance(spec, dict):
+            spec = dict(spec, caption=args.caption)
+        if args.label and isinstance(spec, dict):
+            spec = dict(spec, label=args.label)
         if args.rows and isinstance(spec, dict) and args.rows in spec and "rows" not in spec:
             spec = dict(spec, rows=spec[args.rows])
         if args.cols and isinstance(spec, dict):

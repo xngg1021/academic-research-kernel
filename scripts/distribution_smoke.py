@@ -41,7 +41,7 @@ def _make_minimal_pdf(text_line: str) -> bytes:
     return bytes(out)
 
 
-def research_smoke(execute, directory, pdf_ready=False):
+def research_smoke(execute, directory, pdf_ready=False, expected_version='2.3.0'):
     """Exercise installed workflow on explicitly synthetic raw source material."""
     from importlib.resources import files
     root = Path(directory)
@@ -112,30 +112,57 @@ def research_smoke(execute, directory, pdf_ready=False):
     wf_state = json.loads((project / 'workflow-state.json').read_text(encoding='utf-8'))
     require(wf_state.get('stage') == 'complete' and wf_state.get('semantic_producer_required') is False,
             'workflow-state.json did not transition to complete')
-    import io
-    from contextlib import redirect_stdout
-    from academic_research_kernel import cli as installed_cli
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        rc = installed_cli.main(['verify-source', 'https://doi.org/10.1038/nature14539', '--normalize-only'])
-    require(rc == 0 and json.loads(buf.getvalue()).get('value') == '10.1038/nature14539',
-            'installed verify-source CLI failed')
+    vs_out = json.loads(execute(['verify-source', 'https://doi.org/10.1038/nature14539', '--normalize-only']))
+    require(vs_out.get('value') == '10.1038/nature14539', 'installed verify-source CLI failed')
     bib_file = root / 'fixture.bib'
-    bib_file.write_text('@misc{ark2026,\n  title = {Synthetic Fixture},\n  author = {Shi, Junfu},\n  year = {2026}\n}\n', encoding='utf-8')
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        rc = installed_cli.main(['bibliography', '--from', 'bibtex', '--to', 'csl', '--input', str(bib_file)])
-    csl_out = json.loads(buf.getvalue())
-    require(rc == 0 and isinstance(csl_out, list) and csl_out[0].get('type') == 'document',
-            'installed bibliography CLI failed')
+    bib_file.write_text('@misc{ark2026,\n  title = {Synthetic Fixture},\n  author = {Doe, Jane},\n  year = {2026}\n}\n', encoding='utf-8')
+    csl_out = json.loads(execute(['bibliography', '--from', 'bibtex', '--to', 'csl', '--input', str(bib_file)]))
+    require(isinstance(csl_out, list) and csl_out[0].get('type') == 'document', 'installed bibliography CLI failed')
     meta_file = root / 'meta-studies.json'
     meta_file.write_text(json.dumps({'studies': [{'yi': 0.4, 'vi': 0.04}, {'yi': 0.5, 'vi': 0.05}, {'yi': 0.3, 'vi': 0.03}]}), encoding='utf-8')
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        rc = installed_cli.main(['meta-analyze', '--input', str(meta_file)])
-    meta_out = json.loads(buf.getvalue())
-    require(rc == 0 and meta_out.get('study_count') == 3 and 'random_effects_dl' in meta_out,
-            'installed meta-analyze CLI failed')
+    meta_out = json.loads(execute(['meta-analyze', '--input', str(meta_file)]))
+    require(meta_out.get('study_count') == 3 and 'random_effects_dl' in meta_out, 'installed meta-analyze CLI failed')
+    if tuple(map(int, expected_version.split('.'))) >= (2, 3, 0):
+        require(package.joinpath('venue-specs.json').is_file(), 'installed venue-specs.json missing for >=2.3.0')
+        vspecs = json.loads(package.joinpath('venue-specs.json').read_text(encoding='utf-8'))
+        require('iclr' in vspecs.get('venues', {}), 'installed venue-specs.json missing iclr')
+        vt_out = json.loads(execute(['venue-template', '--action', 'list-venues']))
+        require('iclr' in vt_out.get('venues', {}), 'installed venue-template list-venues CLI failed')
+        scaf_parent = root / 'scaffold-workspace'
+        scaf_out = json.loads(execute([
+            'venue-template', '--action', 'scaffold',
+            '--workspace-dir', str(scaf_parent), '--slug', 'my-paper',
+            '--venue', 'iclr', '--contribution-type', 'systems_architecture',
+        ]))
+        tex_dir = Path(scaf_out['manuscript_dir'])
+        tex_file = tex_dir / 'main.tex'
+        require(scaf_out.get('status') == 'scaffolded' and tex_file.is_file(), 'installed venue-template scaffold CLI failed')
+        dbs_out = json.loads(execute(['sanitize-blind', '--target', str(tex_dir)]))
+        require(dbs_out.get('status') == 'clean', 'installed sanitize-blind CLI failed')
+        psl_out = json.loads(execute(['pre-submission-lint', '--tex', str(tex_file), '--venue', 'iclr', '--contribution-type', 'systems_architecture']))
+        require(psl_out.get('passed') is True, 'installed pre-submission-lint CLI failed')
+        rf_out = json.loads(execute(['repo-forensics', '--local-repo', str(tex_dir)]))
+        require('first_party_core' in rf_out, 'installed repo-forensics CLI failed')
+        tf_in = root / 'table-forensics.json'
+        tf_in.write_text(json.dumps({'partition': {'total': 100, 'parts': [60, 40]}}), encoding='utf-8')
+        tf_out = json.loads(execute(['table-forensics', '--input', str(tf_in)]))
+        require(tf_out.get('consistent') is True, 'installed table-forensics CLI failed')
+        r2l_in = root / 'table-receipt.json'
+        r2l_in.write_text(json.dumps({
+            'columns': ['Method', 'Score'],
+            'rows': [['SynthA', 91.2], ['SynthB', 88.4]]
+        }), encoding='utf-8')
+        r2l_out = json.loads(execute(['receipt-to-latex', '--input', str(r2l_in), '--caption', 'Main Results', '--label', 'tab:main']))
+        require('\\toprule' in r2l_out.get('latex', '') and 'Main Results' in r2l_out.get('latex', '') and 'tab:main' in r2l_out.get('latex', ''),
+                'installed receipt-to-latex CLI failed')
+        or_mirror = root / 'venue-mirror.json'
+        or_mirror.write_text(json.dumps([
+            {'forum_id': 'F1', 'title': 'Memory Agent Study', 'decision': 'Accept (Poster)', 'ratings': [8, 6, 8]},
+            {'forum_id': 'F2', 'title': 'Vision Study', 'decision': 'Reject', 'ratings': [3, 5, 4]},
+        ]), encoding='utf-8')
+        or_out = json.loads(execute(['openreview-audit', '--venue-stats', str(or_mirror), '--topic-regex', 'memory|agent']))
+        require(or_out.get('mode') == 'venue-stats' and or_out.get('total_submissions') == 2, 'installed openreview-audit venue-stats CLI failed')
+        require('locate-oa' in execute(['locate-oa', '--help']), 'installed locate-oa CLI help failed')
     pdf_smoke = 'skipped_no_extra'
     if pdf_ready:
         pdf_file = root / 'synthetic-fixture.pdf'
@@ -156,7 +183,7 @@ def require(condition, message):
         raise RuntimeError(message)
 
 
-def run(command=None, expected_version=None):
+def run(command=None, expected_version=None, require_pdf=False):
     from academic_research_kernel import __version__, __file__ as package_file
     from academic_research_kernel.ingestion import ArtifactEnvelope
     expected_version = expected_version or __version__
@@ -199,6 +226,13 @@ def run(command=None, expected_version=None):
             ('academic_recompute_statistics', {'t_stat': 1, 'df': 30, 'p_value': .00001, 'p_value_literal': '1.0e-5'}),
             ('academic_recompute_statistics', {'t_stat': 1, 'df': 30, 'p_value': .3253}),
         ]
+        if tuple(map(int, expected_version.split('.'))) >= (2, 3, 0):
+            calls.append(('academic_recompute_statistics', {
+                'partition_total': 100, 'partition_parts': [40, 60],
+                'ablation_matrix': [[0.80, 0.72], [0.85, 0.79], [0.90, 0.81]],
+                'bandwidth_item_count': 10000, 'bandwidth_vector_dim': 128,
+                'bandwidth_reported_size_mb': 12.0, 'bandwidth_reported_latency_us': 500.0,
+            }))
         messages = [{'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2024-11-05'}},
                     {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
                     {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'}]
@@ -221,8 +255,14 @@ def run(command=None, expected_version=None):
             value = json.loads(response['result']['content'][0]['text'])
             require('error' not in value, value)
             data.setdefault(name, value)
-        require(json.loads(successful_replies[-2]['result']['content'][0]['text'])['p_match']['consistent'] is False, 'small reported p must be inconsistent')
-        require(json.loads(successful_replies[-1]['result']['content'][0]['text'])['p_match']['consistent'] is True, 'ordinary reported p must be consistent')
+        p_idx = 6
+        require(json.loads(successful_replies[p_idx]['result']['content'][0]['text'])['p_match']['consistent'] is False, 'small reported p must be inconsistent')
+        require(json.loads(successful_replies[p_idx + 1]['result']['content'][0]['text'])['p_match']['consistent'] is True, 'ordinary reported p must be consistent')
+        if tuple(map(int, expected_version.split('.'))) >= (2, 3, 0):
+            v230_mcp = json.loads(successful_replies[p_idx + 2]['result']['content'][0]['text'])
+            require(v230_mcp.get('partition_conservation', {}).get('consistent') is True, 'MCP partition_conservation failed')
+            require(v230_mcp.get('ablation_delta_regularity', {}).get('consistent') is True, 'MCP ablation_delta_regularity failed')
+            require(v230_mcp.get('storage_bandwidth_bounds', {}).get('consistent') is True, 'MCP storage_bandwidth_bounds failed')
         require(data['academic_check_percentage']['consistent'] is True, 'percentage positive control failed')
         require(0.05 < data['academic_recompute_statistics']['recomputed_p'] < 0.07, 't recomputation failed')
         require(data['academic_recompute_statistics']['cohens_d'] == 1.0, 'effect size control failed')
@@ -236,7 +276,12 @@ def run(command=None, expected_version=None):
         require(json.loads(by_id[100]['result']['content'][0]['text'])['status'] == 'failed', 'incomplete statistics failure state missing')
         require(replies[-1] == {'jsonrpc': '2.0', 'id': 'installed-ping', 'result': {}}, 'ping response mismatch')
         if tuple(map(int, expected_version.split('.'))) >= (2, 1, 0):
-            research = research_smoke(execute, directory, pdf_ready=bool(doctor.get('research', {}).get('pdf_ready')))
+            pdf_ready = bool(doctor.get('research', {}).get('pdf_ready'))
+            if require_pdf:
+                require(pdf_ready, 'require-pdf set but doctor reported pdf_ready=false')
+            research = research_smoke(execute, directory, pdf_ready=pdf_ready, expected_version=expected_version)
+            if require_pdf:
+                require(research.get('pdf_smoke') == 'passed', 'require-pdf set but pdf_smoke did not pass')
     print(json.dumps({'installed_e2e': 'PASS', 'version': __version__, 'tools': 12,
                       'calls': [name for name, _ in calls], 'clean_shutdown': True,
                       'arbitrary_cwd': True, 'source_independent': True, 'import_path': str(package_file),
@@ -247,7 +292,8 @@ def run(command=None, expected_version=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--expected-version', help='Independently expected release version')
+    parser.add_argument('--require-pdf', action='store_true', help='Require [research] PDF extraction smoke to execute and pass')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     command = args.command[1:] if args.command and args.command[0] == '--' else args.command
-    run(command or None, expected_version=args.expected_version)
+    run(command or None, expected_version=args.expected_version, require_pdf=args.require_pdf)

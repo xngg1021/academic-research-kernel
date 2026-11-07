@@ -8,19 +8,23 @@ Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Oferta actual: [Source Lineage L
 
 ## Inicio rápido
 
-Ejecute la versión 2.2.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Ejecute la versión 2.3.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-La [versión 2.2.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10–3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 12 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
+La [versión 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10–3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 12 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
 
 ## Verificar la instalación
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 El diagnóstico sin conexión comprueba las dependencias, los esquemas y las 12 definiciones de herramientas. Los servicios externos opcionales pueden permanecer sin configurar. Utilice `doctor --json` para obtener una salida legible por máquina.
@@ -28,12 +32,12 @@ El diagnóstico sin conexión comprueba las dependencias, los esquemas y las 12 
 ## Instalación del paquete
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternativamente, puede instalarlo con `pipx install academic-research-kernel==2.2.0` o mediante `python -m pip install academic-research-kernel==2.2.0` dentro de un entorno virtual compatible. `[full]` añade bibliotecas para ejemplos avanzados de cálculo científico; `[qa]` añade las herramientas de validación del repositorio, incluido el analizador de PDF. `[research]` incorpora `pypdf==6.19.0` y `fonttools==4.65.0` para garantizar una decodificación uniforme de fuentes PDF en instalaciones limpias (ambos compatibles con Python 3.10). La lectura de HTML/XML estructurado y de archivos DOCX/XLSX acotados utiliza la biblioteca estándar. Los backends de GPU y los servicios de pago siguen siendo opcionales.
+Alternativamente, puede instalarlo con `pipx install academic-research-kernel==2.3.0` o mediante `python -m pip install academic-research-kernel==2.3.0` dentro de un entorno virtual compatible. `[full]` añade bibliotecas para ejemplos avanzados de cálculo científico; `[qa]` añade las herramientas de validación del repositorio, incluido el analizador de PDF. `[research]` incorpora `pypdf==6.19.0` y `fonttools==4.65.0` para garantizar una decodificación uniforme de fuentes PDF en instalaciones limpias (ambos compatibles con Python 3.10). La lectura de HTML/XML estructurado y de archivos DOCX/XLSX acotados utiliza la biblioteca estándar. Los backends de GPU y los servicios de pago siguen siendo opcionales.
 
 ## Hermes
 
@@ -70,11 +74,11 @@ SLL permite ampliamente el uso, el estudio, la modificación, el uso comercial, 
 
 | Competencia | Versión | Función |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Contrastar identidad y recuentos de citas por fuente; inspeccionar señales de actualización y retractación; localizar texto en acceso abierto y verificar la identidad de los PDF |
+| `skills/academic-source-verification` | 1.3.0 | Contrastar identidad y recuentos de citas por fuente; inspeccionar señales de actualización y retractación; localizar texto en acceso abierto y verificar la identidad de los PDF |
 | `skills/literature-analysis` | 1.3.0 | Doce flujos: similitud temática, solapamiento local de texto, contraevidencia, perfiles de autores, revisión simulada, comprobación de falacias, matriz de revisión, revistas candidatas, BibTeX, lectura bilingüe, cribado de lagunas, reproducción |
-| `skills/academic-writing` | 1.1.1 | Edición académica, pautas de citación (ISO 690, APA, MLA, Chicago, IEEE, AMA y perfiles regionales), directrices para autores, servicios opcionales de detección, materiales de envío y requisitos institucionales |
+| `skills/academic-writing` | 1.2.0 | Edición académica, pautas de citación (ISO 690, APA, MLA, Chicago, IEEE, AMA y perfiles regionales), directrices para autores, servicios opcionales de detección, materiales de envío y requisitos institucionales |
 | `skills/math-computation` | 1.2.1 | Enrutamiento de dominio y tarea existente con ejemplos numéricos y estadísticos corregidos; cuatro archivos de referencia por dominio |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recalcular las estadísticas declaradas (tamaño del efecto, valores p, intervalos de confianza, OR/RR, potencia alcanzada) y detectar discrepancias numéricas |
+| `skills/quantitative-paper-audit` | 1.2.0 | Recalcular las estadísticas declaradas (tamaño del efecto, valores p, intervalos de confianza, OR/RR, potencia alcanzada) y detectar discrepancias numéricas |
 | `skills/research-reproducibility` | 1.0.1 | Cadena de auditoría de reproducción en catorce etapas con listas de verificación estructuradas, cinco niveles de hechos y registros de auditoría reproducibles |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | Registros de búsqueda PRISMA, registro de cribado de literatura, conversión de tamaños del efecto, heterogeneidad, agrupación de efectos fijos y aleatorios, diagnósticos de sensibilidad y sesgo de publicación |
 | `skills/literature-watch` | 1.1.0 | Plano semanal: vigilar temas, autores y obras que citan DOI en OpenAlex y Crossref; deduplicar y notificar solo novedades |
@@ -82,8 +86,8 @@ SLL permite ampliamente el uso, el estudio, la modificación, el uso comercial, 
 | `skills/research-object-identity` | 1.1.0 | Identificación determinista de recursos de investigación y procedencia / trazabilidad: normalización de identificadores, verificación de 5 estados, grafo de derivación direccionado por contenido, validación de DAG causal y rastreo fuera de línea en menos de 100 ms |
 | `skills/claim-evidence-graph` | 1.0.0 | Vínculos entre afirmaciones y evidencias: conexión determinista de afirmaciones científicas, registros de evidencia / verificación y procedencia computacional |
 | `skills/decision-ledger` | 1.0.0 | Registro de decisiones de investigación y ensayos fallidos: registro determinista de solo anexado de decisiones, ensayos fallidos (resultados negativos), estado de la ruta / por qué se detuvo esta vía y revisiones de conclusiones |
-| `skills/paper-research` | 1.0.0 | Lectura de artículos y suplementos mediante DOI, URL o paquete local con candidatos de campo validados, comprobaciones estadísticas, estado de investigación persistente, informes en chino vinculados a las fuentes y comparación de dos artículos |
-| `skills/cross-review-five` | 2.0.0 | Orquestación dinámica de panel multirrevisor compatible con modelos y subagentes arbitrarios (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, etc.): canalización v2 Sparse Deliberation con asignación húngara de Kuhn-Munkres, agrupación de afirmaciones, interpelación anónima dirigida y clasificación de severidad P0–P3 |
+| `skills/paper-research` | 1.1.0 | Lectura de artículos y suplementos mediante DOI, URL o paquete local con candidatos de campo validados, comprobaciones estadísticas, estado de investigación persistente, informes en chino vinculados a las fuentes y comparación de dos artículos |
+| `skills/cross-review-five` | 2.0.1 | Orquestación dinámica de panel multirrevisor compatible con modelos y subagentes arbitrarios (Kimi K3, DeepSeek V4 Pro, GLM 5.3, Claude, Gemini, etc.): canalización v2 Sparse Deliberation con asignación húngara de Kuhn-Munkres, agrupación de afirmaciones, interpelación anónima dirigida y clasificación de severidad P0–P3 |
 
 Las catorce competencias incluyen 22 archivos de referencia Markdown, cargados solo cuando se necesitan.
 
@@ -91,7 +95,7 @@ Las catorce competencias incluyen 22 archivos de referencia Markdown, cargados s
 
 Los estilos de citación, los criterios de presentación de informes y los contratos de metadatos dependen de la revista de destino, la institución, el organismo de financiación, la disciplina y la jurisdicción. El repositorio establece **ISO 690:2021** (referencias bibliográficas), **ISO 5127:2017** (vocabulario de información y documentación) y **W3C PROV** (modelo de datos de procedencia) como bases internacionales, junto con perfiles regionales (como UNE-ISO 690:2024 en España, GB/T 7714-2025 en China continental, DIN ISO 690:2021 en Alemania) y normas disciplinarias (APA 7.ª ed., IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Los requisitos de la entidad o revista de destino tienen siempre prioridad sobre los perfiles predeterminados. Consulte la [Arquitectura de estándares académicos](docs/standards/README.md) y la [Guía de terminología natural](docs/terminology/README.md).
 
-La versión 2.2.0 valida la coherencia de los DOI e identificadores externos, los indicadores booleanos mutuamente excluyentes de veredicto cuantitativo y el contrato de elementos pendientes de verificación compartido entre el núcleo y los registros de verificación. La integridad de la caché se reconstruye a partir de los sobres fuente conservados y las vinculaciones normalizadas, con independencia de las listas de mutaciones del registro; eliminar simultáneamente un registro y su declaración de caché no puede producir una repetición aceptada. Consulte el [cierre de los cuatro bloqueos](docs/kernel-architecture.md).
+La versión 2.3.0 valida la coherencia de los DOI e identificadores externos, los indicadores booleanos mutuamente excluyentes de veredicto cuantitativo y el contrato de elementos pendientes de verificación compartido entre el núcleo y los registros de verificación. La integridad de la caché se reconstruye a partir de los sobres fuente conservados y las vinculaciones normalizadas, con independencia de las listas de mutaciones del registro; eliminar simultáneamente un registro y su declaración de caché no puede producir una repetición aceptada. Consulte el [cierre de los cuatro bloqueos](docs/kernel-architecture.md).
 
 ## Integración y uso portátil
 
@@ -128,7 +132,7 @@ Véanse [la autenticación de OpenAlex](https://help.openalex.org/api/authentica
 
 ## Incorporación determinista e interfaz pública del núcleo
 
-La versión 2.2.0 proporciona `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (las 14 competencias más el respaldo opaco) y 12 herramientas MCP stdio sin estado. Los registros de incorporación aceptados vinculan cada mutación semántica conservada por tipo, identidad y SHA-256 canónico: objetos de investigación, registros de vínculos entre afirmaciones y evidencias, entradas del registro de decisiones de investigación y ensayos fallidos, elementos pendientes de verificación, registros físicos de verificación y registros de artefactos. La repetición de caché comprueba esos compromisos con independencia de los hashes de las instantáneas de transporte. Los registros vacíos son válidos; los lotes atómicos fallidos no dejan estado parcial.
+La versión 2.3.0 proporciona `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (las 14 competencias más el respaldo opaco) y 12 herramientas MCP stdio sin estado. Los registros de incorporación aceptados vinculan cada mutación semántica conservada por tipo, identidad y SHA-256 canónico: objetos de investigación, registros de vínculos entre afirmaciones y evidencias, entradas del registro de decisiones de investigación y ensayos fallidos, elementos pendientes de verificación, registros físicos de verificación y registros de artefactos. La repetición de caché comprueba esos compromisos con independencia de los hashes de las instantáneas de transporte. Los registros vacíos son válidos; los lotes atómicos fallidos no dejan estado parcial.
 
 La autorización de lectura del contenido de procedencia es explícita y fuera de banda. Los invocadores de Python de confianza pasan `LineageVerificationContext` al reproducir registros de verificación o instantáneas serializados; los invocadores MCP pueden suministrar bytes de contenido acotados, pero nunca una raíz del sistema de archivos anfitrión. El presupuesto de contenido predeterminado es de 10 MiB; un anfitrión de confianza puede autorizar explícitamente artefactos mayores bajo la misma política entre productor y verificador. Sin autorización de contenido, una afirmación `fully_verified` no puede reproducirse de forma independiente y devuelve un resultado estructurado de verificación no válida. El texto no estructurado permanece opaco, las discrepancias siguen siendo visibles y los investigadores conservan el control sobre las confirmaciones, la detención o reapertura de vías, el enrutamiento y los juicios científicos.
 
@@ -160,7 +164,7 @@ scripts/scfabric/ constituye la capa de ejecución del conjunto de herramientas 
 
 ## Investigar un artículo con un Agente local
 
-Instale `academic-research-kernel[research]==2.2.0` y exporte el flujo de trabajo empaquetado:
+Instale `academic-research-kernel[research]==2.3.0` y exporte el flujo de trabajo empaquetado:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

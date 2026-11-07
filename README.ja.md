@@ -8,19 +8,23 @@
 
 ## クイックスタート
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) を用いてバージョン 2.2.0 を実行します：
+[uv](https://docs.astral.sh/uv/getting-started/installation/) を用いてバージョン 2.3.0 を実行します：
 
 ```bash
-uvx academic-research-kernel@2.2.0 mcp
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-[2.2.0 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10–3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 12 個の決定論的ツールが基本インストールに含まれています。
+[2.3.0 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10–3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 12 個の決定論的ツールが基本インストールに含まれています。
 
 ## インストールの確認
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
+uvx academic-research-kernel@2.3.0 doctor
+uvx academic-research-kernel@2.3.0 --version
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel locate-oa 10.1038/nature14539
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
 オフライン診断により依存関係、スキーマ、全 12 個のツール定義を検査します。任意の外部サービスが未設定のままでもエラーにはなりません。機械可読な出力には `doctor --json` を使用します。
@@ -28,12 +32,12 @@ uvx academic-research-kernel@2.2.0 --version
 ## パッケージのインストール
 
 ```bash
-uv tool install academic-research-kernel==2.2.0
+uv tool install academic-research-kernel==2.3.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-または、`pipx install academic-research-kernel==2.2.0`、あるいは対応する仮想環境内で `python -m pip install academic-research-kernel==2.2.0` を実行してインストールできます。`[full]` は拡張的な科学計算スキル例題向けのライブラリを追加し、`[qa]` は PDF パーサーを含むリポジトリ検証ツールを追加します。`[research]` はクリーンインストール環境間で一貫した PDF フォントデコードを行うため `pypdf==6.19.0` と `fonttools==4.65.0` を追加します（いずれも Python 3.10 に対応）。構造化 HTML/XML およびサイズ制限付き DOCX/XLSX の読み取りには標準ライブラリを使用します。GPU バックエンドと有償サービスは任意です。
+または、`pipx install academic-research-kernel==2.3.0`、あるいは対応する仮想環境内で `python -m pip install academic-research-kernel==2.3.0` を実行してインストールできます。`[full]` は拡張的な科学計算スキル例題向けのライブラリを追加し、`[qa]` は PDF パーサーを含むリポジトリ検証ツールを追加します。`[research]` はクリーンインストール環境間で一貫した PDF フォントデコードを行うため `pypdf==6.19.0` と `fonttools==4.65.0` を追加します（いずれも Python 3.10 に対応）。構造化 HTML/XML およびサイズ制限付き DOCX/XLSX の読み取りには標準ライブラリを使用します。GPU バックエンドと有償サービスは任意です。
 
 ## Hermes
 
@@ -70,11 +74,11 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 
 | スキル | バージョン | 機能 |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証 |
+| `skills/academic-source-verification` | 1.3.0 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証 |
 | `skills/literature-analysis` | 1.3.0 | 12 のワークフロー：トピック類似度、局所テキスト重複、反証、著者プロファイル、模擬査読、誤謬検査、レビューマトリクス、投稿先候補、BibTeX、バイリンガル読解、研究ギャップ探索、再現 |
-| `skills/academic-writing` | 1.1.1 | 論文推敲、引用基準案内（ISO 690、APA、MLA、Chicago、IEEE、AMA および地域・機関別プロファイル）、投稿規程、任意の検出サービス、投稿資料、機関審査要件 |
+| `skills/academic-writing` | 1.2.0 | 論文推敲、引用基準案内（ISO 690、APA、MLA、Chicago、IEEE、AMA および地域・機関別プロファイル）、投稿規程、任意の検出サービス、投稿資料、機関審査要件 |
 | `skills/math-computation` | 1.2.1 | 既存の領域・タスク経路と修正済みの数値・統計例題、領域別リファレンス 4 編 |
-| `skills/quantitative-paper-audit` | 1.1.0 | 論文が報告する統計量（効果量、p 値、信頼区間、OR/RR、達成検出力）の再計算と数値不整合の検出 |
+| `skills/quantitative-paper-audit` | 1.2.0 | 論文が報告する統計量（効果量、p 値、信頼区間、OR/RR、達成検出力）の再計算と数値不整合の検出 |
 | `skills/research-reproducibility` | 1.0.1 | 構造化チェックリスト、5 段階の事実階層、再現可能な監査記録を備えた 14 段階の再現監査パイプライン |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | PRISMA 検索ログ、文献選定記録、効果量換算、異質性、固定・変量効果の統合、感度分析、出版バイアス診断 |
 | `skills/literature-watch` | 1.1.0 | 週次ブループリント：OpenAlex と Crossref でトピック、著者、DOI の新規引用作品を監視し、重複排除のうえ新規項目のみ報告 |
@@ -82,8 +86,8 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 | `skills/research-object-identity` | 1.1.0 | 決定論的研究資源の識別および来歴・トレーサビリティ：識別子正規化、5 状態判定、コンテンツアドレス指定派生グラフ、因果 DAG 検証、100 ミリ秒未満のオフライン逆方向追跡 |
 | `skills/claim-evidence-graph` | 1.0.0 | 決定論的な主張と根拠の対応関係：科学的主張、証拠記録、計算来歴の接続 |
 | `skills/decision-ledger` | 1.0.0 | 研究上の意思決定と失敗記録：研究上の選択、失敗試行（ネガティブ結果）、研究ルートの状態・なぜその路線を断念したか、結果の訂正履歴を時系列で追記記録 |
-| `skills/paper-research` | 1.0.0 | DOI・URL・ローカル論文および付録資料の読解、候補フィールドの検証、統計値の再計算、永続的な研究状態管理、出典箇所付き中国語レポート生成、2 論文比較 |
-| `skills/cross-review-five` | 2.0.0 | 任意のモデルやサブエージェント（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini など）に対応する動的マルチレビュアーパネル編成：ハンガリー法（Kuhn-Munkres）最適割当て、主張クラスタリング、匿名相互検証、P0–P3 重要度判定を備えた v2 Sparse Deliberation パイプライン |
+| `skills/paper-research` | 1.1.0 | DOI・URL・ローカル論文および付録資料の読解、候補フィールドの検証、統計値の再計算、永続的な研究状態管理、出典箇所付き中国語レポート生成、2 論文比較 |
+| `skills/cross-review-five` | 2.0.1 | 任意のモデルやサブエージェント（Kimi K3、DeepSeek V4 Pro、GLM 5.3、Claude、Gemini など）に対応する動的マルチレビュアーパネル編成：ハンガリー法（Kuhn-Munkres）最適割当て、主張クラスタリング、匿名相互検証、P0–P3 重要度判定を備えた v2 Sparse Deliberation パイプライン |
 
 14 のスキルには計 22 編の Markdown リファレンスが含まれ、必要時にのみ読み込まれます。
 
@@ -91,7 +95,7 @@ SLL は、適用されるライセンス、通知、ソース系譜の条件に�
 
 引用スタイル、報告ガイドライン、メタデータ規約は対象ジャーナル、助成機関、学問分野、法域に依存します。本リポジトリは **ISO 690:2021**（書誌参照および引用指針）、**ISO 5127:2017**（情報・ドキュメンテーション用語）、**W3C PROV**（来歴データモデル）を国際基準として確立し、各国の地域プロファイル（日本の学協会指針・JIS X 0807 参考、中国大陸 GB/T 7714-2025、スペイン UNE-ISO 690:2024、ドイツ DIN ISO 690:2021 など）および分野別標準（APA 第 7 版、IEEE、ACM、Vancouver、Chicago、PRISMA 2020、ICMJE）に対応しています。投稿先機関・学会の要求事項が既定プロファイルより常に優先されます。詳細は[学術標準アーキテクチャ](docs/standards/README.md)および[自然な学術用語ガイド](docs/terminology/README.md)を参照してください。
 
-バージョン 2.2.0 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/kernel-architecture.md)を参照してください。
+バージョン 2.3.0 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/kernel-architecture.md)を参照してください。
 
 ## 統合とポータブル利用
 
@@ -128,7 +132,7 @@ hermes skills install xngg1021/academic-research-kernel/skills/academic-source-v
 
 ## 決定論的取り込みと公開カーネルインターフェース
 
-バージョン 2.2.0 は `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、15 個のアダプター（14 のスキルおよび opaque fallback）、ならびに 12 個のステートレス stdio MCP ツールを提供します。受理された取り込み検証記録は、保持される各セマンティック変更（研究対象、主張と根拠の対応関係レコード、研究上の意思決定と失敗記録レコード、要確認事項、物理検証記録、成果物登録）を種別、識別子、正規化 SHA-256 によって拘束します。キャッシュ再生時はトランスポートスナップショットのハッシュとは独立してこれらのコミットメントを検証します。空の記録も有効であり、失敗したアトミックバッチは部分的な状態を残しません。
+バージョン 2.3.0 は `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、15 個のアダプター（14 のスキルおよび opaque fallback）、ならびに 12 個のステートレス stdio MCP ツールを提供します。受理された取り込み検証記録は、保持される各セマンティック変更（研究対象、主張と根拠の対応関係レコード、研究上の意思決定と失敗記録レコード、要確認事項、物理検証記録、成果物登録）を種別、識別子、正規化 SHA-256 によって拘束します。キャッシュ再生時はトランスポートスナップショットのハッシュとは独立してこれらのコミットメントを検証します。空の記録も有効であり、失敗したアトミックバッチは部分的な状態を残しません。
 
 来歴コンテンツの読み取り権限は帯域外で明示的に付与されます。信頼された Python 呼び出し元はシリアライズ済み検証記録やスナップショットを再生する際に `LineageVerificationContext` を渡します。一方、MCP 呼び出し元は上限付きのコンテンツバイト列のみを渡すことができ、ホストのファイルシステムルートを指定することはできません。既定のコンテンツ予算は 10 MiB であり、信頼されたホストは生成側と検証側が同一ポリシーに従う条件下でより大きな成果物を明示的に許可できます。コンテンツ権限がない場合、`fully_verified` の主張は独立して再現できず、構造化された無効検証結果を返します。非構造化テキストは不透明なまま保持され、異論は可視状態に保たれ、コミット、路線の断念、再開、ルーティング、真偽判断の主導権は研究者に留保されます。
 
@@ -160,7 +164,7 @@ scripts/scfabric/ は科学計算・統計分析ツール群の実行層です�
 
 ## ローカル Agent による論文研究
 
-`academic-research-kernel[research]==2.2.0` をインストールし、パッケージ同梱のワークフローをエクスポートします：
+`academic-research-kernel[research]==2.3.0` をインストールし、パッケージ同梱のワークフローをエクスポートします：
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research

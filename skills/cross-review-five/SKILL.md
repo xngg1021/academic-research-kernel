@@ -1,7 +1,7 @@
 ---
 name: cross-review-five
-description: 五人异构模型小组:交叉评审、红队、生成对比,v2 四阶段 Sparse Deliberation 稀疏审议流.
-version: 2.0.0
+description: 多模型异构评审组：交叉评审、红队、生成对比与四阶段稀疏审议流.
+version: 2.0.1
 author: SJF, Hermes Agent
 license: LicenseRef-Source-Lineage-1.0
 platforms:

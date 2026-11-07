@@ -10,7 +10,6 @@ import subprocess
 import sys
 import tempfile
 
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 FENCE = re.compile(r'^```python\s*\n(.*?)^```\s*$', re.M | re.S)
@@ -74,13 +73,43 @@ def code_issues(code):
     return errors
 
 
+BANNED_TOKEN_SHA256 = frozenset([
+    "0d3875158b04bb14f5cd67a2ba54f480848ca94aec7a4aa2ca94c712c04be55f",
+    "11987c60f4c83ac9199d79c59b32f37ec5dc07443f1f881353e79ca643bcea57",
+    "3f178fe43b688a406a252fc7b8b25d7670ad939509905159d741ee5185d73310",
+    "6c277575446c91c1d49465940d84d128f43394a06b5ef8c775b5aca4fcdbae31",
+    "73a5ebb82c02c74260d707847837d3a19478844ac0608e976f1c1e1de038283a",
+    "7a9c5cfe8aa8f9c564bc7c0ea50f8267a16f38a93733d6fbd9a1771140979cd0",
+    "8ef4091ea30686929943b7734250a9d0e84c0e80fffe385f76b54ad88c9f5ac2",
+    "9d681ad61b95d6653bf1011354205d4c299f5874f6003814eb852939bf5d687a",
+    "c83bf41fd8fc032e42e75002b1b994956545f3d9ecd72db8d7df79dff4d8e327",
+    "c9a7b24a282314d9fc9337a33ad61714135a639d985054efea2d7c1bf84a2e83",
+    "d55851b489264fc2a373cb1d5de4fa965a900dcf62f476c3b4cceb00130109df",
+    "ed08e61f3aae536101a0b0290098ec338d9ee1c4e876f0874cac95761366ac1f",
+    "ee605c8c3cb751639c13a6a5b498643bc38fa55d255f82c1e9f1b4c8bf5e2777",
+    "f2753a428cd96b8db17d368c803bb913d9bd5212b17831b60538a4209afd29b2",
+    "fd0a5e8c07b3d055c602ffc46a712e5620a18da3f9871860ef9f6a9d267fd9aa"
+])
+
+
 def hygiene(text):
     patterns = [r'(?i)\b[A-Z]:[/\\]+Users[/\\]+(?!<)[\w.-]+',
+                r'(?i)\b[A-Z]:[/\\]+hermes-home\b',
                 r'/(?:Users|home)/(?!<|runner\b)[\w.-]+/',
                 r'\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9]{24,})\b',
                 r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
                 r'''(?i)(?:^|(?<=[^A-Za-z0-9]))(?:api_key|access_token|secret|password)\s*[:=]\s*["'](?!<|YOUR_|example|placeholder|test)[A-Za-z0-9_-]{16,}["']''']
-    return [m.group() for pat in patterns for m in re.finditer(pat, text)]
+    hits = ['<redacted-pattern-hit>' for pat in patterns for _ in re.finditer(pat, text)]
+    candidates = set(re.findall(r'[A-Za-z0-9_.-]{4,}', text))
+    candidates.update(re.findall(r'[A-Za-z0-9_]{4,}', text))
+    for run in re.findall(r'[\u4e00-\u9fff]{2,}', text):
+        for wlen in (2, 3, 4):
+            for idx in range(len(run) - wlen + 1):
+                candidates.add(run[idx:idx + wlen])
+    for tok in candidates:
+        if hashlib.sha256(tok.lower().encode('utf-8')).hexdigest() in BANNED_TOKEN_SHA256:
+            hits.append('<redacted-token-hash-hit>')
+    return hits
 
 
 def reference_issues(path, root=ROOT):
@@ -113,6 +142,7 @@ def reference_issues(path, root=ROOT):
 
 
 def static_checks(root=ROOT):
+    import yaml
     errors, names = [], set()
     inventory = source_files(root)
     readme = (root / 'README.md').read_text(encoding='utf-8')

@@ -53,6 +53,11 @@ def packages(directory, internal_version=VERSION, runtime_version=None, version=
         if tuple(map(int, version.split('.'))) >= (2, 2, 0):
             for name in ('normalize_identifier.py', 'verify_work.py', 'interop.py', 'meta_core.py'):
                 archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
+        if tuple(map(int, version.split('.'))) >= (2, 3, 0):
+            for name in ('locate_oa.py', 'openreview_audit.py', 'github_repo_forensics.py',
+                         'receipt_to_latex_table.py', 'double_blind_sanitizer.py',
+                         'pre_submission_linter.py', 'venue_template_manager.py', 'venue-specs.json'):
+                archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
     sdist = directory / f'academic_research_kernel-{version}.tar.gz'
     with tarfile.open(sdist, 'w:gz') as archive:
         members = {'PKG-INFO': metadata(internal_version),
@@ -119,6 +124,22 @@ def test_210_distribution_requires_new_portable_resources_and_preserves_201_inve
         assert manifests.inspect_artifact(path, '2.1.0')['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
     for path in packages(tmp_path / 'historical'):
         assert manifests.inspect_artifact(path, VERSION)['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_230_distribution_requires_combat_utilities_and_preserves_220_inventory(tmp_path):
+    for path in packages(tmp_path / 'v220', internal_version='2.2.0', version='2.2.0'):
+        assert manifests.inspect_artifact(path, '2.2.0')['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in packages(tmp_path / 'v230', internal_version='2.3.0', version='2.3.0'):
+        assert manifests.inspect_artifact(path, '2.3.0')['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+    wheel_230, _ = packages(tmp_path / 'v230-broken', internal_version='2.3.0', version='2.3.0')
+    with zipfile.ZipFile(wheel_230) as archive:
+        files = {name: archive.read(name) for name in archive.namelist()}
+    del files['academic_research_kernel/venue-specs.json']
+    with zipfile.ZipFile(wheel_230, 'w') as archive:
+        for name, data in files.items():
+            archive.writestr(name, data)
+    with pytest.raises(ValueError, match='2.3.0 bundled scholarly utility'):
+        manifests.inspect_artifact(wheel_230, '2.3.0')
 
 
 @pytest.mark.parametrize('damage', ['missing_skill', 'missing_runtime', 'renamed_schema', 'extra_schema', 'foreign_skill'])
@@ -375,3 +396,13 @@ def test_publish_workflow_uses_validated_target_and_selective_recovery():
     assert '--repo "$RUNNER_TEMP/public-source"' in smoke
     assert '--expected-version "$RELEASE_VERSION"' in smoke
     assert 'academic-research-kernel==$RELEASE_VERSION' in smoke and 'academic-research-kernel@$RELEASE_VERSION' in smoke
+
+
+
+def test_package_acceptance_rejects_empty_or_extra_dist_under_python_optimize(tmp_path):
+    empty_dist = tmp_path / 'empty-dist'
+    empty_dist.mkdir()
+    proc = subprocess.run([sys.executable, '-O', str(SCRIPTS / 'package_acceptance.py'), '--dist', str(empty_dist)],
+                          text=True, capture_output=True, timeout=30)
+    assert proc.returncode != 0 and 'expected exactly 1 wheel and 1 sdist' in proc.stderr
+    assert 'PASS fresh wheel + sdist' not in proc.stdout

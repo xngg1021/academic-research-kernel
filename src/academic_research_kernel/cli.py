@@ -212,33 +212,47 @@ def main(argv=None):
     meta_cmd.add_argument('--input', required=True, help='JSON file with {"studies": [{"yi": float, "vi": float, ...}]}')
     tf_cmd = commands.add_parser('table-forensics', help='audit AI/CS paper tables for partition conservation, constant-offset deltas, and bandwidth bounds')
     tf_cmd.add_argument('--input', required=True, help='JSON file specifying partition, ablation_matrix, or storage_bandwidth parameters')
+    loa_cmd = commands.add_parser('locate-oa', help='locate open-access full text across Unpaywall, arXiv, OpenAlex, Semantic Scholar, and Europe PMC')
+    loa_cmd.add_argument('identifier', nargs='?', help='DOI or arXiv ID')
+    loa_cmd.add_argument('--doi', help='target DOI')
+    loa_cmd.add_argument('--arxiv', help='target arXiv ID')
+    loa_cmd.add_argument('--email', help='Unpaywall contact email')
     or_cmd = commands.add_parser('openreview-audit', help='audit OpenReview submission status, decision, rating distribution, or venue stats')
-    or_cmd.add_argument('--forum-id', help='OpenReview forum ID')
+    or_cmd.add_argument('--forum-id', '--forum', dest='forum_id', help='OpenReview forum ID')
     or_cmd.add_argument('--input-json', help='offline OpenReview notes JSON file')
-    or_cmd.add_argument('--mirror-json', help='optional OpenReview mirror JSON list for 403 fallback')
+    or_cmd.add_argument('--mirror-json', '--mirror', dest='mirror_json', help='optional OpenReview mirror JSON list for 403 fallback')
     or_cmd.add_argument('--venue-stats', help='compute macro statistics over a venue mirror JSON list')
     or_cmd.add_argument('--topic-regex', help='optional regex filter for --venue-stats')
     rf_cmd = commands.add_parser('repo-forensics', help='audit code repository structure (first-party core vs vendored vs unit tests)')
+    rf_cmd.add_argument('local_repo_pos', nargs='?', help='local repository path (positional)')
     rf_cmd.add_argument('--local-repo', '--repo-dir', dest='local_repo', help='local repository path')
     rf_cmd.add_argument('--tree-json', help='offline GitHub git/trees JSON file')
     rf_cmd.add_argument('--github-repo', help='remote GitHub owner/repo')
     ltx_cmd = commands.add_parser('receipt-to-latex', help='render a deterministic booktabs LaTeX table from a JSON receipt')
-    ltx_cmd.add_argument('--input', required=True, help='JSON table specification file')
+    ltx_cmd.add_argument('input_pos', nargs='?', help='JSON table specification file (positional)')
+    ltx_cmd.add_argument('--input', dest='input_opt', help='JSON table specification file')
     ltx_cmd.add_argument('--output', help='optional output .tex path')
-    sb_cmd = commands.add_parser('sanitize-blind', help='scan a manuscript or reproduction bundle for double-blind anonymity leaks')
-    sb_cmd.add_argument('target_pos', nargs='?', help='manuscript file or directory to scan (positional)')
-    sb_cmd.add_argument('--target', dest='target_opt', help='manuscript file or directory to scan')
-    sb_cmd.add_argument('--forbidden-token', action='append', default=[], help='forbidden author/repo/issue token (repeatable)')
+    ltx_cmd.add_argument('--rows', help='optional nested JSON key for rows list')
+    ltx_cmd.add_argument('--cols', help='optional comma-separated column names')
+    ltx_cmd.add_argument('--caption', help='optional table caption override')
+    ltx_cmd.add_argument('--label', help='optional table label override')
+    for sb_name in ('sanitize-blind', 'double-blind-sanitize'):
+        sb_cmd = commands.add_parser(sb_name, help='scan a manuscript or reproduction bundle for double-blind anonymity leaks')
+        sb_cmd.add_argument('target_pos', nargs='?', help='manuscript file or directory to scan (positional)')
+        sb_cmd.add_argument('--target', dest='target_opt', help='manuscript file or directory to scan')
+        sb_cmd.add_argument('--forbidden-token', action='append', default=[], help='forbidden author/repo/issue token (repeatable)')
     ps_cmd = commands.add_parser('pre-submission-lint', help='audit manuscript for venue formatting, required sections, dispersion, and CEG bindings')
-    ps_cmd.add_argument('--tex', required=True, help='path to main .tex entry file')
+    ps_cmd.add_argument('tex_pos', nargs='?', help='path to main .tex entry file or manuscript directory (positional)')
+    ps_cmd.add_argument('--tex', dest='tex_opt', help='path to main .tex entry file')
     ps_cmd.add_argument('--venue', default='iclr', help='target venue key')
     ps_cmd.add_argument('--phase', choices=['submission', 'rebuttal', 'camera_ready'], default='submission', help='submission phase')
-    ps_cmd.add_argument('--contribution-type', default='general_empirical', help='contribution type key')
+    ps_cmd.add_argument('--contribution-type', '--track', dest='contribution_type', default='general_empirical', help='contribution type key')
     ps_cmd.add_argument('--pdf', help='optional compiled PDF path')
     ps_cmd.add_argument('--ceg', help='optional ClaimEvidenceGraph JSON path')
     ps_cmd.add_argument('--require-ceg-binding', action='store_true', help='flag ungrounded quantitative claims in abstract/conclusion')
     ps_cmd.add_argument('--output', help='optional output JSON path')
     vt_cmd = commands.add_parser('venue-template', help='list target venue contracts or scaffold an external manuscript workspace')
+    vt_cmd.add_argument('--list', action='store_true', help='list supported venue specifications')
     vt_cmd.add_argument('--action', choices=['list-venues', 'scaffold', 'verify-styles'], default='list-venues')
     vt_cmd.add_argument('--workspace-dir', help='target parent workspace directory for scaffold')
     vt_cmd.add_argument('--slug', help='project directory slug')
@@ -275,7 +289,7 @@ def main(argv=None):
                 if key not in ('version', 'status'):
                     print(f'{key}: {json.dumps(value, ensure_ascii=False)}')
         return 0 if report['status'] == 'ok' else 1
-    if args.command in ('table-forensics', 'openreview-audit', 'repo-forensics', 'receipt-to-latex', 'sanitize-blind', 'pre-submission-lint', 'venue-template'):
+    if args.command in ('locate-oa', 'table-forensics', 'openreview-audit', 'repo-forensics', 'receipt-to-latex', 'sanitize-blind', 'double-blind-sanitize', 'pre-submission-lint', 'venue-template'):
         try:
             if args.command == 'table-forensics':
                 recomp_mod = _load_bundled_module('recompute', 'skills/quantitative-paper-audit/scripts/recompute.py')
@@ -336,25 +350,53 @@ def main(argv=None):
                 if args.topic_regex:
                     sub_argv.extend(['--topic-regex', args.topic_regex])
                 return or_mod.main(sub_argv)
+            if args.command == 'locate-oa':
+                loa_mod = _load_bundled_module('locate_oa', 'skills/academic-source-verification/scripts/locate_oa.py')
+                sub_argv = []
+                target_id = args.doi or args.identifier
+                if args.arxiv:
+                    sub_argv.extend(['--arxiv', args.arxiv])
+                elif target_id:
+                    if target_id.lower().startswith('arxiv:'):
+                        sub_argv.extend(['--arxiv', target_id.split(':', 1)[1]])
+                    else:
+                        sub_argv.extend(['--doi', target_id])
+                else:
+                    raise ValueError('locate-oa requires a DOI or arXiv identifier')
+                if args.email:
+                    sub_argv.extend(['--email', args.email])
+                return loa_mod.main(sub_argv)
             if args.command == 'repo-forensics':
-                if not (args.local_repo or args.tree_json or args.github_repo):
+                local_repo = args.local_repo or args.local_repo_pos
+                if not (local_repo or args.tree_json or args.github_repo):
                     raise ValueError('repo-forensics requires one of --local-repo, --tree-json, or --github-repo')
                 rf_mod = _load_bundled_module('github_repo_forensics', 'skills/academic-source-verification/scripts/github_repo_forensics.py')
                 sub_argv = []
-                if args.local_repo:
-                    sub_argv.extend(['--local-repo', args.local_repo])
+                if local_repo:
+                    sub_argv.extend(['--local-repo', local_repo])
                 if args.tree_json:
                     sub_argv.extend(['--tree-json', args.tree_json])
                 if args.github_repo:
                     sub_argv.extend(['--github-repo', args.github_repo])
                 return rf_mod.main(sub_argv)
             if args.command == 'receipt-to-latex':
+                ltx_in = args.input_opt or args.input_pos
+                if not ltx_in:
+                    raise ValueError('receipt-to-latex requires --input <path> or a positional input file')
                 ltx_mod = _load_bundled_module('receipt_to_latex_table', 'skills/academic-writing/scripts/receipt_to_latex_table.py')
-                sub_argv = ['--input', args.input]
+                sub_argv = ['--input', ltx_in]
                 if args.output:
                     sub_argv.extend(['--output', args.output])
+                if args.rows:
+                    sub_argv.extend(['--rows', args.rows])
+                if args.cols:
+                    sub_argv.extend(['--cols', args.cols])
+                if args.caption:
+                    sub_argv.extend(['--caption', args.caption])
+                if args.label:
+                    sub_argv.extend(['--label', args.label])
                 return ltx_mod.main(sub_argv)
-            if args.command == 'sanitize-blind':
+            if args.command in ('sanitize-blind', 'double-blind-sanitize'):
                 sb_target = args.target_opt or args.target_pos
                 if not sb_target:
                     raise ValueError('sanitize-blind requires --target <path> or a positional target path')
@@ -364,8 +406,14 @@ def main(argv=None):
                     sub_argv.extend(['--forbidden-token', tok])
                 return sb_mod.main(sub_argv)
             if args.command == 'pre-submission-lint':
+                tex_target = args.tex_opt or args.tex_pos
+                if not tex_target:
+                    raise ValueError('pre-submission-lint requires --tex <path> or a positional .tex/directory path')
+                tex_p = Path(tex_target)
+                if tex_p.is_dir() and (tex_p / 'main.tex').is_file():
+                    tex_target = str(tex_p / 'main.tex')
                 ps_mod = _load_bundled_module('pre_submission_linter', 'skills/academic-writing/scripts/pre_submission_linter.py')
-                sub_argv = ['--tex', args.tex, '--venue', args.venue, '--phase', args.phase, '--contribution-type', args.contribution_type]
+                sub_argv = ['--tex', tex_target, '--venue', args.venue, '--phase', args.phase, '--contribution-type', args.contribution_type]
                 if args.pdf:
                     sub_argv.extend(['--pdf', args.pdf])
                 if args.ceg:

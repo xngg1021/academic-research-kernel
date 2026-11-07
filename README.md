@@ -4,146 +4,219 @@
 
 [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](i18n/pt/README.md) · [Русский](i18n/ru/README.md) · [Bahasa Indonesia](i18n/id/README.md) · [Italiano](i18n/it/README.md) · [हिन्दी](i18n/hi/README.md) · [العربية](i18n/ar/README.md) · [বাংলা](i18n/bn/README.md) · [اردو](i18n/ur/README.md) · [Tiếng Việt](i18n/vi/README.md) · [Türkçe](i18n/tr/README.md) · [فارسی](i18n/fa/README.md) · [Kiswahili](i18n/sw/README.md) · [Polski](i18n/pl/README.md)
 
-This repository is a practical toolkit for verifying scholarly sources, checking statistical numbers, and tracking research evidence with AI agents. When researchers use language models to read papers or draft literature reviews, models often invent citations, misread tables, or lose track of which page supports a specific claim. To prevent this, `academic-research-kernel` packages 14 scholarly workflows and 12 deterministic verification tools behind a standard Model Context Protocol (MCP) server and command-line interface. You can use it to check paper identities and retractions, recompute reported statistics, read papers into source-linked reports, manage systematic review screening logs, and record every claim alongside its supporting evidence and negative results. It works directly with Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external service limits are documented in [the project audit](docs/kernel-architecture.md).
+A deterministic scholarly verification and manuscript engineering kernel for researchers and AI agents.
+
+When researchers use large language models to read or write papers, two failure modes recur. While reading external papers, a model generates text probabilistically and readily repeats miscalculated $p$-values, shifted ablation tables, retracted references, or hollow code repositories as if they were verified facts. While writing your own manuscript, asking a model in prose to check formatting cannot reliably catch residual author metadata in double-blind PDFs, transcription errors in LaTeX tables, dangling figure references, or missing required venue sections.
+
+Built from first principles, this repository separates semantic reading from deterministic verification: your language model handles reading and synthesis, while deterministic code handles mathematical recomputation, public database queries, syntax-tree checks, and SHA-256 provenance verification. The repository unifies 14 scholarly workflows, 12 standard Model Context Protocol (MCP) tools, and 13 CLI command groups on a single state kernel, working out of the box with Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external service limits are documented in [the project audit](docs/kernel-architecture.md).
 
 Author: Junfu Shi (SJF, xngg1021), Hermes Agent. License: [Source Lineage License 1.0](LICENSE).
 
-## Quick start
+---
 
-If you want your AI agent to read a paper, check its numbers, and generate a report, install the package with PDF support and export the `paper-research` workflow into your agent's skill directory; if you want to connect the 12 verification tools as a background MCP server for an MCP client, install [uv](https://docs.astral.sh/uv/getting-started/installation/) and start the stdio server:
+## 1. Two-Minute Quick Start
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then choose either the local CLI + agent skill path or the stdio MCP server path for version `2.3.0`:
 
 ```bash
-# 1. Read PDF papers and generate reports with your local AI agent
-uv tool install "academic-research-kernel[research]==2.2.0"
+# Option 1: Install the full CLI with digital PDF support and export the paper-research skill
+uv tool install "academic-research-kernel[research]==2.3.0"
 academic-research-kernel research skill --output ./paper-research
 
-# 2. Or start the background stdio MCP server for an MCP client
-uvx academic-research-kernel@2.2.0 mcp
+# Option 2: Start the stdio MCP server for Claude Code, Cursor, Codex, or Gemini CLI
+uvx academic-research-kernel@2.3.0 mcp
 ```
 
-Note that running `mcp` in a terminal waits silently for JSON-RPC requests from an MCP client rather than opening an interactive menu. The [2.2.0 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.2.0) lists package hashes and publication status. If you download the release wheel, you can also run it locally with `uvx --from ./academic_research_kernel-2.2.0-py3-none-any.whl academic-research-kernel mcp`. The package supports Python 3.10–3.14, and `uvx --python 3.12` selects a specific Python version. The base installation includes all 12 verification tools and loads statistical libraries on demand when statistical recomputation is called.
-
-## Verify installation
+Run an offline environment check and try source normalization or the built-in venue specification catalog right away:
 
 ```bash
-uvx academic-research-kernel@2.2.0 doctor
-uvx academic-research-kernel@2.2.0 --version
-```
-
-The `doctor` command runs offline and checks runtime dependencies, JSON schemas, and all 12 tool definitions. Leaving optional external APIs unconfigured will not fail the check. Pass `doctor --json` if you need machine-readable output.
-
-## Package install
-
-```bash
-uv tool install academic-research-kernel==2.2.0
 academic-research-kernel doctor
-academic-research-kernel mcp
+academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
+academic-research-kernel venue-template --action list-venues
 ```
 
-You can also install the package with `pipx install academic-research-kernel==2.2.0` or `python -m pip install academic-research-kernel==2.2.0` inside a virtual environment. Installing with `[full]` adds libraries used in extended scientific computing examples. Installing with `[research]` adds `pypdf==6.19.0` and `fonttools==4.65.0` so PDF font decoding behaves identically across clean environments on Python 3.10 and newer. Installing with `[qa]` adds repository test tools on top of those parsing libraries. HTML, XML, DOCX, and XLSX reading use the Python standard library, while GPU backends and paid scholarly databases remain optional.
+The `doctor` command runs offline and checks runtime dependencies, all 26 JSON schemas, and all 12 MCP tool definitions; leaving optional external API keys unconfigured will not fail the check. Running `mcp` in a terminal waits silently on standard input/output for JSON-RPC requests from an MCP client. The [2.3.0 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) lists package SHA-256 hashes. Python 3.10–3.14 is supported, and statistical libraries load on demand only when distribution or power calculations are invoked.
 
-## Hermes
+---
 
-Make sure `uv` is on the Hermes process `PATH`, then install and enable the plugin:
+## 2. First Half: Reading External Papers & Auditing Evidence
+
+When reading external papers or conducting a literature review, the workflow moves from verifying bibliographic and repository authenticity, to recomputing reported statistics, to generating page-anchored reports.
+
+### 1. Read a Paper or Compare Two Papers with Your Local Agent
+
+Point your local agent at the exported `./paper-research/SKILL.md`, pass a DOI, public URL, or local bundle, and ask:
+“Read this paper and its supplements, summarize the method, recompute every verifiable number, and write a source-linked report.”
+
+Under the hood, three CLI steps back the agent workflow:
 
 ```bash
-hermes plugins install xngg1021/academic-research-kernel --no-enable
-hermes plugins enable academic-skills
+academic-research-kernel research prepare INPUT --project PROJECT
+academic-research-kernel research finish --project PROJECT --candidate CANDIDATE.json
+academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-The plugin keeps the `academic-skills` name for compatibility and includes all 14 skills, including `paper-research`. Its `mcp.json` configuration runs `uv run --frozen --no-dev --no-editable` with Python 3.12 and the repository's `uv.lock` file, storing its isolated environment under `${PLUGIN_DATA}/runtime`. On first run, it installs its own dependencies without modifying Hermes or system Python packages. If you prefer installing individual skills without the plugin runtime, see [Integration & Portable Usage](#integration--portable-usage).
+`prepare` ingests PDF, HTML, XML/JATS, DOCX, XLSX, or LaTeX/BibTeX (`.tex`, `.bib`, `.bbl`) source bundles, hashes every file, and indexes passages by page and structural section. Once your agent reads the text and writes the extraction candidate JSON, `finish` verifies that every extracted number appears verbatim at its declared source locator, runs deterministic statistical checks, commits the verified state, and renders source-linked Markdown and HTML reports. `compare` validates structured comparability across two papers' datasets, experimental conditions, and metrics. Any saved project can be replayed offline with `academic-research-kernel research replay --project PROJECT`.
 
-## Run from source
+### 2. Audit Bibliographic Authenticity, Open-Access Full Texts, OpenReview & Code Repositories
+
+Four standalone CLI commands handle external forensic verification:
 
 ```bash
-git clone https://github.com/xngg1021/academic-research-kernel.git
-cd academic-research-kernel
-uv sync --frozen --no-dev --no-editable
-uv run --frozen --no-dev --no-editable academic-research-kernel doctor
-uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
+# Normalize DOI/arXiv identifiers and cross-check OpenAlex and Crossref metadata and retractions
+academic-research-kernel verify-source 10.1038/nature14539
+
+# Locate open-access full text across Unpaywall, arXiv, OpenAlex, Semantic Scholar, and Europe PMC
+academic-research-kernel locate-oa 10.1038/nature14539
+
+# Audit OpenReview review scores, variance, and venue-wide quantiles or topic acceptance rates
+academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
+academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
+
+# Inspect a repository's non-vendor source lines, Git commit history, and README command claims
+academic-research-kernel repo-forensics --local-repo ./target-repo
 ```
 
-See [distribution and release](docs/distribution-release.md) for dependency groups, reproducible build steps, and release verification checkpoints.
+`locate-oa` rejects paywalled landing pages (`is_oa=false`) and mismatched DOIs rather than mislabeling abstracts as full text. `openreview-audit` filters non-finite ratings, deduplicates records by `forum_id`, and computes score means and variance strictly over reviewer ratings while separating meta-reviews and final decisions. `repo-forensics` uses `git ls-files` when available to separate first-party code from bundled third-party directories.
 
-## License
+### 3. 15 Deterministic Statistical & Forensic Checks, Physical Bounds & Meta-Analysis
 
-Snapshots containing this notice apply **Source Lineage License 1.0** to the covered material and rights described in [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md). The initial SLL commit and the subsequent boundary-recording commit are recorded in [LICENSE-HISTORY.md](LICENSE-HISTORY.md) and [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md). Later snapshots that keep this notice carry the same license scope.
+Both the `academic_recompute_statistics` MCP tool and `recompute.py` expose 15 deterministic checks covering $t$-test, $F$-test, and $\chi^2$ $p$-values, regression $\beta/\text{SE}$ Wald checks, confidence-interval symmetry, $2\times 2$ odds and risk ratios, two-group Cohen's $d$ and Hedges' $g$, percentage denominator reconstruction, bounded-scale standard-deviation bounds (Popoviciu and Bhatia-Davis), degrees-of-freedom sample-size checks, and two-sample $t$-test statistical power.
 
-Historical snapshots through commit `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` were distributed under the MIT License. Users of those earlier snapshots keep their MIT permissions and do not need to migrate to SLL. The [previous MIT license text](LICENSES/MIT-pre-SLL.txt) and [tests/upstream/LICENSE](tests/upstream/LICENSE) are preserved unchanged.
+Version `2.3.0` adds three table-forensic checks for machine learning and systems papers (available via `academic-research-kernel table-forensics --input spec.json` and MCP):
+- **Sample Partition Conservation (`partition_conservation`)**: Verifies that a declared total sample size equals the exact sum of mutually exclusive subset counts;
+- **Ablation Constant Offset (`ablation_delta_regularity`)**: Detects suspicious constant-delta shifts across multi-metric ablation rows;
+- **Uncompressed Storage & Full-Scan Bandwidth Bounds (`storage_bandwidth_bounds`)**: Under explicit assumptions of uncompressed fixed-width vectors (`N * D * bytes_per_element`) and a single-pass full linear scan, computes raw vector byte lower bounds and full-scan latency lower bounds to flag inconsistent uncompressed footprint or full-scan latency claims.
 
-SLL permits use, study, modification, commercial use, redistribution, and proprietary extensions, provided you keep the required license and source-lineage notices. It is not copyleft and does not require disclosing your source code. Running a network service without distributing software copies does not trigger the source-lineage notice requirement. The license includes no express patent grant, and third-party files remain under their original licenses. The English [LICENSE](LICENSE) text is authoritative; `LicenseRef-Source-Lineage-1.0` is a local identifier rather than an SPDX or OSI-approved code. [Contribution rules](CONTRIBUTING.md) are separate from downstream license rights.
+When trailing zeros in a reported $p$-value matter, pass `p_value_literal` (such as `"1.0e-5"`) or `p_value_decimals`. Multi-study fixed-effect and DerSimonian-Laird random-effects pooling, $Q/I^2/\tau^2$ heterogeneity, and Egger regression run directly via:
 
-## Skills
+```bash
+academic-research-kernel meta-analyze --input studies.json
+```
 
-| Skill | Version | What it does |
+---
+
+## 3. Second Half: Writing Your Own Paper & Pre-Submission Gates
+
+When drafting and preparing your own manuscript for submission, four deterministic CLI tools cover workspace scaffolding, LaTeX table generation, double-blind sanitization, and venue rule linting:
+
+```bash
+# Step 1: Inspect built-in specs for 8 major venues (ICLR 2027, NeurIPS, ICML, ACL, KDD, Nature, IEEE, ACM) and initialize a workspace
+academic-research-kernel venue-template --action list-venues
+academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+
+# Step 2: Render verified JSON experiment receipts into booktabs LaTeX tables with bold best and underlined second-best values
+academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+
+# Step 3: Scan .tex, .bib, and compiled PDF metadata (/Author, /Creator) for identity leaks, self-citations, or local paths
+academic-research-kernel sanitize-blind --target ./workspace/my-paper
+
+# Step 4: Run pre-submission linting against venue-specs.json (anonymous package flags, page limits, required sections, and CEG links)
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+```
+
+`receipt-to-latex` uses exact `Decimal` half-up rounding so numbers are never altered by hand transcription or binary floating-point drift. `double-blind-sanitize` inspects `\author`, custom identity macros, `\icmlauthor`, `pdfauthor`, acknowledgments, and compiled PDF Info dictionaries. `pre-submission-lint` checks `skills/academic-writing/references/venue-specs.json` for non-anonymous package options (`final`, `preprint`, `camera-ready`), computes exact main-body page counts even when `\bibliography` shares a page with prose, checks for unreferenced figures or tables, and verifies that inline `\cite{clm-...}` tags resolve to `support_status == "supported"` edges in `ClaimEvidenceGraph`.
+
+Convert and normalize bibliographic files at any time with:
+
+```bash
+academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+```
+
+---
+
+## 4. All 14 Scholarly Skills & Agent Integration
+
+| Skill | Version | What it helps you do |
 | --- | --- | --- |
-| `skills/academic-source-verification` | 1.2.0 | Check paper metadata and citation counts across databases, inspect corrections or retractions, find open-access full text, and verify that a local PDF matches the cited work |
-| `skills/literature-analysis` | 1.3.0 | Twelve everyday workflows: find similar papers, check text overlap, search for counter-evidence, summarize author histories, run mock peer review, check reasoning flaws, build comparison tables, suggest target journals, export BibTeX, read bilingually, spot research gaps, and plan reproduction |
-| `skills/academic-writing` | 1.1.1 | Revise academic prose, format citations (ISO 690, APA, MLA, Chicago, IEEE, AMA, and regional standards), check journal author guidelines, prepare submission files, and verify anonymization for blind review |
-| `skills/math-computation` | 1.2.1 | Route symbolic, numerical, and statistical calculation tasks to verified Python tools, accompanied by four domain reference guides |
-| `skills/quantitative-paper-audit` | 1.1.0 | Recompute reported effect sizes, p-values, confidence intervals, odds or risk ratios, and statistical power from summary numbers to catch reporting errors |
-| `skills/research-reproducibility` | 1.0.1 | Audit whether a paper's code, data, dependencies, and reported metrics can be reproduced across a 14-step checklist |
-| `skills/systematic-review-meta-analysis` | 1.0.1 | Record PRISMA search and screening logs, convert effect sizes, test heterogeneity, pool fixed or random effects, and run sensitivity and publication-bias checks |
-| `skills/literature-watch` | 1.1.0 | Monitor OpenAlex and Crossref weekly for new papers by topic, author, or cited DOI, deduplicating results so only new works are reported |
+| `skills/academic-source-verification` | 1.3.0 | Cross-check paper identities and citation counts across databases, check retractions, locate open-access full texts, audit OpenReview records, and run repository forensics |
+| `skills/literature-analysis` | 1.3.0 | Expand related works via snowballing, compare methods and contradictions across papers, build author profiles, review manuscripts, and convert BibTeX, RIS, and CSL-JSON |
+| `skills/quantitative-paper-audit` | 1.2.0 | Recompute $p$-values, effect sizes, confidence intervals, odds ratios, and statistical power from reported statistics, plus partition conservation, ablation offset, and physical bound checks |
+| `skills/math-computation` | 1.2.1 | Run symbolic algebra, calculus, linear algebra, differential equations, optimization, and Monte Carlo simulations with SymPy, NumPy, SciPy, statsmodels, and PyTorch |
+| `skills/academic-writing` | 1.2.0 | Edit academic prose and structure, format citations across international profiles, and run pre-submission linting, double-blind sanitization, receipt-to-LaTeX table generation, and venue templating |
+| `skills/research-reproducibility` | 1.0.1 | Audit companion code commits, lockfiles, random seeds, and numerical tolerances, recording reproduction runs in verifiable receipts |
+| `skills/systematic-review-meta-analysis` | 1.0.1 | Record PRISMA search and screening logs, convert effect sizes, test heterogeneity, pool fixed or random effects, and run leave-one-out sensitivity and publication-bias checks |
+| `skills/literature-watch` | 1.1.0 | Monitor OpenAlex and Crossref weekly for new papers by topic, author, or cited DOI, deduplicating results so only newly published works are reported |
 | `skills/retraction-watch` | 1.1.0 | Recheck a DOI watchlist weekly against OpenAlex retraction flags and Crossref update records, reporting only papers whose status changed |
 | `skills/research-object-identity` | 1.1.0 | Normalize DOIs, arXiv IDs, and file hashes into canonical records, verify resource status, and trace how derived files were produced from raw sources |
 | `skills/claim-evidence-graph` | 1.0.0 | Link each scientific claim to the exact source passage, table, or calculation record that supports or contradicts it |
 | `skills/decision-ledger` | 1.0.0 | Keep an append-only Research Decision Log of methodological choices, failed attempts, reasons for dropping a direction, and later outcome revisions |
-| `skills/paper-research` | 1.0.0 | Read a paper and its supplements from a DOI, URL, or local folder, verify extracted numbers, save structured research state, and generate source-linked Chinese reports or two-paper comparisons |
-| `skills/cross-review-five` | 2.0.0 | Coordinate independent blind reviews across multiple language models or subagents, merge overlapping points, assign cross-challenges, and grade issues from P0 to P3 while preserving unresolved dissent |
+| `skills/paper-research` | 1.1.0 | Read a paper and its supplements from a DOI, URL, or local folder, verify extracted numbers, save structured research state, and generate source-linked reports or two-paper comparisons |
+| `skills/cross-review-five` | 2.0.1 | Coordinate independent blind reviews across multiple language models or subagents, merge overlapping points, assign cross-challenges, and grade issues from P0 to P3 while preserving unresolved dissent |
 
-Across the 14 skills, 22 Markdown reference guides are loaded on demand when a task requires them.
+Across the 14 skills, 22 Markdown reference guides and 1 machine-readable venue specification catalog are loaded on demand when a task requires them.
 
-## Scholarly Standards & Multi-Profile Baseline
+### Installation & Harness Integration
 
-Citation formats, reporting checklists, and metadata rules depend on your target journal, funder, discipline, and region. This repository uses **ISO 690:2021** (bibliographic references), **ISO 5127:2017** (documentation vocabulary), and **W3C PROV** (provenance records) as its international baseline, alongside regional standards such as GB/T 7714-2025 in Mainland China, UNE-ISO 690:2024 in Spain, and DIN ISO 690:2021 in Germany, plus disciplinary guides including APA 7th, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, and ICMJE. A target journal's own instructions always override default settings. See the [Scholarly Standards Architecture](docs/standards/README.md) and [Natural Terminology Guide](docs/terminology/README.md).
+1. **Python Package & Optional Extras**
+   ```bash
+   uv tool install academic-research-kernel==2.3.0
+   ```
+   You can also run `pipx install academic-research-kernel==2.3.0` or `python -m pip install academic-research-kernel==2.3.0` inside a virtual environment. Adding `[research]` pins `pypdf==6.19.0` and `fonttools==4.65.0` for deterministic digital PDF font decoding across Python 3.10–3.14; `[full]` installs extended scientific computing libraries; `[qa]` installs repository test and lint dependencies.
 
-When saving research state, the kernel checks that DOIs and external identifiers match, prevents contradictory statistical verdicts on the same check, and tracks unresolved questions in a shared review list. Cache verification rebuilds state directly from saved source packages and hash bindings rather than trusting summary lists, so deleting both a record and its cache entry will still be caught during replay. Details are recorded in the [four-blocker closeout](docs/kernel-architecture.md).
+2. **Universal Agent Plugins v1 & MCP Server**
+   This repository follows the vendor-neutral **Agent Plugins v1** format (`plugin.json`) and exposes its verification and statistical tools through a standard stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`). Although the repository is named `academic-research-kernel`, the plugin name `academic-skills` and existing MCP aliases remain unchanged so existing configurations continue working:
+   ```bash
+   uvx academic-research-kernel mcp
+   ```
 
-## Integration & Portable Usage
+3. **Native Hermes Installation**
+   Ensure `uv` is on the Hermes process `PATH`, then install the full plugin or register the skill tap for individual skills:
+   ```bash
+   # Option A: Install and enable the full plugin
+   hermes plugins install xngg1021/academic-research-kernel --no-enable
+   hermes plugins enable academic-skills
 
-### 1. Universal Agent Plugins v1 & Model Context Protocol (MCP)
-This repository follows the vendor-neutral **Agent Plugins v1** format (`plugin.json`) and exposes its verification and statistical tools through a standard stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`). You can load it directly in Claude Code, Cursor, Codex, Gemini CLI, or any other MCP-compatible client. Although the repository is named `academic-research-kernel`, the plugin name `academic-skills` and existing MCP aliases remain unchanged so existing configurations keep working:
+   # Option B: Install individual skills via tap
+   hermes skills tap add xngg1021/academic-research-kernel
+   hermes skills search academic-source-verification
+   hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
+   ```
+   `mcp.json` invokes `uv run --frozen --no-dev --no-editable` with Python 3.12 to materialize an isolated environment under `${PLUGIN_DATA}/runtime` from `uv.lock` without modifying your host Python installation. Related skills checked against upstream Hermes commit `245e48008fa814b3251f50755eb656bd9fb86cb1` include `arxiv`, `grounded-citations`, `docx`, `pdf`, and `manim-video`.
 
-```bash
-# Add as stdio MCP server in your agent harness
-uvx academic-research-kernel mcp
-```
+4. **Run from Source**
+   ```bash
+   git clone https://github.com/xngg1021/academic-research-kernel.git
+   cd academic-research-kernel
+   uv sync --frozen --no-dev --no-editable
+   uv run --frozen --no-dev --no-editable academic-research-kernel doctor
+   uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
+   ```
+   See [the release guide](docs/distribution-release.md) for packaging and publication verification recipes.
 
-### 2. Native Hermes Installation
-From an existing Hermes installation, you can also register the skill tap directly:
+---
 
-```bash
-hermes skills tap add xngg1021/academic-research-kernel
-hermes skills search academic-source-verification
-hermes skills install xngg1021/academic-research-kernel/skills/academic-source-verification
-```
+## 5. Under the Hood: Three-Layer State Kernel, Standards & Data Sources
 
-To install another skill, replace the directory name at the end of the command. Because `tap add` reads the default branch, a fresh install gets the 14 skills listed above. If you want to test an unmerged work branch, check out that branch locally and install from the local folder rather than expecting `tap` to pull a pull-request branch.
+### 1. Research State Storage & Verification Boundaries
 
-Related skills checked against upstream Hermes commit `245e48008fa814b3251f50755eb656bd9fb86cb1` include `arxiv`, `grounded-citations`, `docx`, `pdf`, and `manim-video`. Optional skills such as `huggingface-hub` and `llama-cpp` can be installed separately. Neither `ocr-and-documents` nor `pc-hardware-benchmark` is required.
+The ingestion module uses `ResearchArtifactEnvelope v1` and `ArtifactIngestionReceipt v1`, pairing 15 adapters (one for each of the 14 skills plus a plain-text fallback) with 12 stateless stdio MCP tools. Whenever the system saves research objects, claim–evidence links, Research Decision Log entries, items needing review, or verification records, it records their canonical SHA-256 hashes in an ingestion receipt. Replaying a cache checks those hashes directly against the saved source packages. Empty decision logs are valid, and any batch write that fails mid-way rolls back atomically without leaving partial files behind.
 
-## Data-source access
+Marking a record as `fully_verified` requires access to the underlying source bytes so the check can be reproduced independently. Trusted Python callers provide this through `LineageVerificationContext`, while MCP callers pass bounded file bytes directly rather than exposing host filesystem paths (capped at 10 MiB by default). Without the source bytes, a `fully_verified` claim fails validation. Unstructured notes stay untouched, reviewer disagreements remain visible, and human researchers remain in charge of committing state, dropping or reopening research routes, and making final scholarly judgments.
 
-- OpenAlex allows anonymous first-page queries with a small daily budget. Current OpenAlex rate limits are 10 requests per second without a key, 30 requests per second with a free or prepaid API key, and 50 requests per second on annual plans; anonymous use covers $0.10/day and a free API key covers $1/day. Following `next_cursor` beyond the first page requires an API key in `OPENALEX_API_KEY` (anonymous second-page cursor requests return HTTP 401 and are truncated to the first page).
-- Crossref provides public metadata with rate limits. Checking corrections and retractions requires verifying both the DOI and the update direction; an empty result does not prove a paper has no issues.
-- Unpaywall requires a real contact email in `UNPAYWALL_EMAIL`. If Unpaywall returns no link, an open-access copy may still exist elsewhere.
-- arXiv, Europe PMC, PubMed E-utilities, and DOAJ serve as additional sources with their own rate limits. Semantic Scholar separates shared anonymous limits from dedicated API key quotas, and API access does not guarantee that citation context snippets are available for every paper.
-- Scite, Dimensions, Scopus, Web of Science, and commercial AI detectors are optional third-party services. Check your own account permissions and quotas before calling them.
+Retraction checks store the current run's observation (`True`, `False`, or `unknown`) separately from the last confirmed status. If a network error or rate limit produces an `unknown` result on the latest run, the system reports that the current check is unverified while preserving previously confirmed history. The stdio MCP server replies to `ping`, stays silent on valid notifications such as `notifications/cancelled`, and keeps the session open if a client sends malformed input, following the [MCP message contract](https://modelcontextprotocol.io/specification/2024-11-05/basic/messages) and [ping specification](https://modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping).
+
+### 2. Scholarly Standards & Multi-Profile Baseline
+
+This repository uses **ISO 690:2021** (bibliographic references), **ISO 5127:2017** (documentation vocabulary), and **W3C PROV** (provenance records) as its international baseline, alongside regional standards such as GB/T 7714-2025 in Mainland China, UNE-ISO 690:2024 in Spain, and DIN ISO 690:2021 in Germany, plus disciplinary guides including APA 7th, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, and ICMJE. A target journal's own instructions always override default settings. See the [Scholarly Standards Architecture](docs/standards/README.md) and [Natural Terminology Guide](docs/terminology/README.md).
+
+### 3. Data-Source Access & Rate Limits
+
+- **OpenAlex**: Allows anonymous first-page queries with a small daily budget ($0.10/day anonymous at 10 req/s; $1/day with a free API key at 30 req/s; 50 req/s on annual plans). Following `next_cursor` beyond the first page requires `OPENALEX_API_KEY`.
+- **Crossref**: Provides public metadata with rate limits. Checking corrections and retractions requires verifying both the DOI and the update direction; an empty result does not prove a paper has no issues.
+- **Unpaywall**: Requires a real contact email in `UNPAYWALL_EMAIL`. If Unpaywall returns no link, an open-access copy may still exist elsewhere.
+- **arXiv, Europe PMC, PubMed E-utilities, DOAJ & Semantic Scholar**: Serve as additional sources with their own rate limits.
+- **Scite, Dimensions, Scopus, Web of Science & commercial AI detectors**: Optional third-party services; check your own account permissions and quotas before calling them.
 
 See [OpenAlex authentication](https://help.openalex.org/api/authentication/), [budgets/query costs](https://help.openalex.org/api/llm-quick-reference/), and [Crossref update filters](https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/).
 
-## Research state storage and verification boundaries
+---
 
-The ingestion module uses `ResearchArtifactEnvelope v1` and `ArtifactIngestionReceipt v1`, pairing 15 adapters (one for each of the 14 skills plus a plain-text fallback) with 12 stateless stdio MCP tools. Whenever the system saves research objects, claim–evidence links, Research Decision Log entries, items needing review, or verification records, it records their canonical SHA-256 hashes in an ingestion receipt. Replaying a cache checks those hashes directly. Empty decision logs are valid, and any batch write that fails mid-way rolls back cleanly without leaving partial files behind.
+## 6. Local Validation, Test Suite & License
 
-Marking a record as `fully_verified` requires access to the underlying source bytes so the check can be reproduced independently. Trusted Python callers provide this through `LineageVerificationContext`, while MCP callers pass bounded file bytes directly rather than exposing host filesystem paths. The default file size limit is 10 MiB, which a trusted host can raise when needed. Without the source bytes, a `fully_verified` claim fails validation. Unstructured notes stay untouched, reviewer disagreements remain visible, and human researchers stay in charge of committing state, dropping or reopening research routes, and making final scholarly judgments.
+### 1. Validation, Long-Tail Benchmarks & Package Acceptance
 
-See [the architecture guide](docs/kernel-architecture.md) for data contracts and [the release guide](docs/distribution-release.md) for packaging details. All 21 root and regional READMEs are synchronized with the 2.2.0 baseline, and [the manifest](docs/i18n/manifest.json) tracks cryptographic synchronization hashes across all locales. Release verification and review records are archived in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342).
-
-## Validation and testing
-
-Run the test suite in a dedicated Python virtual environment so optional scientific libraries do not conflict with your host setup:
+Run the test suite in a dedicated Python virtual environment:
 
 ```bash
 python -m pip install -r requirements-qa.txt
@@ -155,52 +228,20 @@ python scripts/verify_external_apis.py --output external-status.json --summary e
 git diff --check
 ```
 
-`scripts/qa.py` checks skill frontmatter, file links, accidental local paths or secret strings, Python syntax, and executable code examples. Every `smoke-test: true` code block runs in a clean subprocess, saving plots to `PLOT_DIR` (`~/plots` by default, or a temporary folder during tests). Unlabeled Python blocks are rejected, `fragment:` blocks are syntax-checked only, and `external-test:` blocks run only when you invoke `scripts/verify_external_apis.py`. That external check exits with `0` when all configured checks pass, `1` on code or data errors, and `2` when network or quota limits prevent access; unconfigured optional services are marked `SKIP`.
-
-Our test suite reuses the upstream Hermes skill-authoring rules for each individual skill while validating all 14 skills in this repository against the pinned catalog. CI accesses the network only to install packages; standard pull-request checks never call external scholarly APIs.
-
-GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64 (`windows-latest` with Python 3.10 and non-UTF-8 pipe checks), Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest` with Python 3.14), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1319 tests (extending the 1165-test baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md)). On pushes to `main`, a separate workflow installs the pinned Hermes commit from `tests/upstream/provenance.json` and tests `tap add`, `search`, `install`, and `list` against this repository. See [the project audit](docs/kernel-architecture.md) for exact versions and test boundaries.
-
-[tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, which draws 4096 SHA256-seeded candidates, selects 30 test scenarios, and outputs a coverage report across 16 capability families (E01), the 14 repository skills (E02), and 36 task goals (E03). Every skill appears at least twice across at least two distinct goals, including its core workflow goal.
-
-`scripts/scfabric/` contains the scientific computing benchmark tools, including hardware detection, numeric precision checks, five workload profiles, and `ComputeReceipt` logs. Benchmark results are recorded in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); calculations use the CPU by default and enable hardware accelerators only when verified by a benchmark receipt.
-
-## Read and compare papers with a local Agent
-
-Install the `[research]` extra and export the `paper-research` skill to your local agent workspace:
-
-```sh
-academic-research-kernel research skill --output ./agent-skills/paper-research
-```
-
-Point Work or another local agent at that exported `SKILL.md`, provide a DOI, public URL, or local folder, and ask:
-“研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-If you have two papers, ask the agent to compare their datasets, methods, experimental conditions, and results, and to explain which numbers can be compared directly. The agent will read the source files, extract candidate numbers, run statistical checks, save the verified state, and write a source-linked report in one workflow.
-
-Under the hood, the CLI runs three steps:
-
-```sh
-academic-research-kernel research prepare INPUT --project PROJECT
-academic-research-kernel research finish --project PROJECT --candidate CANDIDATE.json
-academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
-```
-
-`prepare` downloads or reads the paper and its supplements, records file hashes, and indexes text passages by page and section. `finish` checks the structured numbers extracted by your agent, recomputes t-tests, p-values, two-group effect sizes, and percentages, saves the verified state, and writes Chinese Markdown and HTML reports. `compare` checks a structured comparison between two papers. Because the CLI relies on your active agent to read the prose following [paper-research](skills/paper-research/SKILL.md), it does not require a separate model API account. Saved source files and extraction snapshots can be replayed offline at any time.
-
-## Statistical precision, retraction tracking, and package verification
-
-The `academic_recompute_statistics` MCP tool recomputes t-test p-values and two-group Cohen's d or Hedges' g effect sizes, while confidence intervals and odds or risk ratios are available as Python functions. When trailing zeros in a reported p-value matter, pass `p_value_literal` (such as `"1.0e-5"`) or `p_value_decimals`. String literals keep trailing zeros, plain numbers use their floating-point value, and conflicting precision settings return an explicit error. Rounding checks include the lower half-way boundary and exclude the upper boundary. Finding that a paper's reported number disagrees with the recomputed value returns a normal verification result; `isError` is set only when the input is invalid or the calculation itself fails.
-
-Retraction checks store the current run's observation (`True`, `False`, or `unknown`) separately from the last confirmed status. A short lock orders updates for the same DOI without overwriting other DOIs in the watchlist. If a network error or rate limit produces an `unknown` result on the latest run, the system reports that the current check is unverified while preserving the previously confirmed history. Regression tests use labeled local HTTP fixtures instead of live network calls.
-
-The stdio MCP server replies to `ping`, stays silent on valid notifications such as `notifications/cancelled`, and keeps the session open if a client sends malformed input, following the [MCP message contract](https://modelcontextprotocol.io/specification/2024-11-05/basic/messages) and [ping specification](https://modelcontextprotocol.io/specification/2024-11-05/basic/utilities/ping).
-
-To build and verify release packages in an isolated environment, run:
+To build and verify the wheel and source archive in fresh virtual environments outside the repository (covering all 13 CLI command groups, `[research]` PDF extraction, and isolated `uvx` execution), run:
 
 ```bash
-python -m build
-python -m twine check --strict dist/*
+uv build --no-create-gitignore
+python scripts/release_manifest.py --dist dist --output dist/release-manifest.json
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-`--source-checks` unpacks the source archive into a temporary directory outside the repository, sets `ARK_REPO` and `ARK_SDIST`, and runs the unit tests, static QA, executable examples, and i18n checks against the unpacked files. Both the wheel and source archive are tested in fresh virtual environments, and `uvx` is tested against the local wheel with an isolated cache.
+GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1335 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.3.0 baseline in [the i18n manifest](docs/i18n/manifest.json).
+
+### 2. License
+
+Covered material in versions bearing this notice is licensed under the **Source Lineage License 1.0**, within the scope stated in [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md). The initial transition commit and the follow-up commit recording that boundary are documented in [LICENSE-HISTORY.md](LICENSE-HISTORY.md) and [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md). Subsequent commits that retain this notice carry the same application forward.
+
+Commits up to and including `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` were released under the MIT License and remain available under MIT on those commits. Recipients of those commits retain their MIT permissions and do not need to migrate to SLL. The [historical project MIT text](LICENSES/MIT-pre-SLL.txt), [tests/upstream/LICENSE](tests/upstream/LICENSE), and third-party attribution notices remain intact, and this license does not revoke earlier grants.
+
+Under SLL, you may use, study, modify, commercialize, redistribute, and build proprietary extensions on the covered material as long as you keep the required license and lineage notices. SLL is not a copyleft license and does not require you to open-source your own code. Using the software over a network without distributing copies does not trigger core-service attribution, no express patent grant is included, and third-party components remain under their own licenses. The English text in [LICENSE](LICENSE) is authoritative; `LicenseRef-Source-Lineage-1.0` is a local identifier rather than an SPDX-assigned identifier or a claim of OSI approval. [Inbound contributions](CONTRIBUTING.md) are governed separately from downstream license rights.
