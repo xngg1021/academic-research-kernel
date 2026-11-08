@@ -2,7 +2,7 @@
 name: cross-review-five
 description: 多模型异构评审组：交叉评审、红队、生成对比与四阶段稀疏审议流.
 version: 2.0.1
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux
@@ -44,14 +44,14 @@ metadata:
 1. plan:五个模型各拿同一份任务书,独立产出互不可见,写入 review-<短名>.md;
 2. review:轮转配对,模型 i 审查模型 i+1 的产出,写入 review-of-<被审短名>-by-<短名>.md。
 
-完成判定靠产物文件落盘与子进程退出,不依赖完成通知。每个模型是一个完整 Hermes 子进程,用 -m 与 --provider 覆盖模型,不动主配置。
+完成判定靠产物文件落盘与子进程退出，不依赖完成通知。每个席位在独立子进程中运行（通过 `CommandReviewerAdapter` 或可选的 `--adapter hermes` 调用目标模型），不动宿主主配置。
 
 ### 用法 (v1)
 
 ```bash
-python ${HERMES_SKILL_DIR}/scripts/orchestrate.py <流目录> --task <任务书> --stage plan
-python ${HERMES_SKILL_DIR}/scripts/orchestrate.py <流目录> --stage review
-python ${HERMES_SKILL_DIR}/scripts/orchestrate.py <流目录> --stage status
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate.py" <流目录> --task <任务书> --stage plan
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate.py" <流目录> --stage review
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate.py" <流目录> --stage status
 ```
 
 ---
@@ -77,14 +77,14 @@ v2 摒弃全篇通读与固定有向环，按**最大信息增量与核心分歧
 
 ```bash
 # 单步推进:
-python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task <任务书> --stage plan --mode standard
-python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --stage merge --mode standard
-python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task <任务书> --stage challenge
-python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --stage synthesize
-python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --stage status
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --task <任务书> --stage plan --mode standard
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --stage merge --mode standard
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --task <任务书> --stage challenge
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --stage synthesize
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --stage status
 
 # 或一键全流程执行:
-python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task <任务书> --stage all --mode standard
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --task <任务书> --stage all --mode standard
 ```
 
 ### 任意数量与种类模型及子代理支持 (v2 动态扩展)
@@ -94,7 +94,7 @@ python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task <任务�
 1. **命令行内联声明**（支持 `key:provider:model[:runner]` 规范）：
    ```bash
    # 指定自定义 3 模型组合:
-   python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task task.md --stage all \
+   python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --task task.md --stage all \
      --models "sonnet:anthropic:claude-3-7-sonnet,gpt4o:openai:gpt-4o,dsv4:deepseek:deepseek-v4-pro"
    ```
 2. **JSON 配置文件定义**（支持第三方子代理 CLI 模板）：
@@ -105,7 +105,7 @@ python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task <任务�
      {"key": "codex-agent", "runner": "cli", "cmd": "codex run --query-file {prompt_path}"}
    ]
    ```
-   执行：`python ${HERMES_SKILL_DIR}/scripts/orchestrate_v2.py <流目录> --task task.md --stage all --models-file models.json`。
+   执行：`python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/cross-review-five}}/scripts/orchestrate_v2.py" <流目录> --task task.md --stage all --models-file models.json`。
 
 --models 参数若传已有短名则从预设中选取子集。任务书模板与约束见脚本内的 PLAN_PROMPT 与 REVIEW_PROMPT。
 

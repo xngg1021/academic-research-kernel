@@ -2,7 +2,7 @@
 name: research-object-identity
 description: 研究对象身份归一、聚合五态判定与来源追溯及谱系存证 (Provenance Tracking v1).
 version: 1.1.0
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux

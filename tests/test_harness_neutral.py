@@ -221,18 +221,21 @@ def test_mcp_server_protocol_messages():
 
 def test_agent_plugins_v1_skills_and_manifest_compatibility():
     """Verify all 14 skills have strictly portable metadata and pass Agent Plugins v1 checks."""
-    import yaml
+    import re, yaml
     skill_files = sorted(list((ROOT / "skills").glob("*/SKILL.md")))
     assert len(skill_files) == 14
 
     for sf in skill_files:
         text = sf.read_text(encoding="utf-8")
+        assert not re.search(r"(?<!\$\{SKILL_DIR:-)\$\{HERMES_SKILL_DIR\b", text), f"{sf.parent.name}/SKILL.md has ${{HERMES_SKILL_DIR}} without SKILL_DIR primary"
+        assert not re.search(r"python3?\s+\$\{SKILL_DIR:", text), f"{sf.parent.name}/SKILL.md has unquoted python ${{SKILL_DIR:...}} path"
         parts = text.split("---", 2)
         assert len(parts) >= 3, f"{sf.name} missing YAML frontmatter"
         fm = yaml.safe_load(parts[1])
         assert isinstance(fm, dict), f"{sf.name} invalid frontmatter"
         assert "name" in fm
         assert "description" in fm
+        assert fm.get("author") == "Junfu Shi (SJF, xngg1021)", f"{sf.parent.name}: unexpected author {fm.get('author')!r}"
 
         # Agent Plugins v1 metadata check: must be flat string -> string map
         if "metadata" in fm:
@@ -241,6 +244,49 @@ def test_agent_plugins_v1_skills_and_manifest_compatibility():
             for k, v in meta.items():
                 assert isinstance(k, str), f"{sf.name}: metadata key {k!r} not string"
                 assert isinstance(v, str), f"{sf.name}: metadata value {v!r} not string"
+
+    p_data = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
+    assert p_data["author"]["name"] == "Junfu Shi (SJF, xngg1021)"
+    pyproject_txt = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'authors = [{name = "Junfu Shi (SJF, xngg1021)"}]' in pyproject_txt
+    readme_files = list(ROOT.glob("README*.md")) + list((ROOT / "i18n").glob("*/README.md"))
+    assert len(readme_files) == 23
+    for rf in readme_files:
+        author_lines = [l for l in rf.read_text(encoding="utf-8").splitlines()[:20] if "Junfu Shi" in l]
+        assert len(author_lines) == 1, f"{rf} missing Junfu Shi author attribution line"
+        assert "Hermes Agent" not in author_lines[0], f"{rf} still lists Hermes Agent in author line: {author_lines[0]!r}"
+
+
+def test_mcp_multi_agent_protocol_versions_and_resource_prompt_probes():
+    """Verify Claude Code (2025-03-26), Codex CLI (2025-06-18 / 2025-11-25), and Cursor probes succeed."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import mcp_server
+
+    for proto in ("2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25", "2026-07-28"):
+        init_resp = mcp_server.process_message({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": proto},
+        })
+        assert init_resp["result"]["protocolVersion"] == proto
+
+        list_resp = mcp_server.process_message({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/list",
+            "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": proto}},
+        })
+        assert "result" in list_resp
+        assert len(list_resp["result"]["tools"]) == 12
+
+    for method, key in (
+        ("resources/list", "resources"),
+        ("resources/templates/list", "resourceTemplates"),
+        ("prompts/list", "prompts"),
+    ):
+        probe_resp = mcp_server.process_message({"jsonrpc": "2.0", "id": 3, "method": method, "params": {}})
+        assert probe_resp["result"] == {key: []}
 
 
 def test_command_adapter_challenge_receives_prompt_not_just_bundle(tmp_path):

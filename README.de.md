@@ -7,7 +7,7 @@ Umgebungsunabhängiges, deterministisches Werkzeugset zur Verwaltung und Verifik
 
 aus ersten Prinzipien trennt dieses Repository semantisches Lesen von deterministischer Verifikation: Sprachmodelle übernehmen Textverständnis und Synthese, während deterministischer Code mathematische Nachberechnungen, Datenbankabfragen, Syntaxbaum-Prüfungen und SHA-256-Herkunftsnachweise ausführt.
 
-Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Aktueller Lizenzumfang: [Source Lineage License 1.0](LICENSE).
+Autor: Junfu Shi (SJF, xngg1021). Aktueller Lizenzumfang: [Source Lineage License 1.0](LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Um nachzuweisen, dass die deterministischen Prüfungen reale Peer-Review-Mängel
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Identität und quellenspezifische Zitationszahlen gegenprüfen; Aktualisierungs-/Rücknahmesignale prüfen; OA-Text auffinden und PDF-Identität verifizieren; OpenReview-Gutachten und Code-Repositories forensisch prüfen |
 | `skills/literature-analysis` | 1.3.0 | Zwölf Workflows: Themenähnlichkeit, lokale Textüberschneidung, Gegenbeweise, Autorenprofile, Probegutachten, Fehlschlussprüfung, Review-Matrix, Zeitschriftenkandidaten, BibTeX, zweisprachiges Lesen, Forschungslücken-Screening, Reproduktion |
-| `skills/academic-writing` | 1.2.0 | Lektorat, Zitierrichtlinien (ISO 690, APA, MLA, Chicago, IEEE, AMA sowie regionale Profile), Zeitschriftenhinweise, optionale Prüfdienste, Einreichungsunterlagen und institutionelle Anforderungen, Pre-Submission-Linting, Double-Blind-Sanitisierung, Receipt-zu-LaTeX-Tabellen und Konferenz-Templates |
+| `skills/academic-writing` | 1.3.0 | Lektorat, Zitierrichtlinien (ISO 690, APA, MLA, Chicago, IEEE, AMA sowie regionale Profile), Zeitschriftenhinweise, optionale Prüfdienste, Einreichungsunterlagen und institutionelle Anforderungen, Pre-Submission-Linting, Double-Blind-Sanitisierung, Receipt-zu-LaTeX-Tabellen und Konferenz-Templates |
 | `skills/math-computation` | 1.2.1 | Bestehendes Domänen-/Aufgaben-Routing mit korrigierten numerischen und statistischen Beispielen; vier domänenspezifische Referenzdateien |
 | `skills/quantitative-paper-audit` | 1.2.0 | Berichtete Statistiken neu berechnen (Effektgröße, p-Werte, Konfidenzintervalle, OR/RR, erreichte Power) und numerische Abweichungen erkennen sowie Partitionserhaltung, Ablations-Offsets und physische Speicher-/Bandbreitengrenzen prüfen |
 | `skills/research-reproducibility` | 1.0.1 | Vierzehnstufige Reproduktionsaudit-Pipeline mit strukturierter Checkliste, fünf Faktenstufen und reproduzierbaren Audit-Nachweisen |
@@ -259,7 +259,5 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ### Lizenz
 
 Der Snapshot mit diesem Hinweis wendet die **Source Lineage License 1.0** auf das abgedeckte Material und die in [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) benannten Rechte an. Der erste SLL-Commit mit Baum sowie der spätere grenzaufzeichnende Commit sind in [LICENSE-HISTORY.md](LICENSE-HISTORY.md) und [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) unterschieden. Snapshots ab diesem aufgezeichneten Übergang, die diesen Hinweis behalten, tragen denselben Lizenzumfang.
-
-Historische Snapshots bis einschließlich `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` standen unter MIT-Lizenz, vorbehaltlich der für diese Kopien geltenden Bedingungen. Empfänger behalten gültige MIT-Rechte und müssen nicht zu SLL migrieren. Der [frühere MIT-Text des Projekts](LICENSES/MIT-pre-SLL.txt) bleibt erhalten; [tests/upstream/LICENSE](tests/upstream/LICENSE) und dessen Fremdherkunft bleiben unverändert. Das neue Wurzelangebot löscht diese Rechte nicht.
 
 SLL erlaubt weitgehend Nutzung, Studium, Änderung, kommerzielle Nutzung, Verbreitung und proprietäre Ergänzungen, vorbehaltlich der anwendbaren Lizenz-, Hinweis- und Herkunftsbedingungen. Es ist kein Copyleft und verlangt keine Quelloffenlegung. Ein reiner Netzdienst ohne Bereitstellung von Kopien löst die Kern-Dienst-Herkunftshinweisbedingung für sich allein nicht aus. Es gibt keine ausdrückliche Patentgewährung. Fremdmaterial unterliegt weiterhin seinen eigenen Bedingungen. Maßgeblich ist der englische Originaltext der [LICENSE](LICENSE); `LicenseRef-Source-Lineage-1.0` ist eine lokale Referenz, keine SPDX-Zuweisung, und es wird keine OSI-Anerkennung beansprucht. Die [Beitragsannahme](CONTRIBUTING.md) ist von nachgelagerten Lizenzberechtigungen getrennt.

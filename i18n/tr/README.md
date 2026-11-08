@@ -7,7 +7,7 @@ Ajan destekli bilimsel araştırma iş akışları için çalışma ortamından 
 
 İlk ilkelerden (first principles) yola çıkılarak tasarlanan bu depo, anlamsal okuma ile deterministik doğrulamayı birbirinden ayırır: dil modeli metni okuma ve sentezleme işini üstlenirken; matematiksel yeniden hesaplama, veritabanı sorguları, sözdizimi ağacı kontrolleri ve SHA-256 kanıt doğrulaması deterministik kod tarafından yürütülür.
 
-Yazar: Junfu Shi (SJF, xngg1021), Hermes Agent. Geçerli kapsamlı lisans teklifi: [Source Lineage License 1.0](../../LICENSE).
+Yazar: Junfu Shi (SJF, xngg1021). Geçerli kapsamlı lisans teklifi: [Source Lineage License 1.0](../../LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Deterministik kontrollerin ampirik ağırlıklar veya öznel kabul eşikleri uyd
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Yayın kimliğini ve kaynağa özgü atıf sayılarını çapraz kontrol etme; güncelleme ve geri çekme (retraction) sinyallerini inceleme; açık erişim tam metinleri bulma ve PDF kimliğini doğrulama; OpenReview hakem değerlendirmelerini ve kod depolarını adli olarak denetleme |
 | `skills/literature-analysis` | 1.3.0 | On iki analiz iş akışı: konu benzerliği, yerel metin örtüşmesi, karşıt kanıtlar, yazar profilleri, deneme hakemliği, mantık hatası kontrolü, inceleme matrisi, aday dergiler, BibTeX, iki dilli okuma, araştırma boşluğu taraması ve yeniden üretim |
-| `skills/academic-writing` | 1.2.0 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler, gönderim öncesi biçim denetimi, çift-kör anonimlik taraması, kanıt çıktılarından LaTeX tablo üretimi ve konferans şablonları |
+| `skills/academic-writing` | 1.3.0 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler, gönderim öncesi biçim denetimi, çift-kör anonimlik taraması, kanıt çıktılarından LaTeX tablo üretimi ve konferans şablonları |
 | `skills/math-computation` | 1.2.1 | Düzeltilmiş sayısal ve istatistiksel örneklerle mevcut alan/görev yönlendirmesi; dört adet alana özgü ileri düzey referans dosyası |
 | `skills/quantitative-paper-audit` | 1.2.0 | Makalelerde bildirilen istatistikleri (etki büyüklüğü, p değerleri, güven aralıkları, OR/RR, ulaşılan istatistiksel güç) yeniden hesaplama ve sayısal uyuşmazlıkları tespit etme ve örneklem bölümleme korunumu, ablasyon sabit kayması ile fiziksel depolama ve bant genişliği alt sınırlarını kontrol etme |
 | `skills/research-reproducibility` | 1.0.1 | Yapılandırılmış doğrulama kontrol listeleri, beş olgu doğrulama katmanı ve yeniden üretilebilir denetim kayıtları içeren on dört aşamalı tekrarlanabilirlik denetim hattı |
@@ -259,7 +259,5 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ### Lisans
 
 Bu bildirimi içeren anlık görüntü, [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md) dosyasında tanımlanan Kapsanan Materyal ve haklar için **Source Lineage License 1.0** lisansını benimser. İlk SLL işlemesi (commit) ve ağacı ile daha sonraki sınır kaydı işlemesi [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) ve [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md) belgelerinde birbirinden ayrılmıştır. Bu kayıtlı geçişten itibaren bu bildirimi koruyan anlık görüntüler aynı kapsamlı lisans teklifini taşır.
-
-`439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` işlemesine kadar olan geçmiş anlık görüntüler, ilgili kopyalara uygulanan koşullar çerçevesinde MIT lisanslıydı. Alıcılar geçerli MIT izinlerini korur ve SLL'ye geçmek zorunda değildir. [Önceki proje MIT metni](../../LICENSES/MIT-pre-SLL.txt) korunmuştur; [tests/upstream/LICENSE](../../tests/upstream/LICENSE) ve üçüncü taraf kaynak bilgileri değişmeden kalır. Yeni kök lisans teklifi bu önceki hakları ortadan kaldırmaz.
 
 SLL; geçerli lisans, bildirim ve kaynak kökeni koşullarına tabi olmak kaydıyla kullanıma, incelemeye, değiştirmeye, ticari kullanıma, dağıtıma ve özel mülkiyetli eklemelere geniş ölçüde izin verir. Copyleft değildir ve kaynak kodu açıklaması gerektirmez. Kopya sağlamaksızın sunulan saf ağ hizmeti, tek başına Core hizmet kökeni bildirim koşulunu tetiklemez. Açık bir patent lisansı verilmez ve üçüncü taraf materyaller kendi koşullarına tabi kalır. Bu bilgilendirici özete [LICENSE](../../LICENSE) belgesinin özgün İngilizce metni esas teşkil eder; `LicenseRef-Source-Lineage-1.0` yerel bir referanstır, SPDX tarafından atanmış bir tanımlayıcı değildir ve herhangi bir OSI onayı iddia edilmez. [Katkı kabul süreci](../../CONTRIBUTING.md), alt kullanıcı lisans izinlerinden ayrıdır.

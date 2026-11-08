@@ -7,7 +7,7 @@ Ensemble déterministe d'outils de gestion et de vérification de l'état de rec
 
 Conçu à partir des premiers principes, ce dépôt sépare la lecture sémantique de la vérification déterministe : le modèle de langage assure la lecture et la synthèse, tandis que le code déterministe exécute les recalculs mathématiques, les requêtes bibliographiques, l'analyse syntaxique et les preuves SHA-256.
 
-Auteur : Junfu Shi (SJF, xngg1021), Hermes Agent. Offre actuelle : [Source Lineage License 1.0](LICENSE).
+Auteur : Junfu Shi (SJF, xngg1021). Offre actuelle : [Source Lineage License 1.0](LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Afin de vérifier que les contrôles déterministes reflètent fidèlement les m
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Vérifier l'identité et les comptes de citations par source ; examiner les signaux de mise à jour et de rétractation ; localiser le texte en accès libre et vérifier l'identité des PDF ; auditer les évaluations OpenReview et les dépôts de code |
 | `skills/literature-analysis` | 1.3.0 | Douze flux : similarité thématique, chevauchement local, contre-preuves, profils d'auteurs, revue simulée, vérification des sophismes, matrice de revue, revues candidates, BibTeX, lecture bilingue, dépistage des lacunes, reproduction |
-| `skills/academic-writing` | 1.2.0 | Révision éditoriale, normes de citation (ISO 690, APA, MLA, Chicago, IEEE, AMA et profils régionaux), consignes aux auteurs, services facultatifs de détection, dossiers de soumission et exigences institutionnelles, contrôle avant soumission, anonymisation en double aveugle, génération de tableaux LaTeX et modèles de conférences |
+| `skills/academic-writing` | 1.3.0 | Révision éditoriale, normes de citation (ISO 690, APA, MLA, Chicago, IEEE, AMA et profils régionaux), consignes aux auteurs, services facultatifs de détection, dossiers de soumission et exigences institutionnelles, contrôle avant soumission, anonymisation en double aveugle, génération de tableaux LaTeX et modèles de conférences |
 | `skills/math-computation` | 1.2.1 | Routage domaine/tâche existant avec exemples numériques et statistiques corrigés ; quatre fichiers de référence par domaine |
 | `skills/quantitative-paper-audit` | 1.2.0 | Recalculer les statistiques rapportées (taille d'effet, valeurs p, intervalles de confiance, OR/RR, puissance atteinte) et détecter les incohérences numériques, ainsi que la conservation des partitions, les décalages constants d'ablation et les bornes physiques de stockage et de bande passante |
 | `skills/research-reproducibility` | 1.0.1 | Pipeline d'audit de reproduction en quatorze étapes avec listes de contrôle structurées, cinq niveaux de faits et enregistrements d'audit vérifiables |
@@ -259,7 +259,5 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ### Licence
 
 L'instantané contenant le présent avis applique la **Source Lineage License 1.0** au matériel couvert et aux droits identifiés dans [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md). Le premier commit SLL et son arbre, ainsi que le commit ultérieur d'enregistrement de frontière, sont distingués dans [LICENSE-HISTORY.md](LICENSE-HISTORY.md) et [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md). Les instantanés postérieurs à cette transition enregistrée qui conservent le présent avis portent la même offre.
-
-Les instantanés historiques jusqu'à `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` étaient distribués sous licence MIT, soumis aux conditions applicables à ces copies. Les destinataires conservent des droits MIT valides et n'ont pas à migrer vers SLL. L'[ancien texte MIT du projet](LICENSES/MIT-pre-SLL.txt) est préservé ; [tests/upstream/LICENSE](tests/upstream/LICENSE) et sa provenance tierce restent inchangés. La nouvelle offre racine n'efface pas ces droits.
 
 SLL autorise largement l'utilisation, l'étude, la modification, l'usage commercial, la distribution et les ajouts propriétaires, sous réserve des conditions de licence, d'avis et de lignage applicables. Elle n'est pas copyleft et n'exige aucune divulgation du code source. Un service réseau pur sans fourniture de copies ne déclenche pas à lui seul la condition d'avis de lignage du service cœur. Aucune concession expresse de brevet. Le matériel tiers demeure soumis à ses propres conditions. Le texte anglais original de la [LICENSE](LICENSE) prévaut sur ce résumé informatif ; `LicenseRef-Source-Lineage-1.0` est une référence locale, non une affectation SPDX, et aucune approbation OSI n'est revendiquée. L'[admission des contributions](CONTRIBUTING.md) est distincte des permissions de licence en aval.

@@ -10,7 +10,10 @@ import sys
 from pathlib import Path
 import shutil
 
-from ._version import __version__
+try:
+    from ._version import __version__
+except ImportError:
+    from . import __version__
 
 REQUIRED = ('jsonschema',)
 STATS = ('numpy', 'scipy', 'statsmodels')
@@ -87,6 +90,22 @@ def _load_bundled_module(mod_name: str, repo_rel_path: str):
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _load_mcp_server():
+    for pkg in (__package__, 'academic_research_kernel'):
+        if not pkg:
+            continue
+        try:
+            return importlib.import_module(f'{pkg}.mcp_server')
+        except ImportError:
+            continue
+    scripts_dir = Path(__file__).resolve().parents[2] / 'scripts'
+    if (scripts_dir / 'mcp_server.py').is_file():
+        if str(scripts_dir) not in sys.path:
+            sys.path.insert(0, str(scripts_dir))
+        return importlib.import_module('mcp_server')
+    raise ImportError('Unable to load mcp_server')
 
 
 def doctor():
@@ -169,7 +188,7 @@ def doctor():
         'schema_count': 3,
     }
     try:
-        from . import mcp_server
+        mcp_server = _load_mcp_server()
         report['mcp'] = {'importable': True, 'tool_count': len(mcp_server.TOOLS)}
         if len(mcp_server.TOOLS) != 12:
             raise ValueError('unexpected tool count')
@@ -615,9 +634,13 @@ def main(argv=None):
             }, ensure_ascii=False), file=sys.stderr)
             return 1
     try:
-        from .mcp_server import main as serve
+        serve = _load_mcp_server().main
     except ImportError:
         print('Incomplete runtime installation. Run academic-research-kernel doctor.', file=sys.stderr)
         return 1
     serve()
     return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

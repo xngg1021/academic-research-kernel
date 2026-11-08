@@ -7,7 +7,7 @@ Mfumo thabiti wa kusimamia hali ya utafiti wa kitaaluma kwa mitiririko ya kazi i
 
 Ikijengwa kutoka kwenye misingi ya kwanza, hazina hii inatenganisha usomaji wa kisemantiki na uthibitishaji thabiti: muundo wa lugha unasoma na kufupisha maandishi, huku msimbo thabiti ukikokotoa upya hesabu, kuhoji hifadhidata za kitaaluma, kukagua muundo wa hati na kuthibitisha alama za SHA-256.
 
-Mwandishi: Junfu Shi (SJF, xngg1021), Hermes Agent. Ofa ya leseni ya sasa: [Source Lineage License 1.0](../../LICENSE).
+Mwandishi: Junfu Shi (SJF, xngg1021). Ofa ya leseni ya sasa: [Source Lineage License 1.0](../../LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Ili kuthibitisha kuwa ukaguzi waamuzi unalingana na kasoro halisi zinazotajwa na
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Uhakiki mtambuka wa utambulisho na idadi ya nukuu kulingana na chanzo; ukaguzi wa ishara za masasisho au kuondolewa kwa chapisho; utafutaji wa maandishi ya ufikiaji wazi (OA) na uhakiki wa faili za PDF; ukaguzi wa tathmini za OpenReview na uchunguzi wa hazina za msimbo |
 | `skills/literature-analysis` | 1.3.0 | Mitiririko kumi na miwili ya kazi: ulinganifu wa mada, mwingiliano wa maandishi, ushahidi kinzani, wasifu wa waandishi, tathmini ya mfano, ukaguzi wa upotoshaji wa kimantiki, jedwali la mapitio, mapendekezo ya majarida, BibTeX, usomaji wa lugha mbili, uchunguzi wa mapengo ya utafiti na urudiaji |
-| `skills/academic-writing` | 1.2.0 | Uhariri wa kitaaluma, mwongozo wa nukuu (ISO 690, APA, MLA, Chicago, IEEE, AMA na wasifu wa kikanda), maelekezo ya majarida, huduma za hiari za ugunduzi, nyaraka za uwasilishaji na mahitaji ya taasisi, ukaguzi wa kabla ya kuwasilisha, usafishaji wa kutotambulika, ubadilishaji wa risiti kuwa majedwali ya LaTeX na violezo vya mikutano |
+| `skills/academic-writing` | 1.3.0 | Uhariri wa kitaaluma, mwongozo wa nukuu (ISO 690, APA, MLA, Chicago, IEEE, AMA na wasifu wa kikanda), maelekezo ya majarida, huduma za hiari za ugunduzi, nyaraka za uwasilishaji na mahitaji ya taasisi, ukaguzi wa kabla ya kuwasilisha, usafishaji wa kutotambulika, ubadilishaji wa risiti kuwa majedwali ya LaTeX na violezo vya mikutano |
 | `skills/math-computation` | 1.2.1 | Uelekezaji wa kazi na nyanja za kihesabu ukiwa na mifano iliyosahihishwa ya namba na takwimu; faili nne za marejeleo ya kina |
 | `skills/quantitative-paper-audit` | 1.2.0 | Ukokotoaji upya wa takwimu zilizoripotiwa (ukubwa wa athari, thamani za p, vipindi vya uaminifu, OR/RR, nguvu ya takwimu iliyofikiwa) na utambuzi wa tofauti za namba pamoja na uhifadhi wa mgawanyo wa sampuli, mabadiliko ya kudumu kwenye ablation na mipaka ya hifadhi na kipimo data |
 | `skills/research-reproducibility` | 1.0.1 | Mfumo wa hatua kumi na nne wa ukaguzi wa uwezo wa kurudia matokeo wenye kikagua sheria za kurudiwa kwa matokeo, ngazi tano za ukweli na rekodi za ukaguzi zinazoweza kurudiwa |
@@ -259,7 +259,5 @@ Chaguo la `--source-checks` linafungua kifurushi pendekezwa cha `sdist` bila kuk
 ### Leseni
 
 Picha ya hifadhi iliyo na taarifa hii inatumia **Source Lineage License 1.0** kwa Nyenzo Zilizofunikwa na haki zilizoainishwa katika [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md). Ahadi (commit) na mti wa kwanza wa SLL, pamoja na ahadi ya baadaye iliyorekodi mpaka wa mabadiliko, zimetofautishwa katika [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) na [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md). Matoleo yanayoendelea kutoka kwenye mpito huo uliorekodiwa ambayo yanabaki na taarifa hii yanabeba ofa sawa ya leseni.
-
-Matoleo ya kihistoria hadi kufikia `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` yalikuwa chini ya leseni ya MIT, kulingana na masharti yaliyotumika kwa nakala hizo. Wapokeaji wanabaki na ruhusa halali za MIT na hawalazimiki kuhamia SLL. [Maandishi ya awali ya MIT ya mradi](../../LICENSES/MIT-pre-SLL.txt) yamehifadhiwa; [tests/upstream/LICENSE](../../tests/upstream/LICENSE) na asili yake ya wahusika wengine imebaki bila kubadilishwa. Ofa mpya ya msingi haifuti haki hizo za awali.
 
 SLL inaruhusu kwa upana matumizi, uchunguzi, marekebisho, matumizi ya kibiashara, usambazaji na nyongeza za umiliki binafsi, kwa kuzingatia masharti yanayotumika ya leseni, ilani na ufuatiliaji wa asili ya chanzo. Si leseni ya copyleft na haihitaji ufichuzi wa msimbo chanzi.utoaji wa huduma ya mtandao pekee bila kusambaza nakala hausababishi peke yake sharti la ilani ya asili ya huduma ya Core. Hakuna utoaji wa moja kwa moja wa haki za hataza (patent). Nyenzo za wahusika wengine zinabaki chini ya masharti yake husika. Maandishi halisi ya Kiingereza ya [LICENSE](../../LICENSE) ndiyo yanayoongoza muhtasari huu wa taarifa; `LicenseRef-Source-Lineage-1.0` ni rejeleo la ndani, si mgawo wa SPDX, na hakuna dai la uidhinishaji wa OSI. [Utaratibu wa kupokea michango](../../CONTRIBUTING.md) umetenganishwa na ruhusa za leseni kwa watumiaji.

@@ -2,7 +2,7 @@
 name: decision-ledger
 description: Deterministic ledger of decisions and negative results.
 version: 1.0.0
-author: Junfu Shi (SJF, xngg1021), Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux

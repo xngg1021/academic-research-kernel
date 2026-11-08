@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = "LicenseRef-Source-Lineage-1.0"
 license-files = ["LICENSE", "LICENSE-APPLICATION.md", "LICENSE-HISTORY.md", "SOURCE-LINEAGE.md", "LICENSES/MIT-pre-SLL.txt"]
-authors = [{name = "Junfu Shi"}]
+authors = [{name = "Junfu Shi (SJF, xngg1021)"}]
 dependencies = ["jsonschema>=4.23,<5", "numpy>=1.26,<3", "scipy>=1.11,<2", "statsmodels>=0.14,<0.16"]
 classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent"]
 

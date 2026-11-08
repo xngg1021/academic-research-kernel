@@ -7,7 +7,7 @@
 
 第一原理に基づき、本リポジトリは言語モデルによる意味読解と決定論的コードによる検証を明確に分離します。自然言語の読解と要約はモデルが担い、数式再計算、書誌データベース照会、構文木検査、SHA-256 来歴検証はすべて決定論的コードが実行します。
 
-著者：Junfu Shi（SJF、xngg1021）、Hermes Agent。現在の提供範囲：[Source Lineage License 1.0](LICENSE)。
+著者：Junfu Shi（SJF、xngg1021）。現在の提供範囲：[Source Lineage License 1.0](LICENSE)。
 
 ---
 
@@ -113,7 +113,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証、OpenReview 査読履歴およびコードリポジトリのフォレンジック監査 |
 | `skills/literature-analysis` | 1.3.0 | 12 のワークフロー：トピック類似度、局所テキスト重複、反証、著者プロファイル、模擬査読、誤謬検査、レビューマトリクス、投稿先候補、BibTeX、バイリンガル読解、研究ギャップ探索、再現 |
-| `skills/academic-writing` | 1.2.0 | 論文推敲、引用基準案内（ISO 690、APA、MLA、Chicago、IEEE、AMA および地域・機関別プロファイル）、投稿規程、任意の検出サービス、投稿資料、機関審査要件、投稿前リンティング、二重盲検匿名化チェック、検証結果からの LaTeX 三線表生成、会議テンプレート作成 |
+| `skills/academic-writing` | 1.3.0 | 論文推敲、引用基準案内（ISO 690、APA、MLA、Chicago、IEEE、AMA および地域・機関別プロファイル）、投稿規程、任意の検出サービス、投稿資料、機関審査要件、投稿前リンティング、二重盲検匿名化チェック、検証結果からの LaTeX 三線表生成、会議テンプレート作成 |
 | `skills/math-computation` | 1.2.1 | 既存の領域・タスク経路と修正済みの数値・統計例題、領域別リファレンス 4 編 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 論文が報告する統計量（効果量、p 値、信頼区間、OR/RR、達成検出力）の再計算と数値不整合の検出、およびサンプル分割保存、アブレーション定数オフセット、非圧縮ストレージ・帯域幅下界の検査 |
 | `skills/research-reproducibility` | 1.0.1 | 構造化チェックリスト、5 段階の事実階層、再現可能な監査記録を備えた 14 段階の再現監査パイプライン |
@@ -259,7 +259,5 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ### ライセンス
 
 本通知を含むスナップショットは、[LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) で特定された対象物と権利について **Source Lineage License 1.0** を採用する。最初の SLL コミットとツリー、およびその後の境界記録コミットは、[LICENSE-HISTORY.md](LICENSE-HISTORY.md) と [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) で区別される。記録された移行以降、本通知を保持するスナップショットは同じ提供範囲を引き継ぐ。
-
-`439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` までの履歴スナップショットは MIT ライセンスで配布されており、それらの複製に適用される条件に従う。受領者は有効な MIT 権限を保持し、SLL への移行を求められない。[旧プロジェクト MIT 本文](LICENSES/MIT-pre-SLL.txt)は保存され、[tests/upstream/LICENSE](tests/upstream/LICENSE) とその第三者由来記録は変更されない。新しいルート提供はこれらの権利を消さない。
 
 SLL は、適用されるライセンス、通知、ソース系譜の条件に従い、使用、研究、改変、商用利用、配布、独自追加を広く許可する。コピーレフトではなく、ソース開示を要求しない。複製を提供しない純粋なネットワークサービスは、それ自体ではコアサービス系譜通知条件を発動しない。明示的な特許許諾はない。第三者の素材はそれぞれの条件に従う。情報的な要約は英語原本の [LICENSE](LICENSE) が優先する。`LicenseRef-Source-Lineage-1.0` はローカル参照であり SPDX 割当てではなく、OSI 承認を主張しない。[貢献の受付](CONTRIBUTING.md)は下流のライセンス権限とは独立している。

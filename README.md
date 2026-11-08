@@ -10,7 +10,7 @@ When researchers use large language models to read or write papers, two failure 
 
 Built from first principles, this repository separates semantic reading from deterministic verification: your language model handles reading and synthesis, while deterministic code handles mathematical recomputation, public database queries, syntax-tree checks, and SHA-256 provenance verification. The repository unifies 14 scholarly workflows, 12 standard Model Context Protocol (MCP) tools, and 13 CLI command groups on a single state kernel, working out of the box with Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external service limits are documented in [the project audit](docs/kernel-architecture.md).
 
-Author: Junfu Shi (SJF, xngg1021), Hermes Agent. License: [Source Lineage License 1.0](LICENSE).
+Author: Junfu Shi (SJF, xngg1021). License: [Source Lineage License 1.0](LICENSE).
 
 ---
 
@@ -24,7 +24,7 @@ uv tool install "academic-research-kernel[research]==2.3.0"
 academic-research-kernel research skill --output ./paper-research
 
 # Option 2: Start the stdio MCP server for Claude Code, Cursor, Codex, or Gemini CLI
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel mcp
 ```
 
 Run an offline environment check and try source normalization or the built-in venue specification catalog right away:
@@ -145,7 +145,7 @@ To motivate the kernel's five deterministic verification families (missing dispe
 | `skills/literature-analysis` | 1.3.0 | Expand related works via snowballing, compare methods and contradictions across papers, build author profiles, review manuscripts, and convert BibTeX, RIS, and CSL-JSON |
 | `skills/quantitative-paper-audit` | 1.2.0 | Recompute $p$-values, effect sizes, confidence intervals, odds ratios, and statistical power from reported statistics, plus partition conservation, ablation offset, and physical bound checks |
 | `skills/math-computation` | 1.2.1 | Run symbolic algebra, calculus, linear algebra, differential equations, optimization, and Monte Carlo simulations with SymPy, NumPy, SciPy, statsmodels, and PyTorch |
-| `skills/academic-writing` | 1.2.0 | Edit academic prose and structure, format citations across international profiles, and run pre-submission linting, double-blind sanitization, receipt-to-LaTeX table generation, and venue templating |
+| `skills/academic-writing` | 1.3.0 | Edit academic prose and structure, format citations across international profiles, and run pre-submission linting, double-blind sanitization, receipt-to-LaTeX table generation, and venue templating |
 | `skills/research-reproducibility` | 1.0.1 | Audit companion code commits, lockfiles, random seeds, and numerical tolerances, recording reproduction runs in verifiable receipts |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | Record PRISMA search and screening logs, convert effect sizes, test heterogeneity, pool fixed or random effects, and run leave-one-out sensitivity and publication-bias checks |
 | `skills/literature-watch` | 1.1.0 | Monitor OpenAlex and Crossref weekly for new papers by topic, author, or cited DOI, deduplicating results so only newly published works are reported |
@@ -166,9 +166,16 @@ Across the 14 skills, 22 Markdown reference guides and 1 machine-readable venue 
    ```
    You can also run `pipx install academic-research-kernel==2.3.0` or `python -m pip install academic-research-kernel==2.3.0` inside a virtual environment. Adding `[research]` pins `pypdf==6.19.0` and `fonttools==4.65.0` for deterministic digital PDF font decoding across Python 3.10–3.14; `[full]` installs extended scientific computing libraries; `[qa]` installs repository test and lint dependencies.
 
-2. **Universal Agent Plugins v1 & MCP Server**
-   This repository follows the vendor-neutral **Agent Plugins v1** format (`plugin.json`) and exposes its verification and statistical tools through a standard stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`). Although the repository is named `academic-research-kernel`, the plugin name `academic-skills` and existing MCP aliases remain unchanged so existing configurations continue working:
+2. **Universal Agent Plugins v1 & Multi-Agent MCP Registration (Claude Code, Codex, Cursor, Gemini CLI)**
+   This repository follows the vendor-neutral **Agent Plugins v1** format (`plugin.json`) and exposes its 12 verification and statistical tools through a standard stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`, supporting MCP protocol versions `2024-11-05`, `2025-03-26`, `2025-06-18`, `2025-11-25`, and `2026-07-28`):
    ```bash
+   # Claude Code CLI
+   claude mcp add academic-research-kernel -- uvx academic-research-kernel mcp
+
+   # OpenAI Codex CLI
+   codex mcp add academic-research-kernel -- uvx academic-research-kernel mcp
+
+   # Direct stdio launch (Cursor .cursor/mcp.json or Gemini CLI ~/.gemini/settings.json)
    uvx academic-research-kernel mcp
    ```
 
@@ -252,8 +259,6 @@ GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10,
 
 ### 2. License
 
-Covered material in versions bearing this notice is licensed under the **Source Lineage License 1.0**, within the scope stated in [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md). The initial transition commit and the follow-up commit recording that boundary are documented in [LICENSE-HISTORY.md](LICENSE-HISTORY.md) and [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md). Subsequent commits that retain this notice carry the same application forward.
+Covered material in this repository is licensed under the **Source Lineage License 1.0** (`LicenseRef-Source-Lineage-1.0`), within the scope stated in [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md); provenance and historical boundary records are maintained in [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) and [LICENSE-HISTORY.md](LICENSE-HISTORY.md).
 
-Commits up to and including `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` were released under the MIT License and remain available under MIT on those commits. Recipients of those commits retain their MIT permissions and do not need to migrate to SLL. The [historical project MIT text](LICENSES/MIT-pre-SLL.txt), [tests/upstream/LICENSE](tests/upstream/LICENSE), and third-party attribution notices remain intact, and this license does not revoke earlier grants.
-
-Under SLL, you may use, study, modify, commercialize, redistribute, and build proprietary extensions on the covered material as long as you keep the required license and lineage notices. SLL is not a copyleft license and does not require you to open-source your own code. Using the software over a network without distributing copies does not trigger core-service attribution, no express patent grant is included, and third-party components remain under their own licenses. The English text in [LICENSE](LICENSE) is authoritative; `LicenseRef-Source-Lineage-1.0` is a local identifier rather than an SPDX-assigned identifier or a claim of OSI approval. [Inbound contributions](CONTRIBUTING.md) are governed separately from downstream license rights.
+Under SLL 1.0, you may use, study, modify, commercialize, redistribute, and build proprietary extensions on the covered material as long as you preserve the required license and lineage notices. SLL 1.0 is not a copyleft license and does not require you to open-source your own code. Using the software over a network without distributing copies does not trigger core-service attribution, no express patent grant is included, and third-party components (such as [tests/upstream/LICENSE](tests/upstream/LICENSE)) remain under their own licenses. The English text in [LICENSE](LICENSE) is authoritative; `LicenseRef-Source-Lineage-1.0` is a local identifier rather than an SPDX-assigned identifier or a claim of OSI approval. [Inbound contributions](CONTRIBUTING.md) are governed separately from downstream license rights.

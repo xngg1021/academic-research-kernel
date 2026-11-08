@@ -7,7 +7,7 @@ Inti pengelolaan status penelitian ilmiah dan verifikasi metodologis yang determ
 
 Dibangun dari prinsip pertama, repositori ini memisahkan pembacaan semantik dari verifikasi deterministik: model bahasa menangani pembacaan dan sintesis, sementara kode deterministik menjalankan perhitungan ulang matematis, kueri basis data publik, pemeriksaan pohon sintaks, dan verifikasi SHA-256.
 
-Penulis: Junfu Shi (SJF, xngg1021), Hermes Agent. Penawaran lisensi saat ini: [Source Lineage License 1.0](../../LICENSE).
+Penulis: Junfu Shi (SJF, xngg1021). Penawaran lisensi saat ini: [Source Lineage License 1.0](../../LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Untuk memastikan bahwa pemeriksaan deterministik mencerminkan mode kegagalan nya
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Memeriksa silang identitas publikasi dan jumlah sitasi spesifik per sumber; memeriksa sinyal pembaruan atau penarikan artikel; menemukan naskah Open Access dan memverifikasi keaslian PDF; mengaudit ulasan OpenReview dan forensik repositori kode |
 | `skills/literature-analysis` | 1.3.0 | Dua belas alur kerja analisis: kemiripan topik, tumpang tindih teks lokal, bukti tandingan, profil penulis, simulasi telaah sejawat, pemeriksaan sesat pikir, matriks tinjauan, kandidat jurnal, BibTeX, pembacaan dwibahasa, pemetaan celah riset, dan reproduksi |
-| `skills/academic-writing` | 1.2.0 | Penyuntingan naskah ilmiah, panduan gaya sitasi (ISO 690, APA, MLA, Chicago, IEEE, AMA, dan profil regional), petunjuk penulis jurnal, layanan deteksi opsional, berkas pengajuan naskah, dan persyaratan institusional, linting pra-pengajuan, pembersihan anonimitas buta ganda, konversi bukti ke tabel LaTeX, dan templat konferensi |
+| `skills/academic-writing` | 1.3.0 | Penyuntingan naskah ilmiah, panduan gaya sitasi (ISO 690, APA, MLA, Chicago, IEEE, AMA, dan profil regional), petunjuk penulis jurnal, layanan deteksi opsional, berkas pengajuan naskah, dan persyaratan institusional, linting pra-pengajuan, pembersihan anonimitas buta ganda, konversi bukti ke tabel LaTeX, dan templat konferensi |
 | `skills/math-computation` | 1.2.1 | Perutean domain dan tugas komputasi dengan contoh numerik serta statistik yang telah dikoreksi; empat berkas referensi lanjutan per bidang |
 | `skills/quantitative-paper-audit` | 1.2.0 | Menghitung ulang statistik yang dilaporkan dalam makalah (ukuran efek, nilai p, interval kepercayaan, OR/RR, daya statistik tercapai) dan mendeteksi ketidaksesuaian angka, serta pemeriksaan konservasi partisi, pergeseran konstan ablasi, dan batas fisik penyimpanan serta bandwidth |
 | `skills/research-reproducibility` | 1.0.1 | Alur audit reproduktibilitas empat belas tahap dengan daftar periksa terstruktur, lima tingkatan verifikasi fakta, dan catatan audit yang dapat direproduksi |
@@ -259,7 +259,5 @@ Opsi `--source-checks` mengekstrak kandidat `sdist` tanpa perubahan di luar dire
 ### Lisensi
 
 Cuplikan repositori yang memuat pemberitahuan ini mengadopsi **Source Lineage License 1.0** untuk Materi Tercakup beserta hak-hak yang diuraikan dalam [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md). Komit dan pohon objek SLL pertama, serta komit pencatatan batas sesudahnya, dibedakan secara jelas dalam [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) dan [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md). Cuplikan setelah transisi tercatat tersebut yang tetap mempertahankan pemberitahuan ini membawa penawaran lisensi dengan cakupan yang sama.
-
-Cuplikan historis hingga `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` dilisensikan di bawah MIT sesuai ketentuan yang berlaku pada salinan tersebut. Penerima tetap memiliki izin MIT yang sah dan tidak diwajibkan beralih ke SLL. [Teks lisensi MIT proyek sebelumnya](../../LICENSES/MIT-pre-SLL.txt) tetap disimpan; [tests/upstream/LICENSE](../../tests/upstream/LICENSE) beserta asal-usul pihak ketiganya tidak berubah. Penawaran lisensi baru di tingkat akar tidak menghapus hak-hak terdahulu tersebut.
 
 SLL secara luas mengizinkan penggunaan, pembelajaran, modifikasi, pemanfaatan komersial, distribusi, dan penambahan komponen kepemilikan, dengan tunduk pada ketentuan lisensi, pemberitahuan, dan silsilah kode sumber yang berlaku. Lisensi ini bukan copyleft dan tidak menuntut pembukaan kode sumber. Penyediaan layanan jaringan murni tanpa menyerahkan salinan tidak dengan sendirinya memicu kewajiban pemberitahuan silsilah layanan Core. Tidak ada pemberian hak paten secara tersurat, dan materi pihak ketiga tetap berada di bawah ketentuannya masing-masing. Teks bahasa Inggris asli pada [LICENSE](../../LICENSE) menjadi acuan utama atas ringkasan informatif ini; `LicenseRef-Source-Lineage-1.0` merupakan referensi lokal, bukan pengenal resmi SPDX, dan tidak ada klaim persetujuan OSI. Kebijakan [penerimaan kontribusi](../../CONTRIBUTING.md) terpisah dari izin lisensi bagi pengguna hilir.

@@ -86,8 +86,7 @@ class LicenseApplicationTests(unittest.TestCase):
             self.assertIn("separate, explicit inbound arrangement", text)
 
     def test_hermes_mit_boundary_and_upstream_remain_separate(self):
-        if self.receipt["repository"] != "xngg1021/hermes-academic-skills":
-            return
+        self.assertIn(self.receipt["repository"], ("xngg1021/hermes-academic-skills", "xngg1021/academic-research-kernel"))
         history = (ROOT / "LICENSE-HISTORY.md").read_text(encoding="utf-8")
         self.assertIn("retain the permissions already granted under MIT", history)
         self.assertIn("do not have to migrate to SLL", history)

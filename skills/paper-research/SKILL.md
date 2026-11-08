@@ -2,7 +2,7 @@
 name: paper-research
 description: 读取论文及附件、核对统计数字与审稿证据并生成可追溯报告.
 version: 1.1.0
-author: Junfu Shi
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux

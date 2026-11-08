@@ -7,7 +7,7 @@
 
 제1원리에 기반하여 이 저장소는 언어 모델의 의미 독해와 결정론적 코드 검증을 분리합니다. 자연어 독해와 요약은 모델이 수행하고, 수식 재계산, 서지 데이터베이스 조회, 구문 분석 및 SHA-256 이력 검증은 결정론적 코드가 수행합니다.
 
-저자: Junfu Shi (SJF, xngg1021), Hermes Agent. 현재 제공 범위: [Source Lineage License 1.0](LICENSE).
+저자: Junfu Shi (SJF, xngg1021). 현재 제공 범위: [Source Lineage License 1.0](LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | 신원과 출처별 인용 수 교차 확인, 갱신·철회 신호 점검, OA 원문 위치 파악과 PDF 신원 검증, OpenReview 심사 기록 및 코드 저장소 포렌식 감사 |
 | `skills/literature-analysis` | 1.3.0 | 12개 워크플로: 주제 유사도, 국소 텍스트 중복, 반증, 저자 프로필, 모의 심사, 오류 점검, 리뷰 매트릭스, 저널 후보, BibTeX, 이중언어 독해, 연구 공백 선별, 재현 |
-| `skills/academic-writing` | 1.2.0 | 논문 편집, 인용 규범 안내(ISO 690, APA, MLA, Chicago, IEEE, AMA 및 지역 프로필), 저널 투고 지침, 선택적 탐지 서비스, 투고 자료 및 기관 심사 요건, 투고 전 포맷 린팅, 이중맹검 익명성 검사, 검증 기록 기반 LaTeX 표 생성 및 학회 템플릿 초기화 |
+| `skills/academic-writing` | 1.3.0 | 논문 편집, 인용 규범 안내(ISO 690, APA, MLA, Chicago, IEEE, AMA 및 지역 프로필), 저널 투고 지침, 선택적 탐지 서비스, 투고 자료 및 기관 심사 요건, 투고 전 포맷 린팅, 이중맹검 익명성 검사, 검증 기록 기반 LaTeX 표 생성 및 학회 템플릿 초기화 |
 | `skills/math-computation` | 1.2.1 | 기존 영역·과제 라우팅과 수정된 수치·통계 예제, 분야별 심화 참조 문서 4편 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 논문이 보고한 통계량(효과 크기, p값, 신뢰구간, OR/RR, 달성 검정력) 재계산과 수치 불일치 탐지 및 표본 분할 보존, 절제 실험 상수 오프셋, 비압축 저장소·대역폭 하한 검증 |
 | `skills/research-reproducibility` | 1.0.1 | 구조화된 점검표, 5단계 사실 계층, 재현 가능한 감사 기록을 갖춘 14단계 재현 감사 파이프라인 |
@@ -259,7 +259,5 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ### 라이선스
 
 본 통지를 포함한 스냅샷은 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md)에서 식별된 대상 자료와 권리에 **Source Lineage License 1.0**을 적용한다. 최초 SLL 커밋과 트리, 그리고 이후의 경계 기록 커밋은 [LICENSE-HISTORY.md](LICENSE-HISTORY.md)와 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md)에서 구분된다. 기록된 전환 시점 이후로 본 통지를 유지하는 스냅샷은 동일한 제공 범위를 지닌다.
-
-`439ce4a29d6d2d9137308d7f9f045863e9f0c5b3`까지의 과거 스냅샷은 MIT 라이선스로 배포되었으며, 해당 복제본에 적용되는 조건을 따른다. 수령자는 유효한 MIT 권한을 보유하며 SLL로 이전할 필요가 없다. [이전 프로젝트 MIT 원문](LICENSES/MIT-pre-SLL.txt)은 보존되고, [tests/upstream/LICENSE](tests/upstream/LICENSE)와 그 서드파티 출처 기록은 변경되지 않는다. 새로운 루트 제공은 이 권한들을 지우지 않는다.
 
 SLL은 적용 가능한 라이선스, 통지, 소스 계보 조건에 따라 사용, 연구, 수정, 상업적 이용, 배포, 독점적 추가를 폭넓게 허용한다. 카피레프트가 아니며 소스 공개를 요구하지 않는다. 복제본을 제공하지 않는 순수 네트워크 서비스는 그 자체로 핵심 서비스 계보 통지 조건을 발동하지 않는다. 명시적 특허 허여는 없다. 서드파티 자료는 각자의 조건을 따른다. 정보성 요약은 영문 원본 [LICENSE](LICENSE)가 우선한다. `LicenseRef-Source-Lineage-1.0`은 로컬 참조이며 SPDX 부여가 아니고 OSI 승인을 주장하지 않는다. [기여 수취](CONTRIBUTING.md)는 하위 라이선스 권한과 별개이다.

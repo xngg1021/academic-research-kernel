@@ -7,7 +7,7 @@ Conjunto determinista de herramientas de gestión y verificación del estado de 
 
 Diseñado desde primeros principios, este repositorio separa la lectura semántica de la verificación determinista: el modelo de lenguaje se encarga de leer y sintetizar, mientras que el código determinista ejecuta recálculos matemáticos, consultas a bases de datos públicas, análisis sintáctico y pruebas SHA-256.
 
-Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Oferta actual: [Source Lineage License 1.0](LICENSE).
+Autor: Junfu Shi (SJF, xngg1021). Oferta actual: [Source Lineage License 1.0](LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Para comprobar que las verificaciones deterministas capturan fallos reales seña
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Contrastar identidad y recuentos de citas por fuente; inspeccionar señales de actualización y retractación; localizar texto en acceso abierto y verificar la identidad de los PDF; auditar revisiones en OpenReview y repositorios de código |
 | `skills/literature-analysis` | 1.3.0 | Doce flujos: similitud temática, solapamiento local de texto, contraevidencia, perfiles de autores, revisión simulada, comprobación de falacias, matriz de revisión, revistas candidatas, BibTeX, lectura bilingüe, cribado de lagunas, reproducción |
-| `skills/academic-writing` | 1.2.0 | Edición académica, pautas de citación (ISO 690, APA, MLA, Chicago, IEEE, AMA y perfiles regionales), directrices para autores, servicios opcionales de detección, materiales de envío y requisitos institucionales, validación previa al envío, limpieza doble ciego, conversión de recibos a tablas LaTeX y plantillas de congresos |
+| `skills/academic-writing` | 1.3.0 | Edición académica, pautas de citación (ISO 690, APA, MLA, Chicago, IEEE, AMA y perfiles regionales), directrices para autores, servicios opcionales de detección, materiales de envío y requisitos institucionales, validación previa al envío, limpieza doble ciego, conversión de recibos a tablas LaTeX y plantillas de congresos |
 | `skills/math-computation` | 1.2.1 | Enrutamiento de dominio y tarea existente con ejemplos numéricos y estadísticos corregidos; cuatro archivos de referencia por dominio |
 | `skills/quantitative-paper-audit` | 1.2.0 | Recalcular las estadísticas declaradas (tamaño del efecto, valores p, intervalos de confianza, OR/RR, potencia alcanzada) y detectar discrepancias numéricas, además de conservación de particiones, desplazamientos constantes en ablaciones y límites de almacenamiento y ancho de banda |
 | `skills/research-reproducibility` | 1.0.1 | Cadena de auditoría de reproducción en catorce etapas con listas de verificación estructuradas, cinco niveles de hechos y registros de auditoría reproducibles |
@@ -259,7 +259,5 @@ python scripts/package_acceptance.py --dist dist --uvx --source-checks --report 
 ### Licencia
 
 La instantánea que contiene este aviso aplica la **Source Lineage License 1.0** al material cubierto y a los derechos identificados en [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md). El primer commit SLL con su árbol, y el commit posterior de registro de frontera, se distinguen en [LICENSE-HISTORY.md](LICENSE-HISTORY.md) y [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md). Las instantáneas posteriores a esa transición registrada que conservan este aviso llevan la misma oferta.
-
-Las instantáneas históricas hasta `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` se distribuyeron bajo licencia MIT, sujetas a las condiciones aplicables a esas copias. Los destinatarios conservan permisos MIT válidos y no tienen que migrar a SLL. El [antiguo texto MIT del proyecto](LICENSES/MIT-pre-SLL.txt) se conserva; [tests/upstream/LICENSE](tests/upstream/LICENSE) y su procedencia de terceros permanecen sin cambios. La nueva oferta raíz no borra esos derechos.
 
 SLL permite ampliamente el uso, el estudio, la modificación, el uso comercial, la distribución y las adiciones propietarias, sujetos a las condiciones de licencia, aviso y linaje de fuentes aplicables. No es copyleft y no exige divulgación de código fuente. Un servicio de red puro sin suministro de copias no activa por sí solo la condición de aviso de linaje del servicio núcleo. No hay concesión expresa de patentes. El material de terceros sigue bajo sus propios términos. El texto inglés original de la [LICENSE](LICENSE) prevalece sobre este resumen informativo; `LicenseRef-Source-Lineage-1.0` es una referencia local, no una asignación SPDX, y no se reclama aprobación OSI. La [admisión de contribuciones](CONTRIBUTING.md) es independiente de los permisos de licencia posteriores.
