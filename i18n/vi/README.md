@@ -7,7 +7,7 @@ Bộ công cụ và nền tảng quản lý trạng thái nghiên cứu học th
 
 Được xây dựng từ nguyên lý đầu tiên (first principles), kho lưu trữ này tách biệt việc đọc ngữ nghĩa của mô hình ngôn ngữ với bước xác minh tất định bằng mã lệnh: mô hình đảm nhận việc đọc hiểu và tổng hợp, trong khi mã tất định thực hiện tính toán lại thống kê, truy vấn cơ sở dữ liệu, kiểm tra cây cú pháp và xác thực băm SHA-256.
 
-Tác giả: Junfu Shi (SJF, xngg1021), Hermes Agent. Phạm vi cấp phép hiện hành: [Source Lineage License 1.0](../../LICENSE).
+Tác giả: Junfu Shi (SJF, xngg1021). Phạm vi cấp phép hiện hành: [Source Lineage License 1.0](../../LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Đối chiếu chéo định danh và số lượt trích dẫn theo từng nguồn; kiểm tra tín hiệu cập nhật hoặc rút bài; định vị toàn văn truy cập mở (OA) và xác minh tệp PDF; kiểm toán phản biện OpenReview và điều tra kho mã nguồn |
 | `skills/literature-analysis` | 1.3.0 | Mười hai quy trình: độ tương đồng chủ đề, trùng lặp văn bản cục bộ, bằng chứng phản biện, hồ sơ tác giả, phản biện mô phỏng, kiểm tra ngụy biện, ma trận tổng quan, gợi ý tạp chí, BibTeX, đọc song ngữ, rà soát khoảng trống nghiên cứu, tái lập kết quả |
-| `skills/academic-writing` | 1.2.0 | Biên tập học thuật, hướng dẫn trích dẫn (ISO 690, APA, MLA, Chicago, IEEE, AMA và hồ sơ khu vực), thể lệ tạp chí, dịch vụ kiểm tra tùy chọn, hồ sơ nộp bài và yêu cầu thẩm định khuyết danh của cơ sở đào tạo, kiểm tra quy chuẩn trước khi nộp, quét ẩn danh mù đôi, chuyển biên nhận thành bảng LaTeX và tạo khung hội nghị |
+| `skills/academic-writing` | 1.3.0 | Biên tập học thuật, hướng dẫn trích dẫn (ISO 690, APA, MLA, Chicago, IEEE, AMA và hồ sơ khu vực), thể lệ tạp chí, dịch vụ kiểm tra tùy chọn, hồ sơ nộp bài và yêu cầu thẩm định khuyết danh của cơ sở đào tạo, kiểm tra quy chuẩn trước khi nộp, quét ẩn danh mù đôi, chuyển biên nhận thành bảng LaTeX và tạo khung hội nghị |
 | `skills/math-computation` | 1.2.1 | Định tuyến bài toán theo lĩnh vực và nhiệm vụ với các ví dụ giải tích số và thống kê đã hiệu chỉnh; bốn tệp tham chiếu chuyên sâu |
 | `skills/quantitative-paper-audit` | 1.2.0 | Tính toán lại các chỉ số thống kê trong bài báo (độ lớn hiệu ứng, giá trị p, khoảng tin cậy, OR/RR, lực kiểm định thực tế) và phát hiện sai lệch số liệu, đồng thời kiểm tra bảo toàn phân hoạch mẫu, độ lệch hằng số trong thực nghiệm cắt bỏ và giới hạn vật lý của bộ nhớ và băng thông |
 | `skills/research-reproducibility` | 1.0.1 | Quy trình kiểm định khả năng tái lập gồm 14 giai đoạn với bộ kiểm tra quy tắc tái lập có cấu trúc, năm tầng dữ kiện và hồ sơ kiểm định có thể tái lập |
@@ -259,7 +259,5 @@ Tùy chọn `--source-checks` giải nén nguyên trạng gói `sdist` ứng vi�
 ### Giấy phép
 
 Bản chụp chứa thông báo này áp dụng **Source Lineage License 1.0** cho Tài liệu Được bảo hộ và các quyền được xác định trong [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md). Bản commit và cây thư mục SLL đầu tiên, cùng bản commit ghi nhận ranh giới chuyển đổi sau đó, được phân biệt rõ trong [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) và [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md). Các bản chụp kể từ mốc chuyển đổi đã ghi nhận trở đi nếu giữ lại thông báo này đều mang cùng phạm vi cấp phép.
-
-Các bản chụp lịch sử cho đến `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` được cấp phép theo MIT, tuân theo các điều khoản áp dụng cho những bản sao đó. Người nhận giữ nguyên các quyền MIT hợp lệ và không bắt buộc phải chuyển sang SLL. [Văn bản MIT trước đây của dự án](../../LICENSES/MIT-pre-SLL.txt) vẫn được lưu giữ; [tests/upstream/LICENSE](../../tests/upstream/LICENSE) và nguồn gốc bên thứ ba của tệp này không thay đổi. Đề nghị cấp phép mới ở thư mục gốc không xóa bỏ các quyền sẵn có đó.
 
 SLL cho phép rộng rãi việc sử dụng, nghiên cứu, sửa đổi, khai thác thương mại, phân phối và bổ sung phần mở rộng độc quyền, miễn là tuân thủ các điều kiện về giấy phép, thông báo và nguồn gốc xuất xứ. Đây không phải là giấy phép copyleft và không yêu cầu công khai mã nguồn. Việc cung cấp dịch vụ thuần túy qua mạng mà không phân phối bản sao tự thân nó không kích hoạt điều kiện thông báo nguồn gốc dịch vụ Core. Giấy phép không cấp quyền sáng chế tường minh. Tài liệu của bên thứ ba vẫn tuân theo điều khoản riêng của chúng. Văn bản tiếng Anh chính thức tại [LICENSE](../../LICENSE) có giá trị pháp lý cao nhất đối với bản tóm tắt thông tin này; `LicenseRef-Source-Lineage-1.0` là mã tham chiếu cục bộ chứ không phải mã định danh SPDX, và dự án không tuyên bố đã được OSI phê duyệt. Quy định [tiếp nhận đóng góp](../../CONTRIBUTING.md) tách biệt với các quyền cấp phép cho người dùng hạ nguồn.

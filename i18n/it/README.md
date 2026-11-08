@@ -7,7 +7,7 @@ Sistema deterministico per la gestione dello stato della ricerca e la verifica m
 
 Progettato a partire dai principi primi, questo repository separa la lettura semantica dalla verifica deterministica: il modello linguistico gestisce lettura e sintesi, mentre il codice deterministico esegue ricalcoli matematici, interrogazioni bibliografiche, analisi sintattica e verifiche SHA-256.
 
-Autore: Junfu Shi (SJF, xngg1021), Hermes Agent. Offerta di licenza attuale: [Source Lineage License 1.0](../../LICENSE).
+Autore: Junfu Shi (SJF, xngg1021). Offerta di licenza attuale: [Source Lineage License 1.0](../../LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Per verificare che i controlli deterministici riflettano le reali criticità seg
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Verifica incrociata dell'identità bibliografica e dei conteggi delle citazioni per fonte; controllo dei segnali di aggiornamento o ritrattazione; individuazione dei testi Open Access e verifica dell'identità dei PDF; revisione forense di OpenReview e dei repository di codice |
 | `skills/literature-analysis` | 1.3.0 | Dodici flussi di lavoro: similarità tematica, sovrapposizione testuale locale, contro-evidenze, profili degli autori, revisione simulata, controllo delle fallacie, matrice di revisione, riviste candidate, BibTeX, lettura bilingue, analisi delle lacune di ricerca e riproduzione |
-| `skills/academic-writing` | 1.2.0 | Revisione editoriale accademica, guida agli stili di citazione (ISO 690, APA, MLA, Chicago, IEEE, AMA e profili regionali), istruzioni per gli autori, servizi opzionali di rilevamento, materiali di sottomissione e requisiti istituzionali, linting pre-sottomissione, verifica doppio cieco, generazione di tabelle LaTeX e modelli per conferenze |
+| `skills/academic-writing` | 1.3.0 | Revisione editoriale accademica, guida agli stili di citazione (ISO 690, APA, MLA, Chicago, IEEE, AMA e profili regionali), istruzioni per gli autori, servizi opzionali di rilevamento, materiali di sottomissione e requisiti istituzionali, linting pre-sottomissione, verifica doppio cieco, generazione di tabelle LaTeX e modelli per conferenze |
 | `skills/math-computation` | 1.2.1 | Instradamento per dominio e attività matematica con esempi numerici e statistici verificati; quattro file di riferimento specialistici |
 | `skills/quantitative-paper-audit` | 1.2.0 | Ricalcolo delle statistiche riportate (dimensione dell'effetto, valori p, intervalli di confidenza, OR/RR, potenza statistica raggiunta) e rilevamento di discrepanze numeriche, oltre a conservazione delle partizioni, offset costante nelle ablazioni e limiti fisici di memoria e banda |
 | `skills/research-reproducibility` | 1.0.1 | Pipeline di audit della riproducibilità in quattordici fasi con liste di controllo strutturate, cinque livelli di verifica fattuale e registri di audit riproducibili |
@@ -259,7 +259,5 @@ L'opzione `--source-checks` estrae il pacchetto `sdist` candidato senza modifich
 ### Licenza
 
 Lo snapshot contenente questo avviso adotta la **Source Lineage License 1.0** per il Materiale Coperto e i diritti identificati in [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md). Il primo commit e albero SLL, così come il successivo commit di registrazione del confine, sono distinti in [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) e [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md). Gli snapshot successivi a tale transizione registrata che conservano questo avviso mantengono la medesima offerta con ambito definito.
-
-Gli snapshot storici fino a `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` erano concessi sotto licenza MIT, secondo i termini applicabili a tali copie. I destinatari conservano i permessi MIT validi e non sono tenuti a migrare a SLL. Il [testo MIT precedente del progetto](../../LICENSES/MIT-pre-SLL.txt) è preservato; [tests/upstream/LICENSE](../../tests/upstream/LICENSE) e la relativa provenienza di terze parti restano invariati. La nuova offerta alla radice non annulla tali diritti pregressi.
 
 La SLL consente ampiamente l'uso, lo studio, la modifica, l'impiego commerciale, la distribuzione e le estensioni proprietarie, nel rispetto delle condizioni applicabili di licenza, avviso e lignaggio del codice sorgente. Non è copyleft e non impone la divulgazione del sorgente. L'erogazione di un puro servizio di rete senza fornitura di copie non attiva di per sé l'obbligo di avviso sul lignaggio del servizio Core. Non vi è alcuna concessione espressa di brevetti e il materiale di terze parti rimane soggetto alle proprie condizioni. Il testo originale in inglese di [LICENSE](../../LICENSE) prevale su questo riepilogo informativo; `LicenseRef-Source-Lineage-1.0` è un riferimento locale, non un identificatore SPDX, e non viene rivendicata alcuna approvazione OSI. L'[accettazione dei contributi](../../CONTRIBUTING.md) è separata dai permessi di licenza concessi a valle.

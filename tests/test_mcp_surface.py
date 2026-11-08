@@ -271,7 +271,7 @@ def test_mcp_server_discover_and_meta_protocol_version():
     disc = mcp_server.process_message({"jsonrpc": "2.0", "id": 101, "method": "server/discover", "params": {}})
     res = disc["result"]
     assert "protocolVersion" not in res
-    assert res["supportedVersions"] == ["2024-11-05", "2026-07-28"]
+    assert res["supportedVersions"] == ["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25", "2026-07-28"]
     assert res["resultType"] == "complete"
     assert res["ttlMs"] == 3600000
     assert res["cacheScope"] == "public"
@@ -295,7 +295,7 @@ def test_mcp_server_discover_and_meta_protocol_version():
     assert bad_official_meta["error"]["code"] == -32022
     assert bad_official_meta["error"]["data"] == {
         "requested": "2099-01-01",
-        "supported": ["2024-11-05", "2026-07-28"],
+        "supported": ["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25", "2026-07-28"],
     }
 
     ok_official_meta = mcp_server.process_message({

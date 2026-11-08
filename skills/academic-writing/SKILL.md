@@ -1,8 +1,8 @@
 ---
 name: academic-writing
 description: 学术写作与投稿门禁：版式检查、双盲脱敏、收据转三线表、模板与润色引用.
-version: 1.2.0
-author: SJF, Hermes Agent
+version: 1.3.0
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux
@@ -38,7 +38,7 @@ metadata:
 
 ## 工作流 A：论文辅助编辑
 
-输入：本地文件（`read_file` 可提取 docx/pdf 文本（当前 Hermes 上游支持，受转换依赖/大小限制）；md/tex 按文本读，扫描 PDF 需 OCR，版式核对仍须文档工具）、平台文本（用户粘贴）、或浏览器里的在线编辑器。
+输入：本地文件（可通过宿主文档读取工具或 `pypdf`/`python-docx` 提取 docx/pdf 文本；md/tex 按纯文本读取，扫描版 PDF 需 OCR，版式核对仍须文档工具）、平台文本（用户粘贴）、或浏览器里的在线编辑器。
 
 三层编辑，逐层执行并分开报告：
 
@@ -65,7 +65,7 @@ metadata:
 
 1. `web_search` 用"<期刊名> Instructions for Authors"（中文期刊用"<期刊名> 投稿须知 投稿指南"）找官网页面，优先期刊官网域名。
 2. `web_extract` 抓取指南页，提取：字数/页数限制、摘要结构要求、正文结构、参考文献风格、图表规范（分辨率、格式）、投稿系统入口、审稿周期说明。
-3. 输出"投稿清单"（逐项要求 + 来源链接 + 检索日期）。指南页若为动态渲染抓不到，检查当前浏览器后端：默认用 `browser_navigate` → `browser_snapshot`；browser-use 后端用其实际暴露的 `browser_exec`，不混用两套 schema，或如实说明只能拿到部分信息。
+3. 输出"投稿清单"（逐项要求 + 来源链接 + 检索日期）。指南页若为动态渲染抓不到，使用当前宿主环境暴露的网页抓取或无头浏览器工具读取渲染后 DOM 文本，不混用两套 schema，或如实说明只能拿到部分信息。
 
 注意：投稿指南频繁改版，输出必须注明检索日期和具体条款来源；只有该届政策明示程序性拒稿后果时才称某项缺失会导致该结果。
 
@@ -85,10 +85,10 @@ metadata:
 4. 只读模拟评议先列决定性疑点及相应原文位置、所需反证或补充实验、可能改变判断的条件，并把确定性核验结果与审稿人主观判断分列。确定性检查与模板管理已抽为 `scripts/` 下的独立工具，涵盖跨页豁免声明页数核算、平衡花括号宏定义屏蔽、跨文件 `\ref` 与 `lstlisting[label=...]` 闭合校验、著者年份制引用重复伪影与双盲初审致谢基金号拦截：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/double_blind_sanitizer.py" --target <文稿路径或PDF>
-python "${HERMES_SKILL_DIR}/scripts/receipt_to_latex_table.py" --input <收据JSON> --caption "<表题>" --label "<标签>"
-python "${HERMES_SKILL_DIR}/scripts/pre_submission_linter.py" --tex <主tex路径> --venue <会刊键> --contribution-type <赛道键>
-python "${HERMES_SKILL_DIR}/scripts/venue_template_manager.py" --action list-venues
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-writing}}/scripts/double_blind_sanitizer.py" --target <文稿路径或PDF>
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-writing}}/scripts/receipt_to_latex_table.py" --input <收据JSON> --caption "<表题>" --label "<标签>"
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-writing}}/scripts/pre_submission_linter.py" --tex <主tex路径> --venue <会刊键> --contribution-type <赛道键>
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-writing}}/scripts/venue_template_manager.py" --action list-venues
 ```
 
 ## 工作流 D：AI 生成成分检测（渠道聚合）
@@ -125,7 +125,7 @@ python "${HERMES_SKILL_DIR}/scripts/venue_template_manager.py" --action list-ven
 4. **期刊指南时效**。Instructions for Authors 随时改版，输出必须带检索日期与来源链接。
 5. **编辑不改原意**。学术论文润色最大的风险是"顺手改了结论表述"；任何影响语义的修改都要单独标出请用户确认。
 6. **中文期刊引用风格**。GB/T 7714-2025 已实施；目标机构若指定 2015，遵从其版本，避免混用规则；作者名、期刊名的中英双语著录规则见 `references/citation-styles.md`。
-7. **GBK 陷阱**。处理中文 docx/tex 时若脚本报编码错误，文本文件明确编码；docx 是 ZIP/XML 容器，用文档库读写，不能当 UTF-8 文本解码；Windows 默认编码依配置而异（参见 hermes-agent 技能 windows-quirks）。
+7. **GBK 陷阱**。处理中文 docx/tex 时若脚本报编码错误，文本文件明确编码；docx 是 ZIP/XML 容器，用文档库读写，不能当 UTF-8 文本解码；Windows 默认控制台编码依系统区域设置而异，建议显式指定 `encoding='utf-8'` 或设置 `PYTHONUTF8=1`。
 
 ## Verification
 

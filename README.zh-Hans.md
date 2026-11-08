@@ -8,7 +8,7 @@
 
 本仓库从第一性原理出发，把这两件事拆开处理：让大语言模型专心负责自然语言阅读与语义提炼，把所有能用数学公式与公开数据库接口，以及语法解析树和哈希校验定死的环节，全部交给确定性代码执行。全仓将 14 项科研工作流与 12 个标准 MCP 服务工具，以及 13 组命令行子命令收拢在同一套状态内核之上，原生支持 Claude Code 与 Cursor，也直接兼容 Codex、Gemini CLI 与 Hermes Agent。详细的验证范围与外部接口范围见[审计文档](docs/kernel-architecture.md)。
 
-作者为 Junfu Shi，笔名 SJF，GitHub 账号 xngg1021，联合 Hermes Agent 共同完成。当前授权范围适用 [Source Lineage License 1.0](LICENSE)。
+作者为 Junfu Shi，笔名 SJF，GitHub 账号 xngg1021。当前授权范围适用 [Source Lineage License 1.0](LICENSE)。
 
 ---
 
@@ -22,7 +22,7 @@ uv tool install "academic-research-kernel[research]==2.3.0"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作为标准 stdio MCP 服务启动，供 Claude Code / Cursor / Codex 等客户端调用
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel mcp
 ```
 
 安装完成后，可以先跑一次离线环境自检，并直接试试文献核查与会刊规则查询：
@@ -143,7 +143,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | `skills/literature-analysis` | 1.3.0 | 按雪球法拓展相关文献，对比多篇论文的方法与分歧，梳理作者学术履历，按评审清单审读稿件并支持 BibTeX、RIS 与 CSL-JSON 互转 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 根据论文报告的统计量独立重算 $p$ 值与效应量及置信区间、优势比与统计功效，并核查样本分区守恒与消融恒定偏移及物理带宽下界 |
 | `skills/math-computation` | 1.2.1 | 调用 SymPy 与 NumPy 及 SciPy、statsmodels 与 PyTorch 完成符号推导与微积分求解，涵盖线性代数与微分方程及运筹优化和蒙特卡洛模拟 |
-| `skills/academic-writing` | 1.2.0 | 辅助润色论文结构与语言，按各国规范排版参考文献，并提供投稿前版式门禁与双盲匿名清洗，以及实验收据转 LaTeX 三线表和会刊模板生成 |
+| `skills/academic-writing` | 1.3.0 | 辅助润色论文结构与语言，按各国规范排版参考文献，并提供投稿前版式门禁与双盲匿名清洗，以及实验收据转 LaTeX 三线表和会刊模板生成 |
 | `skills/research-reproducibility` | 1.0.1 | 核查论文配套代码的提交哈希与依赖锁文件，以及随机数种子和容差设置，把重跑实验的结果整理成可复查的核验记录 |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | 记录 PRISMA 文献检索与筛选流程，转换效应量，检验异质性，执行固定或随机效应模型合并以及留一法敏感性与发表偏倚分析 |
 | `skills/literature-watch` | 1.1.0 | 按主题、作者或引文 DOI 每周巡检 OpenAlex 与 Crossref，自动跨源去重并只汇报上次检查之后新发表的论文 |
@@ -164,8 +164,15 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
    ```
    您也可以使用 `pipx install academic-research-kernel==2.3.0` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.3.0`。加上 `[research]` 会固定安装 `pypdf==6.19.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
 
-2. **通用 Agent Plugins v1 与 MCP 客户端挂载**
-   本仓库遵循 **Agent Plugins v1** 规范并提供 `plugin.json`，通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 定义的 **MCP 服务器**。虽然仓库名为 `academic-research-kernel`，但插件名 `name: "academic-skills"` 与原有的 MCP 配置别名保持不变，旧配置无需修改即可继续使用。
+2. **通用 Agent Plugins v1 与跨智能体 MCP 一键挂载**
+   本仓库遵循 **Agent Plugins v1** 规范并提供 `plugin.json`，通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 定义的 **MCP 服务器**，支持 `2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25` 与 `2026-07-28` 协议版本协商及 `resources/list`、`prompts/list` 探测响应，可挂载至 Claude Code、OpenAI Codex、Cursor 与 Gemini CLI：
+   ```bash
+   # Claude Code CLI 一键注册
+   claude mcp add academic-research-kernel -- uvx academic-research-kernel mcp
+
+   # OpenAI Codex CLI 一键注册
+   codex mcp add academic-research-kernel -- uvx academic-research-kernel mcp
+   ```
 
 3. **在 Hermes 中安装插件或按需安装单项技能**
    请先确认 Hermes 进程的环境变量 `PATH` 中包含 `uv`，再安装并启用插件，或直接通过 `tap` 按需安装单项技能：
@@ -235,7 +242,7 @@ python scripts/verify_external_apis.py --output external-status.json --summary e
 git diff --check
 ```
 
-如需在仓库目录之外的纯净虚拟环境中构建并验证 Wheel 与源码分发包，涵盖全部 11 组 CLI 子命令、`[research]` PDF 提取与 `uvx` 独立缓存运行，可执行：
+如需在仓库目录之外的纯净虚拟环境中构建并验证 Wheel 与源码分发包，涵盖全部 13 组 CLI 子命令、`[research]` PDF 提取与 `uvx` 独立缓存运行，可执行：
 
 ```bash
 uv build --no-create-gitignore
@@ -247,8 +254,6 @@ GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 �
 
 ### 2. 许可证
 
-包含本声明的代码版本按照 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 界定的范围，对受版权保护的项目材料适用 **Source Lineage License 1.0**。首次切换到 SLL 的提交与后续记录分界的提交，分别登记在 [LICENSE-HISTORY.md](LICENSE-HISTORY.md) 与 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) 中。自该节点起保留本声明的后续版本，均沿用相同的授权范围。
+本仓库受版权保护的项目材料按照 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 界定的范围适用 **Source Lineage License 1.0** 即 `LicenseRef-Source-Lineage-1.0`；来源追溯与历史授权分界记录见 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) 与 [LICENSE-HISTORY.md](LICENSE-HISTORY.md)。
 
-截至提交 `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` 的早期版本按 MIT 许可证发布，继续适用当时的许可条款。早期版本的获取者保留完整的 MIT 授权，不需要迁移到 SLL。仓库完整保留了[原项目 MIT 许可文本](LICENSES/MIT-pre-SLL.txt)，且 [tests/upstream/LICENSE](tests/upstream/LICENSE) 与第三方代码来源说明均未改动，新的许可证不会取消早期版本的既有授权。
-
-SLL 许可证允许自由使用与研究，支持修改代码与商业应用，也允许重新分发和闭源扩展，前提是保留规定的许可声明与来源追溯信息。该许可证不是传染性的 copyleft 协议，不要求使用者公开自己的源码。单纯通过网络提供服务而不分发软件副本，不会触发核心服务的来源署名要求。本许可证不包含明示专利授权，第三方材料继续适用各自原有的许可证。具体条款以英文原版 [LICENSE](LICENSE) 为准；`LicenseRef-Source-Lineage-1.0` 只是本地标识名，并非 SPDX 官方编号，也不代表已通过 OSI 认证。[外部贡献规则](CONTRIBUTING.md)与下游使用者的许可权限相互独立。
+SLL 1.0 许可证允许自由使用与研究，支持修改代码与商业应用，也允许重新分发和闭源扩展，前提是保留规定的许可声明与来源追溯信息。该许可证不是传染性的 copyleft 协议，不要求使用者公开自己的源码。单纯通过网络提供服务而不分发软件副本，不会触发核心服务的来源署名要求。本许可证不包含明示专利授权，第三方材料如 [tests/upstream/LICENSE](tests/upstream/LICENSE) 继续适用各自原有的许可证。具体条款以英文原版 [LICENSE](LICENSE) 为准；`LicenseRef-Source-Lineage-1.0` 只是本地标识名，并非 SPDX 官方编号，也不代表已通过 OSI 认证。[外部贡献规则](CONTRIBUTING.md)与下游使用者的许可权限相互独立。

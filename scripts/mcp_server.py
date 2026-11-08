@@ -1112,7 +1112,7 @@ def _rpc_error(msg_id: Any, code: int, message: str, data: Optional[Dict[str, An
     return {"jsonrpc": "2.0", "id": msg_id, "error": err}
 
 
-SUPPORTED_PROTOCOLS = ("2024-11-05", "2026-07-28")
+SUPPORTED_PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25", "2026-07-28")
 DEFAULT_PROTOCOL_VERSION = "2024-11-05"
 
 
@@ -1211,6 +1211,24 @@ def process_message(msg: Any) -> dict | None:
                 "cacheScope": "public",
                 "tools": TOOLS,
             }
+        }
+    elif method == "resources/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {"resources": []},
+        }
+    elif method == "resources/templates/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {"resourceTemplates": []},
+        }
+    elif method == "prompts/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {"prompts": []},
         }
     elif method == "tools/call":
         name = params.get("name")

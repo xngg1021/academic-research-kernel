@@ -2,7 +2,7 @@
 name: quantitative-paper-audit
 description: 论文定量反算与体检：效应量、p 值、CI、分区守恒、消融偏移与物理带宽下界.
 version: 1.2.0
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux

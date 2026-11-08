@@ -2,7 +2,7 @@
 name: literature-watch
 description: 每周监控新文献：按主题、作者、DOI 清单查 OpenAlex 与 Crossref，只报新增.
 version: 1.1.0
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux
@@ -95,7 +95,7 @@ hermes skills install xngg1021/academic-research-kernel/skills/literature-watch
 手动跑一次（等同 blueprint 每轮做的事）：
 
 ```bash
-python ${HERMES_SKILL_DIR}/scripts/watch.py --run --watchlist ~/.hermes/literature-watch.json
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-watch}}/scripts/watch.py" --run --watchlist ~/.hermes/literature-watch.json
 ```
 
 ## 数据源与限制

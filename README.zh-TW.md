@@ -8,7 +8,7 @@
 
 本倉庫從第一性原理出發，把這兩件事拆開處理：讓大型語言模型專心負責自然語言閱讀與語義提煉，把所有能用數學公式與公開資料庫介面，以及語法解析樹和雜湊校驗定死的環節，全部交給確定性程式碼執行。全倉將 14 項科研工作流與 12 個標準 MCP 服務工具，以及 13 組命令列子命令收攏在同一套狀態核心之上，原生支援 Claude Code 與 Cursor，也直接相容 Codex、Gemini CLI 與 Hermes Agent。詳細的驗證範圍與外部介面範圍見[審計文件](docs/kernel-architecture.md)。
 
-作者為 Junfu Shi，筆名 SJF，GitHub 帳號 xngg1021，聯合 Hermes Agent 共同完成。當前授權範圍適用 [Source Lineage License 1.0](LICENSE)。
+作者為 Junfu Shi，筆名 SJF，GitHub 帳號 xngg1021。當前授權範圍適用 [Source Lineage License 1.0](LICENSE)。
 
 ---
 
@@ -143,7 +143,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | `skills/literature-analysis` | 1.3.0 | 按雪球法拓展相關文獻，對比多篇論文的方法與分歧，梳理作者學術履歷，按評審清單審讀稿件並支援 BibTeX、RIS 與 CSL-JSON 互轉 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 根據論文報告的統計量獨立重算 $p$ 值與效應量及信賴區間、勝算比與統計檢定力，並查核樣本分區守恆與消融恆定偏移及物理頻寬下界 |
 | `skills/math-computation` | 1.2.1 | 呼叫 SymPy 與 NumPy 及 SciPy、statsmodels 與 PyTorch 完成符號推導與微積分求解，涵蓋線性代數與微分方程及作業研究最佳化和蒙地卡羅模擬 |
-| `skills/academic-writing` | 1.2.0 | 輔助潤色論文結構與語言，按各國規範排版參考文獻，並提供投稿前版式門禁與雙盲匿名清洗，以及實驗收據轉 LaTeX 三線表和會刊範本生成 |
+| `skills/academic-writing` | 1.3.0 | 輔助潤色論文結構與語言，按各國規範排版參考文獻，並提供投稿前版式門禁與雙盲匿名清洗，以及實驗收據轉 LaTeX 三線表和會刊範本生成 |
 | `skills/research-reproducibility` | 1.0.1 | 查核論文配套程式碼的提交雜湊與依賴鎖定檔，以及亂數種子與容差設定，把重跑實驗的結果整理成可複查的核驗紀錄 |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | 記錄 PRISMA 文獻檢索與篩選流程，轉換效應量，檢定異質性，執行固定或隨機效應模型合併以及留一法敏感度與發表偏倚分析 |
 | `skills/literature-watch` | 1.1.0 | 按主題、作者或引文 DOI 每週巡檢 OpenAlex 與 Crossref，自動跨源去重並只回報上次檢查之後新發表的論文 |
@@ -235,7 +235,7 @@ python scripts/verify_external_apis.py --output external-status.json --summary e
 git diff --check
 ```
 
-如需在倉庫目錄之外的純淨虛擬環境中建置並驗證 Wheel 與原始碼分發包，涵蓋全部 11 組 CLI 子命令、`[research]` PDF 提取與 `uvx` 獨立快取執行，可執行：
+如需在倉庫目錄之外的純淨虛擬環境中建置並驗證 Wheel 與原始碼分發包，涵蓋全部 13 組 CLI 子命令、`[research]` PDF 提取與 `uvx` 獨立快取執行，可執行：
 
 ```bash
 uv build --no-create-gitignore
@@ -248,7 +248,5 @@ GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 �
 ### 2. 授權條款
 
 包含本聲明的程式碼版本按照 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 界定的範圍，對受版權保護的專案材料適用 **Source Lineage License 1.0**。首次切換到 SLL 的提交與後續記錄分界的提交，分別登記在 [LICENSE-HISTORY.md](LICENSE-HISTORY.md) 與 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md) 中。自該節點起保留本聲明的後續版本，均沿用相同的授權範圍。
-
-截至提交 `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` 的早期版本按 MIT 授權條款發布，繼續適用當時的許可條款。早期版本的取得者保留完整的 MIT 授權，不需要遷移到 SLL。倉庫完整保留了[原專案 MIT 許可文本](LICENSES/MIT-pre-SLL.txt)，且 [tests/upstream/LICENSE](tests/upstream/LICENSE) 與第三方程式碼來源說明均未改動，新的授權條款不會取消早期版本的既有授權。
 
 SLL 授權條款允許自由使用與研究，支援修改程式碼與商業應用，也允許重新分發和閉源擴展，前提是保留規定的許可聲明與來源追溯資訊。該授權條款不是傳染性的 copyleft 協定，不要求使用者公開自己的原始碼。單純透過網路提供服務而不分發軟體副本，不會觸發核心服務的來源署名要求。本授權條款不包含明示專利授權，第三方材料繼續適用各自原有的授權條款。具體條款以英文原版 [LICENSE](LICENSE) 為準；`LicenseRef-Source-Lineage-1.0` 只是本機識別名，並非 SPDX 官方編號，也不代表已通過 OSI 認證。[外部貢獻規則](CONTRIBUTING.md)與下游使用者的許可權限相互獨立。

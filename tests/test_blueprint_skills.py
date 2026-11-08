@@ -47,7 +47,7 @@ def test_sll_frontmatter_and_required_env(name):
     fm, _ = frontmatter(name)
     assert fm['name'] == name
     assert fm['license'] == SLL
-    assert fm['author'] == 'SJF, Hermes Agent'
+    assert fm['author'] == 'Junfu Shi (SJF, xngg1021)'
     assert fm['platforms'] == ['linux', 'macos', 'windows']
     assert re.fullmatch(r'\d+\.\d+\.\d+', fm['version'])
     env = fm['required_environment_variables']

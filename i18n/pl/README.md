@@ -7,7 +7,7 @@ Deterministyczny system zarządzania stanem badań naukowych i weryfikacji metod
 
 Zbudowane od podstaw (first principles) repozytorium oddziela czytanie semantyczne od weryfikacji deterministycznej: model językowy odpowiada za lekturę i syntezę, natomiast deterministyczny kod wykonuje obliczenia matematyczne, zapytania do baz bibliograficznych, analizę drzewa składniowego oraz weryfikację skrótów SHA-256.
 
-Autor: Junfu Shi (SJF, xngg1021), Hermes Agent. Obowiązująca oferta licencyjna: [Source Lineage License 1.0](../../LICENSE).
+Autor: Junfu Shi (SJF, xngg1021). Obowiązująca oferta licencyjna: [Source Lineage License 1.0](../../LICENSE).
 
 ---
 
@@ -113,7 +113,7 @@ Aby potwierdzić, że deterministyczne reguły wykrywają rzeczywiste błędy ws
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Krzyżowa weryfikacja tożsamości publikacji i liczby cytowań w poszczególnych bazach; sprawdzanie sygnałów aktualizacji i wycofania artykułów (retrakcji); lokalizowanie pełnych tekstów Open Access oraz weryfikacja plików PDF; audyt recenzji OpenReview oraz analiza śledcza repozytoriów kodu |
 | `skills/literature-analysis` | 1.3.0 | Dwanaście procedur badawczych: podobieństwo tematyczne, lokalne pokrywanie się tekstu, kontrargumenty, profile autorów, symulowana recenzja, wykrywanie błędów logicznych, macierz przeglądu, dobór czasopism, BibTeX, czytanie dwujęzyczne, identyfikacja luk badawczych i odtwarzanie wyników |
-| `skills/academic-writing` | 1.2.0 | Redakcja tekstów naukowych, wytyczne dotyczące cytowania (ISO 690, APA, MLA, Chicago, IEEE, AMA i profile regionalne), instrukcje redakcyjne czasopism, opcjonalne usługi detekcji, materiały zgłoszeniowe oraz wymogi instytucjonalne, linting przed wysyłką, kontrola anonimowości podwójnie ślepej, generowanie tabel LaTeX oraz szablony konferencyjne |
+| `skills/academic-writing` | 1.3.0 | Redakcja tekstów naukowych, wytyczne dotyczące cytowania (ISO 690, APA, MLA, Chicago, IEEE, AMA i profile regionalne), instrukcje redakcyjne czasopism, opcjonalne usługi detekcji, materiały zgłoszeniowe oraz wymogi instytucjonalne, linting przed wysyłką, kontrola anonimowości podwójnie ślepej, generowanie tabel LaTeX oraz szablony konferencyjne |
 | `skills/math-computation` | 1.2.1 | Kierowanie zadań według dziedziny i typu obliczeń ze zweryfikowanymi przykładami numerycznymi i statystycznymi; cztery specjalistyczne pliki referencyjne |
 | `skills/quantitative-paper-audit` | 1.2.0 | Ponowne przeliczanie deklarowanych statystyk (wielkość efektu, wartości p, przedziały ufności, OR/RR, osiągnięta moc testu) oraz wykrywanie rozbieżności liczbowych, a także kontrola zachowania podziału próby, stałego przesunięcia w ablacjach oraz fizycznych granic pamięci i przepustowości |
 | `skills/research-reproducibility` | 1.0.1 | Czternastoetapowy potok audytu powtarzalności z ustrukturyzowanymi listami kontrolnymi, pięcioma poziomami weryfikacji faktów i powtarzalnymi rekordami audytowymi |
@@ -259,7 +259,5 @@ Opcja `--source-checks` rozpakowuje kandydujący archiwum `sdist` bez modyfikacj
 ### Licencja
 
 Migawka zawierająca niniejszą informację przyjmuje licencję **Source Lineage License 1.0** w odniesieniu do Materiału Objętego Licencją oraz praw wskazanych w dokumencie [LICENSE-APPLICATION.md](../../LICENSE-APPLICATION.md). Pierwszy commit i drzewo SLL oraz późniejszy commit rejestrujący granicę przejścia zostały rozróżnione w plikach [LICENSE-HISTORY.md](../../LICENSE-HISTORY.md) oraz [SOURCE-LINEAGE.md](../../SOURCE-LINEAGE.md). Kolejne migawki po tym zarejestrowanym przejściu, które zachowują niniejszą informację, są udostępniane na tych samych warunkach.
-
-Historyczne migawki aż do `439ce4a29d6d2d9137308d7f9f045863e9f0c5b3` były udostępniane na licencji MIT, zgodnie z warunkami właściwymi dla tamtych kopii. Odbiorcy zachowują ważne uprawnienia wynikające z licencji MIT i nie mają obowiązku przechodzenia na SLL. [Poprzedni tekst licencji MIT projektu](../../LICENSES/MIT-pre-SLL.txt) został zachowany; plik [tests/upstream/LICENSE](../../tests/upstream/LICENSE) oraz pochodzenie komponentów stron trzecich pozostają bez zmian. Nowa oferta licencyjna w katalogu głównym nie uchyla tamtych wcześniejszych praw.
 
 Licencja SLL szeroko zezwala na używanie, badanie, modyfikowanie, wykorzystanie komercyjne, dystrybucję oraz tworzenie własnościowych rozszerzeń, z zastrzeżeniem odpowiednich warunków licencyjnych, informacyjnych i dotyczących rodowodu kodu źródłowego. Nie jest to licencja typu copyleft i nie wymaga ona ujawniania kodu źródłowego. Świadczenie czystej usługi sieciowej bez przekazywania kopii nie uruchamia samo przez się warunku informowania o pochodzeniu usługi głównej (Core). Licencja nie udziela wyraźnych praw patentowych, a materiały stron trzecich podlegają własnym postanowieniom. Wiążący dla niniejszego podsumowania jest oryginalny angielski tekst [LICENSE](../../LICENSE); oznaczenie `LicenseRef-Source-Lineage-1.0` stanowi odniesienie lokalne, a nie identyfikator nadany przez SPDX, i nie deklaruje się zatwierdzenia przez OSI. Zasady [przyjmowania wkładów](../../CONTRIBUTING.md) są odrębne od uprawnień licencyjnych użytkowników końcowych.

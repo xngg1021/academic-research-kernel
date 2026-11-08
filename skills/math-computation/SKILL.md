@@ -2,7 +2,7 @@
 name: math-computation
 description: 全领域计算中枢:数学、金融、社科、生物医学、物理工程计算与两层自动路由.
 version: 1.2.1
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux
@@ -51,11 +51,11 @@ Don't use for: 纯算术四则运算（直接算）、需要联网查数据（�
 
 Python 3.11+；数值配方要求 NumPy、SciPy >=1.9（含 MILP）。其余按任务检查 pandas、sympy、mpmath、statsmodels、scikit-learn >=0.24（含旋转）、matplotlib、networkx、torch、lifelines、arch、pingouin。Excel .xlsx 读取另需 openpyxl，.xls 另需 xlrd。
 
-不假定 Hermes 预装这些库。用所选解释器执行 `python -c "import sys; print(sys.executable)"`；安装时用该解释器的 `-m pip install <package>`，或 `uv pip install --python <venv-python> <package>`。占位符须换成已确认的解释器，不把作者本机版本当成锁定环境。离线计算本身不需 API key；首次安装依赖可能需联网。
+不假定宿主环境预装这些库。用所选解释器执行 `python -c "import sys; print(sys.executable)"`；安装时用该解释器的 `-m pip install <package>`，或 `uv pip install --python <venv-python> <package>`。占位符须换成已确认的解释器，不把作者本机版本当成锁定环境。离线计算本身不需 API key；首次安装依赖可能需联网。
 
 ## 执行方式
 
-使用会话实际暴露的 `terminal` 运行 Python 脚本；`execute_code` 可编排工具调用或在其解释器有依赖时直接计算。不要假定两个环境共享包。打印中间量、单位和结果；检查退出码与 stderr。
+使用宿主会话暴露的终端或代码执行工具运行 Python 脚本；若宿主同时提供沙箱解释器与系统终端，不要假定两个环境共享第三方包。打印中间量、单位和结果；检查退出码与 stderr。
 
 出图必须无头运行：**先 `import matplotlib; matplotlib.use('Agg')` 再 import pyplot，最后 `fig.savefig(path)` 存文件**，不要 `plt.show()`（无 GUI 会卡住/报错）。中文标签需先设字体（见 Pitfalls）。
 
@@ -283,7 +283,7 @@ print(f'saved: {path.resolve()}')
 ## Procedure
 
 1. 明确问题是符号还是数值：能解析解（求导/精确积分/方程有闭式解）走 sympy；否则走 scipy 数值。
-2. 写 `execute_code` 脚本，一次算完中间量和最终答案，`print` 出来；需要图就 `savefig` 到稳定目录（`~/plots/` 或 `tempfile.gettempdir()`，路径保证 UTF-8 可用）。
+2. 编写独立 Python 脚本，一次算完中间量和最终答案，`print` 出来；需要图就 `savefig` 到稳定目录（`~/plots/` 或 `tempfile.gettempdir()`，路径保证 UTF-8 可用）。
 3. 结果核对：符号解代入验算（sympy 的 `expr.subs(x, 值)` 或数值回代）；数值解检查量纲/数量级是否合理；统计结果检查 p 值与效应量的自洽性。
 4. 把最终答案（数字/公式/图路径）用纯文本回给用户；公式用 LaTeX 字符串或 `expr.pretty()` 的文本形式，不贴整段代码。
 

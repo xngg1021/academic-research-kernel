@@ -2,7 +2,7 @@
 name: retraction-watch
 description: 每周核查 DOI 清单的撤稿信号：OpenAlex 与 Crossref 双源比对，只在状态变化时报告.
 version: 1.1.0
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux
@@ -92,7 +92,7 @@ OpenAlex 响应缺少 `is_retracted`、返回 null 或非布尔类型，以及�
 手动跑一次：
 
 ```bash
-python ${HERMES_SKILL_DIR}/scripts/watch.py --run --watchlist ~/.hermes/retraction-watch.json
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/retraction-watch}}/scripts/watch.py" --run --watchlist ~/.hermes/retraction-watch.json
 ```
 
 ## 数据源与限制

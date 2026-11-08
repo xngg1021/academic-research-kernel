@@ -2,7 +2,7 @@
 name: academic-source-verification
 description: 核查文献真伪：被引、撤稿、OA 全文、OpenReview 审稿与代码仓取证.
 version: 1.3.0
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux
@@ -74,11 +74,11 @@ Don't use for: 纯检索发现论文（用 `arxiv` skill）、OCR/解析已下�
 
 请求要带 `User-Agent`（带 mailto 更礼貌），否则部分端点会拒。三库被引数必然不同（收录范围不同），分数量级差异也可来自版本合并/收录范围，须解释而不据此否定论文身份。
 
-用 `execute_code` 批量查并打印对照表；按各服务实际配额控制调用速率；固定 sleep 不能保证避免共享限额的 429。标识符归一与 OpenAlex/Crossref 两库身份核对已抽为脚本：
+用 Python 脚本或 `academic-research-kernel verify-source` 批量查并打印对照表；按各服务实际配额控制调用速率；固定 sleep 不能保证避免共享限额的 429。标识符归一与 OpenAlex/Crossref 两库身份核对已抽为脚本：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/normalize_identifier.py" <标识符>
-python "${HERMES_SKILL_DIR}/scripts/verify_work.py" --doi <DOI>   # 已有记录时 --openalex-json/--crossref-json 离线核对
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/normalize_identifier.py" <标识符>
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/verify_work.py" --doi <DOI>   # 已有记录时 --openalex-json/--crossref-json 离线核对
 ```
 
 ### 第二关：撤稿与更正核查（Crossref update 记录）
@@ -93,8 +93,8 @@ Crossref 于 2025-01 将 Retraction Watch 信号纳入 REST API（2023-09 是合
 更新信号的离线提取与反向查询已抽为 `scripts/check_updates.py`（离线输入须来自已成功查询的 Crossref 记录；retraction、withdrawal、correction 与 expression-of-concern 分类计数，不合并）：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/check_updates.py" --doi <原始DOI>                        # 在线 filter=updates 反向查询
-python "${HERMES_SKILL_DIR}/scripts/check_updates.py" --doi <原始DOI> --records records.json # 离线信号提取
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/check_updates.py" --doi <原始DOI>                        # 在线 filter=updates 反向查询
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/check_updates.py" --doi <原始DOI> --records records.json # 离线信号提取
 ```
 
 查无信号时仅报告“在已检查的数据源中未发现撤稿或撤回记录”，并注明数据来源、查询时间以及失败或未查项目。网络请求失败不等于未发现记录。命中撤稿信号时须说明证据层次；撤稿论文可作为撤稿事件的研究对象，不可在无说明的情况下当作可靠结论依据。
@@ -106,7 +106,7 @@ python "${HERMES_SKILL_DIR}/scripts/check_updates.py" --doi <原始DOI> --record
 Unpaywall 是 OA 定位渠道之一，覆盖率和更新延迟与其他来源不同，未作普遍优劣保证。查询已抽为 `scripts/locate_oa.py`；`UNPAYWALL_EMAIL` 未配置时脚本明确 SKIP 不推断，`is_oa=false` 时 `best_oa_location` 为 null，先判再取：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/locate_oa.py" --doi <DOI>   # 已保存记录时 --record 离线解析
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/locate_oa.py" --doi <DOI>   # 已保存记录时 --record 离线解析
 ```
 
 顺序：Unpaywall `best_oa_location` → OpenAlex `oa_url` → Semantic Scholar `openAccessPdf.url` → archive.org（公版书/专著）。付费墙 403 不要死磕。
@@ -119,7 +119,7 @@ python "${HERMES_SKILL_DIR}/scripts/locate_oa.py" --doi <DOI>   # 已保存记�
 首页文字提取与身份核对已抽为 `scripts/verify_pdf_identity.py`（需 pymupdf，缺失时明确报错；下载成功 ≠ 内容正确）：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/verify_pdf_identity.py" --pdf <路径> --title <标题> --doi <DOI>
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/verify_pdf_identity.py" --pdf <路径> --title <标题> --doi <DOI>
 ```
 
 下载统一存到稳定目录（例如 `Path("~/papers").expanduser()` 并 `mkdir(parents=True, exist_ok=True)`，路径保证 UTF-8 可用），回报绝对路径 + 字节数 + 页数。
@@ -143,9 +143,9 @@ python "${HERMES_SKILL_DIR}/scripts/verify_pdf_identity.py" --pdf <路径> --tit
 先查官方会议公告、统计说明及论文 forum，再确定访问方式；官方 API 遇到访问验证时，可以使用已取得的第三方镜像作带来源和快照时间的替代数据，但不得称为官方实时直连或已核验完整审稿讨论。对镜像抽取脚本，先核对 `--help`、当前入口和镜像字段：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/openreview_audit.py" --forum-id <ID> --mirror-json <镜像路径>
-python "${HERMES_SKILL_DIR}/scripts/openreview_audit.py" --venue-stats <镜像路径> --topic-regex "<正则>"
-python "${HERMES_SKILL_DIR}/scripts/github_repo_forensics.py" --local-repo <本地仓库路径>
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/openreview_audit.py" --forum-id <ID> --mirror-json <镜像路径>
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/openreview_audit.py" --venue-stats <镜像路径> --topic-regex "<正则>"
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/academic-source-verification}}/scripts/github_repo_forensics.py" --local-repo <本地仓库路径>
 ```
 
 每个数字先固定会议年份、快照阶段、原始记录集合和分母：总记录、有效投稿、已出分稿件、留存终审稿件不是同一对象；审稿人的推荐分档、最终决定和论文录用率也须分列。程序化核对分类计数合计、评分条数、逐篇均分和总体分布；跨年比较须用同定义记录与相近阶段。单篇稿件先保存 forum 的原始评审、决定和作者回复；镜像中的零回复字数只说明该字段未计到回复，不能断言作者没有回复。精确分位数须用全体逐篇记录重算，列出严格低于、等于、高于目标均分的人数及并列区间。
@@ -153,7 +153,7 @@ python "${HERMES_SKILL_DIR}/scripts/github_repo_forensics.py" --local-repo <本�
 ## Procedure
 
 1. 确定论文的 DOI/arXiv ID/标题。期刊论文用 DOI，arXiv 预印本用 arXiv ID；标识符用 `scripts/normalize_identifier.py` 归一。
-2. 用 `scripts/verify_work.py` 或 `execute_code` 批量查 OpenAlex + Crossref（+ Semantic Scholar），打印三库标题/作者/年份/期刊/被引数对照表。
+2. 用 `academic-research-kernel verify-source` 或 `scripts/verify_work.py` 批量查 OpenAlex + Crossref（+ Semantic Scholar），打印三库标题/作者/年份/期刊/被引数对照表。
 3. 按第二关核查双向更新关系（`scripts/check_updates.py`）、OpenAlex 标记及出版社/arXiv 状态，分类记录，避免把通知记录判成被撤稿对象。
 4. 判断真实性：DOI、元数据与版本匹配 → 报告身份已核对。不一致 → 记下差异，如实报告。
 5. 能下 OA 就下（`scripts/locate_oa.py` → arXiv → archive.org），下完用 `scripts/verify_pdf_identity.py` 提首页文字核对内容。

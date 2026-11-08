@@ -2,7 +2,7 @@
 name: literature-analysis
 description: 文献分析:相似论文检索、查重比对、矛盾与反证、作者档案、模拟审稿、谬误标注.
 version: 1.3.0
-author: SJF, Hermes Agent
+author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:
 - linux
@@ -84,9 +84,9 @@ Concepts 已弃用且不再维护，不作为主要路径；旧数据回顾只�
 多路候选合并与去重已抽为脚本（来源层次保留，DOI/标题归一）：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/collect_corpus.py" --input layers.json    # 合并 text-search/algorithmic-related/topic-cross 候选
-python "${HERMES_SKILL_DIR}/scripts/collect_corpus.py" --query "<概念>"       # 在线概念搜索
-python "${HERMES_SKILL_DIR}/scripts/deduplicate_works.py" --input corpus.json # DOI/标题归一去重
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-analysis}}/scripts/collect_corpus.py" --input layers.json    # 合并 text-search/algorithmic-related/topic-cross 候选
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-analysis}}/scripts/collect_corpus.py" --query "<概念>"       # 在线概念搜索
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-analysis}}/scripts/deduplicate_works.py" --input corpus.json # DOI/标题归一去重
 ```
 
 ## 工作流 B：查重比对（本地句级）
@@ -119,8 +119,8 @@ def overlap_ratio(a, b):
    `GET https://api.openalex.org/works?filter=cites:<OpenAlex-WID>&per_page=25&select=id,title,abstract_inverted_index,publication_year,doi`
    引用池分页获取与语料内引文网络已抽为 `scripts/build_citation_graph.py`（预算上限内分页，达到上限标 truncated 只称部分样本）：
    ```bash
-   python "${HERMES_SKILL_DIR}/scripts/build_citation_graph.py" --wid <OpenAlex-WID> --pages 4
-   python "${HERMES_SKILL_DIR}/scripts/build_citation_graph.py" --input works.json   # 离线建语料内引文网络
+   python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-analysis}}/scripts/build_citation_graph.py" --wid <OpenAlex-WID> --pages 4
+   python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-analysis}}/scripts/build_citation_graph.py" --input works.json   # 离线建语料内引文网络
    ```
    摘要三层兜底（缺失率依领域/时间而异，不能从三篇抽样外推）：第一层 `abstract_inverted_index` 重建；第二层缺失时查 Crossref `works/{DOI}` 的 `message.abstract`；第三层仍缺则标“证据不足”，尝试 OA 全文（academic-source-verification）；标题仅用于召回排序，不能据此确定支持/批评/无法复现。兜底后由模型逐篇判断引用性质（支持/中立/批评/无法复现），只保留批评与无法复现类，并标注每篇的判断依据（摘要/全文；仅标题者列待核）。
 2. **否定词搜索**（辅助）：用否定句式搜同主题论文：
@@ -150,7 +150,7 @@ def overlap_ratio(a, b):
 20~50 篇论文压成五列对比表（方法/样本/核心结论/局限），按主题聚类分组。执行细节与输出规范见 `references/review-matrix.md`。矩阵骨架（摘要重建 + 五列表 + 覆盖声明）已抽为 `scripts/build_review_matrix.py`；方法/样本/结论/局限四列仍由模型逐篇填：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/build_review_matrix.py" --input corpus.json --query "<检索词>" --date <YYYY-MM-DD>
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-analysis}}/scripts/build_review_matrix.py" --input corpus.json --query "<检索词>" --date <YYYY-MM-DD>
 ```
 
 ## 工作流 H：期刊匹配推荐
@@ -162,7 +162,7 @@ python "${HERMES_SKILL_DIR}/scripts/build_review_matrix.py" --input corpus.json 
 从 OpenAlex 元数据生成 BibTeX 条目（含中文文献的 biblatex-gb7714 建议）。见 `references/bibtex-guide.md`。条目生成已抽为 `scripts/export_bibtex.py`（tex_escape、姓名格式化与 key 命名规则内置；未知字段留 TODO 不伪造）：
 
 ```bash
-python "${HERMES_SKILL_DIR}/scripts/export_bibtex.py" --input works.json --source crossref   # 或 --source openalex
+python "${SKILL_DIR:-${HERMES_SKILL_DIR:-skills/literature-analysis}}/scripts/export_bibtex.py" --input works.json --source crossref   # 或 --source openalex
 ```
 
 ## 工作流 J：双语对照精读
