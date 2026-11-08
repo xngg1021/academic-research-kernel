@@ -234,7 +234,7 @@
         "es": {
           "path": "README.es.md",
           "status": "localized_current",
-          "localized_file_sha256": "104828cc76998a7c28086e58cdf47b3ac5442e5b9806f43bdfabb2208767f3c9",
+          "localized_file_sha256": "f766844be101f4055af49f3c8bb2ced6c459df08d98aec0c7981b611c3ef034b",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -260,7 +260,7 @@
         "pt": {
           "path": "i18n/pt/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "730e075f356dce8926c2ffd622f6cf41496cc5c98e6dee46f16e23291fdea41a",
+          "localized_file_sha256": "10d0bc14f3918bd2555dfeb4841afeb4b1f1950a9610f18195c42c894bf613a6",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -286,7 +286,7 @@
         "fr": {
           "path": "README.fr.md",
           "status": "localized_current",
-          "localized_file_sha256": "8b417b768bbc0758ea33f8ddade48908a82f5e115302bd46ff9d176b654de537",
+          "localized_file_sha256": "6b97b42a2c7d2e9a9be5cbff207879d61aa3d9e573d84ff9b4baa12f5a7c66d7",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -312,7 +312,7 @@
         "de": {
           "path": "README.de.md",
           "status": "localized_current",
-          "localized_file_sha256": "822770b8ee66451566b376792f1aed682d751a37e3df1570cc2c8a02557cc5c4",
+          "localized_file_sha256": "33ef61f5b57f168bc897cd5444d31c550f2deffbf31152f517d3ed10bd063abe",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -338,7 +338,7 @@
         "ru": {
           "path": "i18n/ru/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "4a0d869fb013d2dd2f0d689ab1cddce6fc5518850dd1ae4a44a4f1ff4c5f3181",
+          "localized_file_sha256": "9b52ab075c1bb08402e4d8adc97727049cace061f453f51cfb5466566ec303c0",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -364,7 +364,7 @@
         "ja": {
           "path": "README.ja.md",
           "status": "localized_current",
-          "localized_file_sha256": "f55a61b169f758c6502c1d62e89834ad2bed56451f5249c033de5ae33e607f99",
+          "localized_file_sha256": "2ed0a51564cd0a652a236026ade600c01099bc9a241a6e1678dc7a5c5e419cb4",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -390,7 +390,7 @@
         "ko": {
           "path": "README.ko.md",
           "status": "localized_current",
-          "localized_file_sha256": "00c54f0410918cdd24e02ab42ed90e4331ff7f0c9fdc83c18d969d28f9933afa",
+          "localized_file_sha256": "a9dd2aa651ca492fe9d4cf9252387cb82cfeb1123071026d2155206b16bc7892",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -416,7 +416,7 @@
         "id": {
           "path": "i18n/id/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "ccadb422290092b5f83c4f6a41a0cd93cecdba1256179d5ec1b93475c8713903",
+          "localized_file_sha256": "92730bd38aae33a1b1d4e5700b9a67866e53820d60ea92eac98369de17890406",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -442,7 +442,7 @@
         "it": {
           "path": "i18n/it/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "062828d3790033e57dcedccf73de599500b63447d68f3536f0dc242e08baf5f7",
+          "localized_file_sha256": "72c7621704d5a19e1606b7170d19c9d312ee93a717aa82f0e6df7cfe939c9747",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -468,7 +468,7 @@
         "hi": {
           "path": "i18n/hi/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "e2a281ab1727bef56dcf7de2237f54ab4547c2f7558fcf53ba8bfbb7bbf60a03",
+          "localized_file_sha256": "27ea6ee4efd389c0782e41997445d5a5d0ea2cfe55751e8870f3b09c7ec002d7",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -494,7 +494,7 @@
         "ar": {
           "path": "i18n/ar/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "1da90e9cd2e90e6f3a9285df895174103490f64c3f00e3e580cf09f4d042d3e9",
+          "localized_file_sha256": "13a71b04b9c128f5dcc8dd38172c9e98973856cb67e20cfa47046347570bec58",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -520,7 +520,7 @@
         "bn": {
           "path": "i18n/bn/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "5dffddfe1595d899f8c172f6b0ddf8cd686b2efcdd887585c8a90475c1b064de",
+          "localized_file_sha256": "5926efb5115fdda8a3a9a3d81d8ac1bf6f6aecdadd886e0a20c814dbc9415d2b",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -546,7 +546,7 @@
         "ur": {
           "path": "i18n/ur/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "8dfe8d2b7fa8aff58267f7dfb05edc0458cd112b81ae7642e73b8506932af23e",
+          "localized_file_sha256": "d71d5450041beb2f0f82ce41503203da3babd71ec1b54a75e57a2539044b6832",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -572,7 +572,7 @@
         "vi": {
           "path": "i18n/vi/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "5fea7f12221e171529d60d44e4caf2bbd46fd5cadadfb0267506f0e34cfe5f0b",
+          "localized_file_sha256": "11af14c0075a53cf3241d82a60861c5840d6d4744f4ea703f770fb90b62fbf93",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -598,7 +598,7 @@
         "tr": {
           "path": "i18n/tr/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "cf1c155649c1342740e5316c0eaaf16257b9333fe556bd827bd63f82bf61b2d4",
+          "localized_file_sha256": "6c16a3dcbfed1a94118d8e96de4ebf1b01467cba2c270d24c97ab7e3e2b4edc0",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -624,7 +624,7 @@
         "fa": {
           "path": "i18n/fa/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "2aeb112d4d49100afa79314fa85c1275367512789fa2c05c8e87bbdbd8f7221c",
+          "localized_file_sha256": "1cf7b2f40398f7dde3e2bb21ac297607ee2d175998b5f0d9847531b62759f2ec",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -650,7 +650,7 @@
         "sw": {
           "path": "i18n/sw/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "3a1a19ede480fc574d50ad8bb8f5859f7f869a52119a537aee861977c7a604f1",
+          "localized_file_sha256": "28ef650533421edb97eb7a659182ccf5d6be17bdeff0d582c0466cfc273d962d",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
@@ -676,7 +676,7 @@
         "pl": {
           "path": "i18n/pl/README.md",
           "status": "localized_current",
-          "localized_file_sha256": "944c5006d445d047ddc7c58462d5c0b91ab96936e537dc0b0ddcbd98cddfd403",
+          "localized_file_sha256": "95eeb6546658dc8fc86bb934895d0d3643194a7eed8bf3e15879c29e8cd40a60",
           "translated_from_source_sha256": "11ae7e3be7b306b819cded2275067e11a549fe19aef87c775233801f10aa8c9e",
           "translated_from_section_hashes": {
             "academic-research-kernel": "382f32d4363835b91cf095e7f86ce6beef8a07fb9ff7bd416ab4f9202b51a9c2",
