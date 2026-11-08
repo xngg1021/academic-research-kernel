@@ -115,13 +115,25 @@ academic-research-kernel sanitize-blind --target ./workspace/my-paper
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-`receipt-to-latex` uses exact `Decimal` half-up rounding so numbers are never altered by hand transcription or binary floating-point drift. `double-blind-sanitize` inspects `\author`, custom identity macros, `\icmlauthor`, `pdfauthor`, acknowledgments, and compiled PDF Info dictionaries. `pre-submission-lint` checks `skills/academic-writing/references/venue-specs.json` for non-anonymous package options (`final`, `preprint`, `camera-ready`), computes exact main-body page counts even when `\bibliography` shares a page with prose, checks for unreferenced figures or tables, and verifies that inline `\cite{clm-...}` tags resolve to `support_status == "supported"` edges in `ClaimEvidenceGraph`.
+`receipt-to-latex` uses exact `Decimal` half-up rounding so numbers are never altered by hand transcription or binary floating-point drift. `double-blind-sanitize` inspects `\author`, custom identity macros, `\icmlauthor`, `pdfauthor`, acknowledgments, and compiled PDF Info dictionaries. `pre-submission-lint` checks `skills/academic-writing/references/venue-specs.json` for non-anonymous package options (`final`, `preprint`, `camera-ready`), tracks post-conclusion exempt sections (`Reproducibility Statement`, `Ethics Statement`, `Use of Large Language Models`, `Acknowledgments`) across pages so exempt statements never inflate `main_body_pages`, masks balanced-brace `\newcommand`/`\def` definitions to eliminate false-positive `TODO` warnings, resolves cross-file `\ref`/`\Cref` targets against `\label{...}` and `lstlisting[label={...}]` (`UNDEFINED_LATEX_LABEL_REF`), flags redundant `Author et al. ~\cite{...}` prefixes (`AUTHOR_YEAR_CITE_DUPLICATION`) and bare `\cite` dominance under author–year styles (`NATBIB_BARE_CITE_DOMINANT`), blocks unredacted `Acknowledgments` funding disclosures in double-blind submissions (`FORBIDDEN_ACKS_IN_DOUBLE_BLIND_SUBMISSION`), and verifies in linear time that quantitative claims in the Abstract and Conclusion resolve to `support_status == "supported"` edges in `ClaimEvidenceGraph`.
 
 Convert and normalize bibliographic files at any time with:
 
 ```bash
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
+
+### Macro-Distribution of the 5 Deterministic Defect Families in Peer Review (ICLR 2026, $N = 19,473$)
+
+To motivate the kernel's five deterministic verification families (missing dispersion/error bars, format/section/page violations, table/ablation inconsistencies, citation/baseline omissions, and reproducibility/code gaps) without fitting empirical weights or predicting subjective scores, we measured paper-level incidence (`k / N` manuscripts where at least one official review flagged the category in `Weaknesses` or `Questions`) across `19,473` scored submissions (`75,769` official reviews) in ICLR 2026 (`18,791` standard decision records plus `682` desk-rejected records with reviews; `SHA-256` split-half verified `Split 0: N = 9,765` vs. `Split 1: N = 9,708`; individual manuscripts de-identified):
+
+| Decision / Soundness Tier | Submissions ($N$) | Mean Rating / Soundness | Paper-Level Reviewer Hit Rate (`k / N`) Across the 5 Families |
+| --- | --- | --- | --- |
+| **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108 / 224`; dispersion 12.1%, table/ablation 7.1%, baseline 2.7%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772 / 5,134`; dispersion 15.8%, table/ablation 8.9%, baseline 4.1%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055 / 8,453`; dispersion 21.4%, table/ablation 11.6%, baseline 6.2%) |
+| **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117 / 4,980`; dispersion 23.8%, table/ablation 12.4%, baseline 6.8%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529 / 1,077` $\to$ `1,928 / 2,861`; dispersion 14.9% $\to$ 27.5%) |
 
 ---
 
@@ -236,7 +248,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1335 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.3.0 baseline in [the i18n manifest](docs/i18n/manifest.json).
+GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1340 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.3.0 baseline in [the i18n manifest](docs/i18n/manifest.json).
 
 ### 2. License
 

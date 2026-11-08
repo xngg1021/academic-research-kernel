@@ -113,13 +113,25 @@ academic-research-kernel sanitize-blind --target ./workspace/my-paper
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-`receipt-to-latex` 全程採用 `Decimal` 精確十進位捨入，避免手抄實驗表格改錯數字或浮點精度漂移。`double-blind-sanitize` 既掃描文本中的 `\author` 與自訂實名巨集，以及 `\icmlauthor` 與 `pdfauthor` 設定，也會直接讀取編譯後 PDF 的 `/Author` 與 `/Creator` 文件屬性字典。`pre-submission-lint` 對照 `skills/academic-writing/references/venue-specs.json` 中的當屆規則，檢查是否誤開 `final`、`preprint` 或 `camera-ready` 巨集套件選項，核算正文與參考文獻同頁時的真實正文頁數，並校驗正文中引用的 `\cite{clm-...}` 標籤在 `ClaimEvidenceGraph` 中是否真正連向 `support_status == "supported"` 的正向證據邊。
+`receipt-to-latex` 全程採用 `Decimal` 精確十進位捨入，避免手抄實驗表格改錯數字或浮點精度漂移。`double-blind-sanitize` 既掃描文本中的 `\author` 與自訂實名巨集，以及 `\icmlauthor` 與 `pdfauthor` 設定，也會直接讀取編譯後 PDF 的 `/Author` 與 `/Creator` 文件屬性字典。`pre-submission-lint` 對照 `skills/academic-writing/references/venue-specs.json` 中的當屆規則，檢查是否誤開 `final`、`preprint` 或 `camera-ready` 巨集套件選項，跨頁追蹤文末豁免聲明使 `Reproducibility Statement`、`Ethics Statement` 與 `Acknowledgments` 不再虛增正文頁數，利用平衡大括號屏蔽 `\newcommand` 與 `\def` 巨集定義體以消除未呼叫草稿巨集的 `TODO` 誤報，跨檔案核對 `\ref`、`\Cref` 與 `\label{...}` 及 `lstlisting[label={...}]` 是否閉合，攔截 `Author et al. ~\cite{...}` 作者名重複偽影與著者年份制下全篇混用裸 `\cite` 的排印缺陷，攔截雙盲初審稿中的非匿名致謝與基金號揭露，並在耗時隨文本長度線性增長的前提下校驗摘要與結論中的定量論斷在 `ClaimEvidenceGraph` 中是否真正連向 `support_status == "supported"` 的正向證據邊。
 
 參考文獻格式轉換與排序可直接呼叫：
 
 ```bash
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
+
+### 大規模真實同行評議零參數實證檢驗：ICLR 2026 全量 `19,473` 篇外審稿件
+
+為驗證上述確定性檢查規則是否真正切中同行評議的高頻硬傷，我們在不擬合任何經驗權重與主觀分數閾值的前提下，將缺失誤差棒與版式超限、表格消融異常與漏引基線及缺失重現程式碼這五類確定性檢查對照 ICLR 2026 全量 `19,473` 篇有效外審投稿與 `75,769` 條官方審稿意見做了零參數盲測，並透過 `SHA-256` 奇偶雜湊分片驗證了跨半集穩定性，所有單篇稿件均保持完全匿名：
+
+| 錄用檔位與可靠度分層 | 有效投稿數 $N$ | 評分均值 / Soundness 均值 | 審稿意見命中五類確定性缺陷的比例 |
+| --- | --- | --- | --- |
+| **Oral 口頭報告** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`)，含缺失誤差棒 12.1% 與表格消融異常 7.1%，以及漏引基線 2.7% |
+| **Poster 海報錄用** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`)，含缺失誤差棒 15.8% 與表格消融異常 8.9%，以及漏引基線 4.1% |
+| **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`)，含缺失誤差棒 21.4% 與表格消融異常 11.6%，以及漏引基線 6.2% |
+| **Withdrawn 撤稿** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`)，含缺失誤差棒 23.8% 與表格消融異常 12.4%，以及漏引基線 6.8% |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`)，含缺失誤差棒 14.9% $\to$ 27.5% 與缺程式碼 17.8% $\to$ 27.7% |
 
 ---
 
@@ -231,7 +243,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1335 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.3.0 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
+GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1340 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.3.0 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
 
 ### 2. 授權條款
 

@@ -91,6 +91,18 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
+### Validazione Empirica Senza Parametri sulla Revisione Paritaria su Larga Scala (ICLR 2026, $N = 19,473$)
+
+Per verificare che i controlli deterministici riflettano le reali criticità segnalate dai revisori senza adattare pesi empirici o soglie soggettive, le cinque famiglie di difetti deterministici (assenza di barre d’errore/dispersione, violazioni di formato/pagine, incoerenze in tabelle/ablazioni, omissione di baseline e lacune di riproducibilità) sono state valutate su `19,473` articoli valutati e `75,769` revisioni ufficiali di ICLR 2026 (bipartizione `SHA-256` verificata; manoscritti individuali anonimizzati):
+
+| Livello di Decisione / Soundness | Articoli ($N$) | Voto Medio / Soundness | Tasso di Riscontro nelle 5 Famiglie di Difetti Deterministici |
+| --- | --- | --- | --- |
+| **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; dispersione 12.1%, tabella/ablazione 7.1%, baseline 2.7%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersione 15.8%, tabella/ablazione 8.9%, baseline 4.1%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; dispersione 21.4%, tabella/ablazione 11.6%, baseline 6.2%) |
+| **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dispersione 23.8%, tabella/ablazione 12.4%, baseline 6.8%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersione 14.9% $\to$ 27.5%, codice assente 17.8% $\to$ 27.7%) |
+
 ---
 
 ## 4. Tutte le 14 competenze accademiche e integrazione con gli agenti

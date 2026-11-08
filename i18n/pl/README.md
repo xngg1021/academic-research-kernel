@@ -91,6 +91,18 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
+### Bezparametrowa walidacja empiryczna na danych recenzji naukowych (ICLR 2026, $N = 19,473$)
+
+Aby potwierdzić, że deterministyczne reguły wykrywają rzeczywiste błędy wskazywane przez recenzentów bez dopasowywania wag empirycznych ani subiektywnych progów punktowych, pięć rodzin defektów deterministycznych (brak miar rozrzutu/błędów, naruszenia formatu/limitu stron, niespójności tabel/ablacji, pominięcia metod bazowych oraz luki powtarzalności) zweryfikowano na `19,473` ocenionych pracach i `75,769` oficjalnych recenzjach ICLR 2026 (podział połówkowy `SHA-256`; poszczególne manuskrypty pozostają zanonimizowane):
+
+| Poziom decyzji / Soundness | Prace ($N$) | Średnia ocena / Soundness | Odsetek trafień w 5 rodzinach defektów deterministycznych |
+| --- | --- | --- | --- |
+| **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; rozrzut 12.1%, tabela/ablacja 7.1%, brak baseline 2.7%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; rozrzut 15.8%, tabela/ablacja 8.9%, brak baseline 4.1%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; rozrzut 21.4%, tabela/ablacja 11.6%, brak baseline 6.2%) |
+| **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; rozrzut 23.8%, tabela/ablacja 12.4%, brak baseline 6.8%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; rozrzut 14.9% $\to$ 27.5%, brak kodu 17.8% $\to$ 27.7%) |
+
 ---
 
 ## 4. Wszystkie 14 umiejętności akademickich i integracja z agentami

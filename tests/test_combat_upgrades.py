@@ -570,7 +570,7 @@ def test_pre_submission_linter_passes_clean_scaffolded_manuscript(tmp_path):
     assert ps_data["passed"] is True
 
 
-# ── 8. Cross-Review Counterexample Regressions (SEAT1_Astra & SEAT2_Sol) ─────
+# ── 8. Cross-Review Counterexample Regressions ───────────────────────────────
 
 def test_pre_submission_linter_multi_option_and_prose_section_rejection(tmp_path: Path):
     r"""Multi-option \usepackage[final,nonatbib] and prose 'limitations' must not bypass blockers."""
@@ -664,3 +664,212 @@ def test_locate_oa_rejects_explicitly_closed_best_location():
         "best_oa_location": {"is_oa": False, "pdf_url": "https://example.org/closed.pdf"},
     })
     assert locs == []
+
+
+# ── 9. Pre-Submission Linter Counterexample Regressions ──────────────────────
+
+def test_slice1_pdf_exempt_statements_and_numbered_llm_section_counterexamples():
+    """Verify exempt statement blocks before References do not inflate main_body_pages, while numbered method sections still count."""
+    page_exempt_only = (
+        "Published as a conference paper at ICLR 2026\n"
+        "REPRODUCIBILITYSTATEMENT\n"
+        "Code and weights are provided in the supplementary material.\n"
+        "THE USE OF LARGE LANGUAGE MODELS\n"
+        "LLMs were used only for minor grammar polishing.\n"
+        "ACKNOWLEDGMENTS\n"
+        "We thank the anonymous reviewers.\n"
+        "REFERENCES\n"
+        "[1] AuthorOne et al., 2026.\n"
+    )
+    m_ref = pre_linter.REFERENCES_HEADING_RE.search(page_exempt_only)
+    assert m_ref is not None
+    assert pre_linter._has_main_body_before_heading(page_exempt_only, m_ref) is False
+
+    # Counterexample 1b: Ethics Statement followed by numbered Conclusion on the same page before References
+    page_exempt_then_main = (
+        "ETHICS STATEMENT\n"
+        "No human subjects were involved.\n"
+        "6 CONCLUSION\n"
+        "We presented a deterministic verification framework.\n"
+        "REFERENCES\n"
+    )
+    m_ref2 = pre_linter.REFERENCES_HEADING_RE.search(page_exempt_then_main)
+    assert m_ref2 is not None
+    assert pre_linter._has_main_body_before_heading(page_exempt_then_main, m_ref2) is True
+
+    # Counterexample 1c: Ethics Statement followed by numbered technical section '3 The Use of Large Language Models' exits exempt zone
+    page_exempt_then_numbered_llm = (
+        "ETHICS STATEMENT\n"
+        "No human subjects were involved.\n"
+        "3 The Use of Large Language Models\n"
+        "Our architecture queries a frozen teacher model.\n"
+        "REFERENCES\n"
+    )
+    m_ref3 = pre_linter.REFERENCES_HEADING_RE.search(page_exempt_then_numbered_llm)
+    assert m_ref3 is not None
+    assert pre_linter._has_main_body_before_heading(page_exempt_then_numbered_llm, m_ref3) is True
+
+    # Regression: wrapped sentence ending with 'Appendix K.\nCommonsense...' must not match APPENDIX_HEADING_RE, while standalone 'Appendix A' matches
+    wrapped_prose_page = (
+        "The complete keyword list used for filtering is provided in\n"
+        "Appendix K.\n"
+        "Commonsense Reasoning This category evaluates the model.\n"
+    )
+    assert pre_linter.APPENDIX_HEADING_RE.search(wrapped_prose_page) is None
+    assert pre_linter.APPENDIX_HEADING_RE.search("Appendix A\nProofs and derivations.\n") is not None
+
+
+def test_slice2_todo_macro_masking_and_even_backslash_comments(tmp_path: Path):
+    r"""Macro definitions \newcommand{\TODO}{...} are masked, while inline TODO after macro or \todo{...} calls are caught."""
+    tex = tmp_path / "todo_edge.tex"
+    tex.write_text(
+        "\\documentclass{article}\n"
+        "\\newcommand{\\TODO}[1]{\\textcolor{red}{TODO: #1}}\n"
+        "\\newcommand{\\multi}[1]{\n"
+        "  {\\bf FIXME: #1}\n"
+        "}\n"
+        "\\def\\myfix#1{TBD: #1}\n"
+        "\\begin{document}\n"
+        "\\section{Introduction}\n"
+        "100\\% accuracy % TODO: this is a comment after escaped percent\n"
+        "Line break\\\\% TODO: comment directly after double backslash\n"
+        "\\usepackage{todonotes}\n"
+        "\\todolist\n"
+        "\\newcommand{\\foo}{bar} TODO: real inline marker on same line\n"
+        "We still need to add baselines \\verb|%| \\todo{run seed 42}.\n"
+        "\\section{Limitations}\n"
+        "None.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep = pre_linter.lint_manuscript(tex, venue="arxiv_preprint")
+    todo_hits = [h for h in rep["hits"] if h["code"] == "LEFT_OVER_TODO_MARKER"]
+    locators = [h["locator"] for h in todo_hits]
+    assert locators == ["todo_edge.tex:L13", "todo_edge.tex:L14"]
+
+
+def test_slice3_linear_quant_claim_scanner_no_backtracking_and_decimal_safety(tmp_path: Path):
+    """Verify strict O(L) quantitative claim scanner handles dense multi-token sentences and Unicode multiplication sign."""
+    import time
+
+    long_filler = " ".join(["ExampleAuthor et al. (cf. Fig. 1) evaluated 3.14159 configurations across 20percentage points and 3xylophone tokens"] * 80)
+    dense_tokens = " and ".join([f"{k}\\%" for k in range(1, 120)])
+    tex = tmp_path / "fast_quant.tex"
+    tex.write_text(
+        "\\documentclass{article}\n"
+        "\\begin{document}\n"
+        "\\begin{abstract}\n"
+        f"{long_filler}.\n"
+        f"14.2\\% improvement ({dense_tokens}) is achieved by our method over ExampleAuthor et al. on all tasks.\n"
+        "Our solver achieves a 2.5× speedup over the baseline on all benchmarks.\n"
+        "\\end{abstract}\n"
+        "\\section{Introduction}\n"
+        "Text.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    t0 = time.perf_counter()
+    rep = pre_linter.lint_manuscript(tex, venue="arxiv_preprint", require_ceg_binding=True)
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 0.25
+    q_hits = [h for h in rep["hits"] if h["code"] == "UNGROUNDED_QUANTITATIVE_CLAIM"]
+    assert len(q_hits) == 2
+    assert "14.2\\% improvement" in q_hits[0]["excerpt"]
+    assert "2.5× speedup" in q_hits[1]["excerpt"]
+
+
+def test_slice4_undefined_label_ref_and_author_year_cite_checks(tmp_path: Path):
+    r"""Verify cross-file \ref resolution, unused \label tolerance, Author et al. \cite duplication, and bare \cite dominance."""
+    main_tex = tmp_path / "main.tex"
+    sub_tex = tmp_path / "sec_exp.tex"
+    sub_tex.write_text(
+        "\\section{Experiments}\\label{sec:unused_label}\n"
+        "\\newcommand{\\deadmacro}{\\label{fig:missing_target}}\n"
+        "\\begin{figure}\\caption{A}\\label{fig:valid}\\end{figure}\n"
+        "\\begin{lstlisting}\n[language=YAML,caption={Example [x] label=fig:missing_target},label={example_yaml}]\nlabel=fig:missing_target\n\\end{lstlisting}\n"
+        "The configuration key is \\texttt{label=fig:missing_target}.\n"
+        "As shown in Figure~\\ref{fig:valid}, Listing~\\ref{example_yaml}, and Figure~\\ref{fig:missing_target}, "
+        "Author et al.~\\cite{author2026} and \\cite{c1,c2} and \\cite{c3} and \\cite{c4} and \\cite{c5} and \\cite{c6}.\n",
+        encoding="utf-8",
+    )
+    main_tex.write_text(
+        "\\documentclass{article}\n"
+        "\\usepackage{iclr2026_conference}\n"
+        "\\begin{document}\n"
+        "\\section{Introduction}\n"
+        "\\input{sec_exp}\n"
+        "\\section{Limitations}\n"
+        "Limitation text.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep = pre_linter.lint_manuscript(main_tex, venue="iclr")
+    codes = [h["code"] for h in rep["hits"]]
+    assert "UNDEFINED_LATEX_LABEL_REF" in codes
+    assert "AUTHOR_YEAR_CITE_DUPLICATION" in codes
+    assert "NATBIB_BARE_CITE_DOMINANT" in codes
+    undef_hits = [h for h in rep["hits"] if h["code"] == "UNDEFINED_LATEX_LABEL_REF"]
+    assert len(undef_hits) == 1
+    assert "fig:missing_target" in undef_hits[0]["message"]
+
+    # When [numbers] option is passed on a conference/citation package, author-year cite warnings are suppressed
+    main_num = tmp_path / "main_num.tex"
+    main_num.write_text(
+        main_tex.read_text(encoding="utf-8").replace("\\usepackage{iclr2026_conference}", "\\usepackage[numbers]{iclr2026_conference}"),
+        encoding="utf-8",
+    )
+    rep_num = pre_linter.lint_manuscript(main_num, venue="iclr")
+    num_codes = {h["code"] for h in rep_num["hits"]}
+    assert "AUTHOR_YEAR_CITE_DUPLICATION" not in num_codes
+    assert "NATBIB_BARE_CITE_DOMINANT" not in num_codes
+
+
+def test_slice5_double_blind_acknowledgments_check_respects_phase_and_placeholder(tmp_path: Path):
+    """Verify synthetic grant number in Acknowledgments is blocker in double-blind submission, but allowed in camera-ready or when anonymized."""
+    tex_leak = tmp_path / "leak_acks.tex"
+    tex_leak.write_text(
+        "\\documentclass{article}\n"
+        "\\begin{document}\n"
+        "\\section{Introduction}\nText.\n"
+        "\\section{Limitations}\nLimits.\n"
+        "\\section*{Acknowledgments}\n"
+        "Synthetic test fixture: supported by Grant No. TEST-GRANT-0000.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep_sub = pre_linter.lint_manuscript(tex_leak, venue="iclr", phase="submission")
+    ack_hits = [h for h in rep_sub["hits"] if h["code"] == "FORBIDDEN_ACKS_IN_DOUBLE_BLIND_SUBMISSION"]
+    assert len(ack_hits) == 1
+    assert ack_hits[0]["severity"] == "blocker"
+
+    rep_cam = pre_linter.lint_manuscript(tex_leak, venue="iclr", phase="camera_ready")
+    assert not any(h["code"] == "FORBIDDEN_ACKS_IN_DOUBLE_BLIND_SUBMISSION" for h in rep_cam["hits"])
+
+    tex_anon = tmp_path / "anon_acks.tex"
+    tex_anon.write_text(
+        "\\documentclass{article}\n"
+        "\\begin{document}\n"
+        "\\section{Introduction}\nText.\n"
+        "\\section{Limitations}\nLimits.\n"
+        "\\section*{Acknowledgments}\n"
+        "Funding details are omitted for anonymous review.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep_anon = pre_linter.lint_manuscript(tex_anon, venue="iclr", phase="submission")
+    assert not any(h["code"] == "FORBIDDEN_ACKS_IN_DOUBLE_BLIND_SUBMISSION" for h in rep_anon["hits"])
+
+    # Mixed acknowledgment with real thank-you or semicolon clause + omitted funding must still be flagged
+    tex_mixed = tmp_path / "mixed_acks.tex"
+    tex_mixed.write_text(
+        "\\documentclass{article}\n"
+        "\\begin{document}\n"
+        "\\section{Introduction}\nText.\n"
+        "\\section{Limitations}\nLimits.\n"
+        "\\section*{Acknowledgments}\n"
+        "Funding details are omitted for anonymous review; ExampleAuthor provided compute.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep_mixed = pre_linter.lint_manuscript(tex_mixed, venue="iclr", phase="submission")
+    assert any(h["code"] == "FORBIDDEN_ACKS_IN_DOUBLE_BLIND_SUBMISSION" for h in rep_mixed["hits"])

@@ -91,6 +91,18 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
+### Validation empirique sans paramètre sur l’évaluation par les pairs à grande échelle (ICLR 2026, $N = 19\,473$)
+
+Afin de vérifier que les contrôles déterministes reflètent fidèlement les motifs réels de rejet sans ajuster de poids empiriques ni de seuils subjectifs, les cinq familles de défauts déterministes (absence de barres d’erreur/dispersion, violations de format/pages, incohérences de tableaux/ablations, omissions de références de base et lacunes de reproductibilité) ont été évaluées sur `19 473` soumissions notées et `75 769` rapports d’évaluation officiels d’ICLR 2026 (stabilité vérifiée par partition `SHA-256`, manuscrits individuels anonymisés) :
+
+| Niveau de décision / Soundness | Soumissions ($N$) | Note moyenne / Soundness | Taux de concordance avec les 5 familles de défauts déterministes |
+| --- | --- | --- | --- |
+| **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; dispersion 12.1%, tableau/ablation 7.1%, baseline manquante 2.7%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersion 15.8%, tableau/ablation 8.9%, baseline manquante 4.1%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; dispersion 21.4%, tableau/ablation 11.6%, baseline manquante 6.2%) |
+| **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dispersion 23.8%, tableau/ablation 12.4%, baseline manquante 6.8%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersion 14.9% $\to$ 27.5%, code manquant 17.8% $\to$ 27.7%) |
+
 ---
 
 ## 4. Les 14 compétences académiques et l'intégration aux agents

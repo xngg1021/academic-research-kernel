@@ -91,6 +91,18 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
+### Büyük Ölçekli Hakem Değerlendirmesinde Sıfır Parametreli Ampirik Doğrulama (ICLR 2026, $N = 19,473$)
+
+Deterministik kontrollerin ampirik ağırlıklar veya öznel kabul eşikleri uydurmadan gerçek hakem eleştirilerini yakaladığını doğrulamak amacıyla, beş deterministik kusur ailesi ICLR 2026'daki `19,473` puanlanmış bildiri ve `75,769` resmi hakem değerlendirmesi üzerinde (`SHA-256` yarı-bölme doğrulamalı; bireysel makaleler anonim tutularak) test edilmiştir:
+
+| Karar / Soundness Kademesi | Bildiri ($N$) | Ortalama Puan / Soundness | 5 Deterministik Kusur Ailesinde Hakem İsabet Oranı |
+| --- | --- | --- | --- |
+| **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; dağılım/hata çubuğu 12.1%, tablo/ablasyon 7.1%, eksik baseline 2.7%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dağılım/hata çubuğu 15.8%, tablo/ablasyon 8.9%, eksik baseline 4.1%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; dağılım/hata çubuğu 21.4%, tablo/ablasyon 11.6%, eksik baseline 6.2%) |
+| **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dağılım/hata çubuğu 23.8%, tablo/ablasyon 12.4%, eksik baseline 6.8%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dağılım 14.9% $\to$ 27.5%, eksik kod 17.8% $\to$ 27.7%) |
+
 ---
 
 ## 4. Tüm 14 akademik beceri ve ajan entegrasyonu
