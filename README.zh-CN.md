@@ -113,13 +113,25 @@ academic-research-kernel sanitize-blind --target ./workspace/my-paper
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-`receipt-to-latex` 全程采用 `Decimal` 精确十进制舍入，避免手抄实验表格改错数字或浮点精度漂移。`double-blind-sanitize` 既扫描文本中的 `\author` 与自定义实名宏，以及 `\icmlauthor` 与 `pdfauthor` 配置，也会直接读取编译后 PDF 的 `/Author` 与 `/Creator` 文档属性字典。`pre-submission-lint` 对照 `skills/academic-writing/references/venue-specs.json` 中的当届规则，检查是否误开 `final`、`preprint` 或 `camera-ready` 宏包选项，核算正文与参考文献同页时的真实正文页数，并校验正文中引用的 `\cite{clm-...}` 标签在 `ClaimEvidenceGraph` 中是否真正连向 `support_status == "supported"` 的正向证据边。
+`receipt-to-latex` 全程采用 `Decimal` 精确十进制舍入，避免手抄实验表格改错数字或浮点精度漂移。`double-blind-sanitize` 既扫描文本中的 `\author` 与自定义实名宏，以及 `\icmlauthor` 与 `pdfauthor` 配置，也会直接读取编译后 PDF 的 `/Author` 与 `/Creator` 文档属性字典。`pre-submission-lint` 对照 `skills/academic-writing/references/venue-specs.json` 中的当届规则，检查是否误开 `final`、`preprint` 或 `camera-ready` 宏包选项，跨页追踪文末豁免声明使 `Reproducibility Statement`、`Ethics Statement` 与 `Acknowledgments` 不再虚增正文页数，利用平衡花括号屏蔽 `\newcommand` 与 `\def` 宏定义体以消除未调用草稿宏的 `TODO` 误报，跨文件核对 `\ref`、`\Cref` 与 `\label{...}` 及 `lstlisting[label={...}]` 是否闭合，拦截 `Author et al. ~\cite{...}` 作者名重复伪影与著者年份制下全篇混用裸 `\cite` 的排印缺陷，拦截双盲初审稿中的非匿名致谢与基金号披露，并在耗时随文本长度线性增长的前提下校验摘要与结论中的定量论断在 `ClaimEvidenceGraph` 中是否真正连向 `support_status == "supported"` 的正向证据边。
 
 参考文献格式转换与排序可直接调用：
 
 ```bash
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
+
+### 同行评议中五类确定性缺陷的宏观分布：ICLR 2026 共 `19,473` 篇有分稿件
+
+为说明缺失误差棒与版式超限、表格消融异常与漏引基线及缺失复现代码这五类确定性检查的现实依据，我们在不拟合任何经验权重与主观分数阈值的前提下，按论文粒度统计了 ICLR 2026 共 `19,473` 篇有分投稿与 `75,769` 条官方审稿意见中至少一条审稿意见指出对应缺陷的稿件占比 `k / N`；全集包含下表四类常规决定共 `18,791` 篇与带评语程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分别为 `9,765` 篇与 `9,708` 篇，所有单篇稿件均保持完全匿名：
+
+| 录用档位与可靠度分层 | 有效投稿数 $N$ | 评分均值 / Soundness 均值 | 审稿意见提及五类确定性缺陷的稿件占比 `k / N` |
+| --- | --- | --- | --- |
+| **Oral 口头报告** | 224 | 6.40 / 3.07 | **48.2%** 即 `108 / 224`，含缺失误差棒 12.1% 与表格消融 7.1%，以及漏引基线 2.7% |
+| **Poster 海报录用** | 5,134 | 5.36 / 2.83 | **54.0%** 即 `2,772 / 5,134`，含缺失误差棒 15.8% 与表格消融 8.9%，以及漏引基线 4.1% |
+| **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** 即 `5,055 / 8,453`，含缺失误差棒 21.4% 与表格消融 11.6%，以及漏引基线 6.2% |
+| **Withdrawn 撤稿** | 4,980 | 3.35 / 2.33 | **62.6%** 即 `3,117 / 4,980`，含缺失误差棒 23.8% 与表格消融 12.4%，以及漏引基线 6.8% |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** 即 `529 / 1,077` $\to$ `1,928 / 2,861`，缺失误差棒 14.9% $\to$ 27.5% |
 
 ---
 
@@ -231,7 +243,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1335 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.3.0 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
+GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1340 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.3.0 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
 
 ### 2. 许可证
 

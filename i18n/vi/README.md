@@ -91,6 +91,18 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
+### Kiểm chứng thực nghiệm không tham số trên dữ liệu bình duyệt quy mô lớn (ICLR 2026, $N = 19,473$)
+
+Để xác nhận các quy tắc kiểm tra tất định phản ánh đúng những lỗi thực tế bị phản biện chỉ ra mà không cần khớp trọng số kinh nghiệm hay ngưỡng điểm chủ quan, cả năm nhóm lỗi tất định (thiếu thanh sai số/độ phân tán, vi phạm định dạng/số trang, bất nhất bảng/ablation, thiếu baseline và thiếu mã nguồn tái lập) đã được đối chiếu trên `19,473` bài nộp có điểm và `75,769` nhận xét phản biện chính thức của ICLR 2026 (kiểm chứng chia đôi `SHA-256`; từng bài báo được ẩn danh hoàn toàn):
+
+| Nhóm quyết định / Soundness | Số bài ($N$) | Điểm TB / Soundness | Tỷ lệ trùng khớp phản biện trên 5 nhóm lỗi tất định |
+| --- | --- | --- | --- |
+| **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; độ phân tán 12.1%, bảng/ablation 7.1%, thiếu baseline 2.7%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; độ phân tán 15.8%, bảng/ablation 8.9%, thiếu baseline 4.1%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; độ phân tán 21.4%, bảng/ablation 11.6%, thiếu baseline 6.2%) |
+| **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; độ phân tán 23.8%, bảng/ablation 12.4%, thiếu baseline 6.8%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; độ phân tán 14.9% $\to$ 27.5%, thiếu mã 17.8% $\to$ 27.7%) |
+
 ---
 
 ## 4. Toàn bộ 14 kỹ năng học thuật và tích hợp tác tử

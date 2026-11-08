@@ -76,25 +76,36 @@ def code_issues(code):
 BANNED_TOKEN_SHA256 = frozenset([
     "0d3875158b04bb14f5cd67a2ba54f480848ca94aec7a4aa2ca94c712c04be55f",
     "11987c60f4c83ac9199d79c59b32f37ec5dc07443f1f881353e79ca643bcea57",
+    "30522def353fdb96b4270ed4e44e5f925f7cedec9651ebd8c0e21ba319e2ede9",
+    "309c81d675e41940438bee673bd5b877c55aee03a37a7a7e9ff9dda674d254ad",
     "3f178fe43b688a406a252fc7b8b25d7670ad939509905159d741ee5185d73310",
+    "468764310f068a00fdfa43d3a202b86a2e529079129d86e51c3620dc287c3422",
+    "5c1b70d8678fde4217414c5ac78c614e088814d091db8e7eea9741fd4b351291",
     "6c277575446c91c1d49465940d84d128f43394a06b5ef8c775b5aca4fcdbae31",
     "73a5ebb82c02c74260d707847837d3a19478844ac0608e976f1c1e1de038283a",
     "7a9c5cfe8aa8f9c564bc7c0ea50f8267a16f38a93733d6fbd9a1771140979cd0",
     "8ef4091ea30686929943b7734250a9d0e84c0e80fffe385f76b54ad88c9f5ac2",
     "9d681ad61b95d6653bf1011354205d4c299f5874f6003814eb852939bf5d687a",
+    "aad8b6c3c3c9b33614bab058d0378eac1da1202a138f729c6e450d9ffe3073c8",
+    "abf49cd072079260ad3b499c3fc7b4914134aa2b6c75c3ae40e7428b912e7554",
+    "b3d54f72aca745dc2ddea3c899d33ce904fe759bf747c8a671b4d4d0034a2391",
     "c83bf41fd8fc032e42e75002b1b994956545f3d9ecd72db8d7df79dff4d8e327",
     "c9a7b24a282314d9fc9337a33ad61714135a639d985054efea2d7c1bf84a2e83",
+    "cae755a665553d96911396d77e1a5151d39f57f7aefde27ca6f6cb25b77430c3",
     "d55851b489264fc2a373cb1d5de4fa965a900dcf62f476c3b4cceb00130109df",
+    "d69db26afa12005be9202f63499ebec6a2b79afa541ce0b1f3c5dc6384a1b8cc",
+    "da2b491830473d09a13bbaa262e6a01c6248d96c0f2f1b942d54e0aab3f7a1a9",
     "ed08e61f3aae536101a0b0290098ec338d9ee1c4e876f0874cac95761366ac1f",
     "ee605c8c3cb751639c13a6a5b498643bc38fa55d255f82c1e9f1b4c8bf5e2777",
     "f2753a428cd96b8db17d368c803bb913d9bd5212b17831b60538a4209afd29b2",
+    "f962119a8d8b377c9a74b608244ce367b77dbae9ee69b8cbcab17ccdf9b5cda8",
     "fd0a5e8c07b3d055c602ffc46a712e5620a18da3f9871860ef9f6a9d267fd9aa"
 ])
 
 
 def hygiene(text):
-    patterns = [r'(?i)\b[A-Z]:[/\\]+Users[/\\]+(?!<)[\w.-]+',
-                r'(?i)\b[A-Z]:[/\\]+hermes-home\b',
+    patterns = [r'(?i)\b[A-Z]:[\\/]+Users[\\/]+(?!<)[\w.-]+',
+                r'(?i)\b[A-Z]:[\\/]+[a-z]+-home\b',
                 r'/(?:Users|home)/(?!<|runner\b)[\w.-]+/',
                 r'\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9]{24,})\b',
                 r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',

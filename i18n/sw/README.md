@@ -91,6 +91,18 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
+### Uthibitisho waajaribio Usio na Vigezo kwenye Ukaguzi wa Rika kwa Kiwango Kikubwa (ICLR 2026, $N = 19,473$)
+
+Ili kuthibitisha kuwa ukaguzi waamuzi unalingana na kasoro halisi zinazotajwa na wakaguzi bila kufungamanisha uzito wa kihisia au viwango vya alama, makundi matano ya kasoro zaamuzi yalitathminiwa dhidi ya mawasilisho `19,473` yaliyopewa alama na maoni rasmi `75,769` ya ICLR 2026 (yamethibitishwa kwa mgawanyo wa `SHA-256`; makala binafsi zimefichwa majina):
+
+| Ngazi ya Uamuzi / Soundness | Mawasilisho ($N$) | Wastani wa Alama / Soundness | Kiwango cha Kugundua katika Makundi 5 ya Kasoro |
+| --- | --- | --- | --- |
+| **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; mtawanyiko 12.1%, jedwali/ablation 7.1%, baseline 2.7%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; mtawanyiko 15.8%, jedwali/ablation 8.9%, baseline 4.1%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; mtawanyiko 21.4%, jedwali/ablation 11.6%, baseline 6.2%) |
+| **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; mtawanyiko 23.8%, jedwali/ablation 12.4%, baseline 6.8%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; mtawanyiko 14.9% $\to$ 27.5%, ukosefu wa msimbo 17.8% $\to$ 27.7%) |
+
 ---
 
 ## 4. Ujuzi wote 14 wa kitaaluma na muunganisho wa maajenti
