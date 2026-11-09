@@ -30,7 +30,7 @@ def main():
                                 text=True, encoding='utf-8', capture_output=True, timeout=240)
         assert doctor.returncode == 0, doctor.stderr
         report = json.loads(doctor.stdout)
-        assert report['status'] == 'ok' and report['mcp']['tool_count'] == 12, report
+        assert report['status'] == 'ok' and report['mcp']['tool_count'] == 18, report
         assert Path(report['python']['executable']).is_relative_to(data)
         assert report['python']['version'].startswith('3.12.')
         messages = [{'jsonrpc': '2.0', 'id': 1, 'method': 'initialize'},
@@ -43,10 +43,10 @@ def main():
         assert result.returncode == 0, result.stderr
         replies = [json.loads(line) for line in result.stdout.splitlines()]
         assert replies[0]['result']['serverInfo']['version'] == __version__
-        assert len(replies[1]['result']['tools']) == 12
+        assert len(replies[1]['result']['tools']) == 18
         assert not replies[2]['result']['isError']
         assert json.loads(replies[2]['result']['content'][0]['text'])['consistent'] is True
-    print('PASS Hermes loader -> locked isolated Python 3.12 -> 12 MCP tools -> deterministic dispatch')
+    print('PASS Hermes loader -> locked isolated Python 3.12 -> 18 MCP tools -> deterministic dispatch')
 
 
 if __name__ == '__main__':
