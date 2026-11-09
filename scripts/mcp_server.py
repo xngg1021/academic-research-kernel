@@ -370,6 +370,7 @@ TOOLS = [
                 "ci_level": {"type": "number", "description": "Confidence level in (0, 1), default 0.95"},
                 "ci_log_scale": {"type": "boolean", "description": "Use geometric midpoint for ratio estimates (OR/RR/HR)"},
                 "ci_rel_tol": {"type": "number", "description": "Relative midpoint tolerance, default 0.02"},
+                "ci_method": {"type": "string", "description": "Optional interval construction method (e.g. wald, clopper-pearson, wilson, bootstrap)"},
                 "cell_a": {"type": "integer", "description": "2x2 table exposed/treated event count"},
                 "cell_b": {"type": "integer", "description": "2x2 table exposed/treated non-event count"},
                 "cell_c": {"type": "integer", "description": "2x2 table control event count"},
@@ -405,7 +406,11 @@ TOOLS = [
                 "bandwidth_reported_latency_us": {"type": "number", "description": "Optional reported full-scan latency in microseconds"},
                 "bandwidth_max_gbps": {"type": "number", "description": "Hardware memory bandwidth ceiling in GB/s, default 4000.0"},
                 "bandwidth_rel_tol": {"type": "number", "description": "Relative tolerance for storage size comparison, default 0.01"},
-                "bandwidth_claims_full_system": {"type": "boolean", "description": "Whether reported size claims to include full system text/metadata, default true"}
+                "bandwidth_claims_full_system": {"type": "boolean", "description": "Whether reported size claims to include full system text/metadata, default true"},
+                "bandwidth_storage_unit": {"type": "string", "enum": ["auto", "MB", "MiB"], "description": "Unit for reported storage size, default auto"},
+                "bandwidth_reported_literal": {"type": "string", "description": "Optional exact reported storage literal string preserving decimal precision"},
+                "bandwidth_reported_decimals": {"type": "integer", "minimum": 0, "description": "Optional explicit decimal places for reported storage size"},
+                "bandwidth_min_metadata_overhead_bytes": {"type": "integer", "minimum": 0, "description": "Optional minimum provable non-vector metadata overhead in bytes"}
             }
         }
     },
@@ -957,6 +962,7 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                             level=arguments.get("ci_level", 0.95),
                             log_scale=bool(arguments.get("ci_log_scale", False)),
                             rel_tol=arguments.get("ci_rel_tol", 0.02),
+                            ci_method=arguments.get("ci_method"),
                         )
                     except Exception as exc:
                         failures["ci_consistency"] = str(exc)
@@ -1059,6 +1065,10 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
                             max_bandwidth_gbps=arguments.get("bandwidth_max_gbps", 4000.0),
                             rel_tol=arguments.get("bandwidth_rel_tol", 1e-2),
                             claims_full_system_storage=arguments.get("bandwidth_claims_full_system", True),
+                            storage_unit=arguments.get("bandwidth_storage_unit", "auto"),
+                            reported_literal=arguments.get("bandwidth_reported_literal"),
+                            reported_decimals=arguments.get("bandwidth_reported_decimals"),
+                            min_metadata_overhead_bytes=arguments.get("bandwidth_min_metadata_overhead_bytes", 0),
                         )
                     except Exception as exc:
                         failures["storage_bandwidth_bounds"] = str(exc)
@@ -1264,14 +1274,99 @@ def process_message(msg: Any) -> dict | None:
     return _rpc_error(msg_id, -32601, f"Method not found: {method}")
 
 
+MAX_MCP_FRAME_BYTES = 10 * 1024 * 1024
+MAX_MCP_DRAIN_BYTES = 64 * 1024 * 1024
+
+
+def _iter_bounded_stdio_frames(stream):
+    """Yield (line_str, err_kind) using bounded reads so oversized frames cannot exhaust memory."""
+    buf = getattr(stream, "buffer", None)
+    if buf is not None:
+        while True:
+            chunk = buf.readline(MAX_MCP_FRAME_BYTES + 1)
+            if not chunk:
+                break
+            if len(chunk) > MAX_MCP_FRAME_BYTES or (len(chunk) == MAX_MCP_FRAME_BYTES and not chunk.endswith(b"\n")):
+                drained = 0
+                while not chunk.endswith(b"\n"):
+                    more = buf.readline(65536)
+                    if not more:
+                        break
+                    drained += len(more)
+                    chunk = more
+                    if drained > MAX_MCP_DRAIN_BYTES:
+                        yield None, "oversized"
+                        return
+                yield None, "oversized"
+                continue
+            try:
+                yield chunk.decode("utf-8", errors="strict"), None
+            except UnicodeDecodeError:
+                yield None, "invalid_utf8"
+    else:
+        text_buf: list[str] = []
+        cur_bytes = 0
+        over_limit = False
+        while True:
+            chunk_str = stream.read(4096)
+            if not chunk_str:
+                if text_buf or over_limit:
+                    if over_limit or cur_bytes > MAX_MCP_FRAME_BYTES:
+                        yield None, "oversized"
+                    else:
+                        yield "".join(text_buf), None
+                break
+            while chunk_str:
+                nl_pos = chunk_str.find("\n")
+                if nl_pos == -1:
+                    if not over_limit:
+                        part_b = len(chunk_str.encode("utf-8", errors="replace"))
+                        if cur_bytes + part_b > MAX_MCP_FRAME_BYTES:
+                            over_limit = True
+                            text_buf.clear()
+                            cur_bytes = 0
+                        else:
+                            text_buf.append(chunk_str)
+                            cur_bytes += part_b
+                    break
+                part_str = chunk_str[:nl_pos]
+                chunk_str = chunk_str[nl_pos + 1 :]
+                if not over_limit:
+                    part_b = len(part_str.encode("utf-8", errors="replace"))
+                    if cur_bytes + part_b > MAX_MCP_FRAME_BYTES:
+                        over_limit = True
+                        text_buf.clear()
+                        cur_bytes = 0
+                    else:
+                        text_buf.append(part_str)
+                        cur_bytes += part_b
+                if over_limit:
+                    yield None, "oversized"
+                else:
+                    yield "".join(text_buf), None
+                text_buf.clear()
+                cur_bytes = 0
+                over_limit = False
+
+
 def main():
     if sys.platform == "win32":
         for s in (sys.stdin, sys.stdout):
             if s and hasattr(s, "reconfigure"):
                 s.reconfigure(encoding="utf-8")
 
-    for line in sys.stdin:
-        line = line.strip()
+    for line, err_kind in _iter_bounded_stdio_frames(sys.stdin):
+        if err_kind == "oversized":
+            resp = _rpc_error(None, -32600, f"Request frame exceeds maximum transport budget ({MAX_MCP_FRAME_BYTES} bytes)")
+            sys.stdout.write(json.dumps(resp, ensure_ascii=True, allow_nan=False) + "\n")
+            sys.stdout.flush()
+            continue
+        if err_kind == "invalid_utf8":
+            resp = _rpc_error(None, -32700, "Parse error: invalid UTF-8 byte sequence in stdio frame")
+            sys.stdout.write(json.dumps(resp, ensure_ascii=True, allow_nan=False) + "\n")
+            sys.stdout.flush()
+            continue
+        line = (line or "").strip()
         if not line:
             continue
         try:

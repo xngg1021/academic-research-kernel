@@ -280,33 +280,89 @@ def z_from_beta_se(beta, se, reported=None):
 # ---------------------------------------------------------------------------
 
 @_finite_output
-def check_ci_consistency(estimate, lower, upper, level=0.95, log_scale=False, rel_tol=0.02):
+def check_ci_consistency(estimate, lower, upper, level=0.95, log_scale=False, rel_tol=0.02, ci_method=None):
     """点估计与报告 CI 的几何/算术一致性 + 反推 SE。
 
     对称区间(差值类):estimate 应约等于 (lower+upper)/2。
     比值类指标(OR/RR/HR,log_scale=True):estimate 应约等于 sqrt(lower*upper)。
     反推 SE(或 log 尺度 SE)= (upper-lower)/(2*z_{level}),log 尺度先取对数。
     rel_tol:估计值与 CI 中点的相对容差(报告四舍五入通常 <2%)。
+    ci_method:可选区间构造方法;若为非对称区间方法(如 exact/clopper-pearson/wilson/bootstrap),
+              仅校验点估计位于上下界之间,不强制对称中点假设。
     """
     _finite_inputs(estimate=estimate, lower=lower, upper=upper, level=level, rel_tol=rel_tol)
     _require(isinstance(log_scale, bool), 'log_scale 须为布尔值')
     _require(rel_tol >= 0, 'rel_tol 须非负')
     _require(0 < level < 1, '置信水平须在 (0,1)')
     _require(lower < upper, 'CI 下限须小于上限')
+    if log_scale:
+        _require(lower > 0 and estimate > 0, 'log 尺度要求区间与估计值为正')
+
+    SYMMETRIC_METHODS = {'wald', 'normal', 'symmetric', 'z', 't', 'delta'}
+    ASYMMETRIC_METHODS = {
+        'exact', 'exact_binomial', 'clopper_pearson',
+        'wilson', 'wilson_score', 'agresti_coull',
+        'jeffreys', 'bootstrap', 'bca', 'percentile',
+        'profile_likelihood', 'bayesian', 'bayesian_credible',
+        'credible', 'asymmetric',
+    }
+    method_norm = re.sub(r'[\s-]+', '_', str(ci_method).strip().lower()) if ci_method is not None and str(ci_method).strip() else ''
+    _require(
+        not method_norm or method_norm in (SYMMETRIC_METHODS | ASYMMETRIC_METHODS),
+        f'不支持或无法识别的 ci_method: {ci_method!r}',
+    )
+    bounds_contain_estimate = bool(lower <= estimate <= upper)
+    if method_norm in ASYMMETRIC_METHODS:
+        if not bounds_contain_estimate:
+            return {
+                'consistent': False,
+                'status': 'estimate_outside_bounds',
+                'applicable': True,
+                'ci_method': str(ci_method),
+                'ci_midpoint': None,
+                'estimate': float(estimate),
+                'relative_deviation': None,
+                'implied_se': None,
+                'inputs': {'estimate': estimate, 'lower': lower, 'upper': upper,
+                           'level': level, 'log_scale': log_scale, 'ci_method': str(ci_method)},
+                'formula': 'bounds check: lower <= estimate <= upper',
+                'library': 'pure python',
+                'confidence': 'high',
+                'note': '点估计落在报告的置信区间范围之外',
+            }
+        return {
+            'consistent': None,
+            'status': 'symmetry_check_not_applicable',
+            'applicable': False,
+            'ci_method': str(ci_method),
+            'ci_midpoint': None,
+            'estimate': float(estimate),
+            'relative_deviation': None,
+            'implied_se': None,
+            'inputs': {'estimate': estimate, 'lower': lower, 'upper': upper,
+                       'level': level, 'log_scale': log_scale, 'ci_method': str(ci_method)},
+            'formula': 'symmetry check skipped for asymmetric CI method; bounds lower <= estimate <= upper verified',
+            'library': 'pure python',
+            'confidence': 'low',
+            'note': f'非对称区间方法 ({ci_method}) 不适用对称中点检验',
+        }
+
     st = _require_scipy_stats()
     z_crit = float(st.norm.ppf(1 - (1 - level) / 2))
     if log_scale:
-        _require(lower > 0 and estimate > 0, 'log 尺度要求区间与估计值为正')
         mid = float(math.sqrt(lower * upper))
         half_width = (math.log(upper) - math.log(lower)) / 2.0
-        implied_se = float(half_width / z_crit)
+        implied_se = None if method_norm == 't' else float(half_width / z_crit)
         rel_dev = abs(estimate - mid) / mid
     else:
         mid = (lower + upper) / 2.0
-        implied_se = float((upper - lower) / (2.0 * z_crit))
+        implied_se = None if method_norm == 't' else float((upper - lower) / (2.0 * z_crit))
         rel_dev = abs(estimate - mid) / (abs(mid) if mid != 0 else max(abs(lower), abs(upper)))
+
     return {
-        'consistent': bool(rel_dev <= rel_tol),
+        'consistent': bool(bounds_contain_estimate and rel_dev <= rel_tol),
+        'status': 'ok',
+        'applicable': True,
         'ci_midpoint': float(mid),
         'estimate': float(estimate),
         'relative_deviation': float(rel_dev),
@@ -911,7 +967,11 @@ def check_ablation_delta_regularity(matrix, baseline_col=0, min_rows=3, tol=1e-9
 def check_storage_bandwidth_bounds(item_count, vector_dim, bytes_per_element=4,
                                    reported_size_mb=None, reported_latency_us=None,
                                    max_bandwidth_gbps=4000.0, rel_tol=1e-2,
-                                   claims_full_system_storage=True):
+                                   claims_full_system_storage=True,
+                                   storage_unit='auto',
+                                   reported_literal=None,
+                                   reported_decimals=None,
+                                   min_metadata_overhead_bytes=0):
     """检验向量/记忆系统报告的存储体积是否低于物理下界或仅计裸向量数组,以及报告延迟是否突破物理内存带宽上限。
 
     item_count: 条目总数(正整数, 如 1000000)
@@ -921,12 +981,18 @@ def check_storage_bandwidth_bounds(item_count, vector_dim, bytes_per_element=4,
     reported_latency_us: 论文报告的全库扫描检索耗时(微秒 us, 须 >= 1e-6)
     max_bandwidth_gbps: 硬件合理物理内存带宽上限(GB/s, 默认 4000.0 GB/s 对应顶级 HBM3e)
     claims_full_system_storage: 若论文声明该体积为含原文/元数据的完整记忆系统总体积则为 True(默认)
+    storage_unit: 'auto'、'MB'(十进制 10^6 B) 或 'MiB'(二进制 2^20 B)
+    reported_literal: 可选报告原文数值字符串(保留尾零与精度)
+    reported_decimals: 可选显式报告小数位数
+    min_metadata_overhead_bytes: 完整系统可证明的最小非向量开销字节数(默认 0)
     """
     item_count = _integer('item_count', item_count, 1)
     vector_dim = _integer('vector_dim', vector_dim, 1)
     bytes_per_element = _integer('bytes_per_element', bytes_per_element, 1)
+    min_metadata_overhead_bytes = _integer('min_metadata_overhead_bytes', min_metadata_overhead_bytes, 0)
     _finite_inputs(max_bandwidth_gbps=max_bandwidth_gbps, rel_tol=rel_tol)
     _require(max_bandwidth_gbps > 0 and 0 <= rel_tol < 1.0, 'max_bandwidth_gbps 须为正且 rel_tol 在 [0, 1)')
+    _require(storage_unit in ('auto', 'MB', 'MiB'), "storage_unit 须为 'auto'、'MB' 或 'MiB'")
     _require(reported_size_mb is not None or reported_latency_us is not None,
              '至少须提供 reported_size_mb 或 reported_latency_us 之一以执行核验')
 
@@ -938,19 +1004,83 @@ def check_storage_bandwidth_bounds(item_count, vector_dim, bytes_per_element=4,
     below_raw_vector_bound = False
     matched_unit = None
     checks_performed = []
+    size_verdict = True
+    size_status = 'not_checked'
+    size_confidence = 'high'
+
     if reported_size_mb is not None:
         _finite('reported_size_mb', reported_size_mb)
         _require(reported_size_mb > 0, 'reported_size_mb 须为正')
         checks_performed.append('storage_size')
-        min_raw_bound = min(raw_mib, raw_mb)
-        if reported_size_mb < min_raw_bound * (1.0 - rel_tol):
-            below_raw_vector_bound = True
-        elif abs(reported_size_mb - raw_mib) <= rel_tol * raw_mib:
+        rep_val = float(reported_size_mb)
+        if reported_literal is not None or reported_decimals is not None:
+            _rep_d, _dec, half_ulp_d, _low, _high, _src, _lit = _rounding_spec(
+                reported_size_mb, reported_decimals, reported_literal,
+            )
+            half_ulp = float(half_ulp_d)
+            precision_known = True
+        else:
+            if isinstance(reported_size_mb, int) or rep_val.is_integer():
+                precision_known = False
+                half_ulp = 0.5
+            else:
+                s_rep = format(rep_val, '.12g')
+                if '.' in s_rep and 'e' not in s_rep.lower():
+                    dec = len(s_rep.split('.')[1])
+                    precision_known = True
+                    half_ulp = 0.5 * (10.0 ** (-dec))
+                else:
+                    precision_known = False
+                    half_ulp = 0.5
+
+        if abs(rep_val - raw_mib) <= rel_tol * raw_mib:
             bare_vector_only_match = True
             matched_unit = 'MiB'
-        elif abs(reported_size_mb - raw_mb) <= rel_tol * raw_mb:
+        elif abs(rep_val - raw_mb) <= rel_tol * raw_mb:
             bare_vector_only_match = True
             matched_unit = 'MB'
+
+        def _eval_unit_bound(target_raw: float, unit_scale_bytes: float):
+            min_total_in_unit = target_raw + (min_metadata_overhead_bytes / unit_scale_bytes if claims_full_system_storage else 0.0)
+            upper_rep = rep_val + (half_ulp if precision_known else 0.0)
+            if upper_rep < target_raw * (1.0 - rel_tol):
+                return False, 'below_raw_vector_bound', True
+            if claims_full_system_storage and min_metadata_overhead_bytes > 0:
+                if not precision_known and rep_val < min_total_in_unit:
+                    return None, 'underdetermined_rounding', False
+                if upper_rep < min_total_in_unit:
+                    return False, 'omitted_metadata_overhead', False
+            exact_bare = abs(rep_val - target_raw) <= 1e-6 * target_raw
+            if claims_full_system_storage and exact_bare:
+                return None, 'underdetermined_rounding', False
+            return True, 'ok', False
+
+        if storage_unit == 'MB':
+            size_verdict, size_status, below_raw_vector_bound = _eval_unit_bound(raw_mb, 1000.0 ** 2)
+            matched_unit = matched_unit or 'MB'
+        elif storage_unit == 'MiB':
+            size_verdict, size_status, below_raw_vector_bound = _eval_unit_bound(raw_mib, 1024.0 ** 2)
+            matched_unit = matched_unit or 'MiB'
+        else:
+            v_mb, st_mb, bel_mb = _eval_unit_bound(raw_mb, 1000.0 ** 2)
+            v_mib, st_mib, bel_mib = _eval_unit_bound(raw_mib, 1024.0 ** 2)
+            if v_mb is False and v_mib is False:
+                size_verdict = False
+                below_raw_vector_bound = bool(bel_mb and bel_mib)
+                size_status = 'below_raw_vector_bound' if below_raw_vector_bound else 'omitted_metadata_overhead'
+            elif v_mb is True and v_mib is True:
+                size_verdict = True
+                size_status = 'ok'
+            elif 'underdetermined_rounding' in (st_mb, st_mib):
+                size_verdict = None
+                size_status = 'underdetermined_rounding'
+                size_confidence = 'low'
+            else:
+                size_verdict = None
+                size_status = 'underdetermined_unit'
+                size_confidence = 'low'
+        if size_verdict is None:
+            size_confidence = 'low'
 
     implied_bw_gbps = None
     bandwidth_exceeds_limit = False
@@ -961,22 +1091,28 @@ def check_storage_bandwidth_bounds(item_count, vector_dim, bytes_per_element=4,
         implied_bw_gbps = (raw_bytes / 1e9) / (reported_latency_us * 1e-6)
         bandwidth_exceeds_limit = bool(implied_bw_gbps > max_bandwidth_gbps)
 
-    # Exact match to raw_mib/raw_mb (within 1e-6 relative) when claiming full system storage indicates omitted metadata overhead
-    exact_bare_match = (
-        reported_size_mb is not None
-        and (
-            abs(reported_size_mb - raw_mib) <= 1e-6 * raw_mib
-            or abs(reported_size_mb - raw_mb) <= 1e-6 * raw_mb
-        )
-    )
-    size_inconsistent = below_raw_vector_bound or (bool(claims_full_system_storage) and exact_bare_match)
+    if bandwidth_exceeds_limit or size_verdict is False:
+        overall_consistent = False
+        overall_confidence = 'high'
+        overall_status = 'bandwidth_exceeded' if bandwidth_exceeds_limit and size_verdict is not False else size_status
+    elif size_verdict is None:
+        overall_consistent = None
+        overall_confidence = 'low'
+        overall_status = size_status
+    else:
+        overall_consistent = True
+        overall_confidence = size_confidence
+        overall_status = 'ok'
+
     return {
-        'consistent': not (size_inconsistent or bandwidth_exceeds_limit),
+        'consistent': overall_consistent,
+        'status': overall_status,
         'checks_performed': checks_performed,
         'raw_vector_bytes': int(raw_bytes),
         'raw_mib': float(raw_mib),
         'raw_mb': float(raw_mb),
         'reported_size_mb': float(reported_size_mb) if reported_size_mb is not None else None,
+        'storage_unit': storage_unit,
         'bare_vector_only_match': bool(bare_vector_only_match),
         'below_raw_vector_bound': bool(below_raw_vector_bound),
         'claims_full_system_storage': bool(claims_full_system_storage),
@@ -987,5 +1123,5 @@ def check_storage_bandwidth_bounds(item_count, vector_dim, bytes_per_element=4,
         'bandwidth_exceeds_limit': bool(bandwidth_exceeds_limit),
         'formula': 'raw_bytes = N * dim * elem_bytes; BW_GB/s = (raw_bytes/1e9) / (latency_us*1e-6)',
         'library': 'pure python',
-        'confidence': 'high',
+        'confidence': overall_confidence,
     }

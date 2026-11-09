@@ -14,15 +14,15 @@
 
 ## 一、兩分鐘快速上手
 
-先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任選一條命令安裝 `2.3.0` 版本：
+先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任選一條命令安裝 `2.3.1` 版本：
 
 ```bash
 # 方式一：安裝帶 PDF 解析支援的完整命令列工具，並匯出論文精讀技能給本機智慧體
-uv tool install "academic-research-kernel[research]==2.3.0"
+uv tool install "academic-research-kernel[research]==2.3.1"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作為標準 stdio MCP 服務啟動，供 Claude Code / Cursor / Codex 等用戶端呼叫
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
 安裝完成後，可以先跑一次離線環境自檢，並直接試試文獻查核與會刊規則查詢：
@@ -33,7 +33,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-`doctor` 命令預設離線執行，負責檢查執行環境依賴、26 套 JSON 資料格式與全部 12 個 MCP 工具介面；即使沒有設定可選的外部資料庫金鑰，自檢也不會報錯。直接在終端機執行 `mcp` 子命令會讓程式進入標準輸入輸出監聽狀態，等待 MCP 用戶端發來請求。[2.3.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) 頁面記錄了建置產物的 SHA-256 雜湊值。本工具支援 Python 3.10 至 3.14，基礎安裝套件已內建全部工具，科學計算套件只在呼叫分佈檢定或檢定力重算時按需載入。
+`doctor` 命令預設離線執行，負責檢查執行環境依賴、26 套 JSON 資料格式與全部 12 個 MCP 工具介面；即使沒有設定可選的外部資料庫金鑰，自檢也不會報錯。直接在終端機執行 `mcp` 子命令會讓程式進入標準輸入輸出監聽狀態，等待 MCP 用戶端發來請求。[2.3.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) 頁面記錄了建置產物的 SHA-256 雜湊值。本工具支援 Python 3.10 至 3.14，基礎安裝套件已內建全部工具，科學計算套件只在呼叫分佈檢定或檢定力重算時按需載入。
 
 ---
 
@@ -121,19 +121,18 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### 大規模真實同行評議零參數實證檢驗：ICLR 2026 全量 `19,473` 篇外審稿件
+### 同行評議中五類確定性缺陷的宏觀分佈：ICLR 2026 共 `19,473` 篇有分稿件
 
-為驗證上述確定性檢查規則是否真正切中同行評議的高頻硬傷，我們在不擬合任何經驗權重與主觀分數閾值的前提下，將缺失誤差棒與版式超限、表格消融異常與漏引基線及缺失重現程式碼這五類確定性檢查對照 ICLR 2026 全量 `19,473` 篇有效外審投稿與 `75,769` 條官方審稿意見做了零參數盲測，並透過 `SHA-256` 奇偶雜湊分片驗證了跨半集穩定性，所有單篇稿件均保持完全匿名：
+為說明缺失誤差棒與版式超限、表格消融異常與漏引基線及缺失復現程式碼這五類確定性檢查的現實依據，我們在不擬合任何經驗權重與主觀分數閾值的前提下，按論文粒度統計了 ICLR 2026 共 `19,473` 篇有分投稿與 `75,769` 條官方審稿意見中至少一條審稿意見指出對應缺陷的稿件佔比 `k / N`；全集包含下表四類常規決定共 `18,791` 篇與帶評語程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分別為 `9,765` 篇與 `9,708` 篇，所有單篇稿件均保持完全匿名，彙總數據見[去識別化統計彙總表](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)：
 
-| 錄用檔位與可靠度分層 | 有效投稿數 $N$ | 評分均值 / Soundness 均值 | 審稿意見命中五類確定性缺陷的比例 |
+| 錄用檔位與可靠度分層 | 有效投稿數 $N$ | 評分均值 / Soundness 均值 | 審稿意見提及五類確定性缺陷的稿件佔比 `k / N` |
 | --- | --- | --- | --- |
 | **Oral 口頭報告** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`)，含缺失誤差棒 12.1% 與表格消融異常 7.1%，以及漏引基線 2.7% |
-| **Poster 海報錄用** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`)，含缺失誤差棒 15.8% 與表格消融異常 8.9%，以及漏引基線 4.1% |
-| **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`)，含缺失誤差棒 21.4% 與表格消融異常 11.6%，以及漏引基線 6.2% |
+| **Poster 海報錄用** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`)，含缺失誤差棒 19.5% 與表格消融異常 7.9%，以及漏引基線 4.9% |
+| **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`)，含缺失誤差棒 23.4% 與表格消融異常 10.5%，以及漏引基線 6.1% |
 | **Withdrawn 撤稿** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`)，含缺失誤差棒 23.8% 與表格消融異常 12.4%，以及漏引基線 6.8% |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`)，含缺失誤差棒 14.9% $\to$ 27.5% 與缺程式碼 17.8% $\to$ 27.7% |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`)，含缺失誤差棒 14.9% $\to$ 27.5% 與缺程式碼 15.6% $\to$ 27.7% |
 
----
 
 ## 四、14 項學術技能一覽與智慧體整合
 
@@ -160,9 +159,9 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 1. **Python 軟體套件與可選依賴安裝**
    ```bash
-   uv tool install academic-research-kernel==2.3.0
+   uv tool install academic-research-kernel==2.3.1
    ```
-   您也可以使用 `pipx install academic-research-kernel==2.3.0` 或在虛擬環境內執行 `python -m pip install academic-research-kernel==2.3.0`。加上 `[research]` 會固定安裝 `pypdf==6.19.0` 與 `fonttools==4.65.0`，保證不同機器解析數位 PDF 字型時結果一致；加上 `[full]` 會一併安裝擴展科學計算範例所需的函式庫；加上 `[qa]` 會安裝倉庫自檢與測試所需的解析依賴。
+   您也可以使用 `pipx install academic-research-kernel==2.3.1` 或在虛擬環境內執行 `python -m pip install academic-research-kernel==2.3.1`。加上 `[research]` 會固定安裝 `pypdf==7.0.0` 與 `fonttools==4.65.0`，保證不同機器解析數位 PDF 字型時結果一致；加上 `[full]` 會一併安裝擴展科學計算範例所需的函式庫；加上 `[qa]` 會安裝倉庫自檢與測試所需的解析依賴。
 
 2. **通用 Agent Plugins v1 與 MCP 用戶端掛載**
    本倉庫遵循 **Agent Plugins v1** 規範並提供 `plugin.json`，透過標準輸入輸出協定執行 `mcp.json` 與 `scripts/mcp_server.py` 定義的 **MCP 伺服器**。雖然倉庫名為 `academic-research-kernel`，但外掛名稱 `name: "academic-skills"` 與原有的 MCP 設定別名保持不變，舊設定無需修改即可繼續使用。
@@ -243,7 +242,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1340 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.3.0 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
+GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1340 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.3.1 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
 
 ### 2. 授權條款
 

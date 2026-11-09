@@ -15,19 +15,19 @@ Mwandishi: Junfu Shi (SJF, xngg1021). Ofa ya leseni ya sasa: [Source Lineage Lic
 
 ### Kuanza haraka
 
-Endesha toleo la 2.3.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Endesha toleo la 2.3.1 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-[Toleo la 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 12 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
+[Toleo la 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 12 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
 
 ### Thibitisha usakinishaji
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data 
 
 ### Fanya utafiti wa makala ukitumia Agent wa ndani
 
-Sakinisha `academic-research-kernel[research]==2.3.0` na uhamishe mtiririko wa kazi uliofungashwa:
+Sakinisha `academic-research-kernel[research]==2.3.1` na uhamishe mtiririko wa kazi uliofungashwa:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### Uthibitisho waajaribio Usio na Vigezo kwenye Ukaguzi wa Rika kwa Kiwango Kikubwa (ICLR 2026, $N = 19,473$)
+### Usambazaji Mkuu wa Familia 5 za Kasoro Bainifu katika Mapitio yarika (ICLR 2026, $N = 19,473$)
 
-Ili kuthibitisha kuwa ukaguzi waamuzi unalingana na kasoro halisi zinazotajwa na wakaguzi bila kufungamanisha uzito wa kihisia au viwango vya alama, makundi matano ya kasoro zaamuzi yalitathminiwa dhidi ya mawasilisho `19,473` yaliyopewa alama na maoni rasmi `75,769` ya ICLR 2026 (yamethibitishwa kwa mgawanyo wa `SHA-256`; makala binafsi zimefichwa majina):
+Ili kuonyesha msingi halisi wa familia tano za kasoro bainifu (kukosekana kwa pau za makosa/mtawanyiko, ukiukaji wa muundo/sehemu/kikomo cha kurasa, kutofautiana kwa majedwali/ablation, kukosekana kwa baseline/nukuu na mapengo ya uzalishaji upya/msimbo) bila kufananisha uzito wa kihisia au viwango vya alama, tulipima kiwango cha tukio kwa kila makala `k / N` katika mawasilisho `19,473` yaliyopewa alama (`18,791` maamuzi ya kawaida pamoja na `682` yaliyokataliwa mezani yenye mapitio) na mapitio rasmi `75,769` kutoka ICLR 2026 (uthibitisho wa nusu-mbili wa `SHA-256` `Split 0: N = 9,765` dhidi ya `Split 1: N = 9,708`; miswada imefichwa utambulisho; [risiti jumuishi](../../docs/benchmarks/iclr2026-openreview-incidence-receipt.json)):
 
 | Ngazi ya Uamuzi / Soundness | Mawasilisho ($N$) | Wastani wa Alama / Soundness | Kiwango cha Kugundua katika Makundi 5 ya Kasoro |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; mtawanyiko 12.1%, jedwali/ablation 7.1%, baseline 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; mtawanyiko 15.8%, jedwali/ablation 8.9%, baseline 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; mtawanyiko 21.4%, jedwali/ablation 11.6%, baseline 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; mtawanyiko 19.5%, jedwali/ablation 7.9%, baseline 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; mtawanyiko 23.4%, jedwali/ablation 10.5%, baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; mtawanyiko 23.8%, jedwali/ablation 12.4%, baseline 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; mtawanyiko 14.9% $\to$ 27.5%, ukosefu wa msimbo 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; mtawanyiko 14.9% $\to$ 27.5%, ukosefu wa msimbo 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ Kuna faili 22 za marejeleo ya Markdown katika stadi kumi na nne. Marejeleo hupak
 ### Usakinishaji wa kifurushi
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.3.0` au `python -m pip install academic-research-kernel==2.3.0` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==6.19.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
+Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.3.1` au `python -m pip install academic-research-kernel==2.3.1` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==7.0.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
 
 ### Muunganisho na matumizi yanayohamishika
 
@@ -214,7 +214,7 @@ Angalia [uthibitishaji wa OpenAlex](https://help.openalex.org/api/authentication
 
 ---
 
-## 6. Uthibitishaji wa ndani, ukaguzi wa usambazaji (2.3.0) na leseni
+## 6. Uthibitishaji wa ndani, ukaguzi wa usambazaji (2.3.1) na leseni
 
 ### Uthibitishaji
 
@@ -240,7 +240,7 @@ Saraka ya [tools/longtail/](../../tools/longtail/README.md) inashikilia kizalish
 
 `scripts/scfabric/` ni safu ya utekelezaji wa zana za hesabu za kisayansi na takwimu: uchunguzi wa maunzi, orodha ya viendeshi yenye milango ya `dtype`, wasifu tano za mzigo wa kazi, vipimo vilivyooanishwa vyenye ukaguzi wa usawa wa namba, na `ComputeReceipt`. Vipimo vya duru ya kwanza kwenye mashine hii viko katika [docs/scientific-compute-fabric.md](../../docs/scientific-compute-fabric.md); kanuni ya msingi ni kutumia CPU kwa chaguo-msingi, na kutumia kiongeza kasi (accelerator) pale tu kunapokuwa na stakabadhi.
 
-Toleo la bidhaa 2.3.0 linajumuisha marekebisho ya usahihi kwa ukokotoaji wa takwimu, ufuatiliaji wa kuondolewa kwa makala na udhibiti wa vipindi vya MCP. Zana ya umma ya `academic_recompute_statistics` inatoa thamani za p za kipimo cha t na Cohen's d / Hedges' g ya makundi mawili. Vipindi vya uaminifu (CI) na OR/RR vinabaki kuwa vitendakazi vya chini vya Python. Toa `p_value_literal` (kwa mfano `"1.0e-5"`) au `p_value_decimals` wakati usahihi wa desimali wa ripoti unapokuwa muhimu. Thamani za maandishi (literals) zinahifadhi sufuri za mwisho; ingizo la namba linahifadhi tu uwakilishi wake wa namba. Vyanzo vya usahihi vinavyopingana vinashindwa waziwazi. Ulinganishaji wa kukadiria nusu kwenda juu (round-half-up) unajumuisha mpaka wa chini wa makadirio na kuondoa mpaka wa juu. Kutofautiana kwa kawaida kwa takwimu ni matokeo halali ya kisayansi; ukokotoaji batili au ulioshindwa kwa sehemu unaweka alama ya `isError`.
+Toleo la bidhaa 2.3.1 linajumuisha marekebisho ya usahihi kwa ukokotoaji wa takwimu, ufuatiliaji wa kuondolewa kwa makala na udhibiti wa vipindi vya MCP. Zana ya umma ya `academic_recompute_statistics` inatoa thamani za p za kipimo cha t na Cohen's d / Hedges' g ya makundi mawili. Vipindi vya uaminifu (CI) na OR/RR vinabaki kuwa vitendakazi vya chini vya Python. Toa `p_value_literal` (kwa mfano `"1.0e-5"`) au `p_value_decimals` wakati usahihi wa desimali wa ripoti unapokuwa muhimu. Thamani za maandishi (literals) zinahifadhi sufuri za mwisho; ingizo la namba linahifadhi tu uwakilishi wake wa namba. Vyanzo vya usahihi vinavyopingana vinashindwa waziwazi. Ulinganishaji wa kukadiria nusu kwenda juu (round-half-up) unajumuisha mpaka wa chini wa makadirio na kuondoa mpaka wa juu. Kutofautiana kwa kawaida kwa takwimu ni matokeo halali ya kisayansi; ukokotoaji batili au ulioshindwa kwa sehemu unaweka alama ya `isError`.
 
 Ukaguzi wa kuondolewa kwa machapisho (retraction) unarekodi uchunguzi wa sasa wa `True`/`False`/`unknown` tofauti na thamani ya mwisho iliyojulikana (`last-known`). Uhifadhi mfupi kabla ya swali unapanga uchunguzi wa DOI moja na kuhifadhi masasisho ya DOI nyingine. Uchunguzi wa sasa na uthibitisho wa kihistoria una matoleo tofauti: uthibitisho uliochelewa unaweza kuboresha historia iliyohifadhiwa huku hali mpya ya `unknown` ikibaki bila kuthibitishwa waziwazi kwa ukaguzi wa sasa. Data za majaribio za HTTP katika minyororo ya kurudia zimewekwa alama kama data ya majaribio.
 

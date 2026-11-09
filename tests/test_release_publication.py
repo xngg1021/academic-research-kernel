@@ -84,6 +84,10 @@ def release_case(tmp_path):
     source.mkdir()
     (source / 'scripts').mkdir()
     (source / 'scripts/_version.py').write_text(f'__version__ = "{VERSION}"\n', encoding='utf-8')
+    (source / 'scripts/mcp_server.py').write_text(
+        'SUPPORTED_PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25", "2026-07-28")\n',
+        encoding='utf-8',
+    )
     (source / 'uv.lock').write_text('lock fixture\n', encoding='utf-8')
     server = {'name': 'io.github.xngg1021/academic-research-kernel', 'version': VERSION,
               'packages': [{'registryType': 'pypi', 'identifier': 'academic-research-kernel',

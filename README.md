@@ -16,11 +16,11 @@ Author: Junfu Shi (SJF, xngg1021). License: [Source Lineage License 1.0](LICENSE
 
 ## 1. Two-Minute Quick Start
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then choose either the local CLI + agent skill path or the stdio MCP server path for version `2.3.0`:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then choose either the local CLI + agent skill path or the stdio MCP server path for version `2.3.1`:
 
 ```bash
 # Option 1: Install the full CLI with digital PDF support and export the paper-research skill
-uv tool install "academic-research-kernel[research]==2.3.0"
+uv tool install "academic-research-kernel[research]==2.3.1"
 academic-research-kernel research skill --output ./paper-research
 
 # Option 2: Start the stdio MCP server for Claude Code, Cursor, Codex, or Gemini CLI
@@ -35,7 +35,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-The `doctor` command runs offline and checks runtime dependencies, all 26 JSON schemas, and all 12 MCP tool definitions; leaving optional external API keys unconfigured will not fail the check. Running `mcp` in a terminal waits silently on standard input/output for JSON-RPC requests from an MCP client. The [2.3.0 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) lists package SHA-256 hashes. Python 3.10–3.14 is supported, and statistical libraries load on demand only when distribution or power calculations are invoked.
+The `doctor` command runs offline and checks runtime dependencies, all 26 JSON schemas, and all 12 MCP tool definitions; leaving optional external API keys unconfigured will not fail the check. Running `mcp` in a terminal waits silently on standard input/output for JSON-RPC requests from an MCP client. The [2.3.1 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) lists package SHA-256 hashes. Python 3.10–3.14 is supported, and statistical libraries load on demand only when distribution or power calculations are invoked.
 
 ---
 
@@ -125,17 +125,16 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 ### Macro-Distribution of the 5 Deterministic Defect Families in Peer Review (ICLR 2026, $N = 19,473$)
 
-To motivate the kernel's five deterministic verification families (missing dispersion/error bars, format/section/page violations, table/ablation inconsistencies, citation/baseline omissions, and reproducibility/code gaps) without fitting empirical weights or predicting subjective scores, we measured paper-level incidence (`k / N` manuscripts where at least one official review flagged the category in `Weaknesses` or `Questions`) across `19,473` scored submissions (`75,769` official reviews) in ICLR 2026 (`18,791` standard decision records plus `682` desk-rejected records with reviews; `SHA-256` split-half verified `Split 0: N = 9,765` vs. `Split 1: N = 9,708`; individual manuscripts de-identified):
+To motivate the kernel's five deterministic verification families (missing dispersion/error bars, format/section/page violations, table/ablation inconsistencies, citation/baseline omissions, and reproducibility/code gaps) without fitting empirical weights or predicting subjective scores, we measured paper-level incidence (`k / N` manuscripts where at least one official review flagged the category in `Weaknesses` or `Questions`) across `19,473` scored submissions (`75,769` official reviews) in ICLR 2026 (`18,791` standard decision records plus `682` desk-rejected records with reviews; `SHA-256` split-half verified `Split 0: N = 9,765` vs. `Split 1: N = 9,708`; individual manuscripts de-identified; [aggregate receipt](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)):
 
 | Decision / Soundness Tier | Submissions ($N$) | Mean Rating / Soundness | Paper-Level Reviewer Hit Rate (`k / N`) Across the 5 Families |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108 / 224`; dispersion 12.1%, table/ablation 7.1%, baseline 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772 / 5,134`; dispersion 15.8%, table/ablation 8.9%, baseline 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055 / 8,453`; dispersion 21.4%, table/ablation 11.6%, baseline 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772 / 5,134`; dispersion 19.5%, table/ablation 7.9%, baseline 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057 / 8,453`; dispersion 23.4%, table/ablation 10.5%, baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117 / 4,980`; dispersion 23.8%, table/ablation 12.4%, baseline 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529 / 1,077` $\to$ `1,928 / 2,861`; dispersion 14.9% $\to$ 27.5%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529 / 1,077` $\to$ `1,928 / 2,861`; dispersion 14.9% $\to$ 27.5%, missing code 15.6% $\to$ 27.7%) |
 
----
 
 ## 4. All 14 Scholarly Skills & Agent Integration
 
@@ -162,9 +161,9 @@ Across the 14 skills, 22 Markdown reference guides and 1 machine-readable venue 
 
 1. **Python Package & Optional Extras**
    ```bash
-   uv tool install academic-research-kernel==2.3.0
+   uv tool install academic-research-kernel==2.3.1
    ```
-   You can also run `pipx install academic-research-kernel==2.3.0` or `python -m pip install academic-research-kernel==2.3.0` inside a virtual environment. Adding `[research]` pins `pypdf==6.19.0` and `fonttools==4.65.0` for deterministic digital PDF font decoding across Python 3.10–3.14; `[full]` installs extended scientific computing libraries; `[qa]` installs repository test and lint dependencies.
+   You can also run `pipx install academic-research-kernel==2.3.1` or `python -m pip install academic-research-kernel==2.3.1` inside a virtual environment. Adding `[research]` pins `pypdf==7.0.0` and `fonttools==4.65.0` for deterministic digital PDF font decoding across Python 3.10–3.14; `[full]` installs extended scientific computing libraries; `[qa]` installs repository test and lint dependencies.
 
 2. **Universal Agent Plugins v1 & Multi-Agent MCP Registration (Claude Code, Codex, Cursor, Gemini CLI)**
    This repository follows the vendor-neutral **Agent Plugins v1** format (`plugin.json`) and exposes its 12 verification and statistical tools through a standard stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`, supporting MCP protocol versions `2024-11-05`, `2025-03-26`, `2025-06-18`, `2025-11-25`, and `2026-07-28`):
@@ -255,7 +254,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1340 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.3.0 baseline in [the i18n manifest](docs/i18n/manifest.json).
+GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1340 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.3.1 baseline in [the i18n manifest](docs/i18n/manifest.json).
 
 ### 2. License
 

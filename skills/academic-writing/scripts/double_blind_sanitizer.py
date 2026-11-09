@@ -15,6 +15,8 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Any
+import xml.etree.ElementTree as ET
 
 if sys.platform == "win32":
     for _s in (sys.stdout, sys.stderr):
@@ -200,25 +202,85 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
     return findings
 
 
+def _extract_xmp_entries(xmp_xml: str) -> list[tuple[str, str]]:
+    """Parse XMP XML packet and return (field_key, text_value) pairs for all elements, tails, and attributes."""
+    cleaned = xmp_xml.strip()
+    if not cleaned:
+        raise ValueError("Empty XMP metadata stream")
+    cleaned = re.sub(r"<\?xpacket[^>]*\?>", "", cleaned).strip()
+    if not cleaned:
+        raise ValueError("XMP metadata stream contains no XML root")
+    root = ET.fromstring(cleaned)
+    entries: list[tuple[str, str]] = []
+    for elem in root.iter():
+        local_tag = elem.tag.split("}", 1)[-1] if "}" in elem.tag else elem.tag
+        if elem.text and elem.text.strip():
+            entries.append((f"xmp:{local_tag}", elem.text.strip()))
+        if elem.tail and elem.tail.strip():
+            entries.append((f"xmp:{local_tag}#tail", elem.tail.strip()))
+        for attr_k, attr_v in elem.attrib.items():
+            local_attr = attr_k.split("}", 1)[-1] if "}" in attr_k else attr_k
+            if attr_v and attr_v.strip():
+                entries.append((f"xmp:{local_tag}@{local_attr}", attr_v.strip()))
+    return entries
+
+
 def _scan_pdf_file(pdf_path: Path, rel_path: str, forbidden_tokens: list[str] | None = None) -> tuple[list[dict], bool]:
-    """Scan PDF metadata (/Author) and extracted page text using pypdf or fitz."""
+    """Scan all PDF metadata string fields, full XMP XML stream, and extracted page text using pypdf or fitz."""
     findings: list[dict] = []
     meta_author = ""
+    meta_dict: dict[str, Any] = {}
+    xmp_xml = ""
+    has_xmp_stream = False
     page_texts: list[str] | None = None
 
     try:
         from pypdf import PdfReader  # type: ignore
         reader = PdfReader(str(pdf_path))
-        meta = reader.metadata or {}
-        meta_author = str(meta.get("/Author") or meta.get("Author") or "").strip()
+        raw_meta = reader.metadata or {}
+        for k, v in raw_meta.items():
+            if v is not None:
+                meta_dict[str(k)] = str(v)
+        meta_author = str(raw_meta.get("/Author") or raw_meta.get("Author") or "").strip()
+        root_obj = reader.trailer.get("/Root") if reader.trailer else None
+        if root_obj is not None:
+            if hasattr(root_obj, "get_object"):
+                root_obj = root_obj.get_object()
+            if isinstance(root_obj, dict) and "/Metadata" in root_obj:
+                has_xmp_stream = True
+                m_obj = root_obj["/Metadata"]
+                if hasattr(m_obj, "get_object"):
+                    m_obj = m_obj.get_object()
+                raw_xmp = m_obj.get_data()
+                xmp_xml = raw_xmp.decode("utf-8", errors="strict") if isinstance(raw_xmp, bytes) else str(raw_xmp)
+        if not has_xmp_stream:
+            xmp = getattr(reader, "xmp_metadata", None)
+            if xmp is not None:
+                has_xmp_stream = True
+                stream_obj = getattr(xmp, "stream", None)
+                if stream_obj is not None and hasattr(stream_obj, "get_data"):
+                    raw_xmp = stream_obj.get_data()
+                    xmp_xml = raw_xmp.decode("utf-8", errors="strict") if isinstance(raw_xmp, bytes) else str(raw_xmp)
         page_texts = [(p.extract_text() or "") for p in reader.pages]
     except ImportError:
         try:
             import fitz  # type: ignore
             doc = fitz.open(str(pdf_path))
             try:
-                meta = doc.metadata or {}
-                meta_author = str(meta.get("author") or "").strip()
+                raw_meta = doc.metadata or {}
+                for k, v in raw_meta.items():
+                    if v is not None:
+                        meta_dict[str(k)] = str(v)
+                meta_author = str(raw_meta.get("author") or "").strip()
+                cat_xref = doc.pdf_catalog() if hasattr(doc, "pdf_catalog") else 0
+                if cat_xref and hasattr(doc, "xref_get_key"):
+                    k_type, k_val = doc.xref_get_key(cat_xref, "Metadata")
+                    if k_type not in ("null", "none", "") and k_val not in ("null", ""):
+                        has_xmp_stream = True
+                if hasattr(doc, "get_xml_metadata"):
+                    xmp_xml = str(doc.get_xml_metadata() or "")
+                    if xmp_xml.strip():
+                        has_xmp_stream = True
                 page_texts = [(doc[i].get_text("text") or "") for i in range(len(doc))]
             finally:
                 doc.close()
@@ -229,6 +291,14 @@ def _scan_pdf_file(pdf_path: Path, rel_path: str, forbidden_tokens: list[str] | 
     except Exception:
         return [], False
 
+    if has_xmp_stream:
+        try:
+            xmp_entries = _extract_xmp_entries(xmp_xml)
+        except Exception:
+            return [], False
+    else:
+        xmp_entries = []
+
     if meta_author and meta_author.lower() not in ANONYMOUS_PLACEHOLDERS:
         findings.append({
             "file": rel_path,
@@ -236,6 +306,34 @@ def _scan_pdf_file(pdf_path: Path, rel_path: str, forbidden_tokens: list[str] | 
             "kind": "non_anonymous_pdf_metadata_author",
             "matched": meta_author[:100],
         })
+    for m_key, m_val in sorted(meta_dict.items()):
+        val_str = str(m_val).strip()
+        if not val_str:
+            continue
+        for f in scan_text_for_leaks(val_str, rel_path, forbidden_tokens=forbidden_tokens):
+            f["line"] = 0
+            f["metadata_key"] = m_key
+            findings.append(f)
+    for xmp_key, xmp_val in xmp_entries:
+        key_low = xmp_key.lower()
+        attr_part = key_low.split("@", 1)[1] if "@" in key_low else ""
+        if (
+            any(a in key_low for a in ("creator", "author", "artist", "owner", "contributor"))
+            and not key_low.endswith("creatortool")
+            and attr_part not in ("parsetype", "xmptk", "begin", "id", "about", "resource")
+        ):
+            if xmp_val.lower() not in ANONYMOUS_PLACEHOLDERS:
+                findings.append({
+                    "file": rel_path,
+                    "line": 0,
+                    "kind": "non_anonymous_pdf_metadata_author",
+                    "metadata_key": xmp_key,
+                    "matched": xmp_val[:100],
+                })
+        for f in scan_text_for_leaks(xmp_val, rel_path, forbidden_tokens=forbidden_tokens):
+            f["line"] = 0
+            f["metadata_key"] = xmp_key
+            findings.append(f)
     for idx, ptxt in enumerate(page_texts or [], 1):
         for f in scan_text_for_leaks(ptxt, rel_path, forbidden_tokens=forbidden_tokens):
             f["page"] = idx
@@ -249,13 +347,61 @@ def _decode_file_bytes(raw: bytes) -> str:
     return raw.decode("utf-8-sig")
 
 
+def _is_link_or_junction(p: Path) -> bool:
+    if p.parent == Path("/") and p.name in ("var", "tmp", "etc"):
+        return False
+    try:
+        if p.is_symlink():
+            return True
+    except OSError:
+        return True
+    is_junc = getattr(os.path, "isjunction", None)
+    if is_junc is not None:
+        try:
+            if is_junc(p):
+                return True
+        except OSError:
+            return True
+    try:
+        st = os.lstat(p)
+        if bool(getattr(st, "st_file_attributes", 0) & 0x400):
+            return True
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return True
+    return False
+
+
+def _has_ancestor_link_or_junction(p: Path) -> bool:
+    cur = p
+    while True:
+        if _is_link_or_junction(cur):
+            return True
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    return False
+
+
 def scan_target(target: Path, forbidden_tokens: list[str] | None = None) -> dict:
-    if not target.exists():
+    raw_target = Path(target)
+    if not raw_target.exists() and not _is_link_or_junction(raw_target):
         raise ValueError(f"Target path does not exist: {target}")
-    target = target.resolve()
+    if _has_ancestor_link_or_junction(raw_target):
+        return {
+            "status": "incomplete",
+            "files_scanned": 0,
+            "unsupported_files": [raw_target.name],
+            "skipped_symlinks": [raw_target.name],
+            "leak_count": 0,
+            "findings": [],
+        }
+    target = raw_target.resolve()
     files: list[Path] = []
     pdf_files: list[Path] = []
     unsupported_files: list[str] = []
+    skipped_symlinks: list[str] = []
 
     if target.is_file():
         suf = target.suffix.lower()
@@ -267,16 +413,28 @@ def scan_target(target: Path, forbidden_tokens: list[str] | None = None) -> dict
             unsupported_files.append(target.name)
     else:
         for dirpath, dirnames, filenames in os.walk(target, followlinks=False):
-            dirnames[:] = sorted(
-                d for d in dirnames
-                if d.lower() not in EXCLUDED_DIRS and not d.lower().endswith(".egg-info")
-            )
             rel_dir = Path(dirpath).relative_to(target)
+            kept_dirs: list[str] = []
+            for d in sorted(dirnames):
+                if d.lower() in EXCLUDED_DIRS or d.lower().endswith(".egg-info"):
+                    continue
+                full_d = Path(dirpath) / d
+                if _is_link_or_junction(full_d):
+                    rel_d = (rel_dir / d).as_posix() if rel_dir.parts else d
+                    skipped_symlinks.append(rel_d)
+                    unsupported_files.append(rel_d)
+                    continue
+                kept_dirs.append(d)
+            dirnames[:] = kept_dirs
             for fn in sorted(filenames):
                 full_p = Path(dirpath) / fn
-                if full_p.is_symlink() or not full_p.is_file():
-                    continue
                 rel_posix = (rel_dir / fn).as_posix() if rel_dir.parts else fn
+                if _is_link_or_junction(full_p):
+                    skipped_symlinks.append(rel_posix)
+                    unsupported_files.append(rel_posix)
+                    continue
+                if not full_p.is_file():
+                    continue
                 suf = full_p.suffix.lower()
                 if suf in TEXT_SUFFIXES:
                     files.append(full_p)
@@ -332,6 +490,7 @@ def scan_target(target: Path, forbidden_tokens: list[str] | None = None) -> dict
         "status": status,
         "files_scanned": total_scanned,
         "unsupported_files": unsupported_files,
+        "skipped_symlinks": skipped_symlinks,
         "leak_count": len(all_findings),
         "findings": all_findings,
     }

@@ -54,6 +54,21 @@ def read_source_version(text):
     return versions[0]
 
 
+def read_supported_protocols(text):
+    tree = ast.parse(text)
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == 'SUPPORTED_PROTOCOLS' for target in node.targets
+        ):
+            if isinstance(node.value, (ast.Tuple, ast.List)) and all(
+                isinstance(elt, ast.Constant) and isinstance(elt.value, str) for elt in node.value.elts
+            ):
+                protocols = [elt.value for elt in node.value.elts]
+                require(bool(protocols), 'SUPPORTED_PROTOCOLS cannot be empty')
+                return protocols
+    raise ValueError('scripts/mcp_server.py must declare literal SUPPORTED_PROTOCOLS')
+
+
 def validate_target(version, tag, root=ROOT, expected_commit=None, require_head=False):
     """Resolve the exact tag once, and prove its release source belongs to main."""
     validate_version_tag(version, tag)
@@ -190,11 +205,14 @@ def create_manifest(dist, version=None, tag=None, release=False, root=ROOT):
     expected = package_filenames(version)
     require(names - SIDECARS == expected, 'distribution directory must contain exactly the expected wheel and sdist')
     artifacts = [inspect_artifact(dist / name, version) for name in sorted(expected)]
+    mcp_server_path = root / 'scripts/mcp_server.py'
+    require(mcp_server_path.is_file(), 'scripts/mcp_server.py must exist in release source root')
+    protocols = read_supported_protocols(mcp_server_path.read_text(encoding='utf-8'))
     manifest = {'package': PACKAGE, 'version': version,
                 'source_commit': commit, 'source_tree': tree, 'source_dirty': dirty,
                 'git_tag': tag if release else None, 'intended_tag': tag,
                 'artifacts': artifacts, 'requires_python': '>=3.10,<3.15',
-                'mcp': {'protocols': ['2026-07-28', '2024-11-05'], 'public_tool_count': 12},
+                'mcp': {'protocols': protocols, 'public_tool_count': 12},
                 'plugin': {'name': 'academic-skills', 'version': version},
                 'license_reference': 'LicenseRef-Source-Lineage-1.0',
                 'build': {'backend': 'hatchling==1.29.0', 'source_date_epoch': epoch,

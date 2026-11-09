@@ -414,18 +414,27 @@ def _replay_lineage_content_verification(
     if not isinstance(supplied_content, collections.abc.Mapping):
         raise TypeError("content_by_entity_id must be a mapping of entity IDs to bytes")
 
-    total_hashed = 0
+    def _declares_sha(ent: Mapping[str, Any]) -> bool:
+        return "sha256" in ent and ent["sha256"] is not None
+
+    total_hashed = sum(1 for entity in entities if _declares_sha(entity))
     verified_hashed = 0
     unanchored_relatives = 0
     unauthorized_locals = 0
+    unlocated_entities = 0
     consumed_bytes = 0
     for entity in entities:
-        declared_sha = entity.get("sha256")
-        locator = entity.get("locator")
-        if not declared_sha or not locator:
+        if not _declares_sha(entity):
             continue
-        total_hashed += 1
+        declared_sha = entity["sha256"]
         entity_id = entity.get("id")
+        if not isinstance(declared_sha, str) or re.fullmatch(r"[0-9a-fA-F]{64}", declared_sha) is None:
+            return (
+                "hash_mismatch",
+                "hash_mismatch",
+                f"Malformed SHA256 digest declared on entity {entity_id!r}: {declared_sha!r}",
+            )
+        sha_str = declared_sha.lower()
         supplied = supplied_content.get(entity_id)
         if supplied is not None:
             if not isinstance(supplied, bytes):
@@ -436,7 +445,7 @@ def _replay_lineage_content_verification(
             if consumed_bytes > max_content_bytes:
                 raise ValueError("Authorized lineage content exceeds the read-size budget")
             computed = hashlib.sha256(supplied).hexdigest().lower()
-            if computed != str(declared_sha).lower():
+            if computed != sha_str:
                 return (
                     "hash_mismatch",
                     "hash_mismatch",
@@ -446,6 +455,10 @@ def _replay_lineage_content_verification(
             verified_hashed += 1
             continue
 
+        locator = entity.get("locator")
+        if not locator or not str(locator).strip():
+            unlocated_entities += 1
+            continue
         locator_text = str(locator).strip()
         if (
             REMOTE_LOCATOR_REGEX.match(locator_text)
@@ -512,6 +525,8 @@ def _replay_lineage_content_verification(
             detail = "Relative local locator requires explicit root_dir for on-disk verification"
         elif unauthorized_locals > 0:
             detail = "Local locator is outside the explicitly authorized content root"
+        elif unlocated_entities > 0:
+            detail = "Entity declared SHA256 without a verifiable locator or supplied bytes"
         return "partial", "partially_verified", detail
     detail = None
     if unanchored_relatives > 0:
@@ -522,6 +537,8 @@ def _replay_lineage_content_verification(
             if authorized_root is not None
             else "Local locator requires an explicitly authorized content root or provider"
         )
+    elif unlocated_entities > 0:
+        detail = "Entity declared SHA256 without a verifiable locator or supplied bytes"
     return "unchecked", "unverified", detail
 
 

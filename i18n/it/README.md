@@ -15,19 +15,19 @@ Autore: Junfu Shi (SJF, xngg1021). Offerta di licenza attuale: [Source Lineage L
 
 ### Avvio rapido
 
-Eseguire la versione 2.3.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Eseguire la versione 2.3.1 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-La [release 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) riporta gli hash di distribuzione e lo stato di pubblicazione. Il pacchetto wheel di rilascio può essere eseguito anche localmente con `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. È supportato Python 3.10–3.14; `uvx --python 3.12` seleziona esplicitamente un interprete compatibile. Tutti i 12 strumenti deterministici, inclusi i moduli statistici, sono compresi nell'installazione di base.
+La [release 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) riporta gli hash di distribuzione e lo stato di pubblicazione. Il pacchetto wheel di rilascio può essere eseguito anche localmente con `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. È supportato Python 3.10–3.14; `uvx --python 3.12` seleziona esplicitamente un interprete compatibile. Tutti i 12 strumenti deterministici, inclusi i moduli statistici, sono compresi nell'installazione di base.
 
 ### Verifica dell'installazione
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ La diagnostica offline controlla dipendenze, schemi e le definizioni di tutti i 
 
 ### Analizzare un articolo scientifico con un Agente locale
 
-Installare `academic-research-kernel[research]==2.3.0` ed esportare il flusso di lavoro incluso nel pacchetto:
+Installare `academic-research-kernel[research]==2.3.1` ed esportare il flusso di lavoro incluso nel pacchetto:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### Validazione Empirica Senza Parametri sulla Revisione Paritaria su Larga Scala (ICLR 2026, $N = 19,473$)
+### Macro-distribuzione delle 5 famiglie di difetti deterministici nella peer review (ICLR 2026, $N = 19,473$)
 
-Per verificare che i controlli deterministici riflettano le reali criticità segnalate dai revisori senza adattare pesi empirici o soglie soggettive, le cinque famiglie di difetti deterministici (assenza di barre d’errore/dispersione, violazioni di formato/pagine, incoerenze in tabelle/ablazioni, omissione di baseline e lacune di riproducibilità) sono state valutate su `19,473` articoli valutati e `75,769` revisioni ufficiali di ICLR 2026 (bipartizione `SHA-256` verificata; manoscritti individuali anonimizzati):
+Per motivare le cinque famiglie di difetti deterministici (assenza di barre d'errore/dispersione, violazioni di formato/sezioni/limite di pagine, incoerenze in tabelle/ablazioni, omissioni di baseline/citazioni e lacune di riproducibilità/codice) senza adattare pesi empirici o soglie soggettive, abbiamo misurato l'incidenza per articolo `k / N` su `19,473` sottomissioni valutate (`18,791` decisioni standard più `682` desk-reject con revisioni) e `75,769` revisioni ufficiali di ICLR 2026 (verifica split-half `SHA-256` `Split 0: N = 9,765` vs. `Split 1: N = 9,708`; manoscritti anonimizzati; [ricevuta aggregata](../../docs/benchmarks/iclr2026-openreview-incidence-receipt.json)):
 
 | Livello di Decisione / Soundness | Articoli ($N$) | Voto Medio / Soundness | Tasso di Riscontro nelle 5 Famiglie di Difetti Deterministici |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; dispersione 12.1%, tabella/ablazione 7.1%, baseline 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersione 15.8%, tabella/ablazione 8.9%, baseline 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; dispersione 21.4%, tabella/ablazione 11.6%, baseline 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersione 19.5%, tabella/ablazione 7.9%, baseline 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; dispersione 23.4%, tabella/ablazione 10.5%, baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dispersione 23.8%, tabella/ablazione 12.4%, baseline 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersione 14.9% $\to$ 27.5%, codice assente 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersione 14.9% $\to$ 27.5%, codice assente 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ Sono presenti 22 file di riferimento Markdown distribuiti tra le quattordici com
 ### Installazione del pacchetto
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-In alternativa, è possibile installare il pacchetto con `pipx install academic-research-kernel==2.3.0` oppure con `python -m pip install academic-research-kernel==2.3.0` all'interno di un ambiente virtuale supportato. L'opzione `[full]` aggiunge le librerie per gli esempi scientifici estesi; `[qa]` include gli strumenti di validazione del repository, compreso il parser PDF. L'opzione `[research]` aggiunge `pypdf==6.19.0` e `fonttools==4.65.0` per garantire una decodifica uniforme dei font PDF nelle installazioni pulite, entrambi compatibili con Python 3.10. La lettura strutturata di HTML/XML e di file DOCX/XLSX con limiti di dimensione utilizza la libreria standard. I backend GPU e i servizi a pagamento restano facoltativi.
+In alternativa, è possibile installare il pacchetto con `pipx install academic-research-kernel==2.3.1` oppure con `python -m pip install academic-research-kernel==2.3.1` all'interno di un ambiente virtuale supportato. L'opzione `[full]` aggiunge le librerie per gli esempi scientifici estesi; `[qa]` include gli strumenti di validazione del repository, compreso il parser PDF. L'opzione `[research]` aggiunge `pypdf==7.0.0` e `fonttools==4.65.0` per garantire una decodifica uniforme dei font PDF nelle installazioni pulite, entrambi compatibili con Python 3.10. La lettura strutturata di HTML/XML e di file DOCX/XLSX con limiti di dimensione utilizza la libreria standard. I backend GPU e i servizi a pagamento restano facoltativi.
 
 ### Integrazione e Utilizzo Portatile
 
@@ -214,7 +214,7 @@ Si vedano le guide su [autenticazione OpenAlex](https://help.openalex.org/api/au
 
 ---
 
-## 6. Validazione locale, verifica della distribuzione (2.3.0) e licenza
+## 6. Validazione locale, verifica della distribuzione (2.3.1) e licenza
 
 ### Validazione
 
@@ -240,7 +240,7 @@ La directory [tools/longtail/](../../tools/longtail/README.md) contiene il gener
 
 Il modulo `scripts/scfabric/` rappresenta l'infrastruttura per gli strumenti di calcolo scientifico e analisi statistica: rilevamento dell'hardware, catalogo dei backend con vincoli sui tipi di dati (`dtype`), cinque profili di carico, benchmark appaiato con ammissione basata sulla parità numerica e generazione di `ComputeReceipt`. Le misurazioni del primo ciclo sono raccolte in [docs/scientific-compute-fabric.md](../../docs/scientific-compute-fabric.md); il criterio operativo prevede l'uso predefinito della CPU e l'attivazione degli acceleratori solo in presenza di una ricevuta verificata.
 
-Il rilascio 2.3.0 integra le correzioni di accuratezza statistica e gestione del protocollo. Lo strumento pubblico `academic_recompute_statistics` espone i valori p dei test t e gli indici `d` di Cohen / `g` di Hedges per due gruppi, mentre gli intervalli di confidenza e i rapporti `OR/RR` rimangono disponibili come funzioni Python di livello inferiore. Quando la precisione riportata nell'articolo è determinante, fornire `p_value_literal` (ad esempio `"1.0e-5"`) oppure `p_value_decimals`. I valori letterali preservano gli zeri finali, mentre gli input numerici mantengono la sola rappresentazione numerica; fonti di precisione tra loro incompatibili generano un errore esplicito. I confronti con arrotondamento (`round-half-up`) includono l'estremo inferiore ed escludono quello superiore. Una normale discrepanza statistica costituisce un risultato scientifico valido, mentre calcoli non validi o parzialmente falliti impostano il flag `isError`.
+Il rilascio 2.3.1 integra le correzioni di accuratezza statistica e gestione del protocollo. Lo strumento pubblico `academic_recompute_statistics` espone i valori p dei test t e gli indici `d` di Cohen / `g` di Hedges per due gruppi, mentre gli intervalli di confidenza e i rapporti `OR/RR` rimangono disponibili come funzioni Python di livello inferiore. Quando la precisione riportata nell'articolo è determinante, fornire `p_value_literal` (ad esempio `"1.0e-5"`) oppure `p_value_decimals`. I valori letterali preservano gli zeri finali, mentre gli input numerici mantengono la sola rappresentazione numerica; fonti di precisione tra loro incompatibili generano un errore esplicito. I confronti con arrotondamento (`round-half-up`) includono l'estremo inferiore ed escludono quello superiore. Una normale discrepanza statistica costituisce un risultato scientifico valido, mentre calcoli non validi o parzialmente falliti impostano il flag `isError`.
 
 I controlli sulle ritrattazioni registrano l'osservazione corrente (`True`/`False`/`unknown`) separatamente dall'ultimo valore noto. Una breve prenotazione prima della query ordina le osservazioni relative allo stesso DOI e preserva gli aggiornamenti sugli altri DOI. Le osservazioni correnti e le conferme storiche dispongono di versioni distinte: una conferma ricevuta in ritardo può aggiornare la cronologia conservata, mentre un esito `unknown` più recente resta esplicitamente contrassegnato come non verificato per il controllo corrente. Le risposte HTTP simulate nelle catene di test di regressione sono etichettate come dati di prova.
 

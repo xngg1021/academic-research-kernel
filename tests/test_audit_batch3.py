@@ -46,26 +46,26 @@ def test_sr01_trimfill_mirror_symmetric_case():
 
 
 def test_sr01_trimfill_mirror_nonconvergent_case():
-    """强偏数据: 两侧必须同判未收敛, 不得一侧 k0=N 一侧 k0=0。"""
+    """强偏数据: 修复 COR-06 全集秩和后两侧镜像对称收敛且 k0 相等、adjusted 符号相反。"""
     y = np.array([2.5, 2.2, 1.9, 1.7, 1.5, 1.3, 1.1, 0.9, 0.7, 0.2, -0.4, -1.0])
     v = np.full(12, 0.15)
     res_l = meta_core.trim_and_fill(y, v, side='left')
     res_r = meta_core.trim_and_fill(-y, v, side='right')
-    assert res_l['converged'] is False
-    assert res_r['converged'] is False
-    assert res_l['k0'] is None and res_r['k0'] is None
+    assert res_l['converged'] is True and res_r['converged'] is True
+    assert res_l['k0'] == res_r['k0'] == 1
+    assert res_l['adjusted'] == pytest.approx(-res_r['adjusted'])
 
 
-# ---------- SR-02: 振荡检测 ----------
+# ---------- SR-02: 振荡检测与 maxiter 不变性 ----------
 
 def test_sr02_oscillation_detected_not_parity():
-    """固定输入 (0.05,0.05,0.05,0.1,0.1) 在任何 maxiter 下都不得把奇偶性当结果。"""
+    """固定输入 (0.05,0.05,0.05,0.1,0.1) 在修复 COR-06 后在任何 maxiter>=2 下结果恒定，不随奇偶性变化。"""
     for maxiter in (99, 100, 200):
         res = meta_core.trim_and_fill([0.05, 0.05, 0.05, 0.1, 0.1],
                                       [0.1] * 5, side='left', maxiter=maxiter)
-        assert res['converged'] is False
-        assert res['k0'] is None
-        assert '状态循环' in res['note']
+        assert res['converged'] is True
+        assert res['k0'] == 1
+        assert res['adjusted'] == pytest.approx(0.0625)
 
 
 def test_sr02_hit_maxiter_reported_unconverged():

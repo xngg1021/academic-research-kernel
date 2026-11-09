@@ -70,7 +70,7 @@ CITE_RELEVANT_PKG_RE = re.compile(
 )
 TODO_MARKER_RE = re.compile(r"\b(?:TODO|FIXME|TBD|XXX)\b|\\(?:todo|TODO)\b(?![A-Za-z@])")
 MACRO_DEF_HEAD_RE = re.compile(
-    r"\\(?:(?:newcommand|renewcommand|providecommand|DeclareRobustCommand)\s*\*?\s*(?:\{\s*\\[A-Za-z@]+\s*\}|\\[A-Za-z@]+)\s*(?:\[\s*\d+\s*\])?\s*(?:\[[^\]]*\])?|def\s*\\[A-Za-z@]+[^{]*)\{"
+    r"\\(?:(?:newcommand|renewcommand|providecommand|DeclareRobustCommand)[^\S\n]{0,40}\*?[^\S\n]{0,40}(?:\{[^\S\n]{0,40}\\[A-Za-z@]+[^\S\n]{0,40}\}|\\[A-Za-z@]+)[^\S\n]{0,40}(?:\[\s*\d+\s*\])?[^\S\n]{0,40}(?:\[[^\n\]]{0,200}\])?[^\S\n]{0,40}|def[^\S\n]{0,40}\\[A-Za-z@]+[^\n\\{]{0,120})\{"
 )
 INLINE_VERB_RE = re.compile(r"\\verb\*?([^a-zA-Z0-9\s]).*?\1")
 VERBATIM_ENV_RE = re.compile(
@@ -147,16 +147,52 @@ def load_venue_specs(specs_path: str | Path | None = None) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+_BEGIN_VERB_ENV_RE = re.compile(r"\\begin\{(verbatim\*?|lstlisting|minted)\}")
+
+
 def _strip_latex_comments(text: str) -> str:
-    """Strip unescaped % comments line by line while preserving line numbers, inline \\verb, and even-backslash escapes."""
-    out_lines = []
+    """Strip unescaped % comments in a single top-to-bottom pass so commented-out \\begin{verbatim} never enters verbatim mode."""
+    out_lines: list[str] = []
+    active_env: str | None = None
     for line in text.splitlines():
-        scan_line = INLINE_VERB_RE.sub(lambda m: " " * len(m.group(0)), line)
-        m = re.search(r"(?<!\\)(?:\\\\)*%", scan_line)
-        if m:
-            out_lines.append(line[: m.end() - 1])
-        else:
-            out_lines.append(line)
+        pos = 0
+        n = len(line)
+        kept: list[str] = []
+        while pos < n:
+            if active_env is not None:
+                end_tok = f"\\end{{{active_env}}}"
+                end_idx = line.find(end_tok, pos)
+                if end_idx == -1:
+                    kept.append(line[pos:])
+                    pos = n
+                    break
+                after_end = end_idx + len(end_tok)
+                kept.append(line[pos:after_end])
+                pos = after_end
+                active_env = None
+                continue
+            ch = line[pos]
+            if ch == "%":
+                break
+            if ch == "\\":
+                m_v = INLINE_VERB_RE.match(line, pos)
+                if m_v:
+                    kept.append(m_v.group(0))
+                    pos = m_v.end()
+                    continue
+                m_b = _BEGIN_VERB_ENV_RE.match(line, pos)
+                if m_b:
+                    active_env = m_b.group(1)
+                    kept.append(m_b.group(0))
+                    pos = m_b.end()
+                    continue
+                if pos + 1 < n:
+                    kept.append(line[pos : pos + 2])
+                    pos += 2
+                    continue
+            kept.append(ch)
+            pos += 1
+        out_lines.append("".join(kept))
     return "\n".join(out_lines)
 
 
@@ -403,8 +439,9 @@ def collect_tex_tree(entry_tex: Path) -> tuple[list[tuple[Path, str]], list[dict
         raw = resolved.read_text(encoding="utf-8", errors="replace")
         collected.append((resolved, raw))
         uncommented = _strip_latex_comments(raw)
+        masked_for_include = _mask_macro_definitions_and_verbatim(uncommented)
         rel_self = resolved.relative_to(root_dir).as_posix()
-        for m in INPUT_RE.finditer(uncommented):
+        for m in INPUT_RE.finditer(masked_for_include):
             target = m.group(1).strip()
             if not target:
                 continue
@@ -618,11 +655,17 @@ def _inspect_pdf_pages(
     return info, hits
 
 
-def _load_ceg_verified_claims(ceg_path: Path | None) -> set[str]:
-    """Return set of verified claim IDs and statements that have positive support and zero contradiction."""
+def _normalize_claim_text(text: str) -> str:
+    return " ".join(str(text or "").split()).rstrip(".").strip()
+
+
+def _load_ceg_claim_map(ceg_path: Path | None) -> tuple[dict[str, str], set[str]]:
+    """Return (verified_id_to_text, verified_texts) for claims with positive support and zero contradiction."""
     if ceg_path is None or not ceg_path.is_file():
-        return set()
+        return {}, set()
     data = json.loads(ceg_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {}, set()
     claims = data.get("claims") or data.get("ceg", {}).get("claims") or []
     edges = data.get("support_edges") or data.get("edges") or data.get("ceg", {}).get("support_edges") or []
 
@@ -631,38 +674,39 @@ def _load_ceg_verified_claims(ceg_path: Path | None) -> set[str]:
     for e in edges:
         if not isinstance(e, dict):
             continue
-        cid = str(e.get("claim_id") or e.get("target_claim_id") or "")
+        cid = str(e.get("claim_id") or e.get("target_claim_id") or e.get("target") or "")
         if not cid:
             continue
         status = str(
             e.get("support_status")
             if e.get("support_status") is not None
-            else (e.get("relation") or e.get("polarity") or "")
+            else (e.get("status") or e.get("relation") or e.get("polarity") or "")
         ).strip().lower()
         if status in ("supported", "supports", "support", "verified_by"):
             supported_ids.add(cid)
         elif status in ("contradicted", "contradicts", "refuted", "refutes", "unverifiable", "out_of_scope"):
             contradicted_ids.add(cid)
 
-    verified: set[str] = set()
+    id_to_text: dict[str, str] = {}
+    verified_texts: set[str] = set()
     for c in claims:
         if not isinstance(c, dict):
             continue
         cid = str(c.get("id") or c.get("claim_id") or "")
         txt = str(c.get("text") or c.get("statement") or "").strip()
         c_status = str(c.get("support_status") or c.get("status") or "").strip().lower()
-        if cid in contradicted_ids or c_status in ("contradicted", "unverifiable", "out_of_scope"):
+        if not cid or not txt or cid in contradicted_ids or c_status in ("contradicted", "unverifiable", "out_of_scope"):
             continue
-        has_positive_support = (
-            cid in supported_ids
-            or c_status == "supported"
-            or (bool(c.get("receipt_refs") or c.get("evidence_ids")) and not edges)
-        )
-        if cid and has_positive_support:
-            verified.add(cid)
-            if txt:
-                verified.add(txt)
-    return verified
+        if cid in supported_ids:
+            id_to_text[cid] = txt
+            verified_texts.add(txt)
+    return id_to_text, verified_texts
+
+
+def _load_ceg_verified_claims(ceg_path: Path | None) -> set[str]:
+    """Return set of verified claim IDs and statements that have positive support and zero contradiction."""
+    id_to_text, verified_texts = _load_ceg_claim_map(ceg_path)
+    return set(id_to_text.keys()) | verified_texts
 
 
 def _check_package_options_for_double_blind(uncommented: str, rel_name: str) -> list[dict[str, Any]]:
@@ -718,7 +762,8 @@ def lint_manuscript(
     hits: list[dict[str, Any]] = list(include_hits)
     discovered_sections: list[str] = []
 
-    verified_ceg = _load_ceg_verified_claims(Path(ceg_path) if ceg_path else None)
+    verified_id_to_text, verified_texts = _load_ceg_claim_map(Path(ceg_path) if ceg_path else None)
+    verified_ceg = set(verified_id_to_text.keys()) | verified_texts
     defined_labels: set[str] = set()
     ref_invocations: list[tuple[str, int, str, str]] = []
     bare_cite_invocations: list[tuple[str, int, str]] = []
@@ -818,15 +863,16 @@ def lint_manuscript(
                             "excerpt": " ".join((m_ack.group(1) + " " + ack_body).split())[:160],
                         })
 
-        for m in SECTION_RE.finditer(uncommented):
+        for m in SECTION_RE.finditer(masked_body):
             sec_title = (m.group(1) or m.group(2) or "").strip()
             if sec_title:
                 discovered_sections.append(sec_title)
-        if CHECKLIST_ENV_RE.search(uncommented):
+        if CHECKLIST_ENV_RE.search(masked_body):
             discovered_sections.append("NeurIPS Paper Checklist")
 
         for idx, line in enumerate(lines, 1):
-            m_ref = UNRESOLVED_REF_RE.search(line)
+            masked_line = masked_lines[idx - 1] if idx - 1 < len(masked_lines) else ""
+            m_ref = UNRESOLVED_REF_RE.search(masked_line)
             if m_ref:
                 hits.append({
                     "code": "UNRESOLVED_LATEX_REFERENCE",
@@ -835,7 +881,6 @@ def lint_manuscript(
                     "message": "Unresolved citation or cross-reference placeholder detected.",
                     "excerpt": m_ref.group(0)[:160],
                 })
-            masked_line = masked_lines[idx - 1] if idx - 1 < len(masked_lines) else ""
             m_todo = TODO_MARKER_RE.search(masked_line)
             if m_todo:
                 hits.append({
@@ -846,7 +891,7 @@ def lint_manuscript(
                     "excerpt": line.strip()[:160],
                 })
 
-        for m_tbl in TABLE_BLOCK_RE.finditer(uncommented):
+        for m_tbl in TABLE_BLOCK_RE.finditer(masked_body):
             tbl_body = m_tbl.group(1)
             start_line = bisect_right(newline_offsets, m_tbl.start()) + 1
             if NUMERIC_ROW_RE.search(tbl_body) and not DISPERSION_MARKER_RE.search(tbl_body):
@@ -859,23 +904,37 @@ def lint_manuscript(
                 })
 
         if require_ceg_binding or ceg_path is not None:
+            file_line_tags: dict[int, list[str]] = {}
+            for l_idx, r_line in enumerate(raw.splitlines(), 1):
+                tids = INLINE_CEG_TAG_RE.findall(r_line)
+                if tids:
+                    file_line_tags[l_idx] = tids
             for block_kind, block_re in (("abstract", ABSTRACT_BLOCK_RE), ("conclusion", CONCLUSION_BLOCK_RE)):
-                for m_blk in block_re.finditer(raw):
-                    blk_raw = m_blk.group(1)
-                    blk_uncommented = _strip_latex_comments(blk_raw)
-                    blk_start_line = raw[: m_blk.start(1)].count("\n") + 1
+                for m_blk in block_re.finditer(masked_body):
+                    blk_uncommented = m_blk.group(1)
+                    blk_start_line = masked_body[: m_blk.start(1)].count("\n") + 1
                     blk_nl_offsets = [idx for idx, ch in enumerate(blk_uncommented) if ch == "\n"]
-                    block_tags = set(INLINE_CEG_TAG_RE.findall(blk_raw))
-                    valid_block_tags = block_tags & verified_ceg
-                    for token_start, _sent_end, claim_sentence in _extract_quant_claim_spans(blk_uncommented):
+                    for token_start, sent_end, claim_sentence in _extract_quant_claim_spans(blk_uncommented):
                         line_offset = bisect_right(blk_nl_offsets, token_start)
+                        sent_start_pos = blk_uncommented.rfind("\n", 0, token_start)
+                        sent_start_line = bisect_right(blk_nl_offsets, sent_start_pos + 1) if sent_start_pos != -1 else 0
+                        sent_end_line = bisect_right(blk_nl_offsets, max(token_start, sent_end - 1))
                         loc_line = blk_start_line + line_offset
-                        text_matched = any(
-                            v in claim_sentence or claim_sentence in v
-                            for v in verified_ceg
-                            if len(v) > 8
-                        )
-                        if not valid_block_tags and not text_matched:
+                        abs_start_line = blk_start_line + sent_start_line
+                        abs_end_line = blk_start_line + sent_end_line
+                        norm_sent = _normalize_claim_text(claim_sentence)
+                        tag_matched = False
+                        for check_l in range(max(1, abs_start_line - 1), abs_end_line + 1):
+                            for tid in file_line_tags.get(check_l, ()):
+                                if tid not in verified_id_to_text:
+                                    continue
+                                c_txt = _normalize_claim_text(verified_id_to_text[tid])
+                                if c_txt and c_txt == norm_sent:
+                                    tag_matched = True
+                                    break
+                            if tag_matched:
+                                break
+                        if not tag_matched:
                             hits.append({
                                 "code": "UNGROUNDED_QUANTITATIVE_CLAIM",
                                 "severity": "warning",
