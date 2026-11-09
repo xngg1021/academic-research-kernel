@@ -209,6 +209,8 @@ def scaffold_manuscript(
 
 
 def _is_link_or_reparse(path: Path) -> bool:
+    if path.parent == Path("/") and path.name in ("var", "tmp", "etc"):
+        return False
     try:
         if path.is_symlink():
             return True

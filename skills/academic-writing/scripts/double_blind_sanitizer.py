@@ -348,6 +348,8 @@ def _decode_file_bytes(raw: bytes) -> str:
 
 
 def _is_link_or_junction(p: Path) -> bool:
+    if p.parent == Path("/") and p.name in ("var", "tmp", "etc"):
+        return False
     try:
         if p.is_symlink():
             return True
