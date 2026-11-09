@@ -21,7 +21,7 @@ Endesha toleo la 2.4.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/i
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[Toleo la 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 18 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
+[Toleo la 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10/3.12/3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 18 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
 
 ### Thibitisha usakinishaji
 
@@ -34,7 +34,7 @@ academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data (schemas) na ufafanuzi wa zana zote 12. Huduma za hiari za nje zinaweza kuachwa bila kusanidiwa. Tumia `doctor --json` kupata matokeo yanayosomeka kwa mashine.
+Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data (schemas) na ufafanuzi wa zana zote 18. Huduma za hiari za nje zinaweza kuachwa bila kusanidiwa. Tumia `doctor --json` kupata matokeo yanayosomeka kwa mashine.
 
 ---
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-Amri ya `prepare` inachukua na kuchambua nyenzo kuwa orodha ya faili (manifest), alama zaรหัส za chanzo na vipande vya maandishi vilivyopatikana. Amri ya `finish` inathibitisha uchimbaji uliozalishwa na Agent na kukokotoa upya madai yanayostahili ya t/p, ukubwa wa athari wa makundi mawili na hesabu/asilimia kwa kutumia zana zilizopo za takwimu, kisha inahifadhi hali ya kiini na ripoti za Kichina za Markdown/HTML. Amri ya `compare` inathibitisha tathmini ya wazi ya Agent kuhusu masharti yanayoweza kulinganishwa. Amri hizi hazipachiki muundo wa kudumu wa Work: usomaji wa kisemantiki unafanywa na Agent wa sasa akifuata [paper-research](../../skills/paper-research/SKILL.md). Faili asilia zilizohifadhiwa na picha za uchimbaji zinasaidia marudio thabiti ya nje ya mtandao. Upataji wa mtandao na usomaji mpya wa kisemantiki unabaki kuwa shughuli zinazotambulika tofauti.
+Amri ya `prepare` inachukua na kuchambua nyenzo (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) kuwa orodha ya faili (manifest), heshi za chanzo na vipande vya maandishi vilivyopatikana. Amri ya `finish` inathibitisha uchimbaji uliozalishwa na Agent na kukokotoa upya madai yanayostahili ya t/p, ukubwa wa athari wa makundi mawili na hesabu/asilimia kwa kutumia zana zilizopo za takwimu, kisha inahifadhi hali ya kiini na ripoti za Kichina za Markdown/HTML. Amri ya `compare` inathibitisha tathmini ya wazi ya Agent kuhusu masharti yanayoweza kulinganishwa. Amri hizi hazipachiki muundo wa kudumu wa Work: usomaji wa kisemantiki unafanywa na Agent wa sasa akifuata [paper-research](../../skills/paper-research/SKILL.md). Faili asilia zilizohifadhiwa na picha za uchimbaji zinasaidia marudio thabiti ya nje ya mtandao. Upataji wa mtandao na usomaji mpya wa kisemantiki unabaki kuwa shughuli zinazotambulika tofauti.
 
 ### Ukaguzi wa vyanzo, OpenReview, hazina za msimbo na vipimo 15 vya takwimu
 
-Amri nne za CLI zinahakiki metadata, maandishi kamili ya Open Access, alama za ukaguzi za OpenReview na hazina za msimbo; `table-forensics` na `academic_recompute_statistics` zinapanua ukaguzi hadi vipimo 15 thabiti vikiwemo `partition_conservation`, `ablation_delta_regularity` na `storage_bandwidth_bounds` (kwa dhana ya vekta zisizobanwa na uchanganuzi kamili):
+Amri saba za CLI zinahakiki metadata, maandishi kamili ya Open Access, alama za ukaguzi za OpenReview na hazina za msimbo; `table-forensics` na `academic_recompute_statistics` zinapanua ukaguzi hadi vipimo 15 thabiti vikiwemo `partition_conservation`, `ablation_delta_regularity` na `storage_bandwidth_bounds` (kwa dhana ya vekta zisizobanwa na uchanganuzi kamili):
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ Unapoandika makala yako mwenyewe, zana nne thabiti zinashughulikia uanzishaji wa
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### Usambazaji Mkuu wa Familia 5 za Kasoro Bainifu katika Mapitio yarika (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ Ili kuonyesha msingi halisi wa familia tano za kasoro bainifu (kukosekana kwa pa
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; mtawanyiko 19.5%, jedwali/ablation 7.9%, baseline 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; mtawanyiko 23.4%, jedwali/ablation 10.5%, baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; mtawanyiko 23.8%, jedwali/ablation 12.4%, baseline 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; mtawanyiko 21.8%, jedwali/ablation 11.6%, baseline 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; mtawanyiko 14.9% $\to$ 27.5%, ukosefu wa msimbo 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ Marekebisho ya mwisho ya uthibitishaji yanahakiki uwiano wa DOI na vitambulisho,
 
 ### Ufikiaji wa vyanzo vya data
 
-- Maswali ya msingi ya OpenAlex yanaweza kuendeshwa bila kujitambulisha kwa bajeti ndogo ya kila siku. Nyaraka za tarehe 2026-09-06 zinaonyesha $0.10/siku bila kujitambulisha na $1/siku kwa ufunguo wa bure wa API, pamoja na ukomo wa maombi 100 kwa sekunde. Gharama zinatofautiana kulingana na aina ya swali; huu si ufikiaji usio na kikomo. Hifadhi ufunguo wa hiari katika `OPENALEX_API_KEY`. Tumia `per_page` (upeo 100) na uwekaji kurasa wa kielekezi (cursor pagination).
+- Maswali ya msingi ya OpenAlex yanaweza kuendeshwa bila kujitambulisha kwa bajeti ndogo ya kila siku. Nyaraka za tarehe 2026-09-06 zinaonyesha $0.10/siku bila kujitambulisha na $1/siku kwa ufunguo wa bure wa API, pamoja na ukomo wa maombi 10/30/50 kwa sekunde (bila kujitambulisha / ufunguo wa bure / mpango wa mwaka). Gharama zinatofautiana kulingana na aina ya swali; huu si ufikiaji usio na kikomo. Maswali bila kujitambulisha yanaishia ukurasa wa kwanza (`per_page` upeo 100); kufuata `next_cursor` zaidi ya ukurasa wa kwanza kunahitaji `OPENALEX_API_KEY`.
 - Crossref ina ufikiaji wa metadata ya umma wenye udhibiti wa kasi. Mahusiano ya masasisho na ishara za Retraction Watch zinahitaji ukaguzi wa DOI na mwelekeo; kukosekana kwa rekodi hakuthibitishi kuwa makala haijaathiriwa.
 - Unpaywall inahitaji barua pepe halisi ya mawasiliano katika `UNPAYWALL_EMAIL`. Kukosekana kwa eneo la faili hakuthibitishi kuwa hakuna nakala ya ufikiaji wazi (OA).
 - arXiv, Europe PMC, PubMed E-utilities na DOAJ ni vyanzo vya ziada vyenye sera zake mahususi. Si vyote vinavyojaribiwa na majaribio chaguo-msingi. Semantic Scholar ina mipaka ya pamoja ya matumizi bila kujitambulisha na mipaka tofauti ya funguo za API; ufikiaji hauhakikishi upatikanaji wa muktadha wa nukuu.
@@ -234,7 +244,7 @@ QA inathibitisha metadata, marejeleo, mifumo ya njia za kibinafsi au siri zinazo
 
 Majaribio yaliyofungwa ya uandishi wa stadi za Hermes yanatumiwa tena bila kubadilisha sheria zake za kila ujuzi. Ukaguzi wa idadi ya vifurushi vya usambazaji mzima wa juu hautumiki kwa tap hii; mfumo wetu wa majaribio unakagua stadi kumi na nne na kutatua marejeleo dhidi ya orodha iliyofungwa ya vifurushi vilivyomo na vya hiari. Hili si jaribio kamili la usakinishaji wa Hermes. CI hutumia mtandao kusakinisha programu tegemezi pekee; majaribio ya kawaida hayapigi simu API za kitaaluma.
 
-CI huendesha kifurushi kamili cha QA kwenye Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 preview canary (ubuntu-26.04 na ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), na macOS Intel (macos-15-intel), pamoja na uhakiki wa moja kwa moja wa canary dhidi ya tawi kuu la juu. Toleo pendekezwa la msingi lilifaulu majaribio 1165 ya ndani. Matokeo ya sasa ya marekebisho na mipaka ya upeo vimerekodiwa katika [marekebisho ya usahihi](../../docs/maintenance/correctness-repair-20261008.md); ushahidi wa mbali unatambulisha HEAD iliyojaribiwa tofauti. Mtiririko tofauti wa kuunganisha tap huendeshwa wakati msimbo unaposukumwa kwenye main: unasakinisha toleo la Hermes lililofungwa kwenye `tests/upstream/provenance.json` na kujaribu `tap add`, `search`, `install` na `list` dhidi ya hifadhi hii. Matoleo kamili, ukaguzi na vikwazo viko katika [ripoti ya ukaguzi](../../docs/kernel-architecture.md).
+CI huendesha kifurushi kamili cha QA kwenye Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), pamoja na uhakiki wa moja kwa moja wa canary dhidi ya tawi kuu la juu. Kifurushi cha sasa cha majaribio kinafaulu majaribio 1348 ya ndani (kikipanua msingi wa awali wa majaribio 1165). Matokeo ya sasa ya marekebisho na mipaka ya upeo vimerekodiwa katika [marekebisho ya usahihi](../../docs/maintenance/correctness-repair-20261008.md); ushahidi wa mbali unatambulisha HEAD iliyojaribiwa tofauti. Mtiririko tofauti wa kuunganisha tap huendeshwa wakati msimbo unaposukumwa kwenye main: unasakinisha toleo la Hermes lililofungwa kwenye `tests/upstream/provenance.json` na kujaribu `tap add`, `search`, `install` na `list` dhidi ya hifadhi hii. Matoleo kamili, ukaguzi na vikwazo viko katika [ripoti ya ukaguzi](../../docs/kernel-architecture.md).
 
 Saraka ya [tools/longtail/](../../tools/longtail/README.md) inashikilia kizalishaji thabiti cha vipengele vya hali adimu (long-tail): wagombea 4096 waliotokana na mbegu ya SHA256, hali 30 zilizochaguliwa na ripoti ya upeo wa uthibitisho iliyokokotolewa kwa mashine. Muundo wa v3 unahesabu tofauti familia za uwezo (E01), stadi 14 halisi za hifadhi (E02), na malengo ya kazi (E03). Kila hali ina ujuzi mmoja wa msingi, lengo la kazi linaloungwa mkono na uwezo unaooana; kila ujuzi lazima uonekane angalau mara mbili chini ya malengo mawili tofauti, ikiwa ni pamoja na lengo lake kuu lililotangazwa. Mkengeuko wa saraka za ujuzi husababisha uthibitishaji kushindwa. Upanuzi wa kisemantiki (minyoro ya kazi, vigezo vya ukweli na uingizaji wa matukio yanayotekelezwa) unabaki kuwa hatua tofauti; upeo wa vipengele hauthibitishi upeo wa utekelezaji wa mtiririko wa kazi.
 

@@ -54,15 +54,17 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` 负责读取 PDF 与 HTML、XML/JATS 与 DOCX/XLSX，或者 LaTeX/BibTeX 源码包，计算文件哈希并按页码与章节建立原文段落索引。智能体读完原文填好候选提取结果后，`finish` 会逐条核对每个数字是否真实出现在声明的原文位置，自动调用统计重算引擎验证数值是否自洽，保存研究状态并生成带页码出处的中文 Markdown 与 HTML 报告。`compare` 负责核验两篇论文在数据集、实验条件与评估指标上是否具备直接可比性。保存下来的原始材料与提取快照随时可用 `academic-research-kernel research replay --project PROJECT` 离线重放。
+`prepare` 负责读取 PDF（`.pdf`）与 HTML（`.html`、`.htm`）、XML/JATS（`.xml`）与 DOCX/XLSX（`.docx`、`.xlsx`），以及 LaTeX/BibTeX（`.tex`、`.bib`、`.bbl`）、Markdown（`.md`）、纯文本（`.txt`）或 Python（`.py`）源码包，计算文件哈希并按页码与章节建立原文段落索引。智能体读完原文填好候选提取结果后，`finish` 会逐条核对每个数字是否真实出现在声明的原文位置，自动调用统计重算引擎验证数值是否自洽，保存研究状态并生成带页码出处的中文 Markdown 与 HTML 报告。`compare` 负责核验两篇论文在数据集、实验条件与评估指标上是否具备直接可比性。保存下来的原始材料与提取快照随时可用 `academic-research-kernel research replay --project PROJECT` 离线重放。
 
 ### 2. 查证文献真伪、开放获取全文与审稿记录及代码仓库
 
-针对单篇论文的外部取证，可以直接在终端调用四个子命令：
+针对外部取证、复现核查与增量文献巡检，可以直接在终端调用七组子命令：
 
 ```bash
-# 核对 DOI/arXiv 编号并在 OpenAlex 与 Crossref 交叉核查元数据与撤稿状态
+# 核对 DOI/arXiv 编号、校验本地 PDF 首页真伪，或在 OpenAlex 与 Crossref 交叉核查更新与撤稿信号
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 
 # 按 Unpaywall 与 arXiv、OpenAlex 与 Semantic Scholar 及 Europe PMC 顺序定位开放获取全文并校验 DOI
 academic-research-kernel locate-oa 10.1038/nature14539
@@ -73,6 +75,11 @@ academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --to
 
 # 扫描代码仓库的真实非第三方源码体量、Git 提交记录与 README 宣称命令是否对得上
 academic-research-kernel repo-forensics --local-repo ./target-repo
+
+# 执行 14 阶段复现核查清单裁定，或运行文献增量监控与撤稿巡检离线自测
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 ```
 
 `locate-oa` 会拒绝把 `is_oa=false` 的付费墙落地页或 DOI 不匹配的记录当成全文链接。`openreview-audit` 会自动过滤缺失评分并按 `forum_id` 去重，只用普通审稿人的评分计算均分与方差，把领域主席的元审稿与最终决定单独分列。`repo-forensics` 优先通过 `git ls-files` 区分项目自有源码与打包进来的第三方目录，防止把塞满第三方库的仓库误判为高工作量项目。
@@ -99,31 +106,35 @@ academic-research-kernel meta-analyze --input studies.json
 自己动手写论文与准备投稿时，系统提供从工作区初始化与实验数据转三线表，到双盲匿名清洗与投稿前硬性门禁的四步工具链。
 
 ```bash
-# 1. 查看内置的 8 大会刊规格并初始化论文目录
+# 1. 查看内置的 8 大会刊规格、初始化论文目录，或从 ClaimEvidenceGraph 导出已就绪的 % ark:claim=<id> 证据锚点清单
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 
-# 2. 将核验通过的实验结果 JSON 直接渲染为带最优粗体与次优下划线的 LaTeX booktabs 三线表
+# 2. 将实验结果收据或 paper-research 提取与对比产物直接渲染为 LaTeX booktabs 三线表
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 
 # 3. 执行双盲匿名扫描，拦截 .tex/.bib 与编译后 PDF 元数据中的实名与致谢及自引暗号和本机路径
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
 
-# 4. 执行投稿前全量门禁，检查匿名宏包与页数上限，以及必含章节、悬空引用和 ClaimEvidenceGraph 证据支撑边
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+# 4. 执行投稿前全量门禁，并可选开启 --check-academic-style 扫描中英文 AI 套话、含糊方法句与无锚点强声明
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 ```
 
 `receipt-to-latex` 全程采用 `Decimal` 精确十进制舍入，避免手抄实验表格改错数字或浮点精度漂移。`double-blind-sanitize` 既扫描文本中的 `\author` 与自定义实名宏，以及 `\icmlauthor` 与 `pdfauthor` 配置，也会直接读取编译后 PDF 的 `/Author` 与 `/Creator` 文档属性字典。`pre-submission-lint` 对照 `skills/academic-writing/references/venue-specs.json` 中的当届规则，检查是否误开 `final`、`preprint` 或 `camera-ready` 宏包选项，跨页追踪文末豁免声明使 `Reproducibility Statement`、`Ethics Statement` 与 `Acknowledgments` 不再虚增正文页数，利用平衡花括号屏蔽 `\newcommand` 与 `\def` 宏定义体以消除未调用草稿宏的 `TODO` 误报，跨文件核对 `\ref`、`\Cref` 与 `\label{...}` 及 `lstlisting[label={...}]` 是否闭合，拦截 `Author et al. ~\cite{...}` 作者名重复伪影与著者年份制下全篇混用裸 `\cite` 的排印缺陷，拦截双盲初审稿中的非匿名致谢与基金号披露，并在耗时随文本长度线性增长的前提下校验摘要与结论中的定量论断在 `ClaimEvidenceGraph` 中是否真正连向 `support_status == "supported"` 的正向证据边。
 
-参考文献格式转换与排序可直接调用：
+参考文献格式转换、缩写花括号保护导出、跨源去重、引文关系图与综述对比表可直接调用：
 
 ```bash
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### 同行评议中五类确定性缺陷的宏观分布：ICLR 2026 共 `19,473` 篇有分稿件
 
-为说明缺失误差棒与版式超限、表格消融异常与漏引基线及缺失复现代码这五类确定性检查的现实依据，我们在不拟合任何经验权重与主观分数阈值的前提下，按论文粒度统计了 ICLR 2026 共 `19,473` 篇有分投稿与 `75,769` 条官方审稿意见中至少一条审稿意见指出对应缺陷的稿件占比 `k / N`；全集包含下表四类常规决定共 `18,791` 篇与带评语程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分别为 `9,765` 篇与 `9,708` 篇，所有单篇稿件均保持完全匿名，汇总数据见[脱敏统计汇总表](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)：
+为说明缺失误差棒与版式超限、表格消融异常与漏引基线及缺失复现代码这五类确定性检查的现实依据，我们在不拟合任何经验权重与主观分数阈值的前提下，按论文粒度统计了 ICLR 2026 共 `19,473` 篇有分投稿与 `75,769` 条官方审稿意见中至少一条审稿意见指出对应缺陷的稿件占比 `k / N`；全集包含四类常规决定共 `18,791` 篇与带评语程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分别为 `9,765` 篇与 `9,708` 篇，所有单篇稿件均保持完全匿名，汇总数据见[脱敏统计汇总表](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)：
 
 | 录用档位与可靠度分层 | 有效投稿数 $N$ | 评分均值 / Soundness 均值 | 审稿意见提及五类确定性缺陷的稿件占比 `k / N` |
 | --- | --- | --- | --- |
@@ -131,6 +142,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster 海报录用** | 5,134 | 5.36 / 2.83 | **54.0%** 即 `2,772 / 5,134`，含缺失误差棒 19.5% 与表格消融 7.9%，以及漏引基线 4.9% |
 | **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** 即 `5,057 / 8,453`，含缺失误差棒 23.4% 与表格消融 10.5%，以及漏引基线 6.1% |
 | **Withdrawn 撤稿** | 4,980 | 3.35 / 2.33 | **62.6%** 即 `3,117 / 4,980`，含缺失误差棒 23.8% 与表格消融 12.4%，以及漏引基线 6.8% |
+| **Desk Reject 程序性拒稿** | 682 | 4.01 / 2.46 | **63.6%** 即 `434 / 682`，含缺失误差棒 21.8% 与表格消融 11.6%，以及漏引基线 6.6% |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** 即 `529 / 1,077` $\to$ `1,928 / 2,861`，含缺失误差棒 14.9% $\to$ 27.5% 与缺代码 15.6% $\to$ 27.7% |
 
 
@@ -164,7 +176,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
    您也可以使用 `pipx install academic-research-kernel==2.4.0` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.4.0`。加上 `[research]` 会固定安装 `pypdf==7.0.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
 
 2. **通用 Agent Plugins v1 与跨智能体 MCP 一键挂载**
-   本仓库遵循 **Agent Plugins v1** 规范并提供 `plugin.json`，通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 定义的 **MCP 服务器**，支持 `2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25` 与 `2026-07-28` 协议版本协商及 `resources/list`、`prompts/list` 探测响应，可挂载至 Claude Code、OpenAI Codex、Cursor 与 Gemini CLI：
+   本仓库遵循 **Agent Plugins v1** 规范并提供 `plugin.json`，通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 定义的 **MCP 服务器**，对外暴露全部 18 个核查与统计工具，支持 `2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25` 与 `2026-07-28` 协议版本协商及 `resources/list`、`prompts/list` 探测响应，可挂载至 Claude Code、OpenAI Codex、Cursor 与 Gemini CLI：
    ```bash
    # Claude Code CLI 一键注册
    claude mcp add academic-research-kernel -- uvx academic-research-kernel mcp
@@ -241,7 +253,7 @@ python scripts/verify_external_apis.py --output external-status.json --summary e
 git diff --check
 ```
 
-如需在仓库目录之外的纯净虚拟环境中构建并验证 Wheel 与源码分发包，涵盖全部 13 组 CLI 子命令、`[research]` PDF 提取与 `uvx` 独立缓存运行，可执行：
+如需在仓库目录之外的纯净虚拟环境中构建并验证 Wheel 与源码分发包，涵盖全部 16 组 CLI 子命令、`[research]` PDF 提取与 `uvx` 独立缓存运行，可执行：
 
 ```bash
 uv build --no-create-gitignore
@@ -249,7 +261,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1340 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.4.0 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
+GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1348 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.4.0 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
 
 ### 2. 许可证
 

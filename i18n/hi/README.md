@@ -21,7 +21,7 @@
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.4.0 रिलीज़](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) वितरण हैश और प्रकाशन स्थिति को रिकॉर्ड करता है। रिलीज़ व्हील को स्थानीय रूप से `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` के माध्यम से भी चलाया जा सकता है। Python 3.10–3.14 समर्थित है; `uvx --python 3.12` स्पष्ट रूप से समर्थित इंटरप्रेटर का चयन करता है। वैज्ञानिक गणना और सांख्यिकी उपकरण सहित सभी 18 नियतात्मक उपकरण मूल इंस्टॉलेशन में शामिल हैं।
+[2.4.0 रिलीज़](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) वितरण हैश और प्रकाशन स्थिति को रिकॉर्ड करता है। रिलीज़ व्हील को स्थानीय रूप से `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` के माध्यम से भी चलाया जा सकता है। Python 3.10/3.12/3.14 समर्थित है; `uvx --python 3.12` स्पष्ट रूप से समर्थित इंटरप्रेटर का चयन करता है। वैज्ञानिक गणना और सांख्यिकी उपकरण सहित सभी 18 नियतात्मक उपकरण मूल इंस्टॉलेशन में शामिल हैं।
 
 ### इंस्टॉलेशन की जांच करें
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Work या किसी संगत स्थानीय Agent को उस निर्यातित `SKILL.md` को पढ़ने दें, फिर पूछें:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-केवल DOI, सार्वजनिक लिंक या स्थानीय बंडल प्रदान करें। दो शोध-पत्रों के लिए, उसे डेटा, कार्यप्रणाली, मूल्यांकन शर्तों और परिणामों की तुलना करने के लिए कहें, यह स्पष्ट करते हुए कि किन परिणामों की सीधे तुलना की जा सकती है। Agent उसी कार्य में मूल-पाठ पठन, उम्मीदवार सत्यापन, गणना, अंतर्ग्रहण, रिपोर्ट निर्माण और स्वतंत्र सत्यापन और पुष्टि की प्रक्रिया को पूरा करता है। मौजूदा MCP सतह अपने 12 उपकरणों को बनाए रखती है; नया समन्वय CLI और पोर्टेबल कौशल में रहता है।
+केवल DOI, सार्वजनिक लिंक या स्थानीय बंडल प्रदान करें। दो शोध-पत्रों के लिए, उसे डेटा, कार्यप्रणाली, मूल्यांकन शर्तों और परिणामों की तुलना करने के लिए कहें, यह स्पष्ट करते हुए कि किन परिणामों की सीधे तुलना की जा सकती है। Agent उसी कार्य में मूल-पाठ पठन, उम्मीदवार सत्यापन, गणना, अंतर्ग्रहण, रिपोर्ट निर्माण और स्वतंत्र सत्यापन और पुष्टि की प्रक्रिया को पूरा करता है। मौजूदा MCP सतह अपने 18 उपकरणों को बनाए रखती है; नया समन्वय CLI और पोर्टेबल कौशल में रहता है।
 
 वास्तविक प्रोग्राम चरण इस प्रकार हैं:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` सामग्री को प्राप्त करता है और उसे मैनिफेस्ट, स्रोत हैश और स्थानबद्ध खंडों में पार्स करता है। `finish` Agent द्वारा निर्मित निष्कर्षण को मान्य करता है और मौजूदा सांख्यिकीय उपकरणों का उपयोग करके पात्र t/p, दो-समूह प्रभाव-आकार और गणना/प्रतिशत दावों की पुनर्गणना करता है, फिर कर्नेल स्थिति और चीनी Markdown/HTML रिपोर्ट सहेजता है। `compare` तुलनीय शर्तों के बारे में Agent के स्पष्ट आकलन को मान्य करता है। ये कमांड किसी स्थायी मॉडल को एम्बेड नहीं करते हैं: अर्थगत पठन वर्तमान Agent द्वारा [paper-research](../../skills/paper-research/SKILL.md) का पालन करते हुए किया जाता है। सहेजी गई मूल फ़ाइलें और निष्कर्षण स्नैपशॉट नियतात्मक ऑफ़लाइन रीप्ले का समर्थन करते हैं। नेटवर्क अधिग्रहण और नया अर्थगत पठन अलग से पहचाने जाने वाले संचालन बने रहते हैं।
+`prepare` सामग्री (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) को प्राप्त करता है और उसे मैनिफेस्ट, स्रोत हैश और स्थानबद्ध खंडों में पार्स करता है। `finish` Agent द्वारा निर्मित निष्कर्षण को मान्य करता है और मौजूदा सांख्यिकीय उपकरणों का उपयोग करके पात्र t/p, दो-समूह प्रभाव-आकार और गणना/प्रतिशत दावों की पुनर्गणना करता है, फिर कर्नेल स्थिति और चीनी Markdown/HTML रिपोर्ट सहेजता है। `compare` तुलनीय शर्तों के बारे में Agent के स्पष्ट आकलन को मान्य करता है। ये कमांड किसी स्थायी मॉडल को एम्बेड नहीं करते हैं: अर्थगत पठन वर्तमान Agent द्वारा [paper-research](../../skills/paper-research/SKILL.md) का पालन करते हुए किया जाता है। सहेजी गई मूल फ़ाइलें और निष्कर्षण स्नैपशॉट नियतात्मक ऑफ़लाइन रीप्ले का समर्थन करते हैं। नेटवर्क अधिग्रहण और नया अर्थगत पठन अलग से पहचाने जाने वाले संचालन बने रहते हैं।
 
 ### स्रोत, OpenReview, कोड रिपॉजिटरी फॉरेंसिक और 15 सांख्यिकीय जांच
 
-चार CLI कमांड मेटाडेटा, ओपन-एक्सेस पूर्ण पाठ, OpenReview समीक्षा स्कोर और कोड रिपॉजिटरी की जांच करते हैं; `table-forensics` और `academic_recompute_statistics` `partition_conservation`, `ablation_delta_regularity` और `storage_bandwidth_bounds` (असंपीड़ित वेक्टर और पूर्ण रैखिक स्कैन की स्पष्ट मान्यता के तहत) सहित 15 नियतात्मक जांच प्रदान करते हैं:
+सात CLI कमांड मेटाडेटा, ओपन-एक्सेस पूर्ण पाठ, OpenReview समीक्षा स्कोर और कोड रिपॉजिटरी की जांच करते हैं; `table-forensics` और `academic_recompute_statistics` `partition_conservation`, `ablation_delta_regularity` और `storage_bandwidth_bounds` (असंपीड़ित वेक्टर और पूर्ण रैखिक स्कैन की स्पष्ट मान्यता के तहत) सहित 15 नियतात्मक जांच प्रदान करते हैं:
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ academic-research-kernel meta-analyze --input ./studies.json
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### सहकर्मी समीक्षा में 5 नियतात्मक दोष समूहों का समष्टि वितरण (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; त्रुटि-बार 19.5%, तालिका/एब्लेशन 7.9%, बेसलाइन चूक 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; त्रुटि-बार 23.4%, तालिका/एब्लेशन 10.5%, बेसलाइन चूक 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; त्रुटि-बार 23.8%, तालिका/एब्लेशन 12.4%, बेसलाइन चूक 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; त्रुटि-बार 21.8%, तालिका/एब्लेशन 11.6%, बेसलाइन चूक 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; त्रुटि-बार 14.9% $\to$ 27.5%, कोड अनुपस्थित 15.6% $\to$ 27.7%) |
 
 ---
@@ -190,7 +200,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### नियतात्मक अंतर्ग्रहण और सार्वजनिक कर्नेल
 
-अनुसंधान कलाकृतियों का अंतर्ग्रहण परत `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 एडेप्टर (14 कौशल और एक अपारदर्शी फ़ॉलबैक opaque fallback), तथा 12 स्टेटलेस stdio MCP उपकरण प्रदान करती है। स्वीकृत अंतर्ग्रहण रसीदें प्रत्येक प्रतिधारित अर्थगत परिवर्तन को प्रकार, पहचान और कैननिकल SHA-256 द्वारा बांधती हैं: वस्तुएं, CEG रिकॉर्ड, निर्णय लॉग रिकॉर्ड, समीक्षा की आवश्यकता वाले बिंदु, भौतिक रसीदें और कलाकृति पंजीकरण। कैश रीप्ले ट्रांसपोर्ट स्नैपशॉट हैश से स्वतंत्र रूप से उन प्रतिबद्धताओं की जांच करता है। खाली लॉग मान्य हैं; विफल परमाणु बैच कोई आंशिक स्थिति नहीं छोड़ते।
+अनुसंधान कलाकृतियों का अंतर्ग्रहण परत `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 एडेप्टर (14 कौशल और एक अपारदर्शी फ़ॉलबैक opaque fallback), तथा 18 स्टेटलेस stdio MCP उपकरण प्रदान करती है। स्वीकृत अंतर्ग्रहण रसीदें प्रत्येक प्रतिधारित अर्थगत परिवर्तन को प्रकार, पहचान और कैननिकल SHA-256 द्वारा बांधती हैं: वस्तुएं, CEG रिकॉर्ड, निर्णय लॉग रिकॉर्ड, समीक्षा की आवश्यकता वाले बिंदु, भौतिक रसीदें और कलाकृति पंजीकरण। कैश रीप्ले ट्रांसपोर्ट स्नैपशॉट हैश से स्वतंत्र रूप से उन प्रतिबद्धताओं की जांच करता है। खाली लॉग मान्य हैं; विफल परमाणु बैच कोई आंशिक स्थिति नहीं छोड़ते।
 
 वंशावली सामग्री प्राधिकार स्पष्ट और आउट-ऑफ-बैंड है। विश्वसनीय Python कॉलर क्रमबद्ध रसीदों या स्नैपशॉट को रीप्ले करते समय `LineageVerificationContext` पास करते हैं; MCP कॉलर केवल सीमित सामग्री बाइट्स की आपूर्ति कर सकते हैं, कभी भी होस्ट फ़ाइल सिस्टम रूट की नहीं। डिफ़ॉल्ट सामग्री बजट 10 MiB है; एक विश्वसनीय होस्ट समान उत्पादक/सत्यापनकर्ता नीति के तहत बड़ी कलाकृतियों को स्पष्ट रूप से अधिकृत कर सकता है। सामग्री प्राधिकार के बिना, `fully_verified` दावे को स्वतंत्र रूप से पुनरुत्पादित नहीं किया जा सकता है और यह एक संरचित अमान्य सत्यापन परिणाम लौटाता है। असंरचित गद्य अपारदर्शी रहता है, असहमति दृश्यमान रहती है, और शोधकर्ता कमिट, मार्ग रोकने, पुनः खोलने, रूटिंग और सत्यता निर्णयों पर नियंत्रण बनाए रखते हैं।
 
@@ -204,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### डेटा-स्रोत पहुंच
 
-- OpenAlex की बुनियादी क्वेरी छोटे दैनिक बजट के साथ अनाम रूप से चल सकती हैं। 2026-09-06 के दस्तावेज़ों के अनुसार अनाम रूप से $0.10/दिन और निःशुल्क API कुंजी के साथ $1/दिन का बजट तथा 100 अनुरोध/सेकंड की सीमा निर्धारित है। क्वेरी प्रकार के अनुसार लागत भिन्न होती है; यह असीमित पहुंच नहीं है। वैकल्पिक कुंजी को `OPENALEX_API_KEY` में संग्रहीत करें। `per_page` (अधिकतम 100) और कर्सर पेजिनेशन का उपयोग करें।
+- OpenAlex की बुनियादी क्वेरी छोटे दैनिक बजट के साथ अनाम रूप से चल सकती हैं। 2026-09-06 के दस्तावेज़ों के अनुसार अनाम रूप से $0.10/दिन और निःशुल्क API कुंजी के साथ $1/दिन का बजट तथा 10/30/50 अनुरोध/सेकंड (अनाम / निःशुल्क कुंजी / वार्षिक योजना) की सीमा निर्धारित है। क्वेरी प्रकार के अनुसार लागत भिन्न होती है; यह असीमित पहुंच नहीं है। अनाम क्वेरी पहले पृष्ठ (`per_page` अधिकतम 100) तक सीमित हैं; पहले पृष्ठ के बाद `next_cursor` का अनुसरण करने के लिए `OPENALEX_API_KEY` आवश्यक है।
 - Crossref थ्रॉटलिंग के साथ सार्वजनिक मेटाडेटा पहुंच प्रदान करता है। अद्यतन संबंधों और Retraction Watch संकेतों के लिए DOI और दिशा की जांच आवश्यक है; रिकॉर्ड का न मिलना यह सिद्ध नहीं करता कि शोध-पत्र अप्रभावित है।
 - Unpaywall के लिए `UNPAYWALL_EMAIL` में एक वास्तविक संपर्क ईमेल आवश्यक है। किसी स्थान का न मिलना यह सिद्ध नहीं करता कि कोई ओपन एक्सेस (OA) प्रति मौजूद नहीं है।
 - arXiv, Europe PMC, PubMed E-utilities और DOAJ अपनी स्वयं की नीतियों वाले पूरक स्रोत हैं। डिफ़ॉल्ट परीक्षणों द्वारा उन सभी का अभ्यास नहीं किया जाता है। Semantic Scholar में साझा अनाम सीमाएं और अलग से आवंटित कुंजी सीमाएं हैं; API पहुंच उद्धरण-संदर्भ की उपलब्धता की गारंटी नहीं देती है।
@@ -234,7 +244,7 @@ QA मेटाडेटा, संदर्भ, व्यक्तिगत-प
 
 पिन किए गए Hermes ऑथरिंग परीक्षणों को उनके प्रति-कौशल नियमों को बदले बिना पुनः उपयोग किया जाता है। अपस्ट्रीम संपूर्ण-वितरण जनसंख्या जांच इस टैप पर लागू नहीं होती; हमारा परीक्षण हार्नेस चौदह कौशलों की जांच करता है और पिन किए गए बंडल/वैकल्पिक कैटलॉग के विरुद्ध संदर्भों को हल करता है। यह पूर्ण Hermes इंस्टॉलेशन परीक्षण नहीं है। CI केवल निर्भरताएं इंस्टॉल करने के लिए नेटवर्क का उपयोग करता है; सामान्य परीक्षण अकादमिक API को कॉल नहीं करते हैं।
 
-CI Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 प्रीव्यू कैनरी (ubuntu-26.04 और ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), और macOS Intel (macos-15-intel) पर लाइव अपस्ट्रीम कैनरी सत्यापन के साथ पूर्ण QA सूट चलाता है। आधारभूत रिलीज़ उम्मीदवार ने 1165 स्थानीय परीक्षण उत्तीर्ण किए। वर्तमान सुधार परिणाम और कवरेज सीमाएं [शुद्धता सुधार दस्तावेज़](../../docs/maintenance/correctness-repair-20261008.md) में दर्ज हैं; दूरस्थ साक्ष्य परीक्षण किए गए HEAD को अलग से पहचानता है। main पर पुश करने पर एक अलग टैप एकीकरण कार्यप्रवाह चलता है: यह `tests/upstream/provenance.json` में दर्ज पिन किए गए Hermes चेकआउट को इंस्टॉल करता है और इस रिपॉजिटरी के विरुद्ध `tap add`, `search`, `install` और `list` का अभ्यास करता है। सटीक संस्करण, जांच और सीमाएं [ऑडिट दस्तावेज़](../../docs/kernel-architecture.md) में हैं।
+CI Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) पर लाइव अपस्ट्रीम कैनरी सत्यापन के साथ पूर्ण QA सूट चलाता है। वर्तमान प्रतिगमन सूट 1348 स्थानीय परीक्षण उत्तीर्ण करता है (1165 के ऐतिहासिक आधारभूत से विस्तारित)। वर्तमान सुधार परिणाम और कवरेज सीमाएं [शुद्धता सुधार दस्तावेज़](../../docs/maintenance/correctness-repair-20261008.md) में दर्ज हैं; दूरस्थ साक्ष्य परीक्षण किए गए HEAD को अलग से पहचानता है। main पर पुश करने पर एक अलग टैप एकीकरण कार्यप्रवाह चलता है: यह `tests/upstream/provenance.json` में दर्ज पिन किए गए Hermes चेकआउट को इंस्टॉल करता है और इस रिपॉजिटरी के विरुद्ध `tap add`, `search`, `install` और `list` का अभ्यास करता है। सटीक संस्करण, जांच और सीमाएं [ऑडिट दस्तावेज़](../../docs/kernel-architecture.md) में हैं।
 
 [tools/longtail/](../../tools/longtail/README.md) में नियतात्मक लॉन्ग-टेल कारक जनरेटर है: 4096 SHA256-सीडेड उम्मीदवार, 30 चयनित परिदृश्य और मशीन-गणना की गई सत्यापन कवरेज रिपोर्ट। v3 मॉडल क्षमता परिवारों (E01), रिपॉजिटरी के 14 वास्तविक कौशलों (E02), और कार्य लक्ष्यों (E03) की अलग-अलग गणना करता है। प्रत्येक परिदृश्य में एक प्राथमिक कौशल, एक समर्थित कार्य लक्ष्य और संगत क्षमताएं होती हैं; प्रत्येक कौशल को अपने घोषित मूल लक्ष्य सहित दो अलग-अलग लक्ष्यों के तहत कम से कम दो बार प्रकट होना चाहिए। कौशल-निर्देशिका विचलन होने पर सत्यापन विफल हो जाता है। अर्थगत विस्तार (कार्य श्रृंखला, ओरेकल और निष्पादित इवेंट इंजेक्शन) एक अलग चरण रहता है; कारक कवरेज कार्यप्रवाह निष्पादन कवरेज को सिद्ध नहीं करता है।
 

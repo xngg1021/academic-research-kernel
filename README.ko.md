@@ -21,7 +21,7 @@
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.4.0 릴리스](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0)에는 배포 패키지 해시와 게시 상태가 기록되어 있습니다. 릴리스 wheel 파일을 내려받아 로컬에서 `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` 명령으로 실행할 수도 있습니다. Python 3.10–3.14를 지원하며, `uvx --python 3.12`를 통해 지원되는 인터프리터를 명시적으로 선택할 수 있습니다. 통계 계산을 포함한 18개의 모든 결정론적 도구가 기본 설치에 포함되어 있습니다.
+[2.4.0 릴리스](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0)에는 배포 패키지 해시와 게시 상태가 기록되어 있습니다. 릴리스 wheel 파일을 내려받아 로컬에서 `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` 명령으로 실행할 수도 있습니다. Python 3.10/3.12/3.14를 지원하며, `uvx --python 3.12`를 통해 지원되는 인터프리터를 명시적으로 선택할 수 있습니다. 통계 계산을 포함한 18개의 모든 결정론적 도구가 기본 설치에 포함되어 있습니다.
 
 ### 설치 확인
 
@@ -34,7 +34,7 @@ academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-오프라인 진단 도구는 의존성, 스키마 및 12개 도구 정의를 점검합니다. 선택적 외부 서비스는 설정하지 않아도 무방하며, 기계 판독이 가능한 출력이 필요할 때는 `doctor --json`을 사용합니다.
+오프라인 진단 도구는 의존성, 스키마 및 18개 도구 정의를 점검합니다. 선택적 외부 서비스는 설정하지 않아도 무방하며, 기계 판독이 가능한 출력이 필요할 때는 `doctor --json`을 사용합니다.
 
 ---
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Work 또는 호환 가능한 로컬 Agent가 내보낸 `SKILL.md`를 읽게 한 다음, DOI, 공개 링크 또는 로컬 자료 번들만 제공하고 다음과 같이 요청합니다:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-두 논문을 비교할 때는 데이터, 방법론, 평가 조건 및 결과를 비교하고 무엇이 직접 비교 가능한지 설명하도록 요청합니다. Agent는 동일한 작업 내에서 원문 읽기, 후보 필드 검증, 통계 계산, 데이터 수집, 보고서 생성 및 독립적인 원문 검토까지 이어서 수행합니다. 기존 MCP 인터페이스는 12개 도구를 그대로 유지하며, 새로운 오케스트레이션은 CLI와 이식 가능한 스킬에 자리잡고 있습니다.
+두 논문을 비교할 때는 데이터, 방법론, 평가 조건 및 결과를 비교하고 무엇이 직접 비교 가능한지 설명하도록 요청합니다. Agent는 동일한 작업 내에서 원문 읽기, 후보 필드 검증, 통계 계산, 데이터 수집, 보고서 생성 및 독립적인 원문 검토까지 이어서 수행합니다. 기존 MCP 인터페이스는 18개 도구를 그대로 유지하며, 새로운 오케스트레이션은 CLI와 이식 가능한 스킬에 자리잡고 있습니다.
 
 실제 프로그램 실행 단계는 다음과 같습니다:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare`는 본문과 보충 자료를 입수·파싱하여 매니페스트, 원본 해시 및 위치가 파악된 세그먼트로 저장합니다. `finish`는 Agent가 생성한 추출 후보를 검증하고 기존 통계 도구를 사용하여 적격한 t/p값, 두 집단 효과 크기 및 빈도/백분율 주장을 재계산한 뒤 커널 상태와 중국어 Markdown/HTML 보고서를 저장합니다. `compare`는 비교 가능 조건에 대한 Agent의 명시적 평가를 검증합니다. 이 명령들은 상주 Work 모델을 내장하지 않으며, 의미론적 독해는 현재 Agent가 [paper-research](skills/paper-research/SKILL.md)를 따라 수행합니다. 저장된 원본 파일과 추출 스냅샷은 결정론적 오프라인 재생을 지원하며, 네트워크 입수와 새로운 의미론적 독해는 별도로 식별되는 작업으로 구분됩니다.
+`prepare`는 본문과 보충 자료(`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`)를 입수·파싱하여 매니페스트, 원본 해시 및 위치가 파악된 세그먼트로 저장합니다. `finish`는 Agent가 생성한 추출 후보를 검증하고 기존 통계 도구를 사용하여 적격한 t/p값, 두 집단 효과 크기 및 빈도/백분율 주장을 재계산한 뒤 커널 상태와 중국어 Markdown/HTML 보고서를 저장합니다. `compare`는 비교 가능 조건에 대한 Agent의 명시적 평가를 검증합니다. 이 명령들은 상주 Work 모델을 내장하지 않으며, 의미론적 독해는 현재 Agent가 [paper-research](skills/paper-research/SKILL.md)를 따라 수행합니다. 저장된 원본 파일과 추출 스냅샷은 결정론적 오프라인 재생을 지원하며, 네트워크 입수와 새로운 의미론적 독해는 별도로 식별되는 작업으로 구분됩니다.
 
 ### 서지·OA 원문·OpenReview·코드 저장소 포렌식 및 15종 통계·테이블 검증
 
-4개의 독립 CLI 명령으로 서지 메타데이터, 오픈액세스 원문, OpenReview 심사 점수, 코드 저장소 실체를 검증하며, `table-forensics`와 `academic_recompute_statistics`는 `partition_conservation`, `ablation_delta_regularity`, `storage_bandwidth_bounds`(비압축 고정폭 벡터 및 전체 선형 스캔 가정)를 포함한 15종의 결정론적 검사를 수행합니다:
+7개의 독립 CLI 명령으로 서지 메타데이터, 오픈액세스 원문, OpenReview 심사 점수, 코드 저장소 실체를 검증하며, `table-forensics`와 `academic_recompute_statistics`는 `partition_conservation`, `ablation_delta_regularity`, `storage_bandwidth_bounds`(비압축 고정폭 벡터 및 전체 선형 스캔 가정)를 포함한 15종의 결정론적 검사를 수행합니다:
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ academic-research-kernel meta-analyze --input ./studies.json
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### 동료 심사에서 5대 결정론적 결함군의 거시적 분포 (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; 분산 누락 19.5%, 표·절제 불일치 7.9%, 베이스라인 누락 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; 분산 누락 23.4%, 표·절제 불일치 10.5%, 베이스라인 누락 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; 분산 누락 23.8%, 표·절제 불일치 12.4%, 베이스라인 누락 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; 분산 누락 21.8%, 표·절제 불일치 11.6%, 베이스라인 누락 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; 분산 누락 14.9% $\to$ 27.5%, 코드 누락 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### 데이터 소스 접근
 
-- OpenAlex 기본 쿼리는 익명으로 실행할 수 있으나 일일 예산이 작습니다. 2026-09-06 기준 문서는 익명 일일 0.10달러, 무료 API 키 일일 1달러, 초당 요청 상한 100회를 명시합니다. 비용은 쿼리 유형에 따라 다르며 무제한 접근이 아닙니다. 선택 키는 `OPENALEX_API_KEY`에 저장하고 `per_page`(최대 100)와 커서 페이지네이션을 사용하십시오.
+- OpenAlex 기본 쿼리는 익명으로 실행할 수 있으나 일일 예산이 작습니다. 2026-09-06 기준 문서는 익명 일일 0.10달러, 무료 API 키 일일 1달러, 초당 요청 상한 10/30/50회(익명 / 무료 API 키 / 연간 플랜)를 명시합니다. 비용은 쿼리 유형에 따라 다르며 무제한 접근이 아닙니다. 익명 쿼리는 첫 페이지(`per_page` 최대 100)로 제한되며, `next_cursor`로 다음 페이지를 조회하려면 `OPENALEX_API_KEY`가 필요합니다.
 - Crossref는 속도 제한이 있는 공개 메타데이터 접근을 제공합니다. 갱신 관계와 Retraction Watch 신호는 DOI와 방향 확인이 필요하며, 레코드 부재가 논문이 영향받지 않았다는 증명이 되지는 않습니다.
 - Unpaywall은 `UNPAYWALL_EMAIL`에 실제 연락 이메일을 요구합니다. 위치가 없다고 해서 OA 사본이 없다는 증명이 되지는 않습니다.
 - arXiv, Europe PMC, PubMed E-utilities, DOAJ는 각자의 정책이 있는 보조 소스이며 기본 테스트가 모두를 실행하지는 않습니다. Semantic Scholar는 공유 익명 한도와 별도 할당 키 한도가 있으며, API 접근권이 인용 맥락 가용성을 보장하지는 않습니다.
@@ -234,7 +244,7 @@ QA는 메타데이터, 참조 파일, 개인 경로·알려진 시크릿 패턴,
 
 고정된 Hermes 저작 테스트는 스킬별 규칙을 바꾸지 않고 재사용됩니다. 상류 전체 배포 개체군 검사는 이 tap에 적용되지 않으며, 본 저장소 테스트 하네스는 14개 스킬 전체를 검사하고 고정된 번들·선택 카탈로그에 대해 참조를 해석합니다. 이는 완전한 Hermes 설치 테스트가 아닙니다. CI는 의존성 설치에만 네트워크를 사용하며 일반 테스트는 학술 API를 호출하지 않습니다.
 
-CI는 GitHub Actions를 통해 Linux x86_64(Python 3.10–3.14), Linux ARM64(ubuntu-24.04-arm), Ubuntu 26.04 프리뷰 Canary(ubuntu-26.04 및 ubuntu-26.04-arm), Windows x86_64, Windows ARM64(windows-11-arm), macOS ARM64(macos-latest), macOS Intel(macos-15-intel) 전 플랫폼과 아키텍처에서 전체 QA 스위트를 실행하며, 실시간 상류 Canary 검증을 포함합니다. 기준 후보 로컬 검증은 1165개 테스트를 통과했으며, 현재 수정 결과와 커버리지 경계는 [정확성 복구 기록](docs/maintenance/correctness-repair-20261008.md)에 기록되어 있습니다(원격 근거는 테스트된 HEAD를 별도로 식별합니다). 별도의 tap 통합 워크플로가 main 푸시 시 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 본 저장소에 대해 tap add, search, install, list를 수행합니다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/kernel-architecture.md)에 있습니다.
+CI는 GitHub Actions를 통해 Linux x86_64(Python 3.10/3.12/3.14), Linux ARM64(ubuntu-24.04-arm), Windows x86_64, Windows ARM64(windows-11-arm), macOS ARM64(macos-latest) 전 플랫폼과 아키텍처에서 전체 QA 스위트를 실행하며, 실시간 상류 Canary 검증을 포함합니다. 현재 로컬 회귀 테스트 스위트는 1348개 테스트를 통과하며(초기 기준 후보 1165개에서 확장), 현재 수정 결과와 커버리지 경계는 [정확성 복구 기록](docs/maintenance/correctness-repair-20261008.md)에 기록되어 있습니다(원격 근거는 테스트된 HEAD를 별도로 식별합니다). 별도의 tap 통합 워크플로가 main 푸시 시 실행되어 tests/upstream/provenance.json에 기록된 고정 Hermes 체크아웃을 설치하고 본 저장소에 대해 tap add, search, install, list를 수행합니다. 정확한 버전, 검사 항목, 제약은 [감사 문서](docs/kernel-architecture.md)에 있습니다.
 
 [tools/longtail/](tools/longtail/README.md)에는 결정론적 롱테일 요인 생성기가 포함되어 있습니다: 4096개의 SHA256 시드 후보, 30개의 선택된 시나리오 및 기계가 계산한 검증 적용 범위 보고서를 제공합니다. v3 모델은 역량군(E01), 실제 저장소의 14개 스킬(E02), 과제 목표(E03)를 별도로 집계합니다. 각 시나리오는 하나의 주요 스킬, 지원되는 과제 목표 및 호환 역량을 가지며, 모든 스킬은 선언된 핵심 목표를 포함해 최소 두 개의 서로 다른 목표 아래에서 두 번 이상 등장해야 합니다. 스킬 디렉터리 불일치는 검증 실패로 처리됩니다. 의미론적 확장(과제 체인, 오라클 및 실행 이벤트 주입)은 별도 단계로 유지되며, 요인 커버리지가 워크플로 실행 커버리지를 증명하지는 않습니다.
 

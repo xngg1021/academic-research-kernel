@@ -8,7 +8,7 @@ A deterministic scholarly verification and manuscript engineering kernel for res
 
 When researchers use large language models to read or write papers, two failure modes recur. While reading external papers, a model generates text probabilistically and readily repeats miscalculated $p$-values, shifted ablation tables, retracted references, or hollow code repositories as if they were verified facts. While writing your own manuscript, asking a model in prose to check formatting cannot reliably catch residual author metadata in double-blind PDFs, transcription errors in LaTeX tables, dangling figure references, or missing required venue sections.
 
-Built from first principles, this repository separates semantic reading from deterministic verification: your language model handles reading and synthesis, while deterministic code handles mathematical recomputation, public database queries, syntax-tree checks, and SHA-256 provenance verification. The repository unifies 14 scholarly workflows, 12 standard Model Context Protocol (MCP) tools, and 13 CLI command groups on a single state kernel, working out of the box with Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external service limits are documented in [the project audit](docs/kernel-architecture.md).
+Built from first principles, this repository separates semantic reading from deterministic verification: your language model handles reading and synthesis, while deterministic code handles mathematical recomputation, public database queries, syntax-tree checks, and SHA-256 provenance verification. The repository unifies 14 scholarly workflows, 18 standard Model Context Protocol (MCP) tools, and 16 CLI command groups on a single state kernel, working out of the box with Claude Code, Cursor, Codex, Gemini CLI, and Hermes Agent. Validation scope and external service limits are documented in [the project audit](docs/kernel-architecture.md).
 
 Author: Junfu Shi (SJF, xngg1021). License: [Source Lineage License 1.0](LICENSE).
 
@@ -56,15 +56,17 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` ingests PDF, HTML, XML/JATS, DOCX, XLSX, or LaTeX/BibTeX (`.tex`, `.bib`, `.bbl`) source bundles, hashes every file, and indexes passages by page and structural section. Once your agent reads the text and writes the extraction candidate JSON, `finish` verifies that every extracted number appears verbatim at its declared source locator, runs deterministic statistical checks, commits the verified state, and renders source-linked Markdown and HTML reports. `compare` validates structured comparability across two papers' datasets, experimental conditions, and metrics. Any saved project can be replayed offline with `academic-research-kernel research replay --project PROJECT`.
+`prepare` ingests PDF (`.pdf`), HTML (`.html`, `.htm`), XML/JATS (`.xml`), DOCX (`.docx`), XLSX (`.xlsx`), LaTeX/BibTeX (`.tex`, `.bib`, `.bbl`), Markdown (`.md`), plain-text (`.txt`), or Python (`.py`) source bundles, hashes every file, and indexes passages by page and structural section. Once your agent reads the text and writes the extraction candidate JSON, `finish` verifies that every extracted number appears verbatim at its declared source locator, runs deterministic statistical checks, commits the verified state, and renders source-linked Markdown and HTML reports. `compare` validates structured comparability across two papers' datasets, experimental conditions, and metrics. Any saved project can be replayed offline with `academic-research-kernel research replay --project PROJECT`.
 
 ### 2. Audit Bibliographic Authenticity, Open-Access Full Texts, OpenReview & Code Repositories
 
-Four standalone CLI commands handle external forensic verification:
+Seven standalone CLI commands handle external forensic verification, reproduction auditing, and incremental watchlists:
 
 ```bash
-# Normalize DOI/arXiv identifiers and cross-check OpenAlex and Crossref metadata and retractions
+# Normalize DOI/arXiv identifiers, verify local PDF identity, or check Crossref/OpenAlex update & retraction signals
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 
 # Locate open-access full text across Unpaywall, arXiv, OpenAlex, Semantic Scholar, and Europe PMC
 academic-research-kernel locate-oa 10.1038/nature14539
@@ -75,6 +77,11 @@ academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --to
 
 # Inspect a repository's non-vendor source lines, Git commit history, and README command claims
 academic-research-kernel repo-forensics --local-repo ./target-repo
+
+# Adjudicate a 14-stage reproduction checklist or run offline self-tests for literature & retraction watches
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 ```
 
 `locate-oa` rejects paywalled landing pages (`is_oa=false`) and mismatched DOIs rather than mislabeling abstracts as full text. `openreview-audit` filters non-finite ratings, deduplicates records by `forum_id`, and computes score means and variance strictly over reviewer ratings while separating meta-reviews and final decisions. `repo-forensics` uses `git ls-files` when available to separate first-party code from bundled third-party directories.
@@ -101,26 +108,30 @@ academic-research-kernel meta-analyze --input studies.json
 When drafting and preparing your own manuscript for submission, four deterministic CLI tools cover workspace scaffolding, LaTeX table generation, double-blind sanitization, and venue rule linting:
 
 ```bash
-# Step 1: Inspect built-in specs for 8 major venues (ICLR 2027, NeurIPS, ICML, ACL, KDD, Nature, IEEE, ACM) and initialize a workspace
+# Step 1: Inspect built-in specs for 8 major venues (ICLR 2027, NeurIPS, ICML, ACL, KDD, Nature, IEEE, ACM), scaffold a workspace, or export ready CEG claim anchors
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 
-# Step 2: Render verified JSON experiment receipts into booktabs LaTeX tables with bold best and underlined second-best values
+# Step 2: Render verified JSON experiment receipts or paper-research extraction/comparison artifacts into booktabs LaTeX tables
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 
 # Step 3: Scan .tex, .bib, and compiled PDF metadata (/Author, /Creator) for identity leaks, self-citations, or local paths
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
 
-# Step 4: Run pre-submission linting against venue-specs.json (anonymous package flags, page limits, required sections, and CEG links)
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+# Step 4: Run pre-submission linting against venue-specs.json (plus optional --check-academic-style advisory prose & claim-boundary checks)
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 ```
 
 `receipt-to-latex` uses exact `Decimal` half-up rounding so numbers are never altered by hand transcription or binary floating-point drift. `double-blind-sanitize` inspects `\author`, custom identity macros, `\icmlauthor`, `pdfauthor`, acknowledgments, and compiled PDF Info dictionaries. `pre-submission-lint` checks `skills/academic-writing/references/venue-specs.json` for non-anonymous package options (`final`, `preprint`, `camera-ready`), tracks post-conclusion exempt sections (`Reproducibility Statement`, `Ethics Statement`, `Use of Large Language Models`, `Acknowledgments`) across pages so exempt statements never inflate `main_body_pages`, masks balanced-brace `\newcommand`/`\def` definitions to eliminate false-positive `TODO` warnings, resolves cross-file `\ref`/`\Cref` targets against `\label{...}` and `lstlisting[label={...}]` (`UNDEFINED_LATEX_LABEL_REF`), flags redundant `Author et al. ~\cite{...}` prefixes (`AUTHOR_YEAR_CITE_DUPLICATION`) and bare `\cite` dominance under author–year styles (`NATBIB_BARE_CITE_DOMINANT`), blocks unredacted `Acknowledgments` funding disclosures in double-blind submissions (`FORBIDDEN_ACKS_IN_DOUBLE_BLIND_SUBMISSION`), and verifies in linear time that quantitative claims in the Abstract and Conclusion resolve to `support_status == "supported"` edges in `ClaimEvidenceGraph`.
 
-Convert and normalize bibliographic files at any time with:
+Convert, deduplicate, export acronym-protected BibTeX, build citation graphs, or render review matrices with:
 
 ```bash
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### Macro-Distribution of the 5 Deterministic Defect Families in Peer Review (ICLR 2026, $N = 19,473$)
@@ -133,6 +144,7 @@ To motivate the kernel's five deterministic verification families (missing dispe
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772 / 5,134`; dispersion 19.5%, table/ablation 7.9%, baseline 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057 / 8,453`; dispersion 23.4%, table/ablation 10.5%, baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117 / 4,980`; dispersion 23.8%, table/ablation 12.4%, baseline 6.8%) |
+| **Desk Reject (with reviews)** | 682 | 4.01 / 2.46 | **63.6%** (`434 / 682`; dispersion 21.8%, table/ablation 11.6%, baseline 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529 / 1,077` $\to$ `1,928 / 2,861`; dispersion 14.9% $\to$ 27.5%, missing code 15.6% $\to$ 27.7%) |
 
 
@@ -208,7 +220,7 @@ Across the 14 skills, 22 Markdown reference guides and 1 machine-readable venue 
 
 ### 1. Research State Storage & Verification Boundaries
 
-The ingestion module uses `ResearchArtifactEnvelope v1` and `ArtifactIngestionReceipt v1`, pairing 15 adapters (one for each of the 14 skills plus a plain-text fallback) with 12 stateless stdio MCP tools. Whenever the system saves research objects, claim–evidence links, Research Decision Log entries, items needing review, or verification records, it records their canonical SHA-256 hashes in an ingestion receipt. Replaying a cache checks those hashes directly against the saved source packages. Empty decision logs are valid, and any batch write that fails mid-way rolls back atomically without leaving partial files behind.
+The ingestion module uses `ResearchArtifactEnvelope v1` and `ArtifactIngestionReceipt v1`, pairing 15 adapters (one for each of the 14 skills plus a plain-text fallback) with 18 stateless stdio MCP tools. Whenever the system saves research objects, claim–evidence links, Research Decision Log entries, items needing review, or verification records, it records their canonical SHA-256 hashes in an ingestion receipt. Replaying a cache checks those hashes directly against the saved source packages. Empty decision logs are valid, and any batch write that fails mid-way rolls back atomically without leaving partial files behind.
 
 Marking a record as `fully_verified` requires access to the underlying source bytes so the check can be reproduced independently. Trusted Python callers provide this through `LineageVerificationContext`, while MCP callers pass bounded file bytes directly rather than exposing host filesystem paths (capped at 10 MiB by default). Without the source bytes, a `fully_verified` claim fails validation. Unstructured notes stay untouched, reviewer disagreements remain visible, and human researchers remain in charge of committing state, dropping or reopening research routes, and making final scholarly judgments.
 
@@ -246,7 +258,7 @@ python scripts/verify_external_apis.py --output external-status.json --summary e
 git diff --check
 ```
 
-To build and verify the wheel and source archive in fresh virtual environments outside the repository (covering all 13 CLI command groups, `[research]` PDF extraction, and isolated `uvx` execution), run:
+To build and verify the wheel and source archive in fresh virtual environments outside the repository (covering all 16 CLI command groups, `[research]` PDF extraction, and isolated `uvx` execution), run:
 
 ```bash
 uv build --no-create-gitignore
@@ -254,7 +266,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1340 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.4.0 baseline in [the i18n manifest](docs/i18n/manifest.json).
+GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1348 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.4.0 baseline in [the i18n manifest](docs/i18n/manifest.json).
 
 ### 2. License
 

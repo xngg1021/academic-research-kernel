@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-يقوم الأمر `prepare` بجلب المواد وتحليلها إلى بيان ملفات (manifest)، وبصمات مصادر، ومقاطع نصية محددة الموقع. ويتحقق الأمر `finish` من المخرجات التي استخرجها الوكيل ويعيد حساب ادعاءات اختبار t وقيم p المؤهلة، وحجم الأثر لمجموعتين، والأعداد والنسب المئوية باستخدام الأدوات الإحصائية المتاحة، ثم يحفظ حالة النواة وتقارير Markdown/HTML باللغة الصينية. أما الأمر `compare` فيتحقق من التقييم الصريح الذي يقدمه الوكيل لشروط قابلية المقارنة. لا تدمج هذه الأوامر نموذجًا مقيمًا داخليًا: إذ يتولى الوكيل الحالي عملية القراءة الدلالية باتباع تعليمات مهارة [paper-research](../../skills/paper-research/SKILL.md). وتدعم الملفات الأصلية ولقطات الاستخراج المحفوظة إعادة التشغيل الحتمية دون اتصال بالشبكة. كما يظل الجلب الشبكي والقراءة الدلالية الجديدة عمليتين مميزتين بشكل منفصل.
+يقوم الأمر `prepare` بجلب المواد وتحليلها (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) إلى بيان ملفات (manifest)، وبصمات مصادر، ومقاطع نصية محددة الموقع. ويتحقق الأمر `finish` من المخرجات التي استخرجها الوكيل ويعيد حساب ادعاءات اختبار t وقيم p المؤهلة، وحجم الأثر لمجموعتين، والأعداد والنسب المئوية باستخدام الأدوات الإحصائية المتاحة، ثم يحفظ حالة النواة وتقارير Markdown/HTML باللغة الصينية. أما الأمر `compare` فيتحقق من التقييم الصريح الذي يقدمه الوكيل لشروط قابلية المقارنة. لا تدمج هذه الأوامر نموذجًا مقيمًا داخليًا: إذ يتولى الوكيل الحالي عملية القراءة الدلالية باتباع تعليمات مهارة [paper-research](../../skills/paper-research/SKILL.md). وتدعم الملفات الأصلية ولقطات الاستخراج المحفوظة إعادة التشغيل الحتمية دون اتصال بالشبكة. كما يظل الجلب الشبكي والقراءة الدلالية الجديدة عمليتين مميزتين بشكل منفصل.
 
 ### التدقيق الجنائي للمصادر وOpenReview والمستودعات البرمجية و15 فحصاً إحصائياً
 
-تتحقق أربعة أوامر CLI من البيانات الوصفية، والنصوص الكاملة مفتوحة الوصول، وتقييمات OpenReview، والمستودعات البرمجية؛ كما توسع أداة `table-forensics` و`academic_recompute_statistics` نطاق التدقيق ليشمل 15 فحصاً حتمياً بما فيها `partition_conservation` و`ablation_delta_regularity` و`storage_bandwidth_bounds` (تحت افتراض المتجهات غير المضغوطة والمسح الخطي الكامل):
+تتحقق سبعة أوامر CLI من البيانات الوصفية، والنصوص الكاملة مفتوحة الوصول، وتقييمات OpenReview، والمستودعات البرمجية؛ كما توسع أداة `table-forensics` و`academic_recompute_statistics` نطاق التدقيق ليشمل 15 فحصاً حتمياً بما فيها `partition_conservation` و`ablation_delta_regularity` و`storage_bandwidth_bounds` (تحت افتراض المتجهات غير المضغوطة والمسح الخطي الكامل):
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ academic-research-kernel meta-analyze --input ./studies.json
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### التوزيع الكلي لعائلات العيوب الحتمية الخمس في مراجعة الأقران (ICLR 2026، $N = 19,473$)
@@ -101,6 +110,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; التشتت 19.5%، الجداول/الاستئصال 7.9%، نقص خطوط الأساس 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; التشتت 23.4%، الجداول/الاستئصال 10.5%، نقص خطوط الأساس 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; التشتت 23.8%، الجداول/الاستئصال 12.4%، نقص خطوط الأساس 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; التشتت 21.8%، الجداول/الاستئصال 11.6%، نقص خطوط الأساس 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; التشتت 14.9% $\to$ 27.5%، غياب الكود 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### الوصول إلى مصادر البيانات
 
-- يمكن تشغيل استعلامات OpenAlex الأساسية دون تعريف هوية ضمن ميزانية يومية صغيرة. تحدد الوثائق المحدثة في 2026-09-06 ميزانية 0.10 دولار/يوم للاستخدام المجهول و1 دولار/يوم عند استخدام مفتاح API مجاني، مع سقف 100 طلب/ثانية. تختلف التكلفة باختلاف نوع الاستعلام، ولا يُعد هذا وصولاً غير محدود. خزّن المفتاح الاختياري في المتغير `OPENALEX_API_KEY`، واستخدم `per_page` (بحد أقصى 100) والتصفح بالمؤشر (cursor pagination).
+- يمكن تشغيل استعلامات OpenAlex الأساسية دون تعريف هوية ضمن ميزانية يومية صغيرة. تحدد الوثائق المحدثة في 2026-09-06 ميزانية 0.10 دولار/يوم للاستخدام المجهول و1 دولار/يوم عند استخدام مفتاح API مجاني، مع سقف 10/30/50 طلب/ثانية (مجهول / مفتاح مجاني / خطة سنوية). تختلف التكلفة باختلاف نوع الاستعلام، ولا يُعد هذا وصولاً غير محدود. تقتصر الاستعلامات المجهولة على الصفحة الأولى (`per_page` بحد أقصى 100)؛ ويتطلب تتبع `next_cursor` لما بعد الصفحة الأولى ضبط `OPENALEX_API_KEY`.
 - يتيح Crossref وصولاً عامًا للبيانات الوصفية مع تنظيم معدل الطلبات. تتطلب علاقات التحديث وإشارات Retraction Watch فحص معرف DOI واتجاه الرابط؛ ولا يعني غياب السجل أن الورقة البحثية غير متأثرة.
 - يتطلب Unpaywall بريدًا إلكترونيًا حقيقيًا للتواصل في المتغير `UNPAYWALL_EMAIL`. ولا يثبت عدم العثور على مسار أنه لا توجد نسخة وصول مفتوح (OA).
 - تُعد arXiv وEurope PMC وPubMed E-utilities وDOAJ مصادر تكميلية تخضع لسياساتها الخاصة، ولا تشغل الاختبارات الافتراضية جميع هذه المصادر. يفرض Semantic Scholar حدودًا مشتركة للاستخدام المجهول وحدودًا منفصلة لمفاتيح API؛ ولا يضمن الوصول إلى الواجهة توفر سياق الاستشهادات النصي.
@@ -234,7 +244,7 @@ git diff --check
 
 تُعاد الاستفادة من اختبارات تأليف مهارات Hermes المثبتة دون تغيير قواعدها لكل مهارة. لا تنطبق فحوص التوزع الشامل للحزمة المصدرية الكاملة على هذا المستودع؛ إذ يفحص إطار الاختبار لدينا أربع عشرة مهارة ويحل المراجع مقابل الفهرس المدمج والاختياري المثبت. ولا يُعد هذا اختبار تثبيت كامل لنظام Hermes. يستخدم نظام CI الشبكة لتثبيت الاعتماديات فقط؛ ولا تستدعي الاختبارات الاعتيادية واجهات برمجة التطبيقات الأكاديمية.
 
-يشغّل نظام CI حزمة QA الكاملة عبر بيئات Linux x86_64 (بإصدارات Python 3.10–3.14)، وLinux ARM64 (ubuntu-24.04-arm)، وإصدار المعاينة Ubuntu 26.04 canary (ubuntu-26.04 وubuntu-26.04-arm)، وWindows x86_64، وWindows ARM64 (windows-11-arm)، وmacOS ARM64 (macos-latest)، وmacOS Intel (macos-15-intel)، مع فحص توافق مباشر (canary) مع المستودع الأصل. اجتاز المرشح الأساسي للإصدار 1165 اختبارًا محليًا. وتُسجل نتائج الإصلاح الحالية وحدود التغطية في [تقرير إصلاح الصحة](../../docs/maintenance/correctness-repair-20261008.md)، بينما تحدد الأدلة البعيدة رمز HEAD المختبر بشكل منفصل. كما يعمل مسار تكامل `tap` منفصل عند الدفع إلى الفرع الرئيسي `main`، حيث يثبت نسخة Hermes المحددة في `tests/upstream/provenance.json` ويختبر أوامر `tap add` و`search` و`install` و`list` على هذا المستودع. التفاصيل الدقيقة للإصدارات والفحوص والقيود موثقة في [تقرير التدقيق](../../docs/kernel-architecture.md).
+يشغّل نظام CI حزمة QA الكاملة عبر بيئات Linux x86_64 (بإصدارات Python 3.10/3.12/3.14)، وLinux ARM64 (ubuntu-24.04-arm)، وWindows x86_64، وWindows ARM64 (windows-11-arm)، وmacOS ARM64 (macos-latest)، مع فحص توافق مباشر (canary) مع المستودع الأصل. تجتاز حزمة الانحدار الحالية 1348 اختبارًا محليًا (امتدادًا من خط الأساس التاريخي البالغ 1165 اختبارًا). وتُسجل نتائج الإصلاح الحالية وحدود التغطية في [تقرير إصلاح الصحة](../../docs/maintenance/correctness-repair-20261008.md)، بينما تحدد الأدلة البعيدة رمز HEAD المختبر بشكل منفصل. كما يعمل مسار تكامل `tap` منفصل عند الدفع إلى الفرع الرئيسي `main`، حيث يثبت نسخة Hermes المحددة في `tests/upstream/provenance.json` ويختبر أوامر `tap add` و`search` و`install` و`list` على هذا المستودع. التفاصيل الدقيقة للإصدارات والفحوص والقيود موثقة في [تقرير التدقيق](../../docs/kernel-architecture.md).
 
 يحتوي الدليل [tools/longtail/](../../tools/longtail/README.md) على مولد عوامل الحالات النادرة (long-tail) الحتمي: 4096 مرشحًا مولدًا ببذرة SHA256، و30 سيناريو مختارًا، وتقرير تغطية التحقق محسوبًا آليًا. يحصي النموذج v3 عائلات القدرات (E01)، والمهارات الأربع عشرة الفعلية في المستودع (E02)، وأهداف المهام (E03) كلًا على حدة. يرتبط كل سيناريو بمهارة أساسية واحدة، وهدف مهمة مدعوم، وقدرات متوافقة؛ ويجب أن تظهر كل مهارة مرتين على الأقل تحت هدفين مختلفين، بما في ذلك هدفها الأساسي المعلن. يؤدي أي انحراف في دليل المهارات إلى فشل التحقق. ويظل التوسيع الدلالي (سلاسل المهام، ومعايير التحقق، وحقن الأحداث المنفذة) مرحلة منفصلة؛ فتغطية العوامل لا تثبت تغطية التنفيذ الفعلي لمسار العمل.
 

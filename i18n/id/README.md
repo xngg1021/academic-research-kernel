@@ -21,7 +21,7 @@ Jalankan versi 2.4.0 menggunakan [uv](https://docs.astral.sh/uv/getting-started/
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-Catatan [rilis 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 18 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
+Catatan [rilis 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10/3.12/3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 18 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
 
 ### Verifikasi instalasi
 
@@ -34,7 +34,7 @@ academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-12 alat. Layanan eksternal opsional dapat dibiarkan tanpa konfigurasi. Gunakan `doctor --json` untuk menghasilkan keluaran yang dapat dibaca mesin.
+Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-18 alat. Layanan eksternal opsional dapat dibiarkan tanpa konfigurasi. Gunakan `doctor --json` untuk menghasilkan keluaran yang dapat dibaca mesin.
 
 ---
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Minta Work atau Agen lokal yang kompatibel untuk membaca berkas `SKILL.md` yang telah diekspor tersebut, kemudian berikan instruksi:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-Cukup berikan DOI, tautan publik, atau bundel berkas lokal. Untuk dua makalah, minta Agen membandingkan data, metode, kondisi evaluasi, dan hasil, sembari menjelaskan bagian mana yang dapat dibandingkan secara langsung. Agen akan melanjutkan pembacaan naskah asli, validasi kandidat bidang, penghitungan ulang, ingesti ke inti sistem, pembuatan laporan, hingga peninjauan sumber independen dalam satu tugas yang sama. Permukaan MCP yang ada tetap mempertahankan 12 alatnya, sedangkan orkestrasi baru berjalan melalui CLI dan keahlian portabel.
+Cukup berikan DOI, tautan publik, atau bundel berkas lokal. Untuk dua makalah, minta Agen membandingkan data, metode, kondisi evaluasi, dan hasil, sembari menjelaskan bagian mana yang dapat dibandingkan secara langsung. Agen akan melanjutkan pembacaan naskah asli, validasi kandidat bidang, penghitungan ulang, ingesti ke inti sistem, pembuatan laporan, hingga peninjauan sumber independen dalam satu tugas yang sama. Permukaan MCP yang ada tetap mempertahankan 18 alatnya, sedangkan orkestrasi baru berjalan melalui CLI dan keahlian portabel.
 
 Tahapan program yang sebenarnya adalah:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-Perintah `prepare` mengambil dan mengurai materi menjadi manifes, hash sumber, serta segmen teks yang terlokalisasi. Perintah `finish` memvalidasi hasil ekstraksi buatan Agen dan menghitung ulang klaim uji-t/nilai p, ukuran efek dua kelompok, serta hitungan atau persentase yang memenuhi syarat menggunakan alat statistik yang tersedia, lalu menyimpan status inti beserta laporan bahasa Mandarin dalam format Markdown dan HTML. Perintah `compare` memvalidasi penilaian eksplisit Agen mengenai kondisi yang sebanding antarstudi. Perintah-perintah ini tidak menanamkan model bahasa residen tersendiri: pembacaan semantik dilakukan oleh Agen aktif mengikuti panduan [paper-research](../../skills/paper-research/SKILL.md). Berkas asli dan cuplikan ekstraksi yang tersimpan mendukung pemutaran ulang luring secara deterministik, sementara pengambilan jaringan dan pembacaan semantik baru tetap dicatat sebagai operasi terpisah.
+Perintah `prepare` mengambil dan mengurai materi (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) menjadi manifes, hash sumber, serta segmen teks yang terlokalisasi. Perintah `finish` memvalidasi hasil ekstraksi buatan Agen dan menghitung ulang klaim uji-t/nilai p, ukuran efek dua kelompok, serta hitungan atau persentase yang memenuhi syarat menggunakan alat statistik yang tersedia, lalu menyimpan status inti beserta laporan bahasa Mandarin dalam format Markdown dan HTML. Perintah `compare` memvalidasi penilaian eksplisit Agen mengenai kondisi yang sebanding antarstudi. Perintah-perintah ini tidak menanamkan model bahasa residen tersendiri: pembacaan semantik dilakukan oleh Agen aktif mengikuti panduan [paper-research](../../skills/paper-research/SKILL.md). Berkas asli dan cuplikan ekstraksi yang tersimpan mendukung pemutaran ulang luring secara deterministik, sementara pengambilan jaringan dan pembacaan semantik baru tetap dicatat sebagai operasi terpisah.
 
 ### Forensik sumber, OpenReview, repositori kode, dan 15 pemeriksaan statistik
 
-Empat perintah CLI memeriksa metadata, teks lengkap Open Access, skor ulasan OpenReview, dan repositori kode; `table-forensics` dan `academic_recompute_statistics` memperluas audit menjadi 15 pemeriksaan deterministik termasuk `partition_conservation`, `ablation_delta_regularity`, dan `storage_bandwidth_bounds` (dengan asumsi eksplisit vektor tanpa kompresi dan pemindaian linier penuh):
+Tujuh perintah CLI memeriksa metadata, teks lengkap Open Access, skor ulasan OpenReview, dan repositori kode; `table-forensics` dan `academic_recompute_statistics` memperluas audit menjadi 15 pemeriksaan deterministik termasuk `partition_conservation`, `ablation_delta_regularity`, dan `storage_bandwidth_bounds` (dengan asumsi eksplisit vektor tanpa kompresi dan pemindaian linier penuh):
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ Saat menyusun naskah Anda sendiri, empat alat deterministik mencakup inisialisas
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### Distribusi Makro 5 Kelompok Cacat Deterministik dalam Telaah Sejawat (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ Untuk mendasari lima kelompok cacat deterministik (ketiadaan bilah galat/dispers
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersi 19.5%, tabel/ablasi 7.9%, baseline 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; dispersi 23.4%, tabel/ablasi 10.5%, baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dispersi 23.8%, tabel/ablasi 12.4%, baseline 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; dispersi 21.8%, tabel/ablasi 11.6%, baseline 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersi 14.9% $\to$ 27.5%, tanpa kode 15.6% $\to$ 27.7%) |
 
 ---
@@ -190,7 +200,7 @@ Lihat [panduan distribusi dan rilis](../../docs/distribution-release.md) untuk k
 
 ### Ingesti deterministik dan inti publik
 
-Antarmuka ingesti artefak penelitian menyediakan `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptor (14 keahlian ditambah fallback buram `opaque fallback`), serta 12 alat stdio MCP tanpa status (stateless). Tanda terima ingesti yang disetujui mengikat setiap mutasi semantik yang disimpan berdasarkan jenis, identitas, dan digest SHA-256 kanonis: objek riset, catatan hubungan klaim dan bukti (CEG), entri catatan keputusan penelitian dan kegagalan, hal-hal yang perlu ditinjau, bukti fisik, serta registrasi artefak. Pemutaran ulang tembolok memverifikasi komitmen tersebut secara independen dari hash cuplikan transpor. Catatan kosong tetap valid, dan kelompok operasi atomik yang gagal tidak meninggalkan perubahan status parsial.
+Antarmuka ingesti artefak penelitian menyediakan `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptor (14 keahlian ditambah fallback buram `opaque fallback`), serta 18 alat stdio MCP tanpa status (stateless). Tanda terima ingesti yang disetujui mengikat setiap mutasi semantik yang disimpan berdasarkan jenis, identitas, dan digest SHA-256 kanonis: objek riset, catatan hubungan klaim dan bukti (CEG), entri catatan keputusan penelitian dan kegagalan, hal-hal yang perlu ditinjau, bukti fisik, serta registrasi artefak. Pemutaran ulang tembolok memverifikasi komitmen tersebut secara independen dari hash cuplikan transpor. Catatan kosong tetap valid, dan kelompok operasi atomik yang gagal tidak meninggalkan perubahan status parsial.
 
 Otoritas konten silsilah bersifat eksplisit dan dikirimkan di luar jalur utama. Pemanggil Python tepercaya meneruskan `LineageVerificationContext` saat memutar ulang tanda terima atau cuplikan terserialisasi; pemanggil MCP dapat mengirimkan byte konten secara terbatas, namun tidak pernah mengirimkan akar sistem berkas host. Anggaran konten bawaan adalah 10 MiB, dan host tepercaya dapat secara eksplisit mengizinkan artefak berukuran lebih besar di bawah kebijakan produsen dan pemeriksa yang sama. Tanpa otoritas konten, klaim berstatus `fully_verified` tidak dapat direproduksi secara mandiri dan menghasilkan keluaran verifikasi tidak valid yang terstruktur. Teks bebas tetap diperlakukan buram, perbedaan pendapat tetap ditampilkan, dan peneliti memegang kendali penuh atas komit, penghentian atau pembukaan kembali rute, perutean, serta penilaian kebenaran ilmiah.
 
@@ -204,7 +214,7 @@ Perbaikan integritas akhir memvalidasi koherensi antara DOI dan pengenal ekstern
 
 ### Akses Sumber Data
 
-- Kueri dasar OpenAlex dapat dijalankan secara anonim dengan anggaran harian terbatas. Berdasarkan dokumentasi yang diperiksa pada 2026-09-06, kuota harian adalah US$0,10/hari untuk akses anonim dan US$1/hari dengan kunci API gratis, disertai batas kecepatan 100 permintaan/detik. Biaya berbeda menurut jenis kueri dan bukan berupa akses tanpa batas. Simpan kunci opsional dalam variabel `OPENALEX_API_KEY`, serta gunakan parameter `per_page` (maksimum 100) dan paginasi kursor.
+- Kueri dasar OpenAlex dapat dijalankan secara anonim dengan anggaran harian terbatas. Berdasarkan dokumentasi yang diperiksa pada 2026-09-06, kuota harian adalah US$0,10/hari untuk akses anonim dan US$1/hari dengan kunci API gratis, disertai batas kecepatan 10/30/50 permintaan/detik (anonim / kunci gratis / paket tahunan). Biaya berbeda menurut jenis kueri dan bukan berupa akses tanpa batas. Kueri anonim dibatasi pada halaman pertama (`per_page` maksimum 100); mengikuti `next_cursor` setelah halaman pertama memerlukan `OPENALEX_API_KEY`.
 - Crossref menyediakan akses metadata publik dengan pembatasan laju permintaan. Hubungan pembaruan dan sinyal Retraction Watch memerlukan pemeriksaan DOI serta arah tautan; tidak adanya catatan tidak membuktikan bahwa sebuah makalah bebas dari koreksi atau penarikan.
 - Unpaywall mewajibkan alamat email kontak yang valid pada `UNPAYWALL_EMAIL`. Tidak ditemukannya lokasi tautan bukan bukti bahwa salinan Open Access tidak tersedia.
 - arXiv, Europe PMC, PubMed E-utilities, dan DOAJ merupakan sumber pelengkap dengan kebijakan masing-masing dan tidak semuanya dijalankan oleh pengujian bawaan. Semantic Scholar menerapkan batas anonim bersama serta kuota kunci API terpisah; ketersediaan akses tidak menjamin tersedianya konteks sitasi.
@@ -234,7 +244,7 @@ Skrip QA memvalidasi metadata, tautan referensi lokal, pola jalur pribadi atau r
 
 Pengujian penulisan keahlian Hermes yang dipatok digunakan kembali tanpa mengubah aturan per keahliannya. Pemeriksaan populasi distribusi penuh di repositori hulu tidak berlaku untuk repositori ini; rangkaian pengujian kami memeriksa keempat belas keahlian dan mengurai referensi terhadap katalog bawaan maupun opsional yang dipatok. Ini bukan pengujian instalasi Hermes secara menyeluruh. Lingkungan CI menggunakan jaringan hanya saat memasang dependensi, dan pengujian perubahan reguler tidak memanggil API akademik eksternal.
 
-CI menjalankan rangkaian QA lengkap di Linux x86_64 (Python 3.10–3.14), Linux ARM64 (`ubuntu-24.04-arm`), Ubuntu 26.04 preview canary (`ubuntu-26.04` dan `ubuntu-26.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`), dan macOS Intel (`macos-15-intel`), disertai validasi canary langsung terhadap repositori hulu. Kandidat dasar historis telah meluluskan 1165 pengujian lokal. Hasil perbaikan terkini dan batas cakupan dicatat dalam [laporan perbaikan ketepatan](../../docs/maintenance/correctness-repair-20261008.md), sedangkan bukti jarak jauh mencantumkan komit `HEAD` yang diuji secara terpisah. Alur kerja integrasi tap terpisah berjalan setiap ada dorongan ke cabang `main`: alur ini memasang kode Hermes terpaku yang tercatat di `tests/upstream/provenance.json` lalu menguji perintah `tap add`, `search`, `install`, dan `list` terhadap repositori ini. Versi tepat, daftar pemeriksaan, dan batasan diuraikan dalam [laporan audit](../../docs/kernel-architecture.md).
+CI menjalankan rangkaian QA lengkap di Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`), disertai validasi canary langsung terhadap repositori hulu. Rangkaian regresi saat ini meluluskan 1348 pengujian lokal (diperluas dari kandidat dasar historis 1165 pengujian). Hasil perbaikan terkini dan batas cakupan dicatat dalam [laporan perbaikan ketepatan](../../docs/maintenance/correctness-repair-20261008.md), sedangkan bukti jarak jauh mencantumkan komit `HEAD` yang diuji secara terpisah. Alur kerja integrasi tap terpisah berjalan setiap ada dorongan ke cabang `main`: alur ini memasang kode Hermes terpaku yang tercatat di `tests/upstream/provenance.json` lalu menguji perintah `tap add`, `search`, `install`, dan `list` terhadap repositori ini. Versi tepat, daftar pemeriksaan, dan batasan diuraikan dalam [laporan audit](../../docs/kernel-architecture.md).
 
 Direktori [tools/longtail/](../../tools/longtail/README.md) menyimpan generator faktor ekor panjang deterministik: 4096 kandidat berbenih SHA-256, 30 skenario terpilih, dan laporan cakupan verifikasi yang dihitung mesin. Model v3 menghitung secara terpisah keluarga kapabilitas (E01), 14 keahlian aktual di repositori (E02), serta tujuan tugas (E03). Setiap skenario memiliki satu keahlian utama, satu tujuan tugas yang didukung, dan kapabilitas yang kompatibel; setiap keahlian wajib muncul minimal dua kali di bawah dua tujuan berbeda, termasuk tujuan inti yang dideklarasikannya. Ketidaksesuaian direktori keahlian akan menggagalkan validasi. Perluasan semantik (rantai tugas, oracle pengujian, dan injeksi kejadian terekseskusi) tetap menjadi tahap terpisah; cakupan faktor tidak membuktikan cakupan eksekusi alur kerja secara utuh.
 

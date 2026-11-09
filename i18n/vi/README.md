@@ -21,7 +21,7 @@ Chạy phiên bản 2.4.0 bằng [uv](https://docs.astral.sh/uv/getting-started/
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[Bản phát hành 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 18 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
+[Bản phát hành 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10/3.12/3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 18 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
 
 ### Kiểm tra cài đặt
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Hãy để Work hoặc một Agent cục bộ tương thích đọc tệp `SKILL.md` vừa xuất, sau đó yêu cầu:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-Bạn chỉ cần cung cấp mã DOI, liên kết công khai hoặc gói tệp cục bộ. Đối với hai bài báo, hãy yêu cầu Agent so sánh dữ liệu, phương pháp, điều kiện đánh giá và kết quả chính, đồng thời giải thích những phần nào có thể so sánh trực tiếp. Agent sẽ thực hiện xuyên suốt việc đọc văn bản gốc, kiểm tra ứng viên trích xuất, tính toán lại thống kê, tiếp nhận vào nhân, tạo báo cáo và xác minh và kiểm chứng độc lập đối với nguồn dữ liệu trong cùng một nhiệm vụ. Bề mặt giao tiếp MCP hiện có vẫn giữ nguyên 12 công cụ; tầng điều phối mới nằm ở giao diện dòng lệnh CLI và kỹ năng di động.
+Bạn chỉ cần cung cấp mã DOI, liên kết công khai hoặc gói tệp cục bộ. Đối với hai bài báo, hãy yêu cầu Agent so sánh dữ liệu, phương pháp, điều kiện đánh giá và kết quả chính, đồng thời giải thích những phần nào có thể so sánh trực tiếp. Agent sẽ thực hiện xuyên suốt việc đọc văn bản gốc, kiểm tra ứng viên trích xuất, tính toán lại thống kê, tiếp nhận vào nhân, tạo báo cáo và xác minh và kiểm chứng độc lập đối với nguồn dữ liệu trong cùng một nhiệm vụ. Bề mặt giao tiếp MCP hiện có vẫn giữ nguyên 18 công cụ; tầng điều phối mới nằm ở giao diện dòng lệnh CLI và kỹ năng di động.
 
 Các giai đoạn thực thi thực tế của chương trình gồm:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-Lệnh `prepare` thu thập và phân tích tài liệu thành bản kê khai (manifest), mã băm nguồn và các phân đoạn văn bản đã định vị. Lệnh `finish` xác thực dữ liệu trích xuất do Agent tạo ra và tính toán lại các nhận định đủ điều kiện về kiểm định t/p, độ lớn hiệu ứng hai nhóm cũng như số đếm/tỷ lệ phần trăm bằng các hàm thống kê sẵn có, sau đó lưu trạng thái nhân và xuất báo cáo Markdown/HTML tiếng Trung. Lệnh `compare` xác thực đánh giá tường minh của Agent về các điều kiện có thể so sánh. Các lệnh này không nhúng sẵn một mô hình nền chạy ngầm: việc đọc hiểu ngữ nghĩa do chính Agent hiện tại thực hiện theo hướng dẫn của [paper-research](../../skills/paper-research/SKILL.md). Các tệp gốc và bản chụp trích xuất đã lưu hỗ trợ phát lại ngoại tuyến tất định. Việc thu thập dữ liệu qua mạng và lượt đọc ngữ nghĩa mới vẫn được định danh là các thao tác tách biệt.
+Lệnh `prepare` thu thập và phân tích tài liệu (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) thành bản kê khai (manifest), mã băm nguồn và các phân đoạn văn bản đã định vị. Lệnh `finish` xác thực dữ liệu trích xuất do Agent tạo ra và tính toán lại các nhận định đủ điều kiện về kiểm định t/p, độ lớn hiệu ứng hai nhóm cũng như số đếm/tỷ lệ phần trăm bằng các hàm thống kê sẵn có, sau đó lưu trạng thái nhân và xuất báo cáo Markdown/HTML tiếng Trung. Lệnh `compare` xác thực đánh giá tường minh của Agent về các điều kiện có thể so sánh. Các lệnh này không nhúng sẵn một mô hình nền chạy ngầm: việc đọc hiểu ngữ nghĩa do chính Agent hiện tại thực hiện theo hướng dẫn của [paper-research](../../skills/paper-research/SKILL.md). Các tệp gốc và bản chụp trích xuất đã lưu hỗ trợ phát lại ngoại tuyến tất định. Việc thu thập dữ liệu qua mạng và lượt đọc ngữ nghĩa mới vẫn được định danh là các thao tác tách biệt.
 
 ### Kiểm toán nguồn, OpenReview, kho mã nguồn và 15 phép kiểm tra thống kê
 
-Bốn lệnh CLI độc lập giúp kiểm tra siêu dữ liệu, toàn văn truy cập mở, điểm phản biện OpenReview và kho mã nguồn; `table-forensics` cùng `academic_recompute_statistics` mở rộng kiểm toán lên 15 phép kiểm tra tất định bao gồm `partition_conservation`, `ablation_delta_regularity` và `storage_bandwidth_bounds` (với giả định tường minh về vectơ không nén và quét tuyến tính toàn bộ):
+Bảy lệnh CLI độc lập giúp kiểm tra siêu dữ liệu, toàn văn truy cập mở, điểm phản biện OpenReview và kho mã nguồn; `table-forensics` cùng `academic_recompute_statistics` mở rộng kiểm toán lên 15 phép kiểm tra tất định bao gồm `partition_conservation`, `ablation_delta_regularity` và `storage_bandwidth_bounds` (với giả định tường minh về vectơ không nén và quét tuyến tính toàn bộ):
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ Khi tự viết bài báo và chuẩn bị nộp, bốn công cụ tất định
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### Phân bố vĩ mô của 5 nhóm lỗi tất định trong bình duyệt (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; độ phân tán 19.5%, bảng/ablation 7.9%, thiếu baseline 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; độ phân tán 23.4%, bảng/ablation 10.5%, thiếu baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; độ phân tán 23.8%, bảng/ablation 12.4%, thiếu baseline 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; độ phân tán 21.8%, bảng/ablation 11.6%, thiếu baseline 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; độ phân tán 14.9% $\to$ 27.5%, thiếu mã 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ Quy chuẩn trích dẫn, tiêu chí báo cáo và cấu trúc siêu dữ liệu
 
 ### Truy cập nguồn dữ liệu
 
-- Các truy vấn cơ bản của OpenAlex có thể chạy ẩn danh với hạn mức ngân sách hàng ngày nhỏ. Tài liệu kiểm tra ngày 2026-09-06 quy định hạn mức $0.10/ngày cho truy vấn ẩn danh và $1/ngày khi dùng khóa API miễn phí, cùng trần 100 yêu cầu/giây. Chi phí khác nhau tùy loại truy vấn; đây không phải là quyền truy cập không giới hạn. Lưu khóa tùy chọn vào biến `OPENALEX_API_KEY`, đồng thời sử dụng `per_page` (tối đa 100) và phân trang bằng con trỏ (cursor pagination).
+- Các truy vấn cơ bản của OpenAlex có thể chạy ẩn danh với hạn mức ngân sách hàng ngày nhỏ. Tài liệu kiểm tra ngày 2026-09-06 quy định hạn mức $0.10/ngày cho truy vấn ẩn danh và $1/ngày khi dùng khóa API miễn phí, cùng trần 10/30/50 yêu cầu/giây (ẩn danh / khóa miễn phí / gói năm). Chi phí khác nhau tùy loại truy vấn; đây không phải là quyền truy cập không giới hạn. Truy vấn ẩn danh chỉ giới hạn ở trang đầu tiên (`per_page` tối đa 100); việc theo dõi `next_cursor` sang các trang tiếp theo đòi hỏi `OPENALEX_API_KEY`.
 - Crossref cung cấp quyền truy cập siêu dữ liệu công khai có giới hạn tốc độ. Các mối quan hệ cập nhật và tín hiệu Retraction Watch đòi hỏi phải kiểm tra cả DOI lẫn chiều hướng liên kết; việc không tìm thấy bản ghi không chứng minh rằng bài báo chưa bị ảnh hưởng.
 - Unpaywall yêu cầu cấu hình địa chỉ email liên hệ thực tế trong biến `UNPAYWALL_EMAIL`. Kết quả trả về không có đường dẫn không đồng nghĩa với việc không tồn tại bản sao truy cập mở.
 - arXiv, Europe PMC, PubMed E-utilities và DOAJ là các nguồn bổ trợ với chính sách truy cập riêng; bộ kiểm thử mặc định không gọi toàn bộ các nguồn này. Semantic Scholar áp dụng hạn mức ẩn danh dùng chung và hạn mức khóa API cấp riêng; việc truy cập được API không bảo đảm luôn lấy được ngữ cảnh trích dẫn.
@@ -234,7 +244,7 @@ Trình kiểm tra QA xác thực siêu dữ liệu, tệp tham chiếu, mẫu đ
 
 Các bài kiểm thử quy chuẩn biên soạn kỹ năng của Hermes (đã ghim phiên bản) được tái sử dụng mà không thay đổi quy tắc riêng của từng kỹ năng. Các bài kiểm tra quần thể toàn bộ bản phân phối thượng nguồn không áp dụng cho tap này; bộ khung kiểm thử tại đây kiểm tra đủ 14 kỹ năng và phân giải tệp tham chiếu đối chiếu với danh mục đi kèm/tùy chọn đã ghim. Đây không phải là bài kiểm tra cài đặt toàn bộ hệ thống Hermes. CI chỉ dùng mạng để cài đặt gói phụ thuộc; các bài kiểm thử thông thường không gọi API học thuật bên ngoài.
 
-Hệ thống CI chạy toàn bộ bộ kiểm thử QA trên Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), bản thử nghiệm Ubuntu 26.04 canary (ubuntu-26.04 và ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) và macOS Intel (macos-15-intel), kèm theo bước kiểm tra canary trực tiếp với nhánh thượng nguồn. Bản ứng viên cơ sở đã vượt qua 1165 bài kiểm thử cục bộ. Kết quả hiệu chỉnh hiện tại và phạm vi bao phủ được ghi nhận trong [hồ sơ hiệu chỉnh độ chính xác](../../docs/maintenance/correctness-repair-20261008.md); bằng chứng kiểm thử từ xa ghi rõ mã HEAD được kiểm tra. Một quy trình tích hợp tap riêng biệt sẽ chạy khi đẩy mã lên nhánh main: quy trình này cài đặt bản Hermes đã ghim trong `tests/upstream/provenance.json` và thực thi các lệnh `tap add`, `search`, `install` và `list` đối với kho lưu trữ này. Phiên bản chính xác, hạng mục kiểm tra và các giới hạn được trình bày trong [báo cáo kiểm định](../../docs/kernel-architecture.md).
+Hệ thống CI chạy toàn bộ bộ kiểm thử QA trên Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), kèm theo bước kiểm tra canary trực tiếp với nhánh thượng nguồn. Bộ kiểm thử hồi quy hiện tại vượt qua 1348 bài kiểm thử cục bộ (mở rộng từ mốc cơ sở lịch sử 1165 bài kiểm thử). Kết quả hiệu chỉnh hiện tại và phạm vi bao phủ được ghi nhận trong [hồ sơ hiệu chỉnh độ chính xác](../../docs/maintenance/correctness-repair-20261008.md); bằng chứng kiểm thử từ xa ghi rõ mã HEAD được kiểm tra. Một quy trình tích hợp tap riêng biệt sẽ chạy khi đẩy mã lên nhánh main: quy trình này cài đặt bản Hermes đã ghim trong `tests/upstream/provenance.json` và thực thi các lệnh `tap add`, `search`, `install` và `list` đối với kho lưu trữ này. Phiên bản chính xác, hạng mục kiểm tra và các giới hạn được trình bày trong [báo cáo kiểm định](../../docs/kernel-architecture.md).
 
 Thư mục [tools/longtail/](../../tools/longtail/README.md) chứa bộ sinh nhân tố kịch bản đuôi dài tất định: 4096 tổ hợp ứng viên tạo từ hạt giống SHA256, 30 kịch bản được chọn và một báo cáo độ bao phủ xác minh do máy tính toán. Mô hình v3 thống kê riêng biệt các họ năng lực (E01), 14 kỹ năng thực tế trong kho lưu trữ (E02) và các mục tiêu tác vụ (E03). Mỗi kịch bản gắn với một kỹ năng chính, một mục tiêu tác vụ được hỗ trợ và các năng lực tương thích; mỗi kỹ năng phải xuất hiện ít nhất hai lần dưới hai mục tiêu khác nhau, bao gồm cả mục tiêu cốt lõi đã khai báo. Sự sai lệch giữa thư mục kỹ năng và danh mục nhân tố sẽ làm quá trình xác thực báo lỗi. Giai đoạn mở rộng ngữ nghĩa (chuỗi tác vụ, bộ tiêu chuẩn đối chiếu và tiêm sự kiện thực thi) vẫn là một bước tách biệt; độ bao phủ nhân tố không đồng nghĩa với độ bao phủ thực thi toàn bộ quy trình.
 

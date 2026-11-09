@@ -15,7 +15,7 @@ flowchart TD
     C --> F["Mutation-bound ingestion receipt"]
     D --> F
     E --> F
-    F --> G["12 stateless MCP tools"]
+    F --> G["18 stateless MCP tools"]
 ```
 
 ---
@@ -25,9 +25,9 @@ flowchart TD
 For end-to-end paper reading and verification (`academic-research-kernel research` and `skills/paper-research`), the kernel executes a five-step deterministic pipeline around five irreducible components:
 
 1. **Source Acquisition & Identity Verification (`normalize_identifier.py`, `verify_work.py`, `locate_oa.py`, `openreview_audit.py`, `github_repo_forensics.py`, `skills/research-object-identity/scripts/identity.py`)**: Normalize DOIs, arXiv IDs, PMIDs, and OpenAlex IDs; cross-check bibliographic identity and retraction/correction states across OpenAlex, Crossref, Semantic Scholar, and Retraction Watch.
-2. **Document Segmentation & Exact Provenance (`research/sources.py`, `skills/research-object-identity/scripts/provenance.py`)**: Hash raw PDF, HTML, XML/JATS, DOCX, XLSX, and LaTeX/BibTeX (`.tex`, `.bib`, `.bbl`) source bundles; index passages with page numbers, printed page labels, or structural locators (`tex:abstract=1`, `tex:table=N`, `tex:block=N`, `bib:entry=<citekey>`).
+2. **Document Segmentation & Exact Provenance (`research/sources.py`, `skills/research-object-identity/scripts/provenance.py`)**: Hash raw PDF (`.pdf`), HTML (`.html`, `.htm`), XML/JATS (`.xml`), DOCX (`.docx`), XLSX (`.xlsx`), LaTeX/BibTeX (`.tex`, `.bib`, `.bbl`), Markdown (`.md`), plain-text (`.txt`), and Python (`.py`) source bundles; index passages with page numbers, printed page labels, or structural locators (`tex:abstract=1`, `tex:table=N`, `tex:block=N`, `bib:entry=<citekey>`).
 3. **Context-Bound Extraction Validation (`research/analysis.py`, `schemas/paper-extraction.schema.json`)**: Verify that every extracted number, literal, unit, group, timepoint, and analysis set is backed by a continuous substring quote at its declared document locator.
-4. **Deterministic Statistical Recomputation & Cross-Paper Comparison (`recompute.py`, `meta_core.py`)**: Recompute 15 statistical and physical-bound checks (`t_p`, `f_p`, `chi2_p`, `z_beta_se`, `ci_consistency`, `or_rr_2x2`, `effect_size`, `hedges_g`, `percentage`, `sd_possible`, `sample_size_df`, `power_ttest`, `partition_conservation`, `ablation_delta_regularity`, `storage_bandwidth_bounds`, `nonparametric_test`), fixed/random-effects meta-analyses, and two-paper comparability matrices using exact decimal half-open rounding intervals.
+4. **Deterministic Statistical Recomputation & Cross-Paper Comparison (`recompute.py`, `meta_core.py`)**: Recompute 15 statistical and physical-bound checks (`t_p`, `f_p`, `chi2_p`, `z_beta_se`, `ci_consistency`, `or_rr_2x2`, `effect_size`, `hedges_g`, `percentage`, `sd_possible`, `sample_size_df`, `power_ttest`, `partition_conservation`, `ablation_delta_regularity`, `storage_bandwidth_bounds`), fixed/random-effects meta-analyses, and two-paper comparability matrices using exact decimal half-open rounding intervals.
 5. **Claim-Evidence Graph Binding & Replayable Reporting (`skills/claim-evidence-graph/scripts/graph.py`, `skills/decision-ledger/scripts/ledger.py`, `skills/academic-writing/scripts/pre_submission_linter.py`)**: Automatically attach `supported` or `contradicted` evidence edges to target claims in `ClaimEvidenceGraph`, record analytical decisions in `DecisionLedger`, update `workflow-state.json`, and render traceable Chinese Markdown/HTML reports with offline snapshot replay.
 
 **Scope discipline**: Deterministic code in this repository covers the 86 verification, locator-anchoring, statistical-recomputation, meta-analytic, and provenance invariants where probabilistic language models hallucinate or miscalculate. Pure prose summarization and terminology explanation remain native agent reading tasks, while reference library management, collaborative typesetting, wet-lab LIMS, and spaced-repetition learning belong to external tools (such as Zotero, Overleaf, or dedicated learning systems).
@@ -123,11 +123,11 @@ Portable receipts contain evidence, never filesystem authority. `LineageVerifica
 
 The default content budget is 10 MiB. Trusted callers can explicitly authorize a larger budget for datasets. Producer and verifier share the bounded verification algorithm, so the producer cannot claim content verification that the same policy cannot reproduce. Missing content, hash mismatch, unavailable authority, unchecked mode and exceeded budget remain distinct reasons. Without content authority, a serialized `fully_verified` claim fails verification deterministically; it does not authorize an ambient host read. Replaying a snapshot containing such a claim likewise requires explicit authority. Root traversal and symlink escape fail containment checks.
 
-MCP accepts base64 `content_payloads` indexed by entity ID on the seven content-consuming tools. The wire limit is fixed at 10 MiB unless trusted host configuration supplies a larger context. Wire arguments cannot nominate a root, authorize paths or increase the budget. Malformed registries and domain construction are inside the structured input-validation boundary across all twelve tools; preflight dry-run admission catches errors already knowable at validation time.
+MCP accepts base64 `content_payloads` indexed by entity ID on the seven content-consuming tools. The wire limit is fixed at 10 MiB unless trusted host configuration supplies a larger context. Wire arguments cannot nominate a root, authorize paths or increase the budget. Malformed registries and domain construction are inside the structured input-validation boundary across all eighteen tools; preflight dry-run admission catches errors already knowable at validation time.
 
 ---
 
-## Universal MCP Interface (12 Tools)
+## Universal MCP Interface (18 Tools)
 
 The stdio MCP server ([scripts/mcp_server.py](../scripts/mcp_server.py)) exposes the deterministic kernel directly to Claude Code, Cursor, Codex, Gemini CLI, and Hermes:
 
@@ -140,9 +140,15 @@ The stdio MCP server ([scripts/mcp_server.py](../scripts/mcp_server.py)) exposes
 7. `claim_evidence_trace`: Traces evidence and receipts for a claim.
 8. `decision_ledger_validate`: Executes four-gate verification on a decision ledger.
 9. `decision_trace`: Traces causal ancestry and corrections for a decision.
-10. `academic_recompute_statistics`: Recomputes statistical claims (t/F/chi-square/Wald-z tests, Cohen's d and Hedges' g, 2x2 OR/RR, CI consistency, statistical power, SD bounds, and df-implied sample sizes) with on-demand SciPy/statsmodels loading for probability distributions and closed-form standard-library arithmetic.
+10. `academic_recompute_statistics`: Recomputes statistical claims (t/F/chi-square/Wald-z tests, Cohen's d and Hedges' g, 2x2 OR/RR, CI consistency, statistical power, SD bounds, df-implied sample sizes, partition conservation, ablation delta regularity, and storage/bandwidth bounds) with on-demand SciPy/statsmodels loading for probability distributions and closed-form standard-library arithmetic.
 11. `academic_check_percentage`: Checks count/percentage compatibility.
 12. `academic_scfabric_hardware_probe`: Probes execution accelerators.
+13. `academic_pre_submission_lint`: Runs venue formatting, page-limit, required-section, CEG-anchor, and optional `--check-academic-style` advisory checks on a manuscript.
+14. `academic_double_blind_sanitize`: Scans `.tex`, `.bib`, and compiled PDF metadata for double-blind anonymity leaks, returning a strict redacted allowlist (`matched="[REDACTED]"`).
+15. `academic_table_forensics`: Audits tables for partition conservation, constant-offset ablation shifts, and uncompressed vector storage/bandwidth bounds.
+16. `academic_meta_analyze`: Runs fixed-effect and DerSimonian-Laird random-effects pooling, $Q/I^2/\tau^2$ heterogeneity, Egger regression, and trim-and-fill.
+17. `academic_verify_source`: Normalizes scholarly identifiers, verifies local PDF identity, or cross-checks OpenAlex/Crossref metadata and retraction/update records.
+18. `academic_openreview_audit`: Audits OpenReview forum ratings, reviewer variance, venue-wide quantiles, or topic acceptance rates.
 
 Tool arguments use closed JSON Schemas and are validated before dispatch. Each response sets MCP `isError` consistently, and `research_artifact_ingest` accepts and returns a complete kernel snapshot rather than a lossy projection. The stdio surface is covered by an actual subprocess initialize → tools/list → tools/call exchange.
 
@@ -150,6 +156,6 @@ Tool arguments use closed JSON Schemas and are validated before dispatch. Each r
 
 ## Verification and residual boundaries
 
-The current local regression suite covers **1335 passed** tests (1338 total with the optional CPU PyTorch backend) plus 41 executable documentation fences. Cross-platform CI runs a 7-cell orthogonal matrix across Python 3.10/3.12/3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, and macOS ARM64, alongside isolated wheel/sdist/[research] installation smoke and current-upstream loading.
+The current local regression suite covers **1348 passed** tests (1351 total with the 3 optional skips) plus 41 executable documentation fences. Cross-platform CI runs a 7-cell orthogonal matrix across Python 3.10/3.12/3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, and macOS ARM64, alongside isolated wheel/sdist/[research] installation smoke and current-upstream loading.
 
 Final candidate SHA/tree, exact-head CI and cumulative review evidence are bound in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151); historical CI is not substituted for the new candidate.
