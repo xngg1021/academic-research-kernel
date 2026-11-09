@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Demandez à Work ou à un Agent local compatible de lire ce fichier `SKILL.md` exporté, puis formulez la requête suivante :
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-Fournissez uniquement le DOI, le lien public ou l'archive locale. Pour deux articles, demandez-lui de comparer les données, les méthodes, les conditions d'évaluation et les résultats en expliquant ce qui est directement comparable. L'Agent enchaîne dans la même tâche la lecture du texte original, la validation des candidats, les calculs, l'intégration, la génération du rapport et la relecture indépendante des sources. La surface MCP existante conserve ses 12 outils ; la nouvelle orchestration réside dans l'interface CLI et la compétence portable.
+Fournissez uniquement le DOI, le lien public ou l'archive locale. Pour deux articles, demandez-lui de comparer les données, les méthodes, les conditions d'évaluation et les résultats en expliquant ce qui est directement comparable. L'Agent enchaîne dans la même tâche la lecture du texte original, la validation des candidats, les calculs, l'intégration, la génération du rapport et la relecture indépendante des sources. La surface MCP existante conserve ses 18 outils ; la nouvelle orchestration réside dans l'interface CLI et la compétence portable.
 
 Les étapes effectives du programme sont les suivantes :
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` récupère et analyse le matériel pour produire un manifeste, les empreintes des sources et les segments localisés. `finish` valide l'extraction produite par l'Agent, recalcule les valeurs t/p, tailles d'effet à deux groupes et effectifs/pourcentages éligibles à l'aide des outils statistiques existants, puis enregistre l'état du noyau ainsi que les rapports Markdown/HTML en chinois. `compare` valide l'évaluation explicite des conditions comparables fournie par l'Agent. Ces commandes n'embarquent aucun modèle Work résident : la lecture sémantique est effectuée par l'Agent courant en suivant [paper-research](skills/paper-research/SKILL.md). Les fichiers originaux et instantanés d'extraction sauvegardés permettent une relecture hors ligne déterministe. L'acquisition réseau et une nouvelle lecture sémantique restent des opérations identifiées séparément.
+`prepare` récupère et analyse le matériel (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) pour produire un manifeste, les empreintes des sources et les segments localisés. `finish` valide l'extraction produite par l'Agent, recalcule les valeurs t/p, tailles d'effet à deux groupes et effectifs/pourcentages éligibles à l'aide des outils statistiques existants, puis enregistre l'état du noyau ainsi que les rapports Markdown/HTML en chinois. `compare` valide l'évaluation explicite des conditions comparables fournie par l'Agent. Ces commandes n'embarquent aucun modèle Work résident : la lecture sémantique est effectuée par l'Agent courant en suivant [paper-research](skills/paper-research/SKILL.md). Les fichiers originaux et instantanés d'extraction sauvegardés permettent une relecture hors ligne déterministe. L'acquisition réseau et une nouvelle lecture sémantique restent des opérations identifiées séparément.
 
 ### Audit forensique des sources, d'OpenReview, des dépôts et 15 contrôles statistiques
 
-Quatre commandes CLI vérifient les métadonnées, les textes intégraux en libre accès, les évaluations OpenReview et les dépôts de code ; `table-forensics` et `academic_recompute_statistics` étendent l'audit à 15 contrôles déterministes incluant `partition_conservation`, `ablation_delta_regularity` et `storage_bandwidth_bounds` (sous l'hypothèse explicite de vecteurs non compressés et d'un balayage linéaire complet) :
+Sept commandes CLI vérifient les métadonnées, les textes intégraux en libre accès, les évaluations OpenReview et les dépôts de code ; `table-forensics` et `academic_recompute_statistics` étendent l'audit à 15 contrôles déterministes incluant `partition_conservation`, `ablation_delta_regularity` et `storage_bandwidth_bounds` (sous l'hypothèse explicite de vecteurs non compressés et d'un balayage linéaire complet) :
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ Lors de la rédaction de votre propre manuscrit, quatre outils déterministes co
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### Macro-distribution des 5 familles de défauts déterministes dans l'évaluation par les pairs (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ Pour motiver les cinq familles de défauts déterministes (absence de barres d'e
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersion 19.5%, tableau/ablation 7.9%, baseline manquante 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; dispersion 23.4%, tableau/ablation 10.5%, baseline manquante 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dispersion 23.8%, tableau/ablation 12.4%, baseline manquante 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; dispersion 21.8%, tableau/ablation 11.6%, baseline manquante 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersion 14.9% $\to$ 27.5%, code manquant 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ La version 2.4.0 valide la cohérence des DOI et identifiants externes, l'exclus
 
 ### Accès aux sources de données
 
-- Les requêtes OpenAlex de base peuvent s'exécuter anonymement avec un budget quotidien réduit. Les documents en vigueur au 2026-09-06 précisent 0,10 USD/jour en anonyme et 1 USD/jour avec une clé API gratuite, plus un plafond de 100 requêtes/seconde. Les coûts varient selon le type de requête ; ce n'est pas un accès illimité. Rangez une clé optionnelle dans `OPENALEX_API_KEY`. Utilisez `per_page` (maximum 100) et la pagination par curseur.
+- Les requêtes OpenAlex de base peuvent s'exécuter anonymement avec un budget quotidien réduit. Les documents en vigueur au 2026-09-06 précisent 0,10 USD/jour en anonyme et 1 USD/jour avec une clé API gratuite, plus un plafond de 10/30/50 requêtes/seconde (anonyme / clé API gratuite / forfait annuel). Les coûts varient selon le type de requête ; ce n'est pas un accès illimité. Les requêtes anonymes sont limitées à la première page (`per_page` maximum 100) ; suivre `next_cursor` au-delà de la première page requiert `OPENALEX_API_KEY`.
 - Crossref offre un accès public aux métadonnées avec limitation de débit. Les relations de mise à jour et les signaux Retraction Watch exigent des vérifications de DOI et de direction ; l'absence d'enregistrement ne prouve pas qu'un article est épargné.
 - Unpaywall exige une adresse de contact réelle dans `UNPAYWALL_EMAIL`. L'absence de localisation ne prouve pas l'absence de copie en accès libre.
 - arXiv, Europe PMC, PubMed E-utilities et DOAJ sont des sources complémentaires avec leurs propres règles. Les tests par défaut ne les sollicitent pas toutes. Semantic Scholar a des limites anonymes partagées et des limites de clé attribuées séparément ; l'accès ne garantit pas la disponibilité du contexte de citation.
@@ -234,7 +244,7 @@ QA valide les métadonnées, les références, les motifs de chemins personnels 
 
 Les tests d'autorat Hermes épinglés sont réutilisés sans modifier leurs règles par compétence. Les contrôles de population sur la distribution complète amont ne s'appliquent pas à ce tap ; notre banc de test vérifie quatorze compétences et résout les références contre le catalogue groupé et optionnel épinglé. Ce n'est pas un test d'installation Hermes complet. La CI n'utilise le réseau que pour installer les dépendances ; les tests courants n'appellent pas d'API académiques.
 
-La CI exécute la suite QA complète sur Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 Preview-Canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) et macOS Intel (macos-15-intel), avec validation Canary continue de la branche amont. Le candidat de référence historique a réussi 1165 tests locaux ; les résultats de correction actuels et les limites de couverture sont consignés dans [le rapport de correction](docs/maintenance/correctness-repair-20261008.md), les preuves distantes identifiant séparément le HEAD testé. Un flux d'intégration tap séparé s'exécute lors des poussées sur main : il installe l'extraction Hermes épinglée consignée dans tests/upstream/provenance.json et exerce tap add, search, install et list contre ce dépôt. Les versions, contrôles et limites exacts figurent dans [l'audit](docs/kernel-architecture.md).
+La CI exécute la suite QA complète sur Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), avec validation Canary continue de la branche amont. La suite de régression actuelle réussit 1348 tests locaux (contre 1165 pour le candidat de référence historique) ; les résultats de correction actuels et les limites de couverture sont consignés dans [le rapport de correction](docs/maintenance/correctness-repair-20261008.md), les preuves distantes identifiant séparément le HEAD testé. Un flux d'intégration tap séparé s'exécute lors des poussées sur main : il installe l'extraction Hermes épinglée consignée dans tests/upstream/provenance.json et exerce tap add, search, install et list contre ce dépôt. Les versions, contrôles et limites exacts figurent dans [l'audit](docs/kernel-architecture.md).
 
 [tools/longtail/](tools/longtail/README.md) héberge le générateur déterministe de facteurs de longue traîne : 4096 candidats initialisés par SHA256, 30 scénarios sélectionnés et un rapport de couverture de vérification calculé par machine. Le modèle v3 comptabilise séparément les familles de capacités (E01), les 14 compétences effectives du dépôt (E02) et les objectifs de tâche (E03). Chaque scénario possède une compétence principale, un objectif de tâche pris en charge et des capacités compatibles ; chaque compétence doit apparaître au moins deux fois sous deux objectifs distincts, y compris son objectif principal déclaré. Toute dérive des répertoires de compétences fait échouer la validation. L'expansion sémantique (chaînes de tâches, oracles et injection d'événements exécutés) demeure une étape distincte ; la couverture des facteurs ne prouve pas la couverture d'exécution des flux de travail.
 

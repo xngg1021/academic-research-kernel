@@ -163,7 +163,7 @@ current upstream inspected at `5dd70d7cb6560c3ff8aff294ec44ec4f8d1558e5` support
 bare executable tokens, separate arguments, `env`, and `${PLUGIN_ROOT}` /
 `${PLUGIN_DATA}` expansion. No invented install hook or environment manifest
 field is used. [Hermes runtime smoke](../scripts/hermes_runtime_smoke.py) invokes the real loader and its
-translated command, verifies the isolated 3.12 interpreter, enumerates 12 tools
+translated command, verifies the isolated 3.12 interpreter, enumerates 18 tools
 and dispatches a percentage calculation. Existing pinned tap discovery stays
 unchanged; main CI runs the pinned lifecycle and current canary. This does not
 claim coverage of every conversational Hermes workflow.

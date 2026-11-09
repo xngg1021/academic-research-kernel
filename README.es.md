@@ -21,7 +21,7 @@ Ejecute la versión 2.4.0 con [uv](https://docs.astral.sh/uv/getting-started/ins
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-La [versión 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10–3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 18 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
+La [versión 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10/3.12/3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 18 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
 
 ### Verificar la instalación
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Permita que Work o un Agente local compatible lea ese archivo `SKILL.md` exportado y pídale:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-Proporcione únicamente el DOI, el enlace público o el paquete local de archivos. Para dos artículos, pídale que compare los datos, los métodos, las condiciones de evaluación y los resultados, explicando qué elementos son directamente comparables. El Agente continúa dentro de la misma tarea con la lectura del texto original, la validación de candidatos, el cálculo, la incorporación, la generación del informe y la revisión independiente de fuentes. La superficie MCP existente conserva sus 12 herramientas; la nueva orquestación reside en la CLI y en la competencia portátil.
+Proporcione únicamente el DOI, el enlace público o el paquete local de archivos. Para dos artículos, pídale que compare los datos, los métodos, las condiciones de evaluación y los resultados, explicando qué elementos son directamente comparables. El Agente continúa dentro de la misma tarea con la lectura del texto original, la validación de candidatos, el cálculo, la incorporación, la generación del informe y la revisión independiente de fuentes. La superficie MCP existente conserva sus 18 herramientas; la nueva orquestación reside en la CLI y en la competencia portátil.
 
 Las etapas reales del programa son:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` obtiene y analiza el material generando un manifiesto, hashes de origen y segmentos localizados. `finish` valida la extracción producida por el Agente, recalcula las afirmaciones elegibles de valores t/p, tamaños del efecto de dos grupos y recuentos/porcentajes utilizando las herramientas estadísticas existentes, y guarda el estado del núcleo junto con los informes Markdown/HTML en chino. `compare` valida la evaluación explícita del Agente sobre las condiciones comparables. Estos comandos no integran un modelo Work residente: la lectura semántica la realiza el Agente actual siguiendo [paper-research](skills/paper-research/SKILL.md). Los archivos originales guardados y las instantáneas de extracción permiten una repetición determinista sin conexión. La obtención por red y una nueva lectura semántica permanecen como operaciones identificadas por separado.
+`prepare` obtiene y analiza el material (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) generando un manifiesto, hashes de origen y segmentos localizados. `finish` valida la extracción producida por el Agente, recalcula las afirmaciones elegibles de valores t/p, tamaños del efecto de dos grupos y recuentos/porcentajes utilizando las herramientas estadísticas existentes, y guarda el estado del núcleo junto con los informes Markdown/HTML en chino. `compare` valida la evaluación explícita del Agente sobre las condiciones comparables. Estos comandos no integran un modelo Work residente: la lectura semántica la realiza el Agente actual siguiendo [paper-research](skills/paper-research/SKILL.md). Los archivos originales guardados y las instantáneas de extracción permiten una repetición determinista sin conexión. La obtención por red y una nueva lectura semántica permanecen como operaciones identificadas por separado.
 
 ### Auditoría forense de fuentes, OpenReview, repositorios y 15 comprobaciones estadísticas
 
-Cuatro comandos CLI verifican metadatos, textos completos en acceso abierto, puntuaciones de OpenReview y repositorios de código; `table-forensics` y `academic_recompute_statistics` amplían la auditoría a 15 comprobaciones deterministas incluyendo `partition_conservation`, `ablation_delta_regularity` y `storage_bandwidth_bounds` (bajo el supuesto explícito de vectores sin comprimir y escaneo lineal completo):
+Siete comandos CLI verifican metadatos, textos completos en acceso abierto, puntuaciones de OpenReview y repositorios de código; `table-forensics` y `academic_recompute_statistics` amplían la auditoría a 15 comprobaciones deterministas incluyendo `partition_conservation`, `ablation_delta_regularity` y `storage_bandwidth_bounds` (bajo el supuesto explícito de vectores sin comprimir y escaneo lineal completo):
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ Al redactar su propio artículo, cuatro herramientas deterministas cubren la ini
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### Macro-distribución de las 5 familias de defectos deterministas en la revisión por pares (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ Para fundamentar las cinco familias de defectos deterministas (ausencia de barra
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersión 19.5%, tabla/ablación 7.9%, línea base 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; dispersión 23.4%, tabla/ablación 10.5%, línea base 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dispersión 23.8%, tabla/ablación 12.4%, línea base 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; dispersión 21.8%, tabla/ablación 11.6%, línea base 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersión 14.9% $\to$ 27.5%, sin código 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ La versión 2.4.0 valida la coherencia de los DOI e identificadores externos, lo
 
 ### Acceso a fuentes de datos
 
-- Las consultas básicas de OpenAlex pueden ejecutarse de forma anónima con un presupuesto diario menor. Los documentos vigentes al 2026-09-06 indican 0,10 USD/día anónimo y 1 USD/día con clave API gratuita, más un tope de 100 peticiones/segundo. Los costes varían según el tipo de consulta; no es acceso ilimitado. Guarde una clave opcional en `OPENALEX_API_KEY`. Use `per_page` (máximo 100) y paginación por cursor.
+- Las consultas básicas de OpenAlex pueden ejecutarse de forma anónima con un presupuesto diario menor. Los documentos vigentes al 2026-09-06 indican 0,10 USD/día anónimo y 1 USD/día con clave API gratuita, más un tope de 10/30/50 peticiones/segundo (anónimo / clave API gratuita / plan anual). Los costes varían según el tipo de consulta; no es acceso ilimitado. Las consultas anónimas se limitan a la primera página (`per_page` máximo 100); avanzar más allá con `next_cursor` requiere `OPENALEX_API_KEY`.
 - Crossref ofrece acceso público a metadatos con limitación de velocidad. Las relaciones de actualización y las señales de Retraction Watch exigen comprobaciones de DOI y dirección; la ausencia de registros no prueba que un artículo no esté afectado.
 - Unpaywall exige un correo de contacto real en `UNPAYWALL_EMAIL`. La ausencia de ubicación no prueba que no exista copia en acceso abierto.
 - arXiv, Europe PMC, PubMed E-utilities y DOAJ son fuentes complementarias con sus propias políticas. No todas se ejercitan en las pruebas por defecto. Semantic Scholar tiene límites anónimos compartidos y límites de clave asignados por separado; el acceso no garantiza disponibilidad del contexto de citas.
@@ -234,7 +244,7 @@ QA valida metadatos, referencias, patrones de rutas personales y secretos conoci
 
 Las pruebas de autoría de Hermes fijadas se reutilizan sin cambiar sus reglas por competencia. Las comprobaciones poblacionales de la distribución completa del upstream no se aplican a este tap; nuestro banco de pruebas comprueba catorce competencias y resuelve referencias contra el catálogo agrupado y opcional fijado. Esto no es una prueba completa de instalación de Hermes. La CI usa la red solo para instalar dependencias; las pruebas ordinarias no llaman a API académicas.
 
-La CI ejecuta la suite QA completa en Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 Preview-Canary (ubuntu-26.04 & ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) y macOS Intel (macos-15-intel), con validación Canary en vivo de la rama upstream. El candidato histórico de referencia superó 1165 pruebas locales; los resultados actuales de reparación y los límites de cobertura constan en [la reparación de corrección](docs/maintenance/correctness-repair-20261008.md), donde la evidencia remota identifica por separado el HEAD probado. Un flujo de integración tap separado se ejecuta en las subidas a main: instala el checkout de Hermes fijado registrado en tests/upstream/provenance.json y ejercita tap add, search, install y list contra este repositorio. Las versiones, comprobaciones y limitaciones exactas constan en [la auditoría](docs/kernel-architecture.md).
+La CI ejecuta la suite QA completa en Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), con validación Canary en vivo de la rama upstream. La suite de regresión actual supera 1348 pruebas locales (frente a 1165 en el candidato histórico de referencia); los resultados actuales de reparación y los límites de cobertura constan en [la reparación de corrección](docs/maintenance/correctness-repair-20261008.md), donde la evidencia remota identifica por separado el HEAD probado. Un flujo de integración tap separado se ejecuta en las subidas a main: instala el checkout de Hermes fijado registrado en tests/upstream/provenance.json y ejercita tap add, search, install y list contra este repositorio. Las versiones, comprobaciones y limitaciones exactas constan en [la auditoría](docs/kernel-architecture.md).
 
 [tools/longtail/](tools/longtail/README.md) aloja el generador determinista de factores de cola larga: 4096 candidatos con semilla SHA256, 30 escenarios seleccionados y un informe de cobertura de verificación calculado por máquina. El modelo v3 contabiliza por separado las familias de capacidades (E01), las 14 competencias reales del repositorio (E02) y los objetivos de tarea (E03). Cada escenario tiene una competencia principal, un objetivo de tarea admitido y capacidades compatibles; cada competencia debe aparecer al menos dos veces bajo dos objetivos distintos, incluido su objetivo principal declarado. Cualquier desviación respecto a los directorios de competencias hace fallar la validación. La expansión semántica (cadenas de tareas, oráculos e inyección de eventos ejecutados) permanece como una etapa separada; la cobertura de factores no demuestra la cobertura de ejecución de los flujos de trabajo.
 

@@ -54,15 +54,17 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` 負責讀取 PDF 與 HTML、XML/JATS 與 DOCX/XLSX，或者 LaTeX/BibTeX 原始碼包，計算檔案雜湊並按頁碼與章節建立原文段落索引。智慧體讀完原文填好候選提取結果後，`finish` 會逐條核對每個數字是否真實出現在聲明的原文位置，自動呼叫統計重算引擎驗證數值是否自洽，保存研究狀態並生成帶頁碼出處的中文 Markdown 與 HTML 報告。`compare` 負責核驗兩篇論文在資料集、實驗條件與評估指標上是否具備直接可比性。保存下來的原始材料與提取快照隨時可用 `academic-research-kernel research replay --project PROJECT` 離線重放。
+`prepare` 負責讀取 PDF（`.pdf`）與 HTML（`.html`、`.htm`）、XML/JATS（`.xml`）與 DOCX/XLSX（`.docx`、`.xlsx`），以及 LaTeX/BibTeX（`.tex`、`.bib`、`.bbl`）、Markdown（`.md`）、純文字（`.txt`）或 Python（`.py`）原始碼包，計算檔案雜湊並按頁碼與章節建立原文段落索引。智慧體讀完原文填好候選提取結果後，`finish` 會逐條核對每個數字是否真實出現在聲明的原文位置，自動呼叫統計重算引擎驗證數值是否自洽，保存研究狀態並生成帶頁碼出處的中文 Markdown 與 HTML 報告。`compare` 負責核驗兩篇論文在資料集、實驗條件與評估指標上是否具備直接可比性。保存下來的原始材料與提取快照隨時可用 `academic-research-kernel research replay --project PROJECT` 離線重放。
 
 ### 2. 查證文獻真偽、開放取用全文與審稿紀錄及程式碼倉庫
 
-針對單篇論文的外部取證，可以直接在終端機呼叫四個子命令：
+針對外部取證、復現查核與增量文獻巡檢，可以直接在終端機呼叫七組子命令：
 
 ```bash
-# 核對 DOI/arXiv 編號並在 OpenAlex 與 Crossref 交叉查核詮釋資料與撤稿狀態
+# 核對 DOI/arXiv 編號、校驗本機 PDF 首頁真偽，或在 OpenAlex 與 Crossref 交叉查核更新與撤稿訊號
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 
 # 按 Unpaywall 與 arXiv、OpenAlex 與 Semantic Scholar 及 Europe PMC 順序定位開放取用全文並校驗 DOI
 academic-research-kernel locate-oa 10.1038/nature14539
@@ -73,13 +75,18 @@ academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --to
 
 # 掃描程式碼倉庫的真實非第三方原始碼體量、Git 提交紀錄與 README 宣稱命令是否對得上
 academic-research-kernel repo-forensics --local-repo ./target-repo
+
+# 執行 14 階段復現查核清單裁定，或執行文獻增量監控與撤稿巡檢離線自測
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 ```
 
 `locate-oa` 會拒絕把 `is_oa=false` 的付費牆落地頁或 DOI 不匹配的紀錄當成全文連結。`openreview-audit` 會自動過濾缺失評分並按 `forum_id` 去重，只用普通審稿人的評分計算均分與變異數，把領域主席的元審稿與最終決定單獨分列。`repo-forensics` 優先透過 `git ls-files` 區分專案自有原始碼與打包進來的第三方目錄，防止把塞滿第三方函式庫的倉庫誤判為高工作量專案。
 
-### 3. 16 類統計重算、物理下界校驗與統合分析
+### 3. 15 類統計與取證重算、物理下界校驗與統合分析
 
-公開的 `academic_recompute_statistics` MCP 工具與 `recompute.py` 引擎支援 16 類確定性查核。基礎檢定涵蓋 $t$ 檢定與 $F$ 檢定，以及 $\chi^2$ 檢定與迴歸係數 $\beta/\text{SE}$ 的 Wald 檢定；區間與效應量檢定涵蓋信賴區間對稱性與 $2\times 2$ 列聯表勝算比及風險比，以及雙樣本 Cohen's $d$ 與 Hedges' $g$ 效應量；自洽檢定涵蓋百分比分母反推與有界量表標準差可能性，以及自由度核對和 $t$ 檢定統計檢定力反算。
+公開的 `academic_recompute_statistics` MCP 工具與 `recompute.py` 引擎支援 15 類確定性查核。基礎檢定涵蓋 $t$ 檢定與 $F$ 檢定，以及 $\chi^2$ 檢定與迴歸係數 $\beta/\text{SE}$ 的 Wald 檢定；區間與效應量檢定涵蓋信賴區間對稱性與 $2\times 2$ 列聯表勝算比及風險比，以及雙樣本 Cohen's $d$ 與 Hedges' $g$ 效應量；自洽檢定涵蓋百分比分母反推與有界量表標準差可能性，以及自由度核對和 $t$ 檢定統計檢定力反算。
 
 針對機器學習與系統論文常見的表格異常，`2.3.0` 版本新增了三項表格取證體檢能力（可透過 `academic-research-kernel table-forensics --input spec.json` 或 MCP 呼叫）：
 - **樣本分區守恆 `partition_conservation`**：核對總樣本量是否嚴格等於各互斥子集計數之和；
@@ -99,31 +106,35 @@ academic-research-kernel meta-analyze --input studies.json
 自己動手寫論文與準備投稿時，系統提供從工作區初始化與實驗資料轉三線表，到雙盲匿名清洗與投稿前硬性門禁的四步工具鏈。
 
 ```bash
-# 1. 查看內建的 8 大會刊規格並初始化論文目錄
+# 1. 查看內建的 8 大會刊規格、初始化論文目錄，或從 ClaimEvidenceGraph 匯出已就緒的 % ark:claim=<id> 證據錨點清單
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 
-# 2. 將核驗通過的實驗結果 JSON 直接渲染為帶最優粗體與次優底線的 LaTeX booktabs 三線表
+# 2. 將實驗結果收據或 paper-research 提取與對比產物直接渲染為 LaTeX booktabs 三線表
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 
 # 3. 執行雙盲匿名掃描，攔截 .tex/.bib 與編譯後 PDF 詮釋資料中的實名與致謝及自引暗號和本機路徑
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
 
-# 4. 執行投稿前全量門禁，檢查匿名巨集套件與頁數上限，以及必含章節、懸空引用和 ClaimEvidenceGraph 證據支撐邊
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+# 4. 執行投稿前全量門禁，並可選開啟 --check-academic-style 掃描中英文 AI 套話、含糊方法句與無錨點強聲明
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 ```
 
 `receipt-to-latex` 全程採用 `Decimal` 精確十進位捨入，避免手抄實驗表格改錯數字或浮點精度漂移。`double-blind-sanitize` 既掃描文本中的 `\author` 與自訂實名巨集，以及 `\icmlauthor` 與 `pdfauthor` 設定，也會直接讀取編譯後 PDF 的 `/Author` 與 `/Creator` 文件屬性字典。`pre-submission-lint` 對照 `skills/academic-writing/references/venue-specs.json` 中的當屆規則，檢查是否誤開 `final`、`preprint` 或 `camera-ready` 巨集套件選項，跨頁追蹤文末豁免聲明使 `Reproducibility Statement`、`Ethics Statement` 與 `Acknowledgments` 不再虛增正文頁數，利用平衡大括號屏蔽 `\newcommand` 與 `\def` 巨集定義體以消除未呼叫草稿巨集的 `TODO` 誤報，跨檔案核對 `\ref`、`\Cref` 與 `\label{...}` 及 `lstlisting[label={...}]` 是否閉合，攔截 `Author et al. ~\cite{...}` 作者名重複偽影與著者年份制下全篇混用裸 `\cite` 的排印缺陷，攔截雙盲初審稿中的非匿名致謝與基金號揭露，並在耗時隨文本長度線性增長的前提下校驗摘要與結論中的定量論斷在 `ClaimEvidenceGraph` 中是否真正連向 `support_status == "supported"` 的正向證據邊。
 
-參考文獻格式轉換與排序可直接呼叫：
+參考文獻格式轉換、縮寫大括號保護匯出、跨源去重、引文關係圖與綜述對比表可直接呼叫：
 
 ```bash
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### 同行評議中五類確定性缺陷的宏觀分佈：ICLR 2026 共 `19,473` 篇有分稿件
 
-為說明缺失誤差棒與版式超限、表格消融異常與漏引基線及缺失復現程式碼這五類確定性檢查的現實依據，我們在不擬合任何經驗權重與主觀分數閾值的前提下，按論文粒度統計了 ICLR 2026 共 `19,473` 篇有分投稿與 `75,769` 條官方審稿意見中至少一條審稿意見指出對應缺陷的稿件佔比 `k / N`；全集包含下表四類常規決定共 `18,791` 篇與帶評語程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分別為 `9,765` 篇與 `9,708` 篇，所有單篇稿件均保持完全匿名，彙總數據見[去識別化統計彙總表](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)：
+為說明缺失誤差棒與版式超限、表格消融異常與漏引基線及缺失復現程式碼這五類確定性檢查的現實依據，我們在不擬合任何經驗權重與主觀分數閾值的前提下，按論文粒度統計了 ICLR 2026 共 `19,473` 篇有分投稿與 `75,769` 條官方審稿意見中至少一條審稿意見指出對應缺陷的稿件佔比 `k / N`；全集包含四類常規決定共 `18,791` 篇與帶評語程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分別為 `9,765` 篇與 `9,708` 篇，所有單篇稿件均保持完全匿名，彙總數據見[去識別化統計彙總表](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)：
 
 | 錄用檔位與可靠度分層 | 有效投稿數 $N$ | 評分均值 / Soundness 均值 | 審稿意見提及五類確定性缺陷的稿件佔比 `k / N` |
 | --- | --- | --- | --- |
@@ -131,6 +142,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster 海報錄用** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`)，含缺失誤差棒 19.5% 與表格消融異常 7.9%，以及漏引基線 4.9% |
 | **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`)，含缺失誤差棒 23.4% 與表格消融異常 10.5%，以及漏引基線 6.1% |
 | **Withdrawn 撤稿** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`)，含缺失誤差棒 23.8% 與表格消融異常 12.4%，以及漏引基線 6.8% |
+| **Desk Reject 程序性拒稿** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`)，含缺失誤差棒 21.8% 與表格消融異常 11.6%，以及漏引基線 6.6% |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`)，含缺失誤差棒 14.9% $\to$ 27.5% 與缺程式碼 15.6% $\to$ 27.7% |
 
 
@@ -164,7 +176,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
    您也可以使用 `pipx install academic-research-kernel==2.4.0` 或在虛擬環境內執行 `python -m pip install academic-research-kernel==2.4.0`。加上 `[research]` 會固定安裝 `pypdf==7.0.0` 與 `fonttools==4.65.0`，保證不同機器解析數位 PDF 字型時結果一致；加上 `[full]` 會一併安裝擴展科學計算範例所需的函式庫；加上 `[qa]` 會安裝倉庫自檢與測試所需的解析依賴。
 
 2. **通用 Agent Plugins v1 與 MCP 用戶端掛載**
-   本倉庫遵循 **Agent Plugins v1** 規範並提供 `plugin.json`，透過標準輸入輸出協定執行 `mcp.json` 與 `scripts/mcp_server.py` 定義的 **MCP 伺服器**。雖然倉庫名為 `academic-research-kernel`，但外掛名稱 `name: "academic-skills"` 與原有的 MCP 設定別名保持不變，舊設定無需修改即可繼續使用。
+   本倉庫遵循 **Agent Plugins v1** 規範並提供 `plugin.json`，透過標準輸入輸出協定執行 `mcp.json` 與 `scripts/mcp_server.py` 定義的 **MCP 伺服器**，對外暴露全部 18 個查核與統計工具。雖然倉庫名為 `academic-research-kernel`，但外掛名稱 `name: "academic-skills"` 與原有的 MCP 設定別名保持不變，舊設定無需修改即可繼續使用。
 
 3. **在 Hermes 中安裝外掛或按需安裝單項技能**
    請先確認 Hermes 行程的環境變數 `PATH` 中包含 `uv`，再安裝並啟用外掛，或直接透過 `tap` 按需安裝單項技能：
@@ -234,7 +246,7 @@ python scripts/verify_external_apis.py --output external-status.json --summary e
 git diff --check
 ```
 
-如需在倉庫目錄之外的純淨虛擬環境中建置並驗證 Wheel 與原始碼分發包，涵蓋全部 13 組 CLI 子命令、`[research]` PDF 提取與 `uvx` 獨立快取執行，可執行：
+如需在倉庫目錄之外的純淨虛擬環境中建置並驗證 Wheel 與原始碼分發包，涵蓋全部 16 組 CLI 子命令、`[research]` PDF 提取與 `uvx` 獨立快取執行，可執行：
 
 ```bash
 uv build --no-create-gitignore
@@ -242,7 +254,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1340 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.4.0 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
+GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1348 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.4.0 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
 
 ### 2. 授權條款
 

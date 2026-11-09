@@ -21,7 +21,7 @@ Yazar: Junfu Shi (SJF, xngg1021). Geçerli kapsamlı lisans teklifi: [Source Lin
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.4.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 18 deterministik aracın tamamı temel kuruluma dahildir.
+[2.4.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10/3.12/3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 18 deterministik aracın tamamı temel kuruluma dahildir.
 
 ### Kurulumu doğrulama
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Work veya uyumlu bir yerel Ajanın dışa aktarılan bu `SKILL.md` dosyasını okumasına izin verin ve ardından şunu isteyin:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-Yalnızca DOI'yi, açık bağlantıyı veya yerel dosya paketini sağlamanız yeterlidir. İki makale için Ajandan verileri, yöntemleri, değerlendirme koşullarını ve sonuçları karşılaştırmasını, nelerin doğrudan karşılaştırılabilir olduğunu açıklamasını isteyin. Ajan aynı görev içinde özgün metin okuma, aday alan doğrulaması, istatistiksel hesaplama, çekirdeğe aktarım, rapor oluşturma ve bağımsız kaynak incelemesi adımlarını sürdürür. Mevcut MCP yüzeyi 12 aracını korur; yeni orkestrasyon CLI ve taşınabilir beceri üzerinden çalışır.
+Yalnızca DOI'yi, açık bağlantıyı veya yerel dosya paketini sağlamanız yeterlidir. İki makale için Ajandan verileri, yöntemleri, değerlendirme koşullarını ve sonuçları karşılaştırmasını, nelerin doğrudan karşılaştırılabilir olduğunu açıklamasını isteyin. Ajan aynı görev içinde özgün metin okuma, aday alan doğrulaması, istatistiksel hesaplama, çekirdeğe aktarım, rapor oluşturma ve bağımsız kaynak incelemesi adımlarını sürdürür. Mevcut MCP yüzeyi 18 aracını korur; yeni orkestrasyon CLI ve taşınabilir beceri üzerinden çalışır.
 
 Programın gerçek çalışma aşamaları şunlardır:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` komutu materyali temin eder ve bir bildirim dosyası, kaynak özetleri (hash) ile konumu belirlenmiş metin bölümlerine ayrıştırır. `finish` komutu, Ajan tarafından üretilen çıkarımı doğrular ve mevcut istatistiksel araçları kullanarak uygun t/p testlerini, iki gruplu etki büyüklüğü ve sayı/yüzde iddialarını yeniden hesaplar, ardından çekirdek durumunu ve Çince Markdown/HTML raporlarını kaydeder. `compare` komutu, Ajanın karşılaştırılabilir koşullara ilişkin açık değerlendirmesini doğrular. Bu komutlar yerleşik bir dil modeli barındırmaz: anlamsal okuma, [paper-research](../../skills/paper-research/SKILL.md) kılavuzunu izleyen mevcut Ajan tarafından gerçekleştirilir. Kaydedilen özgün dosyalar ve çıkarım anlık görüntüleri deterministik çevrimdışı yeniden oynatmayı destekler; ağ üzerinden edinim ve yeni bir anlamsal okuma ayrı tanımlanan işlemler olarak kalır.
+`prepare` komutu materyali (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) temin eder ve bir bildirim dosyası, kaynak özetleri (hash) ile konumu belirlenmiş metin bölümlerine ayrıştırır. `finish` komutu, Ajan tarafından üretilen çıkarımı doğrular ve mevcut istatistiksel araçları kullanarak uygun t/p testlerini, iki gruplu etki büyüklüğü ve sayı/yüzde iddialarını yeniden hesaplar, ardından çekirdek durumunu ve Çince Markdown/HTML raporlarını kaydeder. `compare` komutu, Ajanın karşılaştırılabilir koşullara ilişkin açık değerlendirmesini doğrular. Bu komutlar yerleşik bir dil modeli barındırmaz: anlamsal okuma, [paper-research](../../skills/paper-research/SKILL.md) kılavuzunu izleyen mevcut Ajan tarafından gerçekleştirilir. Kaydedilen özgün dosyalar ve çıkarım anlık görüntüleri deterministik çevrimdışı yeniden oynatmayı destekler; ağ üzerinden edinim ve yeni bir anlamsal okuma ayrı tanımlanan işlemler olarak kalır.
 
 ### Kaynak, OpenReview, kod deposu adli analizi ve 15 istatistiksel kontrol
 
-Dört bağımsız CLI komutu üstverileri, açık erişim tam metinleri, OpenReview hakem puanlarını ve kod depolarını doğrular; `table-forensics` ve `academic_recompute_statistics` ise `partition_conservation`, `ablation_delta_regularity` ve `storage_bandwidth_bounds` (sıkıştırılmamış vektörler ve tam doğrusal tarama varsayımı altında) dahil olmak üzere 15 deterministik kontrol sunar:
+Yedi bağımsız CLI komutu üstverileri, açık erişim tam metinleri, OpenReview hakem puanlarını ve kod depolarını doğrular; `table-forensics` ve `academic_recompute_statistics` ise `partition_conservation`, `ablation_delta_regularity` ve `storage_bandwidth_bounds` (sıkıştırılmamış vektörler ve tam doğrusal tarama varsayımı altında) dahil olmak üzere 15 deterministik kontrol sunar:
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ Kendi makalenizi hazırlarken dört deterministik araç; çalışma alanı başl
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### Hakem Değerlendirmesinde 5 Deterministik Hata Ailesinin Makro Dağılımı (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ Ampirik ağırlıklar veya öznel puan eşikleri uydurmadan beş deterministik h
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dağılım/hata çubuğu 19.5%, tablo/ablasyon 7.9%, eksik baseline 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; dağılım/hata çubuğu 23.4%, tablo/ablasyon 10.5%, eksik baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dağılım/hata çubuğu 23.8%, tablo/ablasyon 12.4%, eksik baseline 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; dağılım/hata çubuğu 21.8%, tablo/ablasyon 11.6%, eksik baseline 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dağılım 14.9% $\to$ 27.5%, eksik kod 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ Son bütünlük onarımı; DOI/tanımlayıcı tutarlılığını, nicel karar ba
 
 ### Veri Kaynağı Erişimi
 
-- OpenAlex temel sorguları daha küçük bir günlük bütçeyle anonim olarak çalıştırılabilir. 2026-09-06 tarihinde kontrol edilen belgelere göre anonim kullanım için günlük 0,10 ABD doları, ücretsiz API anahtarıyla günlük 1 ABD doları bütçe ve saniyede 100 istek tavanı uygulanmaktadır. Maliyetler sorgu türüne göre değişir ve sınırsız erişim anlamına gelmez. İsteğe bağlı anahtarı `OPENALEX_API_KEY` değişkeninde saklayın; `per_page` (en fazla 100) ve imleç tabanlı sayfalama kullanın.
+- OpenAlex temel sorguları daha küçük bir günlük bütçeyle anonim olarak çalıştırılabilir. 2026-09-06 tarihinde kontrol edilen belgelere göre anonim kullanım için günlük 0,10 ABD doları, ücretsiz API anahtarıyla günlük 1 ABD doları bütçe ve saniyede 10/30/50 istek (anonim / ücretsiz anahtar / yıllık plan) tavanı uygulanmaktadır. Maliyetler sorgu türüne göre değişir ve sınırsız erişim anlamına gelmez. Anonim sorgular ilk sayfayla sınırlıdır (`per_page` en fazla 100); ilk sayfadan sonra `next_cursor` ile devam etmek için `OPENALEX_API_KEY` gereklidir.
 - Crossref, hız sınırlandırmalı genel meta veri erişimi sunar. Güncelleme ilişkileri ve Retraction Watch sinyalleri DOI ve yön kontrolü gerektirir; kayıt bulunmaması bir makalenin etkilenmediğini kanıtlamaz.
 - Unpaywall, `UNPAYWALL_EMAIL` değişkeninde gerçek bir iletişim e-posta adresi gerektirir. Bir konum dönmemesi, açık erişimli kopya bulunmadığını kanıtlamaz.
 - arXiv, Europe PMC, PubMed E-utilities ve DOAJ kendi kullanım politikalarına sahip tamamlayıcı kaynaklardır ve varsayılan testlerin tamamında çağrılmazlar. Semantic Scholar paylaşımlı anonim sınırlar ve ayrı atanmış anahtar kotaları uygular; API erişimi atıf bağlamının her zaman sunulacağını garanti etmez.
@@ -234,7 +244,7 @@ QA betiği; meta verileri, yerel referansları, kişisel dosya yolu ve bilinen g
 
 Sabitlenmiş Hermes beceri yazım testleri, beceri başına kuralları değiştirilmeden yeniden kullanılır. Üst kaynağın tüm dağıtımı kapsayan genel kontrolleri bu depo için geçerli değildir; test altyapımız on dört beceriyi denetler ve referansları sabitlenmiş yerleşik/isteğe bağlı kataloğa göre çözümler. Bu işlem tam bir Hermes kurulum testi değildir. CI ağı yalnızca bağımlılıkları kurmak için kullanır; olağan değişiklik testleri akademik API'leri çağırmaz.
 
-CI; Linux x86_64 (Python 3.10–3.14), Linux ARM64 (`ubuntu-24.04-arm`), Ubuntu 26.04 preview canary (`ubuntu-26.04` ve `ubuntu-26.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`) ve macOS Intel (`macos-15-intel`) üzerinde canlı üst kaynak canary doğrulamasıyla birlikte tam QA paketini çalıştırır. Geçmiş temel aday 1165 yerel testi geçmiştir. Güncel onarım sonuçları ve kapsam sınırları [doğruluk onarımı raporunda](../../docs/maintenance/correctness-repair-20261008.md) kayıtlıdır; uzak test kanıtları test edilen `HEAD` işlemesini ayrıca belirtir. `main` dalına yapılan göndermelerde ayrı bir tap entegrasyon iş akışı çalışır: `tests/upstream/provenance.json` içinde kayıtlı sabitlenmiş Hermes kopyasını kurar ve bu depoya karşı `tap add`, `search`, `install` ve `list` komutlarını sınar. Tam sürümler, kontroller ve sınırlamalar [denetim raporunda](../../docs/kernel-architecture.md) yer almaktadır.
+CI; Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`) üzerinde canlı üst kaynak canary doğrulamasıyla birlikte tam QA paketini çalıştırır. Güncel regresyon paketi 1348 yerel testi geçmektedir (1165 testlik geçmiş temel adaydan genişletilmiştir). Güncel onarım sonuçları ve kapsam sınırları [doğruluk onarımı raporunda](../../docs/maintenance/correctness-repair-20261008.md) kayıtlıdır; uzak test kanıtları test edilen `HEAD` işlemesini ayrıca belirtir. `main` dalına yapılan göndermelerde ayrı bir tap entegrasyon iş akışı çalışır: `tests/upstream/provenance.json` içinde kayıtlı sabitlenmiş Hermes kopyasını kurar ve bu depoya karşı `tap add`, `search`, `install` ve `list` komutlarını sınar. Tam sürümler, kontroller ve sınırlamalar [denetim raporunda](../../docs/kernel-architecture.md) yer almaktadır.
 
 [tools/longtail/](../../tools/longtail/README.md) dizini deterministik uzun kuyruk faktör üretecini barındırır: SHA-256 tohumlu 4096 aday, seçilen 30 senaryo ve makine tarafından hesaplanan bir doğrulama kapsamı raporu. v3 modeli; yetenek ailelerini (E01), depodaki 14 gerçek beceriyi (E02) ve görev hedeflerini (E03) ayrı ayrı sayar. Her senaryonun bir birincil becerisi, desteklenen bir görev hedefi ve uyumlu yetenekleri vardır; her beceri, beyan edilen temel hedefi dahil olmak üzere iki farklı hedef altında en az iki kez yer almalıdır. Beceri dizini kayması doğrulamayı başarısız kılar. Anlamsal genişletme (görev zincirleri, doğrulama ölçütleri ve yürütülen olay enjeksiyonu) ayrı bir aşamadır; faktör kapsamı iş akışı yürütme kapsamını kanıtlamaz.
 

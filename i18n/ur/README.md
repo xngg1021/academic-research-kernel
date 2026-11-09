@@ -21,7 +21,7 @@
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.4.0 ریلیز](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ڈسٹری بیوشن ہیشز اور اشاعت کی حیثیت کو ریکارڈ کرتی ہے۔ ریلیز وہیل کو مقامی طور پر `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` کے ذریعے بھی چلایا جا سکتا ہے۔ Python 3.10–3.14 معاونت یافتہ ہے؛ `uvx --python 3.12` واضح طور پر ایک معاون انٹرپریٹر منتخب کرتا ہے۔ سائنسی حساب کتاب اور شماریاتی آلات سمیت تمام 18 قطعی ٹولز بنیادی انسٹالیشن میں شامل ہیں۔
+[2.4.0 ریلیز](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ڈسٹری بیوشن ہیشز اور اشاعت کی حیثیت کو ریکارڈ کرتی ہے۔ ریلیز وہیل کو مقامی طور پر `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` کے ذریعے بھی چلایا جا سکتا ہے۔ Python 3.10/3.12/3.14 معاونت یافتہ ہے؛ `uvx --python 3.12` واضح طور پر ایک معاون انٹرپریٹر منتخب کرتا ہے۔ سائنسی حساب کتاب اور شماریاتی آلات سمیت تمام 18 قطعی ٹولز بنیادی انسٹالیشن میں شامل ہیں۔
 
 ### تنصیب کی تصدیق
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Work یا کسی ہم آہنگ مقامی Agent کو ایکسپورٹ کردہ `SKILL.md` پڑھنے دیں، پھر اس سے کہیں:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-صرف DOI، عوامی لنک یا مقامی فائل بنڈل فراہم کریں۔ دو مقالوں کی صورت میں، اسے ڈیٹا، طریقہ کار، تشخیصی شرائط اور نتائج کا موازنہ کرنے کا کہیں، اور یہ واضح کرنے کو کہیں کہ کون سے نتائج براہ راست قابل موازنہ ہیں۔ Agent اسی ٹاسک کے اندر اصل متن کا مطالعہ، امیدوار فیلڈز کی توثیق، حساب کتاب، کرنل میں شمولیت، رپورٹ کی تیاری اور ماخذ کی آزادانہ تصدیق اور توثیق کا عمل مکمل کرتا ہے۔ موجودہ MCP سطح اپنے 12 ٹولز برقرار رکھتی ہے؛ نیا آرکیسٹریشن CLI اور پورٹیبل مہارت میں موجود ہے۔
+صرف DOI، عوامی لنک یا مقامی فائل بنڈل فراہم کریں۔ دو مقالوں کی صورت میں، اسے ڈیٹا، طریقہ کار، تشخیصی شرائط اور نتائج کا موازنہ کرنے کا کہیں، اور یہ واضح کرنے کو کہیں کہ کون سے نتائج براہ راست قابل موازنہ ہیں۔ Agent اسی ٹاسک کے اندر اصل متن کا مطالعہ، امیدوار فیلڈز کی توثیق، حساب کتاب، کرنل میں شمولیت، رپورٹ کی تیاری اور ماخذ کی آزادانہ تصدیق اور توثیق کا عمل مکمل کرتا ہے۔ موجودہ MCP سطح اپنے 18 ٹولز برقرار رکھتی ہے؛ نیا آرکیسٹریشن CLI اور پورٹیبل مہارت میں موجود ہے۔
 
 پروگرام کے حقیقی مراحل یہ ہیں:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` کمانڈ مواد حاصل کر کے اسے مینی فیسٹ، ماخذ کے ہیشز اور متعین کردہ حصوں میں تجزیہ کرتی ہے۔ `finish` کمانڈ Agent کے تیار کردہ اخراج کی توثیق کرتی ہے اور موجودہ شماریاتی ٹولز کا استعمال کرتے ہوئے اہل t/p، دو گروپوں کے اثر کے حجم اور گنتی/فیصد کے دعووں کا دوبارہ حساب لگاتی ہے، پھر کرنل کی کیفیت اور چینی Markdown/HTML رپورٹس محفوظ کرتی ہے۔ `compare` کمانڈ قابل موازنہ شرائط کے بارے میں Agent کے صریح تجزیے کی توثیق کرتی ہے۔ یہ کمانڈز کوئی مستقل ریزیڈنٹ ماڈل شامل نہیں کرتیں: معنوی مطالعہ موجودہ Agent کی جانب سے [paper-research](../../skills/paper-research/SKILL.md) کی پیروی کرتے ہوئے کیا جاتا ہے۔ محفوظ کردہ اصل فائلیں اور اخراج کے اسنیپ شاٹس قطعی آف لائن ری پلے کی معاونت کرتے ہیں۔ نیٹ ورک سے حصول اور نیا معنوی مطالعہ الگ سے شناخت شدہ عوامل کے طور پر برقرار رہتے ہیں۔
+`prepare` کمانڈ مواد (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) حاصل کر کے اسے مینی فیسٹ، ماخذ کے ہیشز اور متعین کردہ حصوں میں تجزیہ کرتی ہے۔ `finish` کمانڈ Agent کے تیار کردہ اخراج کی توثیق کرتی ہے اور موجودہ شماریاتی ٹولز کا استعمال کرتے ہوئے اہل t/p، دو گروپوں کے اثر کے حجم اور گنتی/فیصد کے دعووں کا دوبارہ حساب لگاتی ہے، پھر کرنل کی کیفیت اور چینی Markdown/HTML رپورٹس محفوظ کرتی ہے۔ `compare` کمانڈ قابل موازنہ شرائط کے بارے میں Agent کے صریح تجزیے کی توثیق کرتی ہے۔ یہ کمانڈز کوئی مستقل ریزیڈنٹ ماڈل شامل نہیں کرتیں: معنوی مطالعہ موجودہ Agent کی جانب سے [paper-research](../../skills/paper-research/SKILL.md) کی پیروی کرتے ہوئے کیا جاتا ہے۔ محفوظ کردہ اصل فائلیں اور اخراج کے اسنیپ شاٹس قطعی آف لائن ری پلے کی معاونت کرتے ہیں۔ نیٹ ورک سے حصول اور نیا معنوی مطالعہ الگ سے شناخت شدہ عوامل کے طور پر برقرار رہتے ہیں۔
 
 ### مآخذ، OpenReview، کوڈ ریپوزٹری فرانزک اور 15 شماریاتی جانچیں
 
-چار CLI کمانڈز میٹا ڈیٹا، اوپن ایکسیس مکمل متن، OpenReview جائزہ اسکورز اور کوڈ ریپوزٹریز کی تصدیق کرتی ہیں؛ `table-forensics` اور `academic_recompute_statistics` میں `partition_conservation`، `ablation_delta_regularity` اور `storage_bandwidth_bounds` (غیر کمپریسڈ ویکٹرز اور مکمل لکیری اسکین کے مفروضے کے تحت) سمیت 15 قطعی جانچیں شامل ہیں:
+سات CLI کمانڈز میٹا ڈیٹا، اوپن ایکسیس مکمل متن، OpenReview جائزہ اسکورز اور کوڈ ریپوزٹریز کی تصدیق کرتی ہیں؛ `table-forensics` اور `academic_recompute_statistics` میں `partition_conservation`، `ablation_delta_regularity` اور `storage_bandwidth_bounds` (غیر کمپریسڈ ویکٹرز اور مکمل لکیری اسکین کے مفروضے کے تحت) سمیت 15 قطعی جانچیں شامل ہیں:
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ academic-research-kernel meta-analyze --input ./studies.json
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### ہم مرتبہ جائزے میں 5 حتمی نقائص کے خاندانوں کی مجموعی تقسیم (ICLR 2026، $N = 19,473$)
@@ -101,6 +110,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; عدم پھیلاؤ 19.5%، جدول/ابلیشن 7.9%، بیس لائن کمی 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; عدم پھیلاؤ 23.4%، جدول/ابلیشن 10.5%، بیس لائن کمی 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; عدم پھیلاؤ 23.8%، جدول/ابلیشن 12.4%، بیس لائن کمی 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; عدم پھیلاؤ 21.8%، جدول/ابلیشن 11.6%، بیس لائن کمی 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; عدم پھیلاؤ 14.9% $\to$ 27.5%، کوڈ کی کمی 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### ڈیٹا ذرائع تک رسائی
 
-- OpenAlex کے بنیادی سوالات چھوٹے یومیہ بجٹ کے ساتھ گمنام طور پر چلائے جا سکتے ہیں۔ 2026-09-06 کی دستاویزات کے مطابق گمنام طور پر $0.10/دن اور مفت API کلید کے ساتھ $1/دن کے علاوہ 100 درخواستیں فی سیکنڈ کی حد مقرر ہے۔ سوال کی نوعیت کے لحاظ سے لاگت مختلف ہوتی ہے؛ یہ لامحدود رسائی نہیں ہے۔ اختیاری کلید کو `OPENALEX_API_KEY` میں محفوظ کریں۔ `per_page` (زیادہ سے زیادہ 100) اور کرسر پیجینیشن استعمال کریں۔
+- OpenAlex کے بنیادی سوالات چھوٹے یومیہ بجٹ کے ساتھ گمنام طور پر چلائے جا سکتے ہیں۔ 2026-09-06 کی دستاویزات کے مطابق گمنام طور پر $0.10/دن اور مفت API کلید کے ساتھ $1/دن کے علاوہ 10/30/50 درخواستیں فی سیکنڈ (گمنام / مفت کلید / سالانہ پلان) کی حد مقرر ہے۔ سوال کی نوعیت کے لحاظ سے لاگت مختلف ہوتی ہے؛ یہ لامحدود رسائی نہیں ہے۔ گمنام سوالات پہلے صفحے تک محدود ہیں (`per_page` زیادہ سے زیادہ 100)؛ پہلے صفحے کے بعد `next_cursor` کی پیروی کے لیے `OPENALEX_API_KEY` درکار ہے۔
 - Crossref رفتار کے کنٹرول کے ساتھ عوامی میٹا ڈیٹا تک رسائی فراہم کرتا ہے۔ اپ ڈیٹ کے تعلقات اور Retraction Watch کے اشاروں کے لیے DOI اور سمت کی جانچ ضروری ہے؛ ریکارڈ کی عدم موجودگی یہ ثابت نہیں کرتی کہ مقالہ متاثر نہیں ہوا۔
 - Unpaywall کے لیے `UNPAYWALL_EMAIL` میں ایک حقیقی رابطہ ای میل درکار ہے۔ کسی مقام کا نہ ملنا یہ ثابت نہیں کرتا کہ اوپن ایکسیس (OA) کاپی موجود نہیں ہے۔
 - arXiv، Europe PMC، PubMed E-utilities اور DOAJ اپنی پالیسیوں کے حامل تکمیلی ذرائع ہیں۔ ڈیفالٹ ٹیسٹ ان سب کو نہیں چلاتے۔ Semantic Scholar میں مشترکہ گمنام حدود اور الگ سے تفویض کردہ کلید کی حدود ہیں؛ API تک رسائی حوالہ جات کے متن کی دستیابی کی ضمانت نہیں دیتی۔
@@ -234,7 +244,7 @@ QA میٹا ڈیٹا، حوالہ جات، ذاتی راستوں یا معلوم
 
 پن کیے گئے Hermes آتھرنگ ٹیسٹوں کو ان کے فی مہارت اصول بدلے بغیر دوبارہ استعمال کیا جاتا ہے۔ اپ اسٹریم کی مکمل ڈسٹری بیوشن آبادی کی جانچ اس ٹیپ پر لاگو نہیں ہوتی؛ ہمارا ٹیسٹ ہارنس چودہ مہارتوں کی جانچ کرتا ہے اور پن کیے گئے بنڈل/اختیاری کیٹلاگ کے مطابق حوالہ جات کو حل کرتا ہے۔ یہ مکمل Hermes انسٹالیشن ٹیسٹ نہیں ہے۔ CI صرف انحصار انسٹال کرنے کے لیے نیٹ ورک استعمال کرتا ہے؛ عام ٹیسٹ علمی APIs کو کال نہیں کرتے۔
 
-CI لائیو اپ اسٹریم کینری توثیق کے ساتھ Linux x86_64 (Python 3.10–3.14)، Linux ARM64 (ubuntu-24.04-arm)، Ubuntu 26.04 پریویو کینری (ubuntu-26.04 اور ubuntu-26.04-arm)، Windows x86_64، Windows ARM64 (windows-11-arm)، macOS ARM64 (macos-latest)، اور macOS Intel (macos-15-intel) پر مکمل QA سوٹ چلاتا ہے۔ بنیادی ریلیز امیدوار نے 1165 مقامی ٹیسٹ پاس کیے۔ موجودہ مرمت کے نتائج اور کوریج کی حدود [درستگی کی مرمت کی دستاویز](../../docs/maintenance/correctness-repair-20261008.md) میں درج ہیں؛ ریموٹ شواہد ٹیسٹ کیے گئے HEAD کی الگ سے نشاندہی کرتے ہیں۔ `main` پر پش کرنے پر ایک الگ ٹیپ انٹیگریشن ورک فلو چلتا ہے: یہ `tests/upstream/provenance.json` میں درج پن کیے گئے Hermes چیک آؤٹ کو انسٹال کرتا ہے اور اس ریپوزٹری کے خلاف `tap add`، `search`، `install` اور `list` کی مشق کرتا ہے۔ درست ورژنز، چیکس اور حدود [آڈٹ دستاویز](../../docs/kernel-architecture.md) میں درج ہیں۔
+CI لائیو اپ اسٹریم کینری توثیق کے ساتھ Linux x86_64 (Python 3.10/3.12/3.14)، Linux ARM64 (ubuntu-24.04-arm)، Windows x86_64، Windows ARM64 (windows-11-arm)، macOS ARM64 (macos-latest) پر مکمل QA سوٹ چلاتا ہے۔ موجودہ ریگریشن سوٹ 1348 مقامی ٹیسٹ پاس کرتا ہے (1165 ٹیسٹوں کے تاریخی بنیادی معیار سے توسیع شدہ)۔ موجودہ مرمت کے نتائج اور کوریج کی حدود [درستگی کی مرمت کی دستاویز](../../docs/maintenance/correctness-repair-20261008.md) میں درج ہیں؛ ریموٹ شواہد ٹیسٹ کیے گئے HEAD کی الگ سے نشاندہی کرتے ہیں۔ `main` پر پش کرنے پر ایک الگ ٹیپ انٹیگریشن ورک فلو چلتا ہے: یہ `tests/upstream/provenance.json` میں درج پن کیے گئے Hermes چیک آؤٹ کو انسٹال کرتا ہے اور اس ریپوزٹری کے خلاف `tap add`، `search`، `install` اور `list` کی مشق کرتا ہے۔ درست ورژنز، چیکس اور حدود [آڈٹ دستاویز](../../docs/kernel-architecture.md) میں درج ہیں۔
 
 [tools/longtail/](../../tools/longtail/README.md) میں قطعی لانگ ٹیل فیکٹر جنریٹر موجود ہے: 4096 SHA256 سیڈڈ امیدوار، 30 منتخب منظرنامے اور مشین سے محسوب کردہ تصدیقی احاطے کی رپورٹ۔ v3 ماڈل صلاحیت کے خاندانوں (E01)، ریپوزٹری کی 14 حقیقی مہارتوں (E02)، اور ٹاسک کے اہداف (E03) کو الگ الگ شمار کرتا ہے۔ ہر منظرنامے میں ایک بنیادی مہارت، ایک معاون ٹاسک ہدف اور ہم آہنگ صلاحیتیں ہوتی ہیں؛ ہر مہارت کو اپنے اعلان کردہ بنیادی ہدف سمیت دو مختلف اہداف کے تحت کم از کم دو بار ظاہر ہونا چاہیے۔ مہارت کی ڈائریکٹری میں انحراف کی صورت میں تصدیق ناکام ہو جاتی ہے۔ معنوی توسیع (ٹاسک چینز، اوریکلز اور چلائے گئے ایونٹ کا انجیکشن) ایک الگ مرحلہ رہتی ہے؛ عوامل کا احاطہ ورک فلو کے چلنے کے احاطے کو ثابت نہیں کرتا۔
 

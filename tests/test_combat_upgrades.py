@@ -5,6 +5,7 @@
 4. Author-side receipt-to-LaTeX booktabs generator & double-blind anonymity sanitizer
 """
 from __future__ import annotations
+import re
 from collections import Counter
 
 import importlib.util
@@ -1194,9 +1195,46 @@ def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Pa
     tf_checked = 0
     for rm in all_readmes:
         rm_txt = rm.read_text(encoding="utf-8")
+        rm_lines = rm_txt.splitlines()
         assert "2.4.0" in rm_txt
         assert "iclr2026-openreview-incidence-receipt.json" in rm_txt
-        tf_lines = [ln for ln in rm_txt.splitlines() if "table-forensics --input spec.json" in ln]
+        dr_lines = [ln for ln in rm_lines if "Desk Reject" in ln and ln.strip().startswith("|")]
+        assert len(dr_lines) == 1, f"Missing or duplicate Desk Reject table row in {rm}"
+        dr_cells = [c.strip() for c in dr_lines[0].strip().strip("|").split("|")]
+        assert len(dr_cells) == 4, f"Expected 4 columns in Desk Reject row of {rm}: {dr_cells}"
+        assert dr_cells[1] == "682", f"Expected N=682 in column 1 of {rm}: {dr_cells}"
+        assert dr_cells[2] == "4.01 / 2.46", f"Expected 4.01 / 2.46 in column 2 of {rm}: {dr_cells}"
+        assert "**63.6%**" in dr_cells[3] and "434" in dr_cells[3], f"Missing 63.6% or 434 in column 3 of {rm}: {dr_cells}"
+        assert dr_cells[3].index("21.8%") < dr_cells[3].index("11.6%") < dr_cells[3].index("6.6%"), f"Misordered family percentages in {rm}: {dr_cells[3]}"
+        fmt_lines = [ln for ln in rm_lines if "`prepare`" in ln and ".pdf" in ln]
+        all_12_exts = {".pdf", ".html", ".htm", ".xml", ".docx", ".xlsx", ".tex", ".bib", ".bbl", ".md", ".txt", ".py"}
+        assert len(fmt_lines) == 1, f"Expected exactly 1 prepare format line in {rm}: {fmt_lines}"
+        found_exts = set(re.findall(r"`(\.[a-z0-9]+)`", fmt_lines[0]))
+        assert found_exts == all_12_exts, f"Prepare line backticked extensions mismatch in {rm}: {found_exts ^ all_12_exts}"
+        neg_line = fmt_lines[0].replace("`.md`", "") + " [SKILL.md](skills/paper-research/SKILL.md)"
+        assert "SKILL.md" in neg_line and ".md" not in set(re.findall(r"`(\.[a-z0-9]+)`", neg_line))
+        for req_cmd in (
+            "--verify-pdf",
+            "--check-updates",
+            "--check-academic-style",
+            "--from-research extraction",
+            "export-ceg-anchors",
+            "repro-checklist",
+            "literature-watch",
+            "retraction-watch",
+            "--action export-bibtex",
+            "--action deduplicate",
+        ):
+            assert req_cmd in rm_txt, f"Missing {req_cmd!r} in {rm}"
+        assert any(t in rm_txt for t in ("1348", "১৩৪৮", "۱۳۴۸")), f"Missing current 1348 test count in {rm}"
+        for stale_tok in ("26.04", "15-intel", "1340", "16 類", "16 类", "13 CLI", "13 组", "13 組"):
+            assert stale_tok not in rm_txt, f"Stale token {stale_tok!r} in {rm}"
+        for ln in rm_lines:
+            ln_clean = ln.replace("3.12", "")
+            if "skills/literature-analysis" not in ln_clean and "12.1%" not in ln_clean and "12.4%" not in ln_clean and "pull/12" not in ln_clean:
+                for bad_mcp in (" 12 ", "12개", "ke-12", "12 個", "12 个", "১২টি", "۱۲ ابزار", "الاثنتي عشرة"):
+                    assert bad_mcp not in ln_clean, f"Stale MCP count {bad_mcp!r} in {rm}: {ln}"
+        tf_lines = [ln for ln in rm_lines if "table-forensics --input spec.json" in ln]
         if tf_lines:
             tf_checked += 1
             assert all("2.3.0" in ln and "2.4.0" not in ln for ln in tf_lines)

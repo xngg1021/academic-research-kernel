@@ -21,7 +21,7 @@
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.4.0 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10–3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 18 個の決定論的ツールが基本インストールに含まれています。
+[2.4.0 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10/3.12/3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 18 個の決定論的ツールが基本インストールに含まれています。
 
 ### インストールの確認
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Work または互換性のあるローカル Agent にエクスポートされた `SKILL.md` を読み込ませたうえで、DOI、公開リンク、またはローカル資料バンドルのみを渡して次のように指示します：
 「研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。」
-2 本の論文を比較する場合は、データ、手法、評価条件、主要結果を比較し、どの結果が直接比較可能かを説明するよう依頼します。Agent は同一タスク内で原文読解、候補フィールド検証、統計計算、データ取り込み、レポート生成、独立した出典照合までを一貫して実行します。既存の MCP インターフェースは 12 個のツールを維持し、新しいオーケストレーション機能は CLI とポータブルスキルで提供されます。
+2 本の論文を比較する場合は、データ、手法、評価条件、主要結果を比較し、どの結果が直接比較可能かを説明するよう依頼します。Agent は同一タスク内で原文読解、候補フィールド検証、統計計算、データ取り込み、レポート生成、独立した出典照合までを一貫して実行します。既存の MCP インターフェースは 18 個のツールを維持し、新しいオーケストレーション機能は CLI とポータブルスキルで提供されます。
 
 プログラムの実際の実行ステージは以下の通りです：
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` は本文および付録資料を取得・解析し、マニフェスト、ソースハッシュ、原文セグメント位置を保存します。`finish` は Agent が生成した構造化抽出結果を検証し、既存の統計ツールを用いて対象となる t/p 値、2 群効果量、件数・割合の主張を再計算したうえで、カーネル状態と中国語 Markdown/HTML レポートを保存します。`compare` は比較可能条件に関する Agent の明示的な評価を検証します。これらのコマンドは常駐の Work モデルを内蔵しておらず、セマンティックな読解は現在の Agent が [paper-research](skills/paper-research/SKILL.md) に従って実行します。保存された元ファイルと抽出スナップショットにより決定論的なオフライン再生が可能であり、ネットワーク取得と新規のセマンティック読解は個別の操作として明確に区別されます。
+`prepare` は本文および付録資料（`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`）を取得・解析し、マニフェスト、ソースハッシュ、原文セグメント位置を保存します。`finish` は Agent が生成した構造化抽出結果を検証し、既存の統計ツールを用いて対象となる t/p 値、2 群効果量、件数・割合の主張を再計算したうえで、カーネル状態と中国語 Markdown/HTML レポートを保存します。`compare` は比較可能条件に関する Agent の明示的な評価を検証します。これらのコマンドは常駐の Work モデルを内蔵しておらず、セマンティックな読解は現在の Agent が [paper-research](skills/paper-research/SKILL.md) に従って実行します。保存された元ファイルと抽出スナップショットにより決定論的なオフライン再生が可能であり、ネットワーク取得と新規のセマンティック読解は個別の操作として明確に区別されます。
 
 ### 書誌・OA全文・OpenReview・コードリポジトリ監査と15種の統計・テーブル検証
 
-4つの独立した CLI コマンドで書誌メタデータ、OA全文、OpenReview 査読スコア、コードリポジトリの実態を検証できます。さらに `table-forensics` と `academic_recompute_statistics` は `partition_conservation`、`ablation_delta_regularity`、`storage_bandwidth_bounds`（非圧縮固定幅ベクトルおよび全件線形スキャン前提）を含む全15種の決定論的チェックを実行します：
+7つの独立した CLI コマンドで書誌メタデータ、OA全文、OpenReview 査読スコア、コードリポジトリの実態を検証できます。さらに `table-forensics` と `academic_recompute_statistics` は `partition_conservation`、`ablation_delta_regularity`、`storage_bandwidth_bounds`（非圧縮固定幅ベクトルおよび全件線形スキャン前提）を含む全15種の決定論的チェックを実行します：
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ academic-research-kernel meta-analyze --input ./studies.json
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### 査読における 5 大決定論的欠陥ファミリーのマクロ分布（ICLR 2026、$N = 19,473$）
@@ -101,6 +110,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; 分散指標欠落 19.5%, 表・アブレーション 7.9%, ベースライン漏れ 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; 分散指標欠落 23.4%, 表・アブレーション 10.5%, ベースライン漏れ 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; 分散指標欠落 23.8%, 表・アブレーション 12.4%, ベースライン漏れ 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; 分散指標欠落 21.8%, 表・アブレーション 11.6%, ベースライン漏れ 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; 分散指標欠落 14.9% $\to$ 27.5%, コード欠落 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### データソースへのアクセス
 
-- OpenAlex の基本クエリは匿名で実行できますが、日次予算は小さくなります。2026-09-06 時点の文書では匿名 1 日 0.10 ドル、無料 API キーで 1 日 1 ドル、上限は毎秒 100 リクエストと定められています。費用はクエリ種別により異なり、無制限アクセスではありません。任意キーは `OPENALEX_API_KEY` に保存し、`per_page`（最大 100）とカーソルページネーションを使用してください。
+- OpenAlex の基本クエリは匿名で実行できますが、日次予算は小さくなります。2026-09-06 時点の文書では匿名 1 日 0.10 ドル、無料 API キーで 1 日 1 ドル、上限は毎秒 10/30/50 リクエスト（匿名／無料 API キー／年間プラン）と定められています。費用はクエリ種別により異なり、無制限アクセスではありません。匿名クエリは最初のページ（`per_page` 最大 100）に制限されており、`next_cursor` で 2 ページ目以降を取得するには `OPENALEX_API_KEY` が必要です。
 - Crossref はスロットリング付きの公開メタデータアクセスを提供します。更新関係と Retraction Watch シグナルには DOI と方向の照合が必要であり、レコードの不在は論文が影響を受けていない証明にはなりません。
 - Unpaywall は `UNPAYWALL_EMAIL` に実在の連絡先メールアドレスを必要とします。場所が見つからないことは OA コピーが存在しない証明にはなりません。
 - arXiv、Europe PMC、PubMed E-utilities、DOAJ は補助ソースであり、それぞれ独自の方針があります。既定のテストではすべてが実行されるわけではありません。Semantic Scholar は共有の匿名制限と個別割当てのキー制限を持ちますが、API アクセス権は引用文脈の利用可能性を保証しません。
@@ -234,7 +244,7 @@ QA はメタデータ、リファレンス、個人パス・既知シークレ�
 
 固定バージョンの Hermes オーサリングテストは、スキルごとの規則を変えずに再利用されます。上流の全体配布チェックはこの tap には適用されず、本リポジトリのテストハーネスは 14 のスキルすべてを検査し、固定されたバンドル・任意カタログに対してリファレンスを解決します。これは完全な Hermes インストールテストではありません。CI は依存関係のインストールにのみネットワークを使用し、通常のテストは外部の学術 API を呼び出しません。
 
-CI は GitHub Actions により Linux x86_64（Python 3.10–3.14）、Linux ARM64（ubuntu-24.04-arm）、Ubuntu 26.04 プレビュー Canary（ubuntu-26.04 および ubuntu-26.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）、macOS Intel（macos-15-intel）の全プラットフォーム・全アーキテクチャを網羅し、上流の最新ブランチに対するリアルタイム Canary 検証も実行します。ベースライン候補のローカル検証では 1165 件のテストが通過しており、現在の修正結果とカバレッジ境界は[正確性修復記録](docs/maintenance/correctness-repair-20261008.md)に記録されています（リモート証跡は検証対象の HEAD を個別に識別します）。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、本リポジトリに対して tap add、search、install、list を検証します。正確なバージョン、チェック項目、制約は[監査文書](docs/kernel-architecture.md)に記載されています。
+CI は GitHub Actions により Linux x86_64（Python 3.10/3.12/3.14）、Linux ARM64（ubuntu-24.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）の全プラットフォーム・全アーキテクチャを網羅し、上流の最新ブランチに対するリアルタイム Canary 検証も実行します。現在のローカル回帰テストスイートでは 1348 件のテストが通過しており（初期ベースライン候補の 1165 件から拡張）、現在の修正結果とカバレッジ境界は[正確性修復記録](docs/maintenance/correctness-repair-20261008.md)に記録されています（リモート証跡は検証対象の HEAD を個別に識別します）。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、本リポジトリに対して tap add、search、install、list を検証します。正確なバージョン、チェック項目、制約は[監査文書](docs/kernel-architecture.md)に記載されています。
 
 [tools/longtail/](tools/longtail/README.md) には決定論的な長尾因子生成器が格納されています：4096 個の SHA256 シード候補から 30 シナリオを選出し、機械計算による検証カバレッジ報告を出力します。v3 モデルでは能力ファミリー（E01）、リポジトリの実際の 14 スキル（E02）、タスク目標（E03）を個別に集計します。各シナリオは 1 つの主要スキル、サポートされるタスク目標、互換性のある能力を持ち、すべてのスキルは宣言された中核目標を含む少なくとも 2 つの異なる目標の下で 2 回以上出現する必要があります。スキルディレクトリの不一致は検証失敗となります。セマンティック展開（タスクチェーン、オラクル、実行イベント注入）は別段階であり、因子カバレッジはワークフロー実行カバレッジを証明するものではありません。
 

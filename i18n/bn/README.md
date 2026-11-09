@@ -21,7 +21,7 @@
 uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.4.0 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10–3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১২টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
+[2.4.0 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10/3.12/3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১৮টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
 
 ### ইনস্টলেশন যাচাই
 
@@ -34,7 +34,7 @@ academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-অফলাইন ডায়াগনস্টিক প্রক্রিয়াটি ডিপেন্ডেন্সি, স্কিমা এবং ১২টি টুলের সংজ্ঞা পরীক্ষা করে। ঐচ্ছিক বাহ্যিক পরিষেবাগুলো কনফিগার না করলেও সমস্যা হয় না। মেশিন-পাঠযোগ্য আউটপুটের জন্য `doctor --json` ব্যবহার করুন।
+অফলাইন ডায়াগনস্টিক প্রক্রিয়াটি ডিপেন্ডেন্সি, স্কিমা এবং ১৮টি টুলের সংজ্ঞা পরীক্ষা করে। ঐচ্ছিক বাহ্যিক পরিষেবাগুলো কনফিগার না করলেও সমস্যা হয় না। মেশিন-পাঠযোগ্য আউটপুটের জন্য `doctor --json` ব্যবহার করুন।
 
 ---
 
@@ -50,7 +50,7 @@ academic-research-kernel research skill --output ./agent-skills/paper-research
 
 Work বা অন্য কোনো সামঞ্জস্যপূর্ণ স্থানীয় Agent-কে এক্সপোর্ট করা `SKILL.md` ফাইলটি পড়তে দিন, তারপর বলুন:
 “研究这篇论文及其补充材料，整理方法，核对能重算的关键数字，给我一份带出处的中文报告。”
-শুধুমাত্র DOI, পাবলিক লিংক অথবা স্থানীয় ফাইল বান্ডিল দিন। দুটি গবেষণাপত্রের ক্ষেত্রে সেগুলোর ডেটা, পদ্ধতি, মূল্যায়নের শর্ত এবং ফলাফল তুলনা করতে বলুন এবং কোন ফলাফলগুলো সরাসরি তুলনাযোগ্য তা ব্যাখ্যা করতে বলুন। Agent একই কাজের ভেতরে মূল পাঠ্য পড়া, ক্যান্ডিডেট যাচাই, গণনা, কার্নেলে অন্তর্ভুক্তি, প্রতিবেদন তৈরি এবং স্বাধীন যাচাইকরণ ও নিশ্চিতকরণ সম্পন্ন করবে। বিদ্যমান MCP ইন্টারফেসে ১২টি টুল অক্ষুণ্ণ রয়েছে; নতুন অর্কেস্ট্রেশন যুক্ত হয়েছে CLI এবং পোর্টেবল দক্ষতায়।
+শুধুমাত্র DOI, পাবলিক লিংক অথবা স্থানীয় ফাইল বান্ডিল দিন। দুটি গবেষণাপত্রের ক্ষেত্রে সেগুলোর ডেটা, পদ্ধতি, মূল্যায়নের শর্ত এবং ফলাফল তুলনা করতে বলুন এবং কোন ফলাফলগুলো সরাসরি তুলনাযোগ্য তা ব্যাখ্যা করতে বলুন। Agent একই কাজের ভেতরে মূল পাঠ্য পড়া, ক্যান্ডিডেট যাচাই, গণনা, কার্নেলে অন্তর্ভুক্তি, প্রতিবেদন তৈরি এবং স্বাধীন যাচাইকরণ ও নিশ্চিতকরণ সম্পন্ন করবে। বিদ্যমান MCP ইন্টারফেসে ১৮টি টুল অক্ষুণ্ণ রয়েছে; নতুন অর্কেস্ট্রেশন যুক্ত হয়েছে CLI এবং পোর্টেবল দক্ষতায়।
 
 প্রোগ্রামের প্রকৃত ধাপগুলো হলো:
 
@@ -60,18 +60,23 @@ academic-research-kernel research finish --project PROJECT --candidate CANDIDATE
 academic-research-kernel research compare LEFT_PROJECT RIGHT_PROJECT --analysis COMPARISON.json --output OUTPUT
 ```
 
-`prepare` কমান্ডটি উপাদান সংগ্রহ ও পার্স করে ম্যানিফেস্ট, সোর্স হ্যাশ এবং চিহ্নিত অংশে রূপান্তর করে। `finish` কমান্ডটি Agent-এর তৈরি করা তথ্য নিষ্কাশন যাচাই করে এবং বিদ্যমান পরিসংখ্যান টুল ব্যবহার করে প্রযোজ্য t/p, দুই-গ্রুপের প্রভাবের আকার এবং গণনা/শতাংশের দাবিগুলো পুনর্গণনা করে, এরপর কার্নেল অবস্থা এবং চীনা Markdown/HTML প্রতিবেদন সংরক্ষণ করে। `compare` কমান্ডটি তুলনাযোগ্য শর্তাবলি সম্পর্কে Agent-এর সুস্পষ্ট মূল্যায়ন যাচাই করে। এই কমান্ডগুলো কোনো স্থায়ী রেসিডেন্ট মডেল যুক্ত করে না: অর্থগত পাঠের কাজটি বর্তমান Agent নিজেই [paper-research](../../skills/paper-research/SKILL.md) অনুসরণ করে সম্পন্ন করে। সংরক্ষিত মূল ফাইল এবং নিষ্কাশন স্ন্যাপশট সুনির্দিষ্ট অফলাইন রিপ্লে সমর্থন করে। নেটওয়ার্ক থেকে সংগ্রহ এবং নতুন অর্থগত পাঠ পৃথক অপারেশন হিসেবে চিহ্নিত থাকে।
+`prepare` কমান্ডটি উপাদান (`.pdf`, `.html`, `.htm`, `.xml`, `.docx`, `.xlsx`, `.tex`, `.bib`, `.bbl`, `.md`, `.txt`, `.py`) সংগ্রহ ও পার্স করে ম্যানিফেস্ট, সোর্স হ্যাশ এবং চিহ্নিত অংশে রূপান্তর করে। `finish` কমান্ডটি Agent-এর তৈরি করা তথ্য নিষ্কাশন যাচাই করে এবং বিদ্যমান পরিসংখ্যান টুল ব্যবহার করে প্রযোজ্য t/p, দুই-গ্রুপের প্রভাবের আকার এবং গণনা/শতাংশের দাবিগুলো পুনর্গণনা করে, এরপর কার্নেল অবস্থা এবং চীনা Markdown/HTML প্রতিবেদন সংরক্ষণ করে। `compare` কমান্ডটি তুলনাযোগ্য শর্তাবলি সম্পর্কে Agent-এর সুস্পষ্ট মূল্যায়ন যাচাই করে। এই কমান্ডগুলো কোনো স্থায়ী রেসিডেন্ট মডেল যুক্ত করে না: অর্থগত পাঠের কাজটি বর্তমান Agent নিজেই [paper-research](../../skills/paper-research/SKILL.md) অনুসরণ করে সম্পন্ন করে। সংরক্ষিত মূল ফাইল এবং নিষ্কাশন স্ন্যাপশট সুনির্দিষ্ট অফলাইন রিপ্লে সমর্থন করে। নেটওয়ার্ক থেকে সংগ্রহ এবং নতুন অর্থগত পাঠ পৃথক অপারেশন হিসেবে চিহ্নিত থাকে।
 
 ### উৎস, OpenReview, কোড রিপোজিটরি ফরেনসিক এবং ১৫টি পরিসংখ্যানগত পরীক্ষা
 
-চারটি CLI কমান্ড মেটাডেটা, ওপেন-অ্যাক্সেস পূর্ণপাঠ, OpenReview রিভিউ স্কোর এবং কোড রিপোজিটরি যাচাই করে; `table-forensics` ও `academic_recompute_statistics` মোট ১৫টি সুনির্দিষ্ট পরীক্ষা পরিচালনা করে যার মধ্যে রয়েছে `partition_conservation`, `ablation_delta_regularity` এবং `storage_bandwidth_bounds` (অসংকুচিত ভেক্টর এবং পূর্ণ রৈখিক স্ক্যানের সুস্পষ্ট শর্তে):
+সাতটি CLI কমান্ড মেটাডেটা, ওপেন-অ্যাক্সেস পূর্ণপাঠ, OpenReview রিভিউ স্কোর এবং কোড রিপোজিটরি যাচাই করে; `table-forensics` ও `academic_recompute_statistics` মোট ১৫টি সুনির্দিষ্ট পরীক্ষা পরিচালনা করে যার মধ্যে রয়েছে `partition_conservation`, `ablation_delta_regularity` এবং `storage_bandwidth_bounds` (অসংকুচিত ভেক্টর এবং পূর্ণ রৈখিক স্ক্যানের সুস্পষ্ট শর্তে):
 
 ```bash
 academic-research-kernel verify-source 10.1038/nature14539
+academic-research-kernel verify-source ./paper.pdf --verify-pdf --title "Expected Paper Title"
+academic-research-kernel verify-source 10.1038/nature14539 --check-updates
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel openreview-audit --forum-id Forum_Synth_01 --mirror-json ./venue-mirror.json
 academic-research-kernel openreview-audit --venue-stats ./venue-mirror.json --topic-regex "memory|agent"
 academic-research-kernel repo-forensics --local-repo ./target-repo
+academic-research-kernel repro-checklist --input ./repro-checklist.json
+academic-research-kernel literature-watch --self-test
+academic-research-kernel retraction-watch --self-test
 academic-research-kernel table-forensics --input ./table-spec.json
 academic-research-kernel meta-analyze --input ./studies.json
 ```
@@ -85,10 +90,14 @@ academic-research-kernel meta-analyze --input ./studies.json
 ```bash
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel venue-template --action scaffold --workspace-dir ./workspace --slug my-paper --venue iclr
+academic-research-kernel venue-template --action export-ceg-anchors --ceg ./ceg.json
 academic-research-kernel receipt-to-latex --input ./results-receipt.json --caption "Main Results" --label "tab:main"
+academic-research-kernel receipt-to-latex --input ./extraction.json --from-research extraction --caption "Extracted Metrics" --label "tab:ext"
 academic-research-kernel sanitize-blind --target ./workspace/my-paper
-academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
+academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture --check-academic-style
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
+academic-research-kernel bibliography --action export-bibtex --input works.json --output refs.bib
+academic-research-kernel bibliography --action deduplicate --input works.json --output deduped.json
 ```
 
 ### পিয়ার রিভিউতে ৫টি নির্ধারণমূলক ত্রুটি পরিবারের সামষ্টিক বণ্টন (ICLR 2026, $N = 19,473$)
@@ -101,6 +110,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 | **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; ডিসপারশন 19.5%, টেবিল/অ্যাবলেশন 7.9%, বেসলাইন ঘাটতি 4.9%) |
 | **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; ডিসপারশন 23.4%, টেবিল/অ্যাবলেশন 10.5%, বেসলাইন ঘাটতি 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; ডিসপারশন 23.8%, টেবিল/অ্যাবলেশন 12.4%, বেসলাইন ঘাটতি 6.8%) |
+| **Desk Reject** | 682 | 4.01 / 2.46 | **63.6%** (`434/682`; ডিসপারশন 21.8%, টেবিল/অ্যাবলেশন 11.6%, বেসলাইন ঘাটতি 6.6%) |
 | **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; ডিসপারশন 14.9% $\to$ 27.5%, কোড অনুপস্থিত 15.6% $\to$ 27.7%) |
 
 ---
@@ -204,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### ডেটা-উৎসে প্রবেশাধিকার
 
-- OpenAlex-এর মৌলিক কুয়েরিগুলো ছোট দৈনিক বাজেটের আওতায় বেনামে চালানো যায়। 2026-09-06 তারিখের ডকুমেন্টেশন অনুযায়ী বেনামে প্রতিদিন $0.10 এবং বিনামূল্যের API কী ব্যবহার করলে প্রতিদিন $1 বাজেট ও প্রতি সেকেন্ডে সর্বোচ্চ ১০০টি অনুরোধের সীমা রয়েছে। কুয়েরির ধরনভেদে খরচ ভিন্ন হয়; এটি অসীম অ্যাক্সেস নয়। ঐচ্ছিক কী `OPENALEX_API_KEY`-তে সংরক্ষণ করুন এবং `per_page` (সর্বোচ্চ ১০০) ও কার্সর পেজিনেশন ব্যবহার করুন।
+- OpenAlex-এর মৌলিক কুয়েরিগুলো ছোট দৈনিক বাজেটের আওতায় বেনামে চালানো যায়। 2026-09-06 তারিখের ডকুমেন্টেশন অনুযায়ী বেনামে প্রতিদিন $0.10 এবং বিনামূল্যের API কী ব্যবহার করলে প্রতিদিন $1 বাজেট ও প্রতি সেকেন্ডে সর্বোচ্চ ১০/৩০/৫০টি অনুরোধের সীমা (বেনাম / বিনামূল্যের কী / বার্ষিক প্ল্যান) রয়েছে। কুয়েরির ধরনভেদে খরচ ভিন্ন হয়; এটি অসীম অ্যাক্সেস নয়। বেনামী কুয়েরি প্রথম পৃষ্ঠায় সীমাবদ্ধ (`per_page` সর্বোচ্চ ১০০); প্রথম পৃষ্ঠার পরে `next_cursor` অনুসরণ করতে `OPENALEX_API_KEY` প্রয়োজন।
 - Crossref হার নিয়ন্ত্রণের (throttling) মাধ্যমে সর্বজনীন মেটাডেটা অ্যাক্সেস দেয়। আপডেট সম্পর্ক এবং Retraction Watch সংকেতের জন্য DOI ও দিকনির্দেশ যাচাই করা আবশ্যক; কোনো রেকর্ড না থাকা প্রমাণ করে না যে গবেষণাপত্রটি প্রভাবিত হয়নি।
 - Unpaywall ব্যবহারের জন্য `UNPAYWALL_EMAIL`-এ একটি প্রকৃত যোগাযোগের ইমেইল থাকা প্রয়োজন। কোনো অবস্থান খুঁজে না পাওয়া প্রমাণ করে না যে ওপেন অ্যাক্সেস (OA) কপি নেই।
 - arXiv, Europe PMC, PubMed E-utilities এবং DOAJ নিজস্ব নীতিমালাসহ পরিপূরক উৎস। ডিফল্ট পরীক্ষায় এগুলোর সব কটি চালানো হয় না। Semantic Scholar-এ যৌথ বেনামী সীমা এবং আলাদাভাবে বরাদ্দকৃত কী সীমা রয়েছে; API অ্যাক্সেস থাকলেই উদ্ধৃতির প্রাসঙ্গিক পাঠ্য (citation context) পাওয়ার নিশ্চয়তা থাকে না।
@@ -234,7 +244,7 @@ QA মেটাডেটা, রেফারেন্স, ব্যক্তি�
 
 পিন করা Hermes অথরিং টেস্টগুলো প্রতি-দক্ষতার নিয়ম পরিবর্তন না করেই পুনর্ব্যবহার করা হয়। আপস্ট্রিম সম্পূর্ণ-ডিস্ট্রিবিউশন পপুলেশন পরীক্ষা এই tap-এর ক্ষেত্রে প্রযোজ্য নয়; আমাদের টেস্ট হারনেস ১৪টি দক্ষতা পরীক্ষা করে এবং পিন করা বান্ডিল/ঐচ্ছিক ক্যাটালগের বিপরীতে রেফারেন্স মীমাংসা করে। এটি সম্পূর্ণ Hermes ইনস্টলেশন পরীক্ষা নয়। CI কেবল ডিপেন্ডেন্সি ইনস্টল করতে নেটওয়ার্ক ব্যবহার করে; সাধারণ পরীক্ষায় একাডেমিক API কল করা হয় না।
 
-CI Linux x86_64 (Python 3.10–3.14), Linux ARM64 (ubuntu-24.04-arm), Ubuntu 26.04 প্রিভিউ ক্যানারি (ubuntu-26.04 ও ubuntu-26.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) এবং macOS Intel (macos-15-intel) জুড়ে লাইভ আপস্ট্রিম ক্যানারি যাচাইকরণসহ সম্পূর্ণ QA স্যুট চালায়। বেসলাইন রিলিজ ক্যান্ডিডেট ১১৬৫টি স্থানীয় পরীক্ষায় উত্তীর্ণ হয়েছে। বর্তমান সংশোধন ফলাফল এবং কভারেজ সীমা [সঠিকতা মেরামত নথিতে](../../docs/maintenance/correctness-repair-20261008.md) লিপিবদ্ধ আছে; রিমোট প্রমাণ পরীক্ষিত HEAD-কে আলাদাভাবে চিহ্নিত করে। main ব্রাঞ্চে পুশ করা হলে একটি পৃথক tap ইন্টিগ্রেশন ওয়ার্কফ্লো চলে: এটি `tests/upstream/provenance.json`-এ লিপিবদ্ধ পিন করা Hermes চেকআউট ইনস্টল করে এবং এই রিপোজিটরির বিপরীতে `tap add`, `search`, `install` ও `list` পরীক্ষা করে। সঠিক সংস্করণ, পরীক্ষা এবং সীমাবদ্ধতা [নিরীক্ষা প্রতিবেদনে](../../docs/kernel-architecture.md) রয়েছে।
+CI Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) জুড়ে লাইভ আপস্ট্রিম ক্যানারি যাচাইকরণসহ সম্পূর্ণ QA স্যুট চালায়। বর্তমান রিগ্রেশন স্যুট ১৩৪৮টি স্থানীয় পরীক্ষায় উত্তীর্ণ হয়েছে (ঐতিহাসিক ১১৬৫টি বেসলাইন থেকে বর্ধিত)। বর্তমান সংশোধন ফলাফল এবং কভারেজ সীমা [সঠিকতা মেরামত নথিতে](../../docs/maintenance/correctness-repair-20261008.md) লিপিবদ্ধ আছে; রিমোট প্রমাণ পরীক্ষিত HEAD-কে আলাদাভাবে চিহ্নিত করে। main ব্রাঞ্চে পুশ করা হলে একটি পৃথক tap ইন্টিগ্রেশন ওয়ার্কফ্লো চলে: এটি `tests/upstream/provenance.json`-এ লিপিবদ্ধ পিন করা Hermes চেকআউট ইনস্টল করে এবং এই রিপোজিটরির বিপরীতে `tap add`, `search`, `install` ও `list` পরীক্ষা করে। সঠিক সংস্করণ, পরীক্ষা এবং সীমাবদ্ধতা [নিরীক্ষা প্রতিবেদনে](../../docs/kernel-architecture.md) রয়েছে।
 
 [tools/longtail/](../../tools/longtail/README.md)-এ রয়েছে সুনির্দিষ্ট লং-টেইল ফ্যাক্টর জেনারেটর: ৪০৯৬টি SHA256-সিডেড ক্যান্ডিডেট, ৩০টি নির্বাচিত দৃশ্যপট এবং মেশিনে গণনাকৃত যাচাইকরণ কভারেজ রিপোর্ট। v3 মডেলটি সক্ষমতা পরিবার (E01), রিপোজিটরির ১৪টি প্রকৃত দক্ষতা (E02) এবং কাজের লক্ষ্যগুলোকে (E03) আলাদাভাবে গণনা করে। প্রতিটি দৃশ্যপটে একটি প্রধান দক্ষতা, একটি সমর্থিত লক্ষ্য এবং সামঞ্জস্যপূর্ণ সক্ষমতা থাকে; প্রতিটি দক্ষতাকে তার ঘোষিত মূল লক্ষ্যসহ অন্তত দুটি ভিন্ন লক্ষ্যের অধীনে কমপক্ষে দুইবার উপস্থিত থাকতে হয়। দক্ষতা-ডিরেক্টরির বিচ্যুতি ঘটলে যাচাইকরণ ব্যর্থ হয়। অর্থগত সম্প্রসারণ (টাস্ক চেইন, ওরাকল এবং এক্সিকিউটেড ইভেন্ট ইনজেকশন) একটি পৃথক ধাপ হিসেবে থাকে; ফ্যাক্টর কভারেজ কর্মপ্রবাহের এক্সিকিউশন কভারেজ প্রমাণ করে না।
 
