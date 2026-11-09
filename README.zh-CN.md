@@ -14,11 +14,11 @@
 
 ## 一、两分钟快速上手
 
-先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任选一条命令安装 `2.3.0` 版本：
+先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任选一条命令安装 `2.3.1` 版本：
 
 ```bash
 # 方式一：安装带 PDF 解析支持的完整命令行工具，并导出论文精读技能给本地智能体
-uv tool install "academic-research-kernel[research]==2.3.0"
+uv tool install "academic-research-kernel[research]==2.3.1"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作为标准 stdio MCP 服务启动，供 Claude Code / Cursor / Codex 等客户端调用
@@ -33,7 +33,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-`doctor` 命令默认离线运行，负责检查运行环境依赖、26 套 JSON 数据格式与全部 12 个 MCP 工具接口；即使没有配置可选的外部数据库密钥，自检也不会报错。直接在终端运行 `mcp` 子命令会让程序进入标准输入输出监听状态，等待 MCP 客户端发来请求。[2.3.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) 页面记录了构建产物的 SHA-256 哈希值。本工具支持 Python 3.10 至 3.14，基础安装包已内置全部工具，科学计算库只在调用分布检验或功效重算时按需加载。
+`doctor` 命令默认离线运行，负责检查运行环境依赖、26 套 JSON 数据格式与全部 12 个 MCP 工具接口；即使没有配置可选的外部数据库密钥，自检也不会报错。直接在终端运行 `mcp` 子命令会让程序进入标准输入输出监听状态，等待 MCP 客户端发来请求。[2.3.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) 页面记录了构建产物的 SHA-256 哈希值。本工具支持 Python 3.10 至 3.14，基础安装包已内置全部工具，科学计算库只在调用分布检验或功效重算时按需加载。
 
 ---
 
@@ -123,17 +123,16 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 ### 同行评议中五类确定性缺陷的宏观分布：ICLR 2026 共 `19,473` 篇有分稿件
 
-为说明缺失误差棒与版式超限、表格消融异常与漏引基线及缺失复现代码这五类确定性检查的现实依据，我们在不拟合任何经验权重与主观分数阈值的前提下，按论文粒度统计了 ICLR 2026 共 `19,473` 篇有分投稿与 `75,769` 条官方审稿意见中至少一条审稿意见指出对应缺陷的稿件占比 `k / N`；全集包含下表四类常规决定共 `18,791` 篇与带评语程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分别为 `9,765` 篇与 `9,708` 篇，所有单篇稿件均保持完全匿名：
+为说明缺失误差棒与版式超限、表格消融异常与漏引基线及缺失复现代码这五类确定性检查的现实依据，我们在不拟合任何经验权重与主观分数阈值的前提下，按论文粒度统计了 ICLR 2026 共 `19,473` 篇有分投稿与 `75,769` 条官方审稿意见中至少一条审稿意见指出对应缺陷的稿件占比 `k / N`；全集包含下表四类常规决定共 `18,791` 篇与带评语程序性拒稿 `682` 篇，`SHA-256` 奇偶分半子集分别为 `9,765` 篇与 `9,708` 篇，所有单篇稿件均保持完全匿名，汇总数据见[脱敏统计汇总表](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)：
 
 | 录用档位与可靠度分层 | 有效投稿数 $N$ | 评分均值 / Soundness 均值 | 审稿意见提及五类确定性缺陷的稿件占比 `k / N` |
 | --- | --- | --- | --- |
 | **Oral 口头报告** | 224 | 6.40 / 3.07 | **48.2%** 即 `108 / 224`，含缺失误差棒 12.1% 与表格消融 7.1%，以及漏引基线 2.7% |
-| **Poster 海报录用** | 5,134 | 5.36 / 2.83 | **54.0%** 即 `2,772 / 5,134`，含缺失误差棒 15.8% 与表格消融 8.9%，以及漏引基线 4.1% |
-| **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** 即 `5,055 / 8,453`，含缺失误差棒 21.4% 与表格消融 11.6%，以及漏引基线 6.2% |
+| **Poster 海报录用** | 5,134 | 5.36 / 2.83 | **54.0%** 即 `2,772 / 5,134`，含缺失误差棒 19.5% 与表格消融 7.9%，以及漏引基线 4.9% |
+| **Rejected 拒稿** | 8,453 | 3.96 / 2.49 | **59.8%** 即 `5,057 / 8,453`，含缺失误差棒 23.4% 与表格消融 10.5%，以及漏引基线 6.1% |
 | **Withdrawn 撤稿** | 4,980 | 3.35 / 2.33 | **62.6%** 即 `3,117 / 4,980`，含缺失误差棒 23.8% 与表格消融 12.4%，以及漏引基线 6.8% |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** 即 `529 / 1,077` $\to$ `1,928 / 2,861`，缺失误差棒 14.9% $\to$ 27.5% |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** 即 `529 / 1,077` $\to$ `1,928 / 2,861`，含缺失误差棒 14.9% $\to$ 27.5% 与缺代码 15.6% $\to$ 27.7% |
 
----
 
 ## 四、14 项学术技能一览与智能体集成
 
@@ -160,9 +159,9 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 1. **Python 软件包与可选依赖安装**
    ```bash
-   uv tool install academic-research-kernel==2.3.0
+   uv tool install academic-research-kernel==2.3.1
    ```
-   您也可以使用 `pipx install academic-research-kernel==2.3.0` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.3.0`。加上 `[research]` 会固定安装 `pypdf==6.19.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
+   您也可以使用 `pipx install academic-research-kernel==2.3.1` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.3.1`。加上 `[research]` 会固定安装 `pypdf==7.0.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
 
 2. **通用 Agent Plugins v1 与跨智能体 MCP 一键挂载**
    本仓库遵循 **Agent Plugins v1** 规范并提供 `plugin.json`，通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 定义的 **MCP 服务器**，支持 `2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25` 与 `2026-07-28` 协议版本协商及 `resources/list`、`prompts/list` 探测响应，可挂载至 Claude Code、OpenAI Codex、Cursor 与 Gemini CLI：
@@ -250,7 +249,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1340 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.3.0 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
+GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1340 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.3.1 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
 
 ### 2. 许可证
 

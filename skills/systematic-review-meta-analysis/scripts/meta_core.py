@@ -223,13 +223,11 @@ def trim_and_fill(yi, vi, side: str = 'left', maxiter: int = 100) -> dict:
     if side not in ('left', 'right'):
         raise ValueError("side 必须是 'left' 或 'right'")
 
-    def l0_count(yy, vv, side):
-        theta = float(np.sum(yy / vv) / np.sum(1.0 / vv))
-        x = yy - theta
-        ranks = stats.rankdata(np.abs(x))
-        t_sign = float(np.sum(ranks[x < 0] if side == 'right' else ranks[x > 0]))
-        kk = yy.size
-        return max(0, int(round((4.0 * t_sign - kk * (kk + 1)) / (2.0 * kk - 1.0))))
+    def l0_count_full(theta_est):
+        x_full = y - theta_est
+        ranks = stats.rankdata(np.abs(x_full), method='average')
+        t_sign = float(np.sum(ranks[x_full < 0] if side == 'right' else ranks[x_full > 0]))
+        return max(0, int(round((4.0 * t_sign - k * (k + 1)) / (2.0 * k - 1.0))))
 
     idx = np.arange(k)
     k0, prev = 0, -1
@@ -238,15 +236,22 @@ def trim_and_fill(yi, vi, side: str = 'left', maxiter: int = 100) -> dict:
     while k0 != prev and it < maxiter:
         it += 1
         prev = k0
-        k0 = min(l0_count(y[idx], v[idx], side), k - 3)
+        theta = float(np.sum(y[idx] / v[idx]) / np.sum(1.0 / v[idx]))
+        k0_raw = l0_count_full(theta)
+        if k0_raw > k - 2:
+            return {'k0': None, 'adjusted': None, 'se': None,
+                    'theta_observed': float(pool_fixed(y, v).estimate),
+                    'filled': [], 'converged': False,
+                    'note': 'trim-and-fill 删减后保留研究不足 2 项,无法稳定估计中心; '
+                            '请用 R metafor::trimfill 复核 k0'}
+        k0 = min(k0_raw, k - 2)
         if k0 == prev:
             # S01: 连续两轮 k0 一致, 成功到达固定点
             break
         if k0 > 0:
-            theta = float(np.sum(y[idx] / v[idx]) / np.sum(1.0 / v[idx]))
             x_full = y - theta
-            # 从原始全集削去与缺失侧相反的最极端 k0 项
-            order = np.argsort(x_full) if side == 'right' else np.argsort(-x_full)
+            # 从原始全集削去与缺失侧相反的最极端 k0 项 (稳定排序保持确定性)
+            order = np.argsort(x_full, kind='mergesort') if side == 'right' else np.argsort(-x_full, kind='mergesort')
             idx = order[k0:]
         else:
             idx = np.arange(k)

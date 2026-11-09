@@ -15,19 +15,19 @@ Yazar: Junfu Shi (SJF, xngg1021). Geçerli kapsamlı lisans teklifi: [Source Lin
 
 ### Hızlı başlangıç
 
-2.3.0 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
+2.3.1 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-[2.3.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 12 deterministik aracın tamamı temel kuruluma dahildir.
+[2.3.1 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 12 deterministik aracın tamamı temel kuruluma dahildir.
 
 ### Kurulumu doğrulama
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### Yerel bir Ajan ile makale araştırma
 
-`academic-research-kernel[research]==2.3.0` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
+`academic-research-kernel[research]==2.3.1` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### Büyük Ölçekli Hakem Değerlendirmesinde Sıfır Parametreli Ampirik Doğrulama (ICLR 2026, $N = 19,473$)
+### Hakem Değerlendirmesinde 5 Deterministik Hata Ailesinin Makro Dağılımı (ICLR 2026, $N = 19,473$)
 
-Deterministik kontrollerin ampirik ağırlıklar veya öznel kabul eşikleri uydurmadan gerçek hakem eleştirilerini yakaladığını doğrulamak amacıyla, beş deterministik kusur ailesi ICLR 2026'daki `19,473` puanlanmış bildiri ve `75,769` resmi hakem değerlendirmesi üzerinde (`SHA-256` yarı-bölme doğrulamalı; bireysel makaleler anonim tutularak) test edilmiştir:
+Ampirik ağırlıklar veya öznel puan eşikleri uydurmadan beş deterministik hata ailesinin (hata çubuğu/dağılım eksikliği, biçim/bölüm/sayfa sınırı ihlalleri, tablo/ablasyon tutarsızlıkları, baseline/atıf eksikleri ve yeniden üretilebilirlik/kod boşlukları) gerçek 근거sini göstermek için ICLR 2026'daki `19,473` puanlanmış gönderi (`18,791` standart karar artı `682` değerlendirmeli masa başı ret) ve `75,769` resmi hakem değerlendirmesi genelinde makale düzeyinde görülme oranı `k / N` ölçülmüştür (`SHA-256` yarıya bölme doğrulaması `Split 0: N = 9,765` vs. `Split 1: N = 9,708`; makaleler anonimleştirilmiştir; [toplu makbuz](../../docs/benchmarks/iclr2026-openreview-incidence-receipt.json)):
 
 | Karar / Soundness Kademesi | Bildiri ($N$) | Ortalama Puan / Soundness | 5 Deterministik Kusur Ailesinde Hakem İsabet Oranı |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; dağılım/hata çubuğu 12.1%, tablo/ablasyon 7.1%, eksik baseline 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dağılım/hata çubuğu 15.8%, tablo/ablasyon 8.9%, eksik baseline 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; dağılım/hata çubuğu 21.4%, tablo/ablasyon 11.6%, eksik baseline 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dağılım/hata çubuğu 19.5%, tablo/ablasyon 7.9%, eksik baseline 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; dağılım/hata çubuğu 23.4%, tablo/ablasyon 10.5%, eksik baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dağılım/hata çubuğu 23.8%, tablo/ablasyon 12.4%, eksik baseline 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dağılım 14.9% $\to$ 27.5%, eksik kod 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dağılım 14.9% $\to$ 27.5%, eksik kod 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ On dört beceri genelinde 22 adet Markdown referans dosyası bulunmaktadır. Ref
 ### Paket kurulumu
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.3.0` veya `python -m pip install academic-research-kernel==2.3.0` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==6.19.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
+Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.3.1` veya `python -m pip install academic-research-kernel==2.3.1` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==7.0.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
 
 ### Entegrasyon ve Taşınabilir Kullanım
 
@@ -214,7 +214,7 @@ Ayrıntılar için [OpenAlex kimlik doğrulaması](https://help.openalex.org/api
 
 ---
 
-## 6. Yerel doğrulama, dağıtım doğrulaması (2.3.0) ve lisans
+## 6. Yerel doğrulama, dağıtım doğrulaması (2.3.1) ve lisans
 
 ### Doğrulama
 
@@ -240,7 +240,7 @@ CI; Linux x86_64 (Python 3.10–3.14), Linux ARM64 (`ubuntu-24.04-arm`), Ubuntu 
 
 `scripts/scfabric/` dizini bilimsel hesaplama ve istatistik araç seti katmanıdır: donanım sondası, veri türü (`dtype`) geçitlerine sahip arka uç kataloğu, beş iş yükü profili, eşlik kabulüne sahip eşleştirilmiş kıyaslama ve `ComputeReceipt`. Bu makinedeki ilk tur ölçümleri [docs/scientific-compute-fabric.md](../../docs/scientific-compute-fabric.md) belgesindedir; genel kural varsayılan olarak CPU kullanmak, hızlandırıcıları ise yalnızca doğrulama alındısı ile etkinleştirmektir.
 
-2.3.0 ürün sürümü, istatistiksel hesaplama ve protokol doğruluk onarımlarını içerir. Açık `academic_recompute_statistics` aracı t-testi p değerlerini ve iki gruplu Cohen `d` / Hedges `g` katsayılarını sunar; güven aralıkları (CI) ve `OR/RR` hesaplamaları alt düzey Python işlevleri olarak kalır. Raporlanan hassasiyet önemli olduğunda `p_value_literal` (örneğin `"1.0e-5"`) veya `p_value_decimals` parametresini sağlayın. Metin biçimindeki değerler sondaki sıfırları korurken, sayısal girdiler yalnızca sayısal gösterimlerini korur; çelişen hassasiyet kaynakları açıkça hata verir. Yarıdan yukarı yuvarlama (`round-half-up`) karşılaştırmaları alt yuvarlama sınırını dahil eder ve üst sınırı hariç tutar. Olağan bir sayısal uyuşmazlık başarılı bir bilimsel bulgudur; geçersiz veya kısmen başarısız hesaplamalar ise `isError` bayrağını ayarlar.
+2.3.1 ürün sürümü, istatistiksel hesaplama ve protokol doğruluk onarımlarını içerir. Açık `academic_recompute_statistics` aracı t-testi p değerlerini ve iki gruplu Cohen `d` / Hedges `g` katsayılarını sunar; güven aralıkları (CI) ve `OR/RR` hesaplamaları alt düzey Python işlevleri olarak kalır. Raporlanan hassasiyet önemli olduğunda `p_value_literal` (örneğin `"1.0e-5"`) veya `p_value_decimals` parametresini sağlayın. Metin biçimindeki değerler sondaki sıfırları korurken, sayısal girdiler yalnızca sayısal gösterimlerini korur; çelişen hassasiyet kaynakları açıkça hata verir. Yarıdan yukarı yuvarlama (`round-half-up`) karşılaştırmaları alt yuvarlama sınırını dahil eder ve üst sınırı hariç tutar. Olağan bir sayısal uyuşmazlık başarılı bir bilimsel bulgudur; geçersiz veya kısmen başarısız hesaplamalar ise `isError` bayrağını ayarlar.
 
 Geri çekme (retraction) kontrolleri, mevcut `True`/`False`/`unknown` gözlemini bilinen son değerden ayrı olarak kaydeder. Sorgu öncesi kısa bir rezervasyon, aynı DOI için yapılan gözlemleri sıralar ve diğer DOI güncellemelerini korur. Mevcut gözlemler ve geçmiş doğrulamalar ayrı sürümlere sahiptir: geç ulaşan bir doğrulama korunan geçmişi iyileştirebilirken, daha yeni bir `unknown` durumu mevcut kontrol için açıkça doğrulanmamış olarak kalır. Regresyon zincirlerindeki HTTP test verileri açıkça etiketlenmiştir.
 

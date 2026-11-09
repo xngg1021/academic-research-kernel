@@ -1,0 +1,965 @@
+{
+  "schema_version": "1.0.0",
+  "study_id": "iclr2026-openreview-5family-incidence-v1",
+  "description": "De-identified paper-level incidence of the 5 deterministic defect families in official ICLR 2026 peer-review Weaknesses and Questions texts. No individual paper IDs, titles, or author identities are stored.",
+  "methodology": {
+    "unit_of_analysis": "scored_manuscript",
+    "text_fields_concatenated": [
+      "reviews[*].weaknesses",
+      "reviews[*].questions"
+    ],
+    "aggregation_rule": "k / N manuscripts where at least one official review matches the category regex (case-insensitive)",
+    "split_half_rule": "int(hashlib.sha256(forum_id.encode('utf-8')).hexdigest(), 16) % 2",
+    "zero_fitted_parameters": true,
+    "regex_patterns": {
+      "dispersion_error_bars": "\\b(?:error\\s+bars?|standard\\s+deviations?|std\\b|stdev\\b|confidence\\s+intervals?|statistical\\s+significance|multiple\\s+(?:runs|seeds)|random\\s+seeds?|variance\\s+across)\\b",
+      "format_section_page": "\\b(?:typos?|grammatical|grammar\\s+errors?|broken\\s+references?|missing\\s+references?|citation\\s+format|template|page\\s+limit|over\\s+length|limitations?\\s+section|no\\s+limitations?|lack\\s+of\\s+limitations?|unresolved\\s+reference)\\b",
+      "table_quant_ablation": "\\b(?:inconsistent\\s+numbers?|mismatch\\s+between\\s+table|table\\s+\\d+\\s+and\\s+table\\s+\\d+|ablation\\s+study\\s+is\\s+missing|no\\s+ablation|marginal\\s+improvement|overclaimed|over-claimed|hyperbole|exaggerated|numbers?\\s+in\\s+table\\s+\\d+\\s+do\\s+not\\s+match|sum\\s+to\\s+100)\\b",
+      "citation_baseline": "\\b(?:missing\\s+citations?|missing\\s+references?|outdated\\s+baselines?|recent\\s+baselines?|duplicate\\s+citations?|duplicate\\s+references?|wrong\\s+citation|incorrect\\s+citation|hallucinated\\s+reference|non-existent\\s+reference)\\b",
+      "reproducibility_code": "\\b(?:no\\s+code|code\\s+is\\s+not\\s+provided|code\\s+is\\s+not\\s+available|missing\\s+code|anonymous\\s+(?:code|repo|repository|link)|reproducib(?:le|ility)|hyperparameters?\\s+are\\s+not\\s+specified|implementation\\s+details?\\s+are\\s+missing)\\b"
+    }
+  },
+  "upstream_sources": {
+    "metadata_snapshot": {
+      "source": "papercopilot/paperlists (iclr2026.json)",
+      "total_records": 19814,
+      "sha256": "fc6f5e5b6ba0fb28bec691a8b8d7a922e9d7bb1615209695ad79fafe62a75d4a",
+      "size_bytes": 88818779
+    },
+    "review_text_corpus": {
+      "source": "insomnia7/iclr2026_stats (iclr2026_stats.jsonl)",
+      "total_rows": 19506,
+      "scored_joined_manuscripts": 19473,
+      "official_reviews": 75769,
+      "sha256": "01f394abceb02bb382471b89462cf7abbbd77018dfbb56648ddcc36d545738d1",
+      "size_bytes": 316261882
+    }
+  },
+  "partition_conservation": {
+    "total_scored_manuscripts": 19473,
+    "total_official_reviews": 75769,
+    "standard_decision_tiers_sum": 18791,
+    "desk_reject_with_reviews": 682,
+    "decision_partition_identities": {
+      "224 + 5134 + 8453 + 4980": 18791,
+      "18791 + 682": 19473,
+      "any_hit_k_sum_108_2772_5057_3117_434": 11488
+    },
+    "soundness_partition_identities": {
+      "1077 + 15535 + 2861": 19473,
+      "any_hit_k_sum_529_9031_1928": 11488
+    },
+    "split_half_partition_identities": {
+      "9765 + 9708": 19473,
+      "any_hit_k_sum_5824_5664": 11488
+    }
+  },
+  "tiers": {
+    "Oral": {
+      "papers_n": 224,
+      "reviews_n": 870,
+      "mean_rating": 6.401,
+      "mean_soundness": 3.07,
+      "hit_any": {
+        "k": 108,
+        "pct": 48.2
+      },
+      "hit_dispersion": {
+        "k": 27,
+        "pct": 12.1
+      },
+      "hit_format": {
+        "k": 46,
+        "pct": 20.5
+      },
+      "hit_table_quant": {
+        "k": 16,
+        "pct": 7.1
+      },
+      "hit_bib": {
+        "k": 6,
+        "pct": 2.7
+      },
+      "hit_repro": {
+        "k": 40,
+        "pct": 17.9
+      }
+    },
+    "Poster": {
+      "papers_n": 5134,
+      "reviews_n": 20035,
+      "mean_rating": 5.356,
+      "mean_soundness": 2.825,
+      "hit_any": {
+        "k": 2772,
+        "pct": 54.0
+      },
+      "hit_dispersion": {
+        "k": 1000,
+        "pct": 19.5
+      },
+      "hit_format": {
+        "k": 1304,
+        "pct": 25.4
+      },
+      "hit_table_quant": {
+        "k": 405,
+        "pct": 7.9
+      },
+      "hit_bib": {
+        "k": 253,
+        "pct": 4.9
+      },
+      "hit_repro": {
+        "k": 974,
+        "pct": 19.0
+      }
+    },
+    "Rejected": {
+      "papers_n": 8453,
+      "reviews_n": 32877,
+      "mean_rating": 3.961,
+      "mean_soundness": 2.49,
+      "hit_any": {
+        "k": 5057,
+        "pct": 59.8
+      },
+      "hit_dispersion": {
+        "k": 1982,
+        "pct": 23.4
+      },
+      "hit_format": {
+        "k": 2257,
+        "pct": 26.7
+      },
+      "hit_table_quant": {
+        "k": 886,
+        "pct": 10.5
+      },
+      "hit_bib": {
+        "k": 517,
+        "pct": 6.1
+      },
+      "hit_repro": {
+        "k": 1882,
+        "pct": 22.3
+      }
+    },
+    "Withdrawn": {
+      "papers_n": 4980,
+      "reviews_n": 19355,
+      "mean_rating": 3.349,
+      "mean_soundness": 2.331,
+      "hit_any": {
+        "k": 3117,
+        "pct": 62.6
+      },
+      "hit_dispersion": {
+        "k": 1187,
+        "pct": 23.8
+      },
+      "hit_format": {
+        "k": 1339,
+        "pct": 26.9
+      },
+      "hit_table_quant": {
+        "k": 618,
+        "pct": 12.4
+      },
+      "hit_bib": {
+        "k": 340,
+        "pct": 6.8
+      },
+      "hit_repro": {
+        "k": 1233,
+        "pct": 24.8
+      }
+    },
+    "STANDARD_DECISION_TIERS": {
+      "papers_n": 18791,
+      "reviews_n": 73137,
+      "mean_rating": 4.209,
+      "mean_soundness": 2.546,
+      "hit_any": {
+        "k": 11054,
+        "pct": 58.8
+      },
+      "hit_dispersion": {
+        "k": 4196,
+        "pct": 22.3
+      },
+      "hit_format": {
+        "k": 4946,
+        "pct": 26.3
+      },
+      "hit_table_quant": {
+        "k": 1925,
+        "pct": 10.2
+      },
+      "hit_bib": {
+        "k": 1116,
+        "pct": 5.9
+      },
+      "hit_repro": {
+        "k": 4129,
+        "pct": 22.0
+      }
+    },
+    "Desk Reject": {
+      "papers_n": 682,
+      "reviews_n": 2632,
+      "mean_rating": 4.009,
+      "mean_soundness": 2.463,
+      "hit_any": {
+        "k": 434,
+        "pct": 63.6
+      },
+      "hit_dispersion": {
+        "k": 149,
+        "pct": 21.8
+      },
+      "hit_format": {
+        "k": 188,
+        "pct": 27.6
+      },
+      "hit_table_quant": {
+        "k": 79,
+        "pct": 11.6
+      },
+      "hit_bib": {
+        "k": 45,
+        "pct": 6.6
+      },
+      "hit_repro": {
+        "k": 184,
+        "pct": 27.0
+      }
+    },
+    "ALL_SCORED": {
+      "papers_n": 19473,
+      "reviews_n": 75769,
+      "mean_rating": 4.202,
+      "mean_soundness": 2.543,
+      "hit_any": {
+        "k": 11488,
+        "pct": 59.0
+      },
+      "hit_dispersion": {
+        "k": 4345,
+        "pct": 22.3
+      },
+      "hit_format": {
+        "k": 5134,
+        "pct": 26.4
+      },
+      "hit_table_quant": {
+        "k": 2004,
+        "pct": 10.3
+      },
+      "hit_bib": {
+        "k": 1161,
+        "pct": 6.0
+      },
+      "hit_repro": {
+        "k": 4313,
+        "pct": 22.1
+      }
+    },
+    "SOUND_HIGH(>=3.25)": {
+      "papers_n": 1077,
+      "reviews_n": 4113,
+      "mean_rating": 5.829,
+      "mean_soundness": 3.33,
+      "hit_any": {
+        "k": 529,
+        "pct": 49.1
+      },
+      "hit_dispersion": {
+        "k": 161,
+        "pct": 14.9
+      },
+      "hit_format": {
+        "k": 277,
+        "pct": 25.7
+      },
+      "hit_table_quant": {
+        "k": 64,
+        "pct": 5.9
+      },
+      "hit_bib": {
+        "k": 30,
+        "pct": 2.8
+      },
+      "hit_repro": {
+        "k": 168,
+        "pct": 15.6
+      }
+    },
+    "SOUND_MID(2.0_to_3.25)": {
+      "papers_n": 15535,
+      "reviews_n": 60738,
+      "mean_rating": 4.346,
+      "mean_soundness": 2.611,
+      "hit_any": {
+        "k": 9031,
+        "pct": 58.1
+      },
+      "hit_dispersion": {
+        "k": 3396,
+        "pct": 21.9
+      },
+      "hit_format": {
+        "k": 3995,
+        "pct": 25.7
+      },
+      "hit_table_quant": {
+        "k": 1546,
+        "pct": 10.0
+      },
+      "hit_bib": {
+        "k": 889,
+        "pct": 5.7
+      },
+      "hit_repro": {
+        "k": 3352,
+        "pct": 21.6
+      }
+    },
+    "SOUND_LOW(<=2.0)": {
+      "papers_n": 2861,
+      "reviews_n": 10918,
+      "mean_rating": 2.806,
+      "mean_soundness": 1.876,
+      "hit_any": {
+        "k": 1928,
+        "pct": 67.4
+      },
+      "hit_dispersion": {
+        "k": 788,
+        "pct": 27.5
+      },
+      "hit_format": {
+        "k": 862,
+        "pct": 30.1
+      },
+      "hit_table_quant": {
+        "k": 394,
+        "pct": 13.8
+      },
+      "hit_bib": {
+        "k": 242,
+        "pct": 8.5
+      },
+      "hit_repro": {
+        "k": 793,
+        "pct": 27.7
+      }
+    }
+  },
+  "split_half": {
+    "split_0": {
+      "Oral": {
+        "papers_n": 114,
+        "reviews_n": 448,
+        "mean_rating": 6.505,
+        "mean_soundness": 3.097,
+        "hit_any": {
+          "k": 47,
+          "pct": 41.2
+        },
+        "hit_dispersion": {
+          "k": 13,
+          "pct": 11.4
+        },
+        "hit_format": {
+          "k": 22,
+          "pct": 19.3
+        },
+        "hit_table_quant": {
+          "k": 6,
+          "pct": 5.3
+        },
+        "hit_bib": {
+          "k": 2,
+          "pct": 1.8
+        },
+        "hit_repro": {
+          "k": 18,
+          "pct": 15.8
+        }
+      },
+      "Poster": {
+        "papers_n": 2574,
+        "reviews_n": 10049,
+        "mean_rating": 5.351,
+        "mean_soundness": 2.818,
+        "hit_any": {
+          "k": 1438,
+          "pct": 55.9
+        },
+        "hit_dispersion": {
+          "k": 525,
+          "pct": 20.4
+        },
+        "hit_format": {
+          "k": 665,
+          "pct": 25.8
+        },
+        "hit_table_quant": {
+          "k": 208,
+          "pct": 8.1
+        },
+        "hit_bib": {
+          "k": 135,
+          "pct": 5.2
+        },
+        "hit_repro": {
+          "k": 517,
+          "pct": 20.1
+        }
+      },
+      "Rejected": {
+        "papers_n": 4255,
+        "reviews_n": 16535,
+        "mean_rating": 3.965,
+        "mean_soundness": 2.486,
+        "hit_any": {
+          "k": 2563,
+          "pct": 60.2
+        },
+        "hit_dispersion": {
+          "k": 1014,
+          "pct": 23.8
+        },
+        "hit_format": {
+          "k": 1109,
+          "pct": 26.1
+        },
+        "hit_table_quant": {
+          "k": 435,
+          "pct": 10.2
+        },
+        "hit_bib": {
+          "k": 267,
+          "pct": 6.3
+        },
+        "hit_repro": {
+          "k": 967,
+          "pct": 22.7
+        }
+      },
+      "Withdrawn": {
+        "papers_n": 2494,
+        "reviews_n": 9700,
+        "mean_rating": 3.348,
+        "mean_soundness": 2.324,
+        "hit_any": {
+          "k": 1562,
+          "pct": 62.6
+        },
+        "hit_dispersion": {
+          "k": 615,
+          "pct": 24.7
+        },
+        "hit_format": {
+          "k": 669,
+          "pct": 26.8
+        },
+        "hit_table_quant": {
+          "k": 306,
+          "pct": 12.3
+        },
+        "hit_bib": {
+          "k": 156,
+          "pct": 6.3
+        },
+        "hit_repro": {
+          "k": 614,
+          "pct": 24.6
+        }
+      },
+      "STANDARD_DECISION_TIERS": {
+        "papers_n": 9437,
+        "reviews_n": 36732,
+        "mean_rating": 4.211,
+        "mean_soundness": 2.541,
+        "hit_any": {
+          "k": 5610,
+          "pct": 59.4
+        },
+        "hit_dispersion": {
+          "k": 2167,
+          "pct": 23.0
+        },
+        "hit_format": {
+          "k": 2465,
+          "pct": 26.1
+        },
+        "hit_table_quant": {
+          "k": 955,
+          "pct": 10.1
+        },
+        "hit_bib": {
+          "k": 560,
+          "pct": 5.9
+        },
+        "hit_repro": {
+          "k": 2116,
+          "pct": 22.4
+        }
+      },
+      "Desk Reject": {
+        "papers_n": 328,
+        "reviews_n": 1265,
+        "mean_rating": 4.042,
+        "mean_soundness": 2.477,
+        "hit_any": {
+          "k": 214,
+          "pct": 65.2
+        },
+        "hit_dispersion": {
+          "k": 83,
+          "pct": 25.3
+        },
+        "hit_format": {
+          "k": 84,
+          "pct": 25.6
+        },
+        "hit_table_quant": {
+          "k": 48,
+          "pct": 14.6
+        },
+        "hit_bib": {
+          "k": 21,
+          "pct": 6.4
+        },
+        "hit_repro": {
+          "k": 82,
+          "pct": 25.0
+        }
+      },
+      "ALL_SCORED": {
+        "papers_n": 9765,
+        "reviews_n": 37997,
+        "mean_rating": 4.205,
+        "mean_soundness": 2.539,
+        "hit_any": {
+          "k": 5824,
+          "pct": 59.6
+        },
+        "hit_dispersion": {
+          "k": 2250,
+          "pct": 23.0
+        },
+        "hit_format": {
+          "k": 2549,
+          "pct": 26.1
+        },
+        "hit_table_quant": {
+          "k": 1003,
+          "pct": 10.3
+        },
+        "hit_bib": {
+          "k": 581,
+          "pct": 5.9
+        },
+        "hit_repro": {
+          "k": 2198,
+          "pct": 22.5
+        }
+      },
+      "SOUND_HIGH(>=3.25)": {
+        "papers_n": 524,
+        "reviews_n": 2002,
+        "mean_rating": 5.844,
+        "mean_soundness": 3.331,
+        "hit_any": {
+          "k": 264,
+          "pct": 50.4
+        },
+        "hit_dispersion": {
+          "k": 79,
+          "pct": 15.1
+        },
+        "hit_format": {
+          "k": 131,
+          "pct": 25.0
+        },
+        "hit_table_quant": {
+          "k": 29,
+          "pct": 5.5
+        },
+        "hit_bib": {
+          "k": 15,
+          "pct": 2.9
+        },
+        "hit_repro": {
+          "k": 86,
+          "pct": 16.4
+        }
+      },
+      "SOUND_MID(2.0_to_3.25)": {
+        "papers_n": 7756,
+        "reviews_n": 30306,
+        "mean_rating": 4.363,
+        "mean_soundness": 2.612,
+        "hit_any": {
+          "k": 4546,
+          "pct": 58.6
+        },
+        "hit_dispersion": {
+          "k": 1784,
+          "pct": 23.0
+        },
+        "hit_format": {
+          "k": 1965,
+          "pct": 25.3
+        },
+        "hit_table_quant": {
+          "k": 764,
+          "pct": 9.9
+        },
+        "hit_bib": {
+          "k": 448,
+          "pct": 5.8
+        },
+        "hit_repro": {
+          "k": 1698,
+          "pct": 21.9
+        }
+      },
+      "SOUND_LOW(<=2.0)": {
+        "papers_n": 1485,
+        "reviews_n": 5689,
+        "mean_rating": 2.802,
+        "mean_soundness": 1.877,
+        "hit_any": {
+          "k": 1014,
+          "pct": 68.3
+        },
+        "hit_dispersion": {
+          "k": 387,
+          "pct": 26.1
+        },
+        "hit_format": {
+          "k": 453,
+          "pct": 30.5
+        },
+        "hit_table_quant": {
+          "k": 210,
+          "pct": 14.1
+        },
+        "hit_bib": {
+          "k": 118,
+          "pct": 7.9
+        },
+        "hit_repro": {
+          "k": 414,
+          "pct": 27.9
+        }
+      }
+    },
+    "split_1": {
+      "Oral": {
+        "papers_n": 110,
+        "reviews_n": 422,
+        "mean_rating": 6.292,
+        "mean_soundness": 3.042,
+        "hit_any": {
+          "k": 61,
+          "pct": 55.5
+        },
+        "hit_dispersion": {
+          "k": 14,
+          "pct": 12.7
+        },
+        "hit_format": {
+          "k": 24,
+          "pct": 21.8
+        },
+        "hit_table_quant": {
+          "k": 10,
+          "pct": 9.1
+        },
+        "hit_bib": {
+          "k": 4,
+          "pct": 3.6
+        },
+        "hit_repro": {
+          "k": 22,
+          "pct": 20.0
+        }
+      },
+      "Poster": {
+        "papers_n": 2560,
+        "reviews_n": 9986,
+        "mean_rating": 5.361,
+        "mean_soundness": 2.832,
+        "hit_any": {
+          "k": 1334,
+          "pct": 52.1
+        },
+        "hit_dispersion": {
+          "k": 475,
+          "pct": 18.6
+        },
+        "hit_format": {
+          "k": 639,
+          "pct": 25.0
+        },
+        "hit_table_quant": {
+          "k": 197,
+          "pct": 7.7
+        },
+        "hit_bib": {
+          "k": 118,
+          "pct": 4.6
+        },
+        "hit_repro": {
+          "k": 457,
+          "pct": 17.9
+        }
+      },
+      "Rejected": {
+        "papers_n": 4198,
+        "reviews_n": 16342,
+        "mean_rating": 3.957,
+        "mean_soundness": 2.493,
+        "hit_any": {
+          "k": 2494,
+          "pct": 59.4
+        },
+        "hit_dispersion": {
+          "k": 968,
+          "pct": 23.1
+        },
+        "hit_format": {
+          "k": 1148,
+          "pct": 27.3
+        },
+        "hit_table_quant": {
+          "k": 451,
+          "pct": 10.7
+        },
+        "hit_bib": {
+          "k": 250,
+          "pct": 6.0
+        },
+        "hit_repro": {
+          "k": 915,
+          "pct": 21.8
+        }
+      },
+      "Withdrawn": {
+        "papers_n": 2486,
+        "reviews_n": 9655,
+        "mean_rating": 3.35,
+        "mean_soundness": 2.338,
+        "hit_any": {
+          "k": 1555,
+          "pct": 62.6
+        },
+        "hit_dispersion": {
+          "k": 572,
+          "pct": 23.0
+        },
+        "hit_format": {
+          "k": 670,
+          "pct": 27.0
+        },
+        "hit_table_quant": {
+          "k": 312,
+          "pct": 12.6
+        },
+        "hit_bib": {
+          "k": 184,
+          "pct": 7.4
+        },
+        "hit_repro": {
+          "k": 619,
+          "pct": 24.9
+        }
+      },
+      "STANDARD_DECISION_TIERS": {
+        "papers_n": 9354,
+        "reviews_n": 36405,
+        "mean_rating": 4.207,
+        "mean_soundness": 2.551,
+        "hit_any": {
+          "k": 5444,
+          "pct": 58.2
+        },
+        "hit_dispersion": {
+          "k": 2029,
+          "pct": 21.7
+        },
+        "hit_format": {
+          "k": 2481,
+          "pct": 26.5
+        },
+        "hit_table_quant": {
+          "k": 970,
+          "pct": 10.4
+        },
+        "hit_bib": {
+          "k": 556,
+          "pct": 5.9
+        },
+        "hit_repro": {
+          "k": 2013,
+          "pct": 21.5
+        }
+      },
+      "Desk Reject": {
+        "papers_n": 354,
+        "reviews_n": 1367,
+        "mean_rating": 3.979,
+        "mean_soundness": 2.451,
+        "hit_any": {
+          "k": 220,
+          "pct": 62.1
+        },
+        "hit_dispersion": {
+          "k": 66,
+          "pct": 18.6
+        },
+        "hit_format": {
+          "k": 104,
+          "pct": 29.4
+        },
+        "hit_table_quant": {
+          "k": 31,
+          "pct": 8.8
+        },
+        "hit_bib": {
+          "k": 24,
+          "pct": 6.8
+        },
+        "hit_repro": {
+          "k": 102,
+          "pct": 28.8
+        }
+      },
+      "ALL_SCORED": {
+        "papers_n": 9708,
+        "reviews_n": 37772,
+        "mean_rating": 4.199,
+        "mean_soundness": 2.547,
+        "hit_any": {
+          "k": 5664,
+          "pct": 58.3
+        },
+        "hit_dispersion": {
+          "k": 2095,
+          "pct": 21.6
+        },
+        "hit_format": {
+          "k": 2585,
+          "pct": 26.6
+        },
+        "hit_table_quant": {
+          "k": 1001,
+          "pct": 10.3
+        },
+        "hit_bib": {
+          "k": 580,
+          "pct": 6.0
+        },
+        "hit_repro": {
+          "k": 2115,
+          "pct": 21.8
+        }
+      },
+      "SOUND_HIGH(>=3.25)": {
+        "papers_n": 553,
+        "reviews_n": 2111,
+        "mean_rating": 5.815,
+        "mean_soundness": 3.329,
+        "hit_any": {
+          "k": 265,
+          "pct": 47.9
+        },
+        "hit_dispersion": {
+          "k": 82,
+          "pct": 14.8
+        },
+        "hit_format": {
+          "k": 146,
+          "pct": 26.4
+        },
+        "hit_table_quant": {
+          "k": 35,
+          "pct": 6.3
+        },
+        "hit_bib": {
+          "k": 15,
+          "pct": 2.7
+        },
+        "hit_repro": {
+          "k": 82,
+          "pct": 14.8
+        }
+      },
+      "SOUND_MID(2.0_to_3.25)": {
+        "papers_n": 7779,
+        "reviews_n": 30432,
+        "mean_rating": 4.329,
+        "mean_soundness": 2.61,
+        "hit_any": {
+          "k": 4485,
+          "pct": 57.7
+        },
+        "hit_dispersion": {
+          "k": 1612,
+          "pct": 20.7
+        },
+        "hit_format": {
+          "k": 2030,
+          "pct": 26.1
+        },
+        "hit_table_quant": {
+          "k": 782,
+          "pct": 10.1
+        },
+        "hit_bib": {
+          "k": 441,
+          "pct": 5.7
+        },
+        "hit_repro": {
+          "k": 1654,
+          "pct": 21.3
+        }
+      },
+      "SOUND_LOW(<=2.0)": {
+        "papers_n": 1376,
+        "reviews_n": 5229,
+        "mean_rating": 2.81,
+        "mean_soundness": 1.876,
+        "hit_any": {
+          "k": 914,
+          "pct": 66.4
+        },
+        "hit_dispersion": {
+          "k": 401,
+          "pct": 29.1
+        },
+        "hit_format": {
+          "k": 409,
+          "pct": 29.7
+        },
+        "hit_table_quant": {
+          "k": 184,
+          "pct": 13.4
+        },
+        "hit_bib": {
+          "k": 124,
+          "pct": 9.0
+        },
+        "hit_repro": {
+          "k": 379,
+          "pct": 27.5
+        }
+      }
+    }
+  }
+}

@@ -15,19 +15,19 @@
 
 ### 빠른 시작
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/)를 사용하여 버전 2.3.0을 실행합니다:
+[uv](https://docs.astral.sh/uv/getting-started/installation/)를 사용하여 버전 2.3.1을 실행합니다:
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-[2.3.0 릴리스](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0)에는 배포 패키지 해시와 게시 상태가 기록되어 있습니다. 릴리스 wheel 파일을 내려받아 로컬에서 `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp` 명령으로 실행할 수도 있습니다. Python 3.10–3.14를 지원하며, `uvx --python 3.12`를 통해 지원되는 인터프리터를 명시적으로 선택할 수 있습니다. 통계 계산을 포함한 12개의 모든 결정론적 도구가 기본 설치에 포함되어 있습니다.
+[2.3.1 릴리스](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1)에는 배포 패키지 해시와 게시 상태가 기록되어 있습니다. 릴리스 wheel 파일을 내려받아 로컬에서 `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp` 명령으로 실행할 수도 있습니다. Python 3.10–3.14를 지원하며, `uvx --python 3.12`를 통해 지원되는 인터프리터를 명시적으로 선택할 수 있습니다. 통계 계산을 포함한 12개의 모든 결정론적 도구가 기본 설치에 포함되어 있습니다.
 
 ### 설치 확인
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### 로컬 Agent로 논문 연구하기
 
-`academic-research-kernel[research]==2.3.0`을 설치하고 패키지에 포함된 워크플로를 내보냅니다:
+`academic-research-kernel[research]==2.3.1`을 설치하고 패키지에 포함된 워크플로를 내보냅니다:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### 대규모 동료 심사 데이터 기반 무매개변수 실증 검증 (ICLR 2026, $N = 19,473$)
+### 동료 심사에서 5대 결정론적 결함군의 거시적 분포 (ICLR 2026, $N = 19,473$)
 
-경험적 가중치나 주관적 합격 임계값을 일절 피팅하지 않고, 5대 결정론적 검증 모듈(오차 범위·분산 지표 누락, 양식·페이지 제한 위반, 표·절제 실험 수치 불일치, 핵심 베이스라인 인용 누락, 재현 코드·설정 누락)을 ICLR 2026의 유효 심사 논문 `19,473`편 및 공식 심사평 `75,769`건(`SHA-256` 홀짝 분할 검증 완료, 개별 논문 완전 익명화)과 대조한 결과는 다음과 같습니다.
+경험적 가중치나 주관적 점수 임계값을 피팅하지 않고 5대 결정론적 결함군(오차 막대/분산 누락, 서식/섹션/페이지 제한 위반, 표/소거 실험 불일치, 베이스라인/인용 누락, 재현성/코드 부재)의 현실적 근거를 제시하기 위해, ICLR 2026 점수 부여 논문 `19,473`편(표준 심사 결정 `18,791`편 + 심사평 포함 데스크 리젝트 `682`편, 공식 심사평 `75,769`건, `SHA-256` 홀짝 반분 검증 `Split 0: N = 9,765` vs. `Split 1: N = 9,708`, 개별 논문 비식별화, [집계 데이터](docs/benchmarks/iclr2026-openreview-incidence-receipt.json))의 논문 단위 지적 비율 `k / N`을 집계했습니다:
 
 | 채택 등급 및 신뢰도 계층 | 논문 수 ($N$) | 평균 평점 / Soundness | 5대 결정론적 결함 모듈과 심사평 지적 일치율 |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; 분산 누락 12.1%, 표·절제 불일치 7.1%, 베이스라인 누락 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; 분산 누락 15.8%, 표·절제 불일치 8.9%, 베이스라인 누락 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; 분산 누락 21.4%, 표·절제 불일치 11.6%, 베이스라인 누락 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; 분산 누락 19.5%, 표·절제 불일치 7.9%, 베이스라인 누락 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; 분산 누락 23.4%, 표·절제 불일치 10.5%, 베이스라인 누락 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; 분산 누락 23.8%, 표·절제 불일치 12.4%, 베이스라인 누락 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; 분산 누락 14.9% $\to$ 27.5%, 코드 누락 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; 분산 누락 14.9% $\to$ 27.5%, 코드 누락 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ### 패키지 설치
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-또는 `pipx install academic-research-kernel==2.3.0`을 사용하거나, 지원되는 가상 환경 내에서 `python -m pip install academic-research-kernel==2.3.0`으로 설치할 수 있습니다. `[full]`은 확장 과학 계산 스킬 예제용 라이브러리를 추가하며, `[qa]`는 PDF 파서를 포함한 저장소 검증 도구를 추가합니다. `[research]`는 클린 설치 환경 전반에서 일관된 PDF 폰트 디코딩을 보장하기 위해 `pypdf==6.19.0`과 `fonttools==4.65.0`을 추가하며, 두 패키지 모두 Python 3.10을 지원합니다. 구조화된 HTML/XML 및 크기 제한이 있는 DOCX/XLSX 읽기는 표준 라이브러리를 사용합니다. GPU 백엔드와 유료 서비스는 선택 사항입니다.
+또는 `pipx install academic-research-kernel==2.3.1`을 사용하거나, 지원되는 가상 환경 내에서 `python -m pip install academic-research-kernel==2.3.1`으로 설치할 수 있습니다. `[full]`은 확장 과학 계산 스킬 예제용 라이브러리를 추가하며, `[qa]`는 PDF 파서를 포함한 저장소 검증 도구를 추가합니다. `[research]`는 클린 설치 환경 전반에서 일관된 PDF 폰트 디코딩을 보장하기 위해 `pypdf==7.0.0`과 `fonttools==4.65.0`을 추가하며, 두 패키지 모두 Python 3.10을 지원합니다. 구조화된 HTML/XML 및 크기 제한이 있는 DOCX/XLSX 읽기는 표준 라이브러리를 사용합니다. GPU 백엔드와 유료 서비스는 선택 사항입니다.
 
 ### 통합 및 이식 가능한 사용
 
@@ -190,7 +190,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### 결정론적 수집 및 공개 커널 인터페이스
 
-버전 2.3.0은 `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15개의 어댑터(14개 스킬과 opaque fallback), 그리고 12개의 무상태 stdio MCP 도구를 제공합니다. 승인된 수집 검증 기록은 보관되는 각 의미론적 변경(연구 객체, 주장과 근거의 연결 레코드, 연구 의사결정 및 실패 시도 기록 레코드, 확인 필요 항목, 물리적 검증 기록 및 산출물 등록)을 종류, 식별자, 정규 SHA-256으로 바인딩합니다. 캐시 재생은 전송 스냅샷 해시와 독립적으로 이러한 약정을 검증합니다. 빈 기록부도 유효하며, 실패한 원자적 배치는 부분 상태를 남기지 않습니다.
+버전 2.3.1은 `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15개의 어댑터(14개 스킬과 opaque fallback), 그리고 12개의 무상태 stdio MCP 도구를 제공합니다. 승인된 수집 검증 기록은 보관되는 각 의미론적 변경(연구 객체, 주장과 근거의 연결 레코드, 연구 의사결정 및 실패 시도 기록 레코드, 확인 필요 항목, 물리적 검증 기록 및 산출물 등록)을 종류, 식별자, 정규 SHA-256으로 바인딩합니다. 캐시 재생은 전송 스냅샷 해시와 독립적으로 이러한 약정을 검증합니다. 빈 기록부도 유효하며, 실패한 원자적 배치는 부분 상태를 남기지 않습니다.
 
 이력 콘텐츠 읽기 권한은 대역 외에서 명시적으로 부여됩니다. 신뢰할 수 있는 Python 호출자는 직렬화된 검증 기록이나 스냅샷을 재생할 때 `LineageVerificationContext`를 전달하며, MCP 호출자는 제한된 크기의 콘텐츠 바이트만 제공할 수 있고 호스트 파일시스템 루트는 지정할 수 없습니다. 기본 콘텐츠 예산은 10 MiB이며, 신뢰할 수 있는 호스트는 생산자와 검증자가 동일한 정책을 따르는 조건에서 더 큰 산출물을 명시적으로 허용할 수 있습니다. 콘텐츠 권한이 없으면 `fully_verified` 주장은 독립적으로 재현될 수 없으며 구조화된 무효 검증 결과를 반환합니다. 비정형 텍스트는 불투명하게 유지되고 이견은 가시적으로 보존되며, 커밋, 경로 중단, 재개, 라우팅 및 사실 판단의 통제권은 연구자에게 있습니다.
 
@@ -200,7 +200,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 인용 양식, 보고 지침, 메타데이터 규약은 대상 학술지, 연구지원기관, 학문 분야, 관할권에 따라 달라집니다. 본 저장소는 **ISO 690:2021**(서지 참조 및 인용 지침), **ISO 5127:2017**(정보 및 문헌 용어), **W3C PROV**(이력 및 출처 데이터 모델)를 국제 기준으로 삼고, 한국 KS X ISO 690 참조, 중국 대륙 GB/T 7714-2025, 스페인 UNE-ISO 690:2024, 독일 DIN ISO 690:2021 등 지역 프로필과 APA 7판, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE 등 학문 분야별 표준을 지원합니다. 투고 대상 기관이나 학술지의 공식 요건이 기본 프로필보다 항상 우선합니다. 자세한 내용은 [학술 표준 아키텍처](docs/standards/README.md) 및 [자연스러운 학술 용어 가이드](docs/terminology/README.md)를 참조하십시오.
 
-버전 2.3.0은 DOI 및 외부 식별자 일관성, 상호 배타적인 정량 판정 플래그, 그리고 커널과 검증 기록이 공유하는 확인 필요 항목 규약을 검증합니다. 캐시 완전성은 보관된 원본 엔벌로프와 정규화된 바인딩으로부터 독립적으로 재구성되므로, 상태 레코드와 캐시 선언을 동시에 삭제하더라도 잘못된 캐시 재생이 승인되지 않습니다. 자세한 내용은 [4대 차단 요소 해결 기록](docs/kernel-architecture.md)을 참조하십시오.
+버전 2.3.1은 DOI 및 외부 식별자 일관성, 상호 배타적인 정량 판정 플래그, 그리고 커널과 검증 기록이 공유하는 확인 필요 항목 규약을 검증합니다. 캐시 완전성은 보관된 원본 엔벌로프와 정규화된 바인딩으로부터 독립적으로 재구성되므로, 상태 레코드와 캐시 선언을 동시에 삭제하더라도 잘못된 캐시 재생이 승인되지 않습니다. 자세한 내용은 [4대 차단 요소 해결 기록](docs/kernel-architecture.md)을 참조하십시오.
 
 ### 데이터 소스 접근
 
@@ -214,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. 로컬 검증, 배포 패키지 검증(2.3.0) 및 라이선스
+## 6. 로컬 검증, 배포 패키지 검증(2.3.1) 및 라이선스
 
 ### 검증 및 테스트
 
@@ -240,7 +240,7 @@ CI는 GitHub Actions를 통해 Linux x86_64(Python 3.10–3.14), Linux ARM64(ubu
 
 scripts/scfabric/은 과학 계산 및 통계 분석 도구군의 실행 계층입니다: 하드웨어 프로브, dtype 게이트가 있는 백엔드 카탈로그, 5개 워크로드 프로필, 동등성 검증이 포함된 쌍대 벤치마크 및 ComputeReceipt를 제공합니다. 이 기기에서의 1차 측정값은 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)에 기록되어 있으며, 기본 원칙은 CPU를 기본으로 사용하고 검증 기록이 있을 때만 가속기를 사용하는 것입니다.
 
-제품 릴리스 2.3.0부터 적용된 정확성 보강을 통해, 공개 `academic_recompute_statistics` 도구는 t-검정 p값과 두 집단 Cohen's d / Hedges' g를 노출하며 신뢰구간(CI)과 OR/RR은 하위 수준 Python 함수로 유지됩니다. 보고된 정밀도가 중요할 때는 `p_value_literal`(예: `"1.0e-5"`) 또는 `p_value_decimals`를 전달하십시오. 리터럴은 끝자리 0을 보존하며, 수치 입력은 수치 표현만 유지합니다. 정밀도 출처가 충돌하면 명시적으로 실패합니다. 반올림(round-half-up) 비교는 하한 경계를 포함하고 상한 경계를 제외합니다. 일반적인 수치 불일치는 정상적인 과학적 검증 결과이며, 잘못된 입력이나 부분적으로 실패한 계산만 `isError`를 설정합니다.
+제품 릴리스 2.3.1부터 적용된 정확성 보강을 통해, 공개 `academic_recompute_statistics` 도구는 t-검정 p값과 두 집단 Cohen's d / Hedges' g를 노출하며 신뢰구간(CI)과 OR/RR은 하위 수준 Python 함수로 유지됩니다. 보고된 정밀도가 중요할 때는 `p_value_literal`(예: `"1.0e-5"`) 또는 `p_value_decimals`를 전달하십시오. 리터럴은 끝자리 0을 보존하며, 수치 입력은 수치 표현만 유지합니다. 정밀도 출처가 충돌하면 명시적으로 실패합니다. 반올림(round-half-up) 비교는 하한 경계를 포함하고 상한 경계를 제외합니다. 일반적인 수치 불일치는 정상적인 과학적 검증 결과이며, 잘못된 입력이나 부분적으로 실패한 계산만 `isError`를 설정합니다.
 
 철회 점검은 현재의 True/False/unknown 관측값을 기존에 알려진 값(last-known)과 별도로 기록합니다. 짧은 사전 쿼리 예약으로 동일 DOI 관측 순서를 정렬하고 다른 DOI의 업데이트를 보존합니다. 현재 관측값과 과거 확인 이력은 별도의 버전을 가지므로, 늦게 도착한 확인이 보관된 이력을 개선하더라도 더 최신의 unknown 관측은 현재 점검에서 미검증 상태로 명확히 유지됩니다. 회귀 체인의 HTTP 픽스처는 테스트 데이터로 표시됩니다.
 

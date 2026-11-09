@@ -15,19 +15,19 @@
 
 ### クイックスタート
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) を用いてバージョン 2.3.0 を実行します：
+[uv](https://docs.astral.sh/uv/getting-started/installation/) を用いてバージョン 2.3.1 を実行します：
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-[2.3.0 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10–3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 12 個の決定論的ツールが基本インストールに含まれています。
+[2.3.1 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10–3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 12 個の決定論的ツールが基本インストールに含まれています。
 
 ### インストールの確認
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### ローカル Agent による論文研究
 
-`academic-research-kernel[research]==2.3.0` をインストールし、パッケージ同梱のワークフローをエクスポートします：
+`academic-research-kernel[research]==2.3.1` をインストールし、パッケージ同梱のワークフローをエクスポートします：
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### 大規模査読データによるゼロパラメータ実証検証（ICLR 2026、$N = 19,473$）
+### 査読における 5 大決定論的欠陥ファミリーのマクロ分布（ICLR 2026、$N = 19,473$）
 
-経験的な重み付けや主観的な合否スコア閾値を一切フィッティングすることなく、5つの決定論的検証モジュール（誤差範囲・分散指標の欠落、フォーマット・ページ上限違反、表・アブレーション数値の不整合、主要ベースラインの引用漏れ、再現用コード・設定の欠落）を ICLR 2026 の採点済み投稿 `19,473` 件および公式査読コメント `75,769` 件（`SHA-256` 偶奇分割検証済み、個別論文は完全匿名化）と照合した結果は以下の通りです。
+経験的な重み付けや主観的スコア閾値を一切フィットさせずに、5 つの決定論的欠陥ファミリー（誤差棒・分散の欠落、書式・セクション・ページ上限違反、表・アブレーションの不整合、ベースライン・引用の欠落、再現性・コードの欠落）の現実的根拠を示すため、ICLR 2026 のスコア付き投稿 `19,473` 件（標準採否決定 `18,791` 件＋査読付きデスク・リジェクト `682` 件、公式査読テキスト `75,769` 件、`SHA-256` 偶奇分割検証 `Split 0: N = 9,765` vs. `Split 1: N = 9,708`、個別論文は完全匿名化、[集計レシート](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)）における論文単位の指摘率 `k / N` を計測しました：
 
 | 採否・信頼性階層 | 投稿数 ($N$) | 平均スコア / Soundness | 5大決定論的欠陥モジュールに対する査読指摘一致率 |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; 分散指標欠落 12.1%, 表・アブレーション 7.1%, ベースライン漏れ 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; 分散指標欠落 15.8%, 表・アブレーション 8.9%, ベースライン漏れ 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; 分散指標欠落 21.4%, 表・アブレーション 11.6%, ベースライン漏れ 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; 分散指標欠落 19.5%, 表・アブレーション 7.9%, ベースライン漏れ 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; 分散指標欠落 23.4%, 表・アブレーション 10.5%, ベースライン漏れ 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; 分散指標欠落 23.8%, 表・アブレーション 12.4%, ベースライン漏れ 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; 分散指標欠落 14.9% $\to$ 27.5%, コード欠落 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; 分散指標欠落 14.9% $\to$ 27.5%, コード欠落 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ### パッケージのインストール
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-または、`pipx install academic-research-kernel==2.3.0`、あるいは対応する仮想環境内で `python -m pip install academic-research-kernel==2.3.0` を実行してインストールできます。`[full]` は拡張的な科学計算スキル例題向けのライブラリを追加し、`[qa]` は PDF パーサーを含むリポジトリ検証ツールを追加します。`[research]` はクリーンインストール環境間で一貫した PDF フォントデコードを行うため `pypdf==6.19.0` と `fonttools==4.65.0` を追加します（いずれも Python 3.10 に対応）。構造化 HTML/XML およびサイズ制限付き DOCX/XLSX の読み取りには標準ライブラリを使用します。GPU バックエンドと有償サービスは任意です。
+または、`pipx install academic-research-kernel==2.3.1`、あるいは対応する仮想環境内で `python -m pip install academic-research-kernel==2.3.1` を実行してインストールできます。`[full]` は拡張的な科学計算スキル例題向けのライブラリを追加し、`[qa]` は PDF パーサーを含むリポジトリ検証ツールを追加します。`[research]` はクリーンインストール環境間で一貫した PDF フォントデコードを行うため `pypdf==7.0.0` と `fonttools==4.65.0` を追加します（いずれも Python 3.10 に対応）。構造化 HTML/XML およびサイズ制限付き DOCX/XLSX の読み取りには標準ライブラリを使用します。GPU バックエンドと有償サービスは任意です。
 
 ### 統合とポータブル利用
 
@@ -190,7 +190,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### 決定論的取り込みと公開カーネルインターフェース
 
-バージョン 2.3.0 は `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、15 個のアダプター（14 のスキルおよび opaque fallback）、ならびに 12 個のステートレス stdio MCP ツールを提供します。受理された取り込み検証記録は、保持される各セマンティック変更（研究対象、主張と根拠の対応関係レコード、研究上の意思決定と失敗記録レコード、要確認事項、物理検証記録、成果物登録）を種別、識別子、正規化 SHA-256 によって拘束します。キャッシュ再生時はトランスポートスナップショットのハッシュとは独立してこれらのコミットメントを検証します。空の記録も有効であり、失敗したアトミックバッチは部分的な状態を残しません。
+バージョン 2.3.1 は `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、15 個のアダプター（14 のスキルおよび opaque fallback）、ならびに 12 個のステートレス stdio MCP ツールを提供します。受理された取り込み検証記録は、保持される各セマンティック変更（研究対象、主張と根拠の対応関係レコード、研究上の意思決定と失敗記録レコード、要確認事項、物理検証記録、成果物登録）を種別、識別子、正規化 SHA-256 によって拘束します。キャッシュ再生時はトランスポートスナップショットのハッシュとは独立してこれらのコミットメントを検証します。空の記録も有効であり、失敗したアトミックバッチは部分的な状態を残しません。
 
 来歴コンテンツの読み取り権限は帯域外で明示的に付与されます。信頼された Python 呼び出し元はシリアライズ済み検証記録やスナップショットを再生する際に `LineageVerificationContext` を渡します。一方、MCP 呼び出し元は上限付きのコンテンツバイト列のみを渡すことができ、ホストのファイルシステムルートを指定することはできません。既定のコンテンツ予算は 10 MiB であり、信頼されたホストは生成側と検証側が同一ポリシーに従う条件下でより大きな成果物を明示的に許可できます。コンテンツ権限がない場合、`fully_verified` の主張は独立して再現できず、構造化された無効検証結果を返します。非構造化テキストは不透明なまま保持され、異論は可視状態に保たれ、コミット、路線の断念、再開、ルーティング、真偽判断の主導権は研究者に留保されます。
 
@@ -200,7 +200,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 引用スタイル、報告ガイドライン、メタデータ規約は対象ジャーナル、助成機関、学問分野、法域に依存します。本リポジトリは **ISO 690:2021**（書誌参照および引用指針）、**ISO 5127:2017**（情報・ドキュメンテーション用語）、**W3C PROV**（来歴データモデル）を国際基準として確立し、各国の地域プロファイル（日本の学協会指針・JIS X 0807 参考、中国大陸 GB/T 7714-2025、スペイン UNE-ISO 690:2024、ドイツ DIN ISO 690:2021 など）および分野別標準（APA 第 7 版、IEEE、ACM、Vancouver、Chicago、PRISMA 2020、ICMJE）に対応しています。投稿先機関・学会の要求事項が既定プロファイルより常に優先されます。詳細は[学術標準アーキテクチャ](docs/standards/README.md)および[自然な学術用語ガイド](docs/terminology/README.md)を参照してください。
 
-バージョン 2.3.0 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/kernel-architecture.md)を参照してください。
+バージョン 2.3.1 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/kernel-architecture.md)を参照してください。
 
 ### データソースへのアクセス
 
@@ -214,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. ローカル検証・配布パッケージ検証（2.3.0）・ライセンス
+## 6. ローカル検証・配布パッケージ検証（2.3.1）・ライセンス
 
 ### 検証とテスト
 
@@ -240,7 +240,7 @@ CI は GitHub Actions により Linux x86_64（Python 3.10–3.14）、Linux ARM
 
 scripts/scfabric/ は科学計算・統計分析ツール群の実行層です：ハードウェアプローブ、dtype ゲート付きバックエンドカタログ、5 つのワークロードプロファイル、数値等価性検査付きの対ベンチマーク、および ComputeReceipt を備えています。本機での初回測定結果は [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md) に記録されており、既定では CPU を使用し、検証記録がある場合のみアクセラレータを有効化します。
 
-バージョン 2.3.0 以降の正確性修復により、公開ツール `academic_recompute_statistics` は t 検定の p 値および 2 群の Cohen's d / Hedges' g を公開し、信頼区間（CI）とオッズ比・リスク比（OR/RR）は下位の Python 関数として維持されます。報告値の精度が重要な場合は `p_value_literal`（例：`"1.0e-5"`）または `p_value_decimals` を渡してください。リテラル文字列は末尾のゼロを保持し、数値入力は数値表現のみを保持します。複数の精度指定が競合する場合は明示的にエラーとなります。四捨五入（round-half-up）の比較は下限境界を含み上限境界を除きます。通常の統計的不一致は正常な科学的検証結果として扱われ、無効な入力や部分的な計算失敗のみが `isError` を設定します。
+バージョン 2.3.1 以降の正確性修復により、公開ツール `academic_recompute_statistics` は t 検定の p 値および 2 群の Cohen's d / Hedges' g を公開し、信頼区間（CI）とオッズ比・リスク比（OR/RR）は下位の Python 関数として維持されます。報告値の精度が重要な場合は `p_value_literal`（例：`"1.0e-5"`）または `p_value_decimals` を渡してください。リテラル文字列は末尾のゼロを保持し、数値入力は数値表現のみを保持します。複数の精度指定が競合する場合は明示的にエラーとなります。四捨五入（round-half-up）の比較は下限境界を含み上限境界を除きます。通常の統計的不一致は正常な科学的検証結果として扱われ、無効な入力や部分的な計算失敗のみが `isError` を設定します。
 
 撤回チェックは今回の観測結果（True / False / unknown）を既知の最新値（last-known）とは別に記録します。クエリ前の短い予約ロックにより同一 DOI の観測順序が保証され、他の DOI の更新も保持されます。現在の観測と過去の確認履歴は別個のバージョンを持ち、遅れて到着した有効な確認が保持履歴を更新した場合でも、より新しい unknown 観測は今回のチェックにおいて未検証として明示的に残されます。回帰テスト内の HTTP フィクスチャにはテストデータである旨が明記されています。
 

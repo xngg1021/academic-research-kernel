@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hashlib
 import json
 import math
 import os
@@ -390,30 +391,31 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
 
 
 def _find_local_mirror_fallback(forum_id: str, mirror_path: str | None = None) -> tuple[dict, str] | None:
+    """Resolve from an explicitly provided mirror_path or explicit OPENREVIEW_MIRROR_DIR only (never ambient TMPDIR/TEMP)."""
     candidates = []
-    if mirror_path:
-        candidates.append(Path(mirror_path))
-    search_dirs = [
-        os.environ.get("OPENREVIEW_MIRROR_DIR"),
-        os.environ.get("TMPDIR"),
-        os.environ.get("TEMP"),
-    ]
-    for d in search_dirs:
-        if not d:
-            continue
+    if mirror_path and str(mirror_path).strip():
+        candidates.append(Path(str(mirror_path).strip()))
+    explicit_dir = (os.environ.get("OPENREVIEW_MIRROR_DIR") or "").strip()
+    if explicit_dir:
         for fn in ("iclr2027.json", "iclr2026.json", "iclr2025.json"):
-            p = Path(d) / fn
+            p = Path(explicit_dir) / fn
             if p.exists() and p not in candidates:
                 candidates.append(p)
     for p in candidates:
-        if not p.exists():
+        if not p.exists() or p.is_symlink():
             continue
         try:
-            data = json.loads(p.read_text(encoding="utf-8"))
+            raw_bytes = p.read_bytes()
+            sha = hashlib.sha256(raw_bytes).hexdigest()
+            data = json.loads(raw_bytes.decode("utf-8"))
             if isinstance(data, list):
                 for item in data:
                     if isinstance(item, dict) and (item.get("id") == forum_id or item.get("openreview_forum") == forum_id):
-                        return parse_mirror_record(item), f"mirror-fallback:{p.name}"
+                        rec = parse_mirror_record(item)
+                        rec["verification_status"] = "unverified_local_mirror"
+                        rec["authenticated"] = False
+                        rec["mirror_sha256"] = sha
+                        return rec, f"mirror-fallback:{p.name}"
         except Exception:
             continue
     return None
@@ -467,7 +469,9 @@ def main(argv=None) -> int:
             if fb is not None:
                 result, fb_mode = fb
                 result["mode"] = fb_mode
-                result["live_api_note"] = f"api2.openreview.net failed ({type(net_err).__name__}); resolved via verified mirror snapshot"
+                result["verification_status"] = "unverified_local_mirror"
+                result["authenticated"] = False
+                result["live_api_note"] = f"api2.openreview.net failed ({type(net_err).__name__}); resolved via unverified local mirror ({fb_mode})"
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return 0
             raise

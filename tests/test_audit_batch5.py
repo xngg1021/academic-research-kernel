@@ -369,12 +369,12 @@ def test_a01_locate_oa_checks_record_doi(tmp_path):
 # ---------- S01 & S02 ----------
 
 def test_s01_trim_and_fill_fixed_point_converges():
-    # ChatGPT 反例中的真实固定点样本
+    # ChatGPT 反例中的真实固定点样本（修复 COR-06 全集秩和后固定点为 k0=3）
     import numpy as np
     y = np.array([6, -4, 1, -4, 0, 6, 7, 2, 5, -1], dtype=float)
     v = np.array([0.5, 2.0, 2.0, 0.2, 0.2, 2.0, 0.5, 2.0, 0.2, 0.5], dtype=float)
 
     res = meta_core.trim_and_fill(y, v, side="left")
     assert res["converged"] is True, "k0 在固定点稳定时不应误判为状态循环未收敛"
-    assert res["k0"] == 1
+    assert res["k0"] == 3
     assert res["adjusted"] is not None

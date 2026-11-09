@@ -15,19 +15,19 @@ Penulis: Junfu Shi (SJF, xngg1021). Penawaran lisensi saat ini: [Source Lineage 
 
 ### Mulai cepat
 
-Jalankan versi 2.3.0 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Jalankan versi 2.3.1 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-Catatan [rilis 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 12 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
+Catatan [rilis 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 12 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
 
 ### Verifikasi instalasi
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-12 alat. L
 
 ### Meneliti makalah dengan Agen lokal
 
-Instal `academic-research-kernel[research]==2.3.0` dan ekspor alur kerja terpaket:
+Instal `academic-research-kernel[research]==2.3.1` dan ekspor alur kerja terpaket:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### Validasi Empiris Tanpa Parameter pada Peninjauan Sejawat Skala Besar (ICLR 2026, $N = 19,473$)
+### Distribusi Makro 5 Kelompok Cacat Deterministik dalam Telaah Sejawat (ICLR 2026, $N = 19,473$)
 
-Untuk memastikan bahwa pemeriksaan deterministik mencerminkan mode kegagalan nyata dalam peninjauan sejawat tanpa melakukan fitting bobot empiris atau ambang skor subjektif, kelima kelompok cacat deterministik (hilangnya dispersi/error bar, pelanggaran format/batas halaman, inkonsistensi tabel/ablasi, kelalaian baseline, dan celah reprodusibilitas) dievaluasi terhadap `19,473` naskah dan `75,769` ulasan resmi ICLR 2026 (diverifikasi melalui pembagian paritas `SHA-256`; naskah individual tetap dianonimkan):
+Untuk mendasari lima kelompok cacat deterministik (ketiadaan bilah galat/dispersi, pelanggaran format/bagian/batas halaman, inkonsistensi tabel/ablasi, kelalaian baseline/sitasi, serta celah reprodusibilitas/kode) tanpa mengepaskan bobot empiris atau ambang subjektif, kami mengukur insidensi tingkat makalah `k / N` pada `19,473` naskah ternilai (`18,791` keputusan standar ditambah `682` penolakan administratif dengan ulasan) dan `75,769` ulasan resmi ICLR 2026 (verifikasi belah-paruh `SHA-256` `Split 0: N = 9,765` vs. `Split 1: N = 9,708`; naskah dianonimkan; [tanda terima agregat](../../docs/benchmarks/iclr2026-openreview-incidence-receipt.json)):
 
 | Tingkat Keputusan / Soundness | Naskah ($N$) | Skor Rata-Rata / Soundness | Tingkat Kecocokan pada 5 Kelompok Cacat Deterministik |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; dispersi 12.1%, tabel/ablasi 7.1%, baseline 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersi 15.8%, tabel/ablasi 8.9%, baseline 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; dispersi 21.4%, tabel/ablasi 11.6%, baseline 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; dispersi 19.5%, tabel/ablasi 7.9%, baseline 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; dispersi 23.4%, tabel/ablasi 10.5%, baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; dispersi 23.8%, tabel/ablasi 12.4%, baseline 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersi 14.9% $\to$ 27.5%, tanpa kode 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; dispersi 14.9% $\to$ 27.5%, tanpa kode 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ Terdapat 22 berkas referensi Markdown yang tersebar di keempat belas keahlian te
 ### Instalasi paket
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.3.0` atau `python -m pip install academic-research-kernel==2.3.0` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==6.19.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
+Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.3.1` atau `python -m pip install academic-research-kernel==2.3.1` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==7.0.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
 
 ### Integrasi dan Penggunaan Portabel
 
@@ -214,7 +214,7 @@ Lihat panduan [autentikasi OpenAlex](https://help.openalex.org/api/authenticatio
 
 ---
 
-## 6. Validasi lokal, verifikasi distribusi (2.3.0), dan lisensi
+## 6. Validasi lokal, verifikasi distribusi (2.3.1), dan lisensi
 
 ### Validasi
 
@@ -240,7 +240,7 @@ Direktori [tools/longtail/](../../tools/longtail/README.md) menyimpan generator 
 
 Direktori `scripts/scfabric/` berisi perangkat alat komputasi ilmiah dan statistik: pemeriksa perangkat keras, katalog backend dengan gerbang tipe data (`dtype`), lima profil beban kerja, tolok ukur berpasangan dengan penerimaan kesetaraan numerik, serta `ComputeReceipt`. Hasil pengukuran tahap pertama di mesin ini terdokumentasi dalam [docs/scientific-compute-fabric.md](../../docs/scientific-compute-fabric.md); aturan praktisnya adalah menggunakan CPU secara bawaan dan hanya mengaktifkan akselerator jika disertai tanda terima komputasi.
 
-Rilis produk 2.3.0 mencakup perbaikan ketepatan perhitungan statistik dan penanganan protokol. Alat publik `academic_recompute_statistics` menyediakan nilai p uji-t serta ukuran efek `d` Cohen / `g` Hedges dua kelompok, sementara interval kepercayaan dan `OR/RR` tetap berupa fungsi Python tingkat bawah. Berikan parameter `p_value_literal` (misalnya `"1.0e-5"`) atau `p_value_decimals` apabila presisi angka pada laporan makalah bersifat penting. Nilai literal mempertahankan angka nol di belakang koma, sedangkan masukan numerik biasa hanya menyimpan representasi numeriknya; sumber presisi yang saling bertentangan akan digagalkan secara eksplisit. Perbandingan pembulatan (`round-half-up`) menyertakan batas bawah pembulatan dan mengecualikan batas atas. Ketidaksesuaian angka biasa merupakan hasil temuan ilmiah yang sah, sedangkan perhitungan yang tidak valid atau gagal sebagian akan menetapkan penanda `isError`.
+Rilis produk 2.3.1 mencakup perbaikan ketepatan perhitungan statistik dan penanganan protokol. Alat publik `academic_recompute_statistics` menyediakan nilai p uji-t serta ukuran efek `d` Cohen / `g` Hedges dua kelompok, sementara interval kepercayaan dan `OR/RR` tetap berupa fungsi Python tingkat bawah. Berikan parameter `p_value_literal` (misalnya `"1.0e-5"`) atau `p_value_decimals` apabila presisi angka pada laporan makalah bersifat penting. Nilai literal mempertahankan angka nol di belakang koma, sedangkan masukan numerik biasa hanya menyimpan representasi numeriknya; sumber presisi yang saling bertentangan akan digagalkan secara eksplisit. Perbandingan pembulatan (`round-half-up`) menyertakan batas bawah pembulatan dan mengecualikan batas atas. Ketidaksesuaian angka biasa merupakan hasil temuan ilmiah yang sah, sedangkan perhitungan yang tidak valid atau gagal sebagian akan menetapkan penanda `isError`.
 
 Pemeriksaan penarikan artikel (retraksi) mencatat pengamatan saat ini (`True`/`False`/`unknown`) secara terpisah dari nilai terakhir yang diketahui. Reservasi singkat sebelum kueri mengurutkan pengamatan pada DOI yang sama dan menjaga pembaruan DOI lainnya. Pengamatan saat ini dan konfirmasi historis memiliki versi terpisah: konfirmasi yang datang terlambat dapat memperbarui riwayat yang disimpan, sementara status `unknown` yang lebih baru tetap ditandai secara eksplisit sebagai belum terverifikasi untuk pemeriksaan berjalan. Respons HTTP tiruan dalam rantai pengujian regresi diberi label sebagai data uji.
 

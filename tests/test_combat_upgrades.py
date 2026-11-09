@@ -19,8 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load_script(rel_path: str, mod_name: str):
+    import sys
     spec = importlib.util.spec_from_file_location(mod_name, ROOT / rel_path)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -873,3 +875,328 @@ def test_slice5_double_blind_acknowledgments_check_respects_phase_and_placeholde
     )
     rep_mixed = pre_linter.lint_manuscript(tex_mixed, venue="iclr", phase="submission")
     assert any(h["code"] == "FORBIDDEN_ACKS_IN_DOUBLE_BLIND_SUBMISSION" for h in rep_mixed["hits"])
+
+
+# ── 10. 20-Item Independent Audit Regression Suite (COR/LIN/SEC/REL) ─────────
+
+def test_audit_cor01_to_cor07_scientific_correctness_and_recompute(tmp_path: Path):
+    """Verify COR-01..COR-07 scientific contract and statistical recomputation fixes."""
+    import hashlib
+    import numpy as np
+    from test_paper_research_analysis import analysis, sources
+
+    evidence_mod = _load_script("scripts/shared_contracts/evidence.py", "evidence_cor01")
+    pr_mod = _load_script("skills/research-object-identity/scripts/provenance.py", "provenance_cor01")
+    meta_mod = _load_script("skills/systematic-review-meta-analysis/scripts/meta_core.py", "meta_cor06")
+
+    # COR-01: Entity with sha256 and no locator still verifies supplied_content and enters total_hashed
+    expected_sha = hashlib.sha256(b"expected").hexdigest()
+    graph = pr_mod.LineageGraph()
+    graph.add_entity("ent-1", "data_snapshot", sha256=expected_sha, locator=None)
+    graph.add_entity("out-1", "statistic_artifact", sha256=hashlib.sha256(b"out").hexdigest(), locator="urn:out:1")
+    graph.record_derivation("out-1", "ent-1")
+
+    ctx_mismatch = evidence_mod.LineageVerificationContext(content_by_entity_id={"ent-1": b"CHANGED", "out-1": b"out"})
+    rep_mismatch = pr_mod.trace_origin(graph, "out-1", verification_context=ctx_mismatch)
+    assert rep_mismatch.verification_status == "hash_mismatch"
+    assert rep_mismatch.content_verification == "hash_mismatch"
+
+    ctx_unlocated = evidence_mod.LineageVerificationContext(content_by_entity_id={"out-1": b"out"})
+    rep_unlocated = pr_mod.trace_origin(graph, "out-1", verification_context=ctx_unlocated)
+    assert rep_unlocated.verification_status == "partial"
+    assert rep_unlocated.content_verification == "partially_verified"
+
+    # COR-02: Unit token binding between literal/unit and source quote via validate_candidate
+    import test_paper_research_analysis as tpra
+    c02_dir = tmp_path / "cor02_proj"
+    c02_dir.mkdir(parents=True, exist_ok=True)
+    proj, docs, cand, _ = tpra.case.__wrapped__(c02_dir)
+    for f in cand["fields"]:
+        if f["id"] == "percent":
+            f["literal"] = "25.0 ms"
+            f["unit"] = "ms"
+    with pytest.raises(ValueError, match="absent from quoted source|conflicts with percentage"):
+        analysis.validate_candidate(proj, cand, documents=docs)
+
+    # COR-03: Non-DOI work identity (arXiv ID and version) verification against manifest
+    kern = analysis._kernel()
+    manifest_ident = analysis._normalize_paper_identity("arXiv:2601.00001v1", "v1", kern)
+    cand_diff_id = analysis._normalize_paper_identity("arXiv:2601.00002v1", "v1", kern)
+    assert manifest_ident != cand_diff_id
+    with pytest.raises(ValueError, match="Conflicting arXiv version"):
+        analysis._normalize_paper_identity("arXiv:2601.00001v1", "v2", kern)
+
+    # COR-04: Direct comparison rejects unknown unit or unknown context keys
+    full_ctx = {"dataset": "D", "group": "G", "timepoint": "T", "analysis_set": "A", "condition": "C"}
+    assert analysis._is_known_complete_for_direct({"unit": "unknown", "context": full_ctx}) is False
+    assert analysis._is_known_complete_for_direct({"unit": "%", "context": {**full_ctx, "condition": "unknown"}}) is False
+    assert analysis._is_known_complete_for_direct({"unit": "%", "context": full_ctx}) is True
+
+    # COR-05: Asymmetric Clopper-Pearson / exact binomial CI skips symmetric midpoint check
+    ci_exact = recompute.check_ci_consistency(0.1, 0.0025, 0.445, ci_method="clopper_pearson")
+    assert ci_exact["consistent"] is None
+    assert ci_exact["status"] == "symmetry_check_not_applicable"
+    assert ci_exact["applicable"] is False
+
+    ci_wald_bad = recompute.check_ci_consistency(0.1, 0.0025, 0.445, ci_method="wald")
+    assert ci_wald_bad["consistent"] is False
+    assert ci_wald_bad["implied_se"] is not None
+
+    # COR-06: Trim-and-fill computes L0 on full sample relative to updated center (BCG 13-study reference)
+    bcg_y = np.array([-.88931133, -1.58538866, -1.34807315, -1.44155119, -.21754732, -.78611559,
+                      -1.62089822, .01195233, -.46941765, -1.37134480, -.33935883, .44591340, -.01731395])
+    bcg_v = np.array([.325584765, .194581121, .415367965, .020010032, .051210172, .006905618,
+                      .223017248, .003961579, .056434210, .073024794, .012412214, .532505845, .071404660])
+    tf_res = meta_mod.trim_and_fill(bcg_y, bcg_v, side="right")
+    assert tf_res["converged"] is True
+    assert tf_res["k0"] == 4
+    assert tf_res["adjusted"] == pytest.approx(-0.2910, abs=1e-4)
+
+    # COR-07: Storage bounds separate MB/MiB unit and half-ULP literal rounding from below_raw_vector_bound
+    sb_round = recompute.check_storage_bandwidth_bounds(
+        item_count=1000, vector_dim=384, bytes_per_element=4,
+        reported_size_mb=1.5, reported_literal="1.5", storage_unit="MB",
+    )
+    assert sb_round["below_raw_vector_bound"] is False
+    assert sb_round["consistent"] is True
+    assert sb_round["status"] == "ok"
+
+
+def test_audit_lin01_to_lin03_ceg_binding_macro_perf_and_comment_masking(tmp_path: Path):
+    """Verify LIN-01 per-claim CEG binding, LIN-02 linear \\def scan, and LIN-03 comment/verbatim masking."""
+    import time
+
+    ceg_path = tmp_path / "ceg.json"
+    ceg_path.write_text(json.dumps({
+        "claims": [
+            {"id": "C_VALID", "text": "Our method improves accuracy by 12.4\\% on DatasetA."},
+            {"id": "C_UNSUP", "text": "Latency is reduced by 30\\% on GPU."},
+        ],
+        "support_edges": [
+            {"claim_id": "C_VALID", "evidence_id": "E1", "support_status": "supported"},
+        ],
+    }), encoding="utf-8")
+
+    # LIN-01: Unanchored second quantitative claim in same file or mismatched text for C_VALID must be flagged
+    tex_lin01 = tmp_path / "lin01.tex"
+    tex_lin01.write_text(
+        "\\documentclass{article}\n\\begin{document}\n"
+        "\\begin{abstract}\n"
+        "% ark:claim=C_VALID\n"
+        "Our method improves accuracy by 99.9\\% on DatasetB.\n"
+        "Unanchored claim: throughput increases by 4.2x over baseline.\n"
+        "\\end{abstract}\n"
+        "\\section{Introduction}\nText.\n"
+        "\\section{Limitations}\nLimits.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep_lin01 = pre_linter.lint_manuscript(tex_lin01, venue="iclr", ceg_path=ceg_path, require_ceg_binding=True)
+    codes_lin01 = [h["code"] for h in rep_lin01["hits"]]
+    assert codes_lin01.count("UNGROUNDED_QUANTITATIVE_CLAIM") == 2
+    assert any("no verified ClaimEvidenceGraph support edge" in h["message"] for h in rep_lin01["hits"])
+
+    # LIN-02: 12K nested \def macro file completes in < 0.1s
+    macro_body = "\\def\\a{" + ("x" * 60) + "}\n"
+    tex_lin02 = tmp_path / "lin02.tex"
+    tex_lin02.write_text(
+        "\\documentclass{article}\n" + (macro_body * 200) +
+        "\\begin{document}\n\\section{Introduction}\nText.\n\\section{Limitations}\nLimits.\n\\end{document}\n",
+        encoding="utf-8",
+    )
+    t0 = time.perf_counter()
+    pre_linter.lint_manuscript(tex_lin02, venue="iclr")
+    assert (time.perf_counter() - t0) < 0.25
+
+    # LIN-03: Commented-out \section{Limitations} does not satisfy required section; verbatim ?? does not trigger unresolved ref
+    tex_lin03 = tmp_path / "lin03.tex"
+    tex_lin03.write_text(
+        "\\documentclass{article}\n\\begin{document}\n"
+        "\\section{Introduction}\n"
+        "% \\section{Limitations}\n"
+        "\\begin{verbatim}\nSection ?? and \\ref{missing} and TODO: inside verbatim\n\\end{verbatim}\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep_lin03 = pre_linter.lint_manuscript(tex_lin03, venue="neurips")
+    codes_lin03 = [h["code"] for h in rep_lin03["hits"]]
+    assert "MISSING_REQUIRED_SECTION" in codes_lin03
+    assert "UNRESOLVED_LATEX_REFERENCE" not in codes_lin03
+    assert "LEFT_OVER_TODO_MARKER" not in codes_lin03
+
+
+def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Path, monkeypatch):
+    """Verify SEC-02..SEC-07 security boundary fixes and REL-01..REL-03/REL-G1 release & incidence contracts."""
+    import subprocess
+    import sys
+
+    # SEC-02: Non-Author PDF metadata forbidden token & incomplete status when files are unsupported
+    unsupported_bin = tmp_path / "archive.bin"
+    unsupported_bin.write_bytes(b"\x00\x01\x02")
+    scan_dir = blind_san.scan_target(tmp_path)
+    assert scan_dir["status"] == "incomplete"
+    assert "archive.bin" in scan_dir["unsupported_files"]
+
+    # SEC-03: Ambient TMPDIR mirror is ignored by openreview_audit when not explicitly configured
+    fake_tmp = tmp_path / "ambient_tmp"
+    fake_tmp.mkdir()
+    (fake_tmp / "iclr2026.json").write_text(json.dumps([{"id": "FakeForum", "status": "Oral", "rating": "10"}]), encoding="utf-8")
+    monkeypatch.setenv("TMPDIR", str(fake_tmp))
+    monkeypatch.delenv("OPENREVIEW_MIRROR_DIR", raising=False)
+    assert or_audit._find_local_mirror_fallback("FakeForum") is None
+
+    # SEC-05: Venue template manager marks bundled scaffold as unverified and detects legacy style pattern
+    mdir = venue_mgr.scaffold_manuscript(tmp_path, "sec05-paper", venue="iclr", year=2027)
+    sty_file = mdir / "styles" / "iclr2027_conference.sty"
+    sty_file.write_text("% initial style\n", encoding="utf-8")
+    m1 = venue_mgr.verify_style_directory(mdir)
+    assert m1["official_style_verified"] is False
+    assert m1["official_style_installed"] is False
+    assert m1["style_verification_status"] == "unverified_local_style"
+    assert m1["style_files"][0]["verified_origin"] is False
+
+    # SEC-07: Bounded MCP stdio frame reader rejects oversized lines & invalid UTF-8 on both text and binary .buffer streams
+    mcp_mod = _load_script("scripts/mcp_server.py", "mcp_sec07")
+    monkeypatch.setattr(mcp_mod, "MAX_MCP_FRAME_BYTES", 64)
+    oversized_stream = io.StringIO("x" * 128 + "\n" + json.dumps({"jsonrpc": "2.0", "id": 1, "method": "ping"}) + "\n")
+    frames = list(mcp_mod._iter_bounded_stdio_frames(oversized_stream))
+    assert frames[0] == (None, "oversized")
+    assert frames[1][1] is None and "ping" in frames[1][0]
+
+    raw_bytes_stream = io.BytesIO(
+        b"y" * 128 + b"\n"
+        + b"\xff\xfe\xfd\n"
+        + (json.dumps({"jsonrpc": "2.0", "id": 2, "method": "ping"}) + "\n").encode("utf-8")
+    )
+    bin_wrapped = io.TextIOWrapper(raw_bytes_stream, encoding="utf-8", errors="replace")
+    bin_frames = list(mcp_mod._iter_bounded_stdio_frames(bin_wrapped))
+    assert bin_frames[0] == (None, "oversized")
+    assert bin_frames[1] == (None, "invalid_utf8")
+    assert bin_frames[2][1] is None and "ping" in bin_frames[2][0]
+
+    # B1/B5/B6/B7: Empty sha256 rejected, unknown ci_method rejected, non-exact-bare metadata overhead rejected, commented \end{abstract} handled
+    ev_mod = _load_script("scripts/shared_contracts/evidence.py", "ev_mod_b1")
+    st_empty, r_empty, _ = ev_mod._replay_lineage_content_verification(
+        [{"id": "e1", "sha256": ""}],
+        check_on_disk_hashes=True,
+        content_by_entity_id={"e1": b"abc"},
+    )
+    assert st_empty == "hash_mismatch" and r_empty == "hash_mismatch"
+    with pytest.raises(ValueError, match="ci_method"):
+        recompute.check_ci_consistency(0.5, 0.2, 0.8, ci_method="unknown_method_xyz")
+    res_meta_non_exact = recompute.check_storage_bandwidth_bounds(
+        item_count=1_000_000,
+        vector_dim=384,
+        bytes_per_element=4,
+        reported_size_mb=1536.01,
+        reported_literal="1536.01",
+        storage_unit="MB",
+        claims_full_system_storage=True,
+        min_metadata_overhead_bytes=64 * 1_000_000,
+    )
+    assert res_meta_non_exact["consistent"] is False
+    assert res_meta_non_exact["status"] == "omitted_metadata_overhead"
+
+    # B2/B3/B5/B7/B8 additional Round-2 & Round-3 edge cases:
+    from test_paper_research_analysis import analysis as analysis_r2
+    import test_paper_research_analysis as tpra_r2
+    assert analysis_r2._units_attached_to_number("Accuracy is 25.0 percent.", "25.0") == {"%"}
+    assert analysis_r2._units_attached_to_number("Speedup is 25.0×.", "25.0") == {"x"}
+    assert analysis_r2._units_attached_to_number("Gain is 25.0 percentage points.", "25.0") == {"pp"}
+    c_pp_dir = tmp_path / "cor02_pp_proj"
+    c_pp_dir.mkdir(parents=True, exist_ok=True)
+    proj_pp, docs_pp, cand_pp, _ = tpra_r2.case.__wrapped__(c_pp_dir)
+    for f in cand_pp["fields"]:
+        if f["id"] == "percent":
+            loc_p = f["sources"][0]["locator"]
+            for seg in docs_pp["documents"][0]["segments"]:
+                if seg["locator"] == loc_p:
+                    seg["text"] = seg["text"] + " Accuracy improved by 25.0 percentage points. Speedup is 25.0×."
+            f["sources"][0]["quote"] = "Accuracy improved by 25.0 percentage points."
+            f["literal"] = "25.0"
+            f["unit"] = "%"
+    with pytest.raises(ValueError, match="conflicts with unit|requires '%'"):
+        analysis_r2.validate_candidate(proj_pp, cand_pp, documents=docs_pp)
+    for f in cand_pp["fields"]:
+        if f["id"] == "percent":
+            f["sources"][0]["quote"] = "Speedup is 25.0×."
+            f["literal"] = "25.0"
+            f["unit"] = "ms"
+    with pytest.raises(ValueError, match="conflicts with unit"):
+        analysis_r2.validate_candidate(proj_pp, cand_pp, documents=docs_pp)
+
+    assert analysis_r2._normalize_paper_identity("CorpusId:12345678", "v1", analysis_r2._kernel()) == ("s2", "12345678", "v1")
+    res_t_ci = recompute.check_ci_consistency(0.5, 0.2, 0.8, ci_method="t")
+    assert res_t_ci["consistent"] is True and res_t_ci["implied_se"] is None
+    meta_mod_r3 = _load_script("skills/systematic-review-meta-analysis/scripts/meta_core.py", "meta_cor06_r3")
+    tf_nonconv = meta_mod_r3.trim_and_fill([-0.01, -0.02, 0.5, 1.0, 2.0, 5.0], [1.0, 1.0, 100.0, 100.0, 100.0, 100.0], side="left", maxiter=1)
+    assert tf_nonconv["converged"] is False and tf_nonconv["k0"] is None and tf_nonconv["adjusted"] is None and tf_nonconv["se"] is None
+
+    uv_lock_txt = (ROOT / "uv.lock").read_text(encoding="utf-8")
+    assert '{ name = "sympy", marker = "extra == \'full\'", specifier = ">=1.13,<2" }' in uv_lock_txt
+    assert '{ name = "sympy", marker = "extra == \'qa\'", specifier = ">=1.13,<2" }' in uv_lock_txt
+    assert not any('"sympy"' in ln and '">=1.3,<2"' in ln for ln in uv_lock_txt.splitlines())
+
+    ceg_edgeless = tmp_path / "edgeless_ceg.json"
+    ceg_edgeless.write_text(json.dumps({"claims": [{"id": "C1", "text": "Accuracy improves by 10\\%.", "status": "supported"}], "support_edges": []}), encoding="utf-8")
+    id_map_edgeless, _ = pre_linter._load_ceg_claim_map(ceg_edgeless)
+    assert "C1" not in id_map_edgeless
+
+    commented_verb_tex = tmp_path / "commented_verb.tex"
+    commented_verb_tex.write_text(
+        "\\documentclass{article}\n\\begin{document}\n\\section{Introduction}\nText.\n"
+        "% \\begin{verbatim}\n% \\section{Limitations}\n% \\end{verbatim}\n\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep_cverb = pre_linter.lint_manuscript(commented_verb_tex, venue="acl")
+    assert any(h["code"] == "MISSING_REQUIRED_SECTION" for h in rep_cverb["hits"])
+
+    xmp_entries = blind_san._extract_xmp_entries(
+        '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="XMPTK_SECRET_TOKEN" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        '<rdf:Description rdf:about="https://github.com/secret_user/repo"><child/>TAIL_SENTINEL</rdf:Description></x:xmpmeta>'
+    )
+    xmp_vals = [v for _, v in xmp_entries]
+    assert "https://github.com/secret_user/repo" in xmp_vals and "TAIL_SENTINEL" in xmp_vals and "XMPTK_SECRET_TOKEN" in xmp_vals
+
+    # REL-03: release_manifest read_supported_protocols matches mcp_server.SUPPORTED_PROTOCOLS
+    rel_mod = _load_script("scripts/release_manifest.py", "rel_mod_rel03")
+    protocols = rel_mod.read_supported_protocols((ROOT / "scripts/mcp_server.py").read_text(encoding="utf-8"))
+    assert tuple(protocols) == mcp_mod.SUPPORTED_PROTOCOLS
+    assert len(protocols) == 5
+
+    # REL-02 & REL-G1: Verify de-identified ICLR 2026 incidence receipt conservation & all 23 localized READMEs
+    receipt_path = ROOT / "docs" / "benchmarks" / "iclr2026-openreview-incidence-receipt.json"
+    assert receipt_path.is_file()
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert "\\?\\?" not in receipt["methodology"]["regex_patterns"]["format_section_page"]
+    tiers = receipt["tiers"]
+    assert (
+        tiers["Oral"]["papers_n"]
+        + tiers["Poster"]["papers_n"]
+        + tiers["Rejected"]["papers_n"]
+        + tiers["Withdrawn"]["papers_n"]
+        == tiers["STANDARD_DECISION_TIERS"]["papers_n"]
+        == 18791
+    )
+    assert tiers["STANDARD_DECISION_TIERS"]["papers_n"] + tiers["Desk Reject"]["papers_n"] == tiers["ALL_SCORED"]["papers_n"] == 19473
+    assert (
+        tiers["SOUND_HIGH(>=3.25)"]["papers_n"]
+        + tiers["SOUND_MID(2.0_to_3.25)"]["papers_n"]
+        + tiers["SOUND_LOW(<=2.0)"]["papers_n"]
+        == 19473
+    )
+    sp0 = receipt["split_half"]["split_0"]["ALL_SCORED"]["papers_n"]
+    sp1 = receipt["split_half"]["split_1"]["ALL_SCORED"]["papers_n"]
+    assert sp0 == 9765 and sp1 == 9708 and sp0 + sp1 == 19473
+    all_readmes = sorted(list(ROOT.glob("README*.md")) + list(ROOT.glob("i18n/*/README.md")))
+    assert len(all_readmes) == 23
+    tf_checked = 0
+    for rm in all_readmes:
+        rm_txt = rm.read_text(encoding="utf-8")
+        assert "2.3.1" in rm_txt
+        assert "iclr2026-openreview-incidence-receipt.json" in rm_txt
+        tf_lines = [ln for ln in rm_txt.splitlines() if "table-forensics --input spec.json" in ln]
+        if tf_lines:
+            tf_checked += 1
+            assert all("2.3.0" in ln and "2.3.1" not in ln for ln in tf_lines)
+    assert tf_checked == 5

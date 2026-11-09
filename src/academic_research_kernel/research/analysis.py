@@ -93,6 +93,115 @@ def _literal(field: dict) -> str:
     return literal
 
 
+_UNIT_ALIASES: dict[str, str] = {
+    "%": "%",
+    "percent": "%",
+    "percentage": "%",
+    "pct": "%",
+    "百分比": "%",
+    "pp": "pp",
+    "percentage point": "pp",
+    "percentage points": "pp",
+    "ms": "ms",
+    "millisecond": "ms",
+    "milliseconds": "ms",
+    "s": "s",
+    "sec": "s",
+    "secs": "s",
+    "second": "s",
+    "seconds": "s",
+    "us": "us",
+    "µs": "us",
+    "μs": "us",
+    "microsecond": "us",
+    "microseconds": "us",
+    "ns": "ns",
+    "nanosecond": "ns",
+    "nanoseconds": "ns",
+    "mb": "mb",
+    "mib": "mib",
+    "gb": "gb",
+    "gib": "gib",
+    "kb": "kb",
+    "kib": "kib",
+    "gb/s": "gb/s",
+    "hz": "hz",
+    "khz": "khz",
+    "mhz": "mhz",
+    "ghz": "ghz",
+    "db": "db",
+    "x": "x",
+    "×": "x",
+}
+
+_ATTACHED_UNIT_RE_SUFFIX = r"(percentage\s+points?|%|百分比|percentage|percent|pct|pp|×|x|milliseconds?|seconds?|microseconds?|nanoseconds?|secs?|ms|s|us|µs|μs|ns|gb/s|mib|gib|kib|mb|gb|kb|ghz|mhz|khz|hz|db)"
+
+
+def _canonical_unit(raw_unit: Any) -> str:
+    u = _space(str(raw_unit or "")).strip().lower()
+    return _UNIT_ALIASES.get(u, u)
+
+
+def _units_attached_to_number(text: str, number_str: str) -> set[str]:
+    norm_text = text.replace("−", "-")
+    pat = r"(?<![\w.])" + re.escape(number_str) + r"(?![\d.])\s*" + _ATTACHED_UNIT_RE_SUFFIX + r"(?![\w/%])"
+    return {_canonical_unit(m.group(1)) for m in re.finditer(pat, norm_text, re.I)}
+
+
+def _normalize_paper_identity(raw_id: str | None, raw_ver: str | None, kernel) -> tuple[str, str, str | None]:
+    s = str(raw_id or "").strip()
+    ver = str(raw_ver).strip() if raw_ver is not None and str(raw_ver).strip() else None
+    norm_v = ver.lower() if ver else None
+    if norm_v and norm_v.isdigit():
+        norm_v = "v" + norm_v
+    if not s:
+        return ("none", "", norm_v)
+    doi = kernel.id_mod.normalize("doi", s)
+    if re.match(r"^10\.\d{4,9}/\S+", doi):
+        return ("doi", doi.lower(), norm_v)
+    m_arx = re.match(
+        r"^(?:arxiv:\s*|https?://arxiv\.org/(?:abs|pdf)/)?(\d{4}\.\d{4,5}|[a-z-]+(?:\.[a-z]{2})?/\d{7})(v\d+)?(?:\.pdf)?$",
+        s,
+        re.I,
+    )
+    if m_arx:
+        base_arx = m_arx.group(1).lower()
+        emb_v = m_arx.group(2).lower() if m_arx.group(2) else None
+        if emb_v and norm_v and emb_v != norm_v:
+            raise ValueError(f"Conflicting arXiv version between identifier ({emb_v}) and version field ({norm_v})")
+        return ("arxiv", base_arx, emb_v or norm_v)
+    m_pmc = re.match(r"^(?:pmcid:\s*)?(pmc\d+)$", s, re.I)
+    if m_pmc:
+        return ("pmcid", m_pmc.group(1).upper(), norm_v)
+    m_pmid = re.match(r"^pmid:\s*(\d+)$", s, re.I)
+    if m_pmid:
+        return ("pmid", m_pmid.group(1), norm_v)
+    m_oa = re.match(r"^(?:openalex:\s*|https?://openalex\.org/)?(W\d+)$", s, re.I)
+    if m_oa:
+        return ("openalex", m_oa.group(1).upper(), norm_v)
+    m_s2 = re.match(r"^(?:s2:\s*|corpusid:\s*)(\d+|[0-9a-f]{40})$", s, re.I)
+    if m_s2:
+        return ("s2", m_s2.group(1).lower(), norm_v)
+    return ("other", re.sub(r"\s+", " ", s), norm_v)
+
+
+def _is_known_complete_for_direct(field: dict) -> bool:
+    unit = field.get("unit")
+    if unit is None or not str(unit).strip() or str(unit).strip().lower() in {"unknown", "none", "null", "n/a"}:
+        return False
+    ctx = field.get("context")
+    if not isinstance(ctx, dict) or not ctx:
+        return False
+    for k in ("dataset", "group", "timepoint", "analysis_set", "condition"):
+        val = ctx.get(k)
+        if val is None or not str(val).strip() or str(val).strip().lower() in {"unknown", "none", "null", "n/a"}:
+            return False
+    for val in ctx.values():
+        if val is None or not str(val).strip() or str(val).strip().lower() in {"unknown", "none", "null", "n/a"}:
+            return False
+    return True
+
+
 def validate_candidate(project: str | Path, candidate: dict, *, documents: dict | None = None) -> dict:
     """Reject stale bytes, fabricated locations, unknown fields and empty reading."""
     root = Path(project).resolve()
@@ -111,11 +220,26 @@ def validate_candidate(project: str | Path, candidate: dict, *, documents: dict 
         title = manifest.get("title")
         if title and kernel.id_mod.normalize_title(title) != kernel.id_mod.normalize_title(candidate["paper"]["title"]):
             raise ValueError("Candidate paper title differs from acquired manifest identity")
-        identifier = manifest.get("doi") or manifest.get("identifier")
-        if identifier:
-            normalized = kernel.id_mod.normalize("doi", identifier)
-            if re.match(r"^10\.\d{4,9}/", normalized) and normalized != kernel.id_mod.normalize("doi", candidate["paper"]["identifier"]):
-                raise ValueError("Candidate DOI differs from acquired manifest identity")
+        cand_kind, cand_base, cand_ver = _normalize_paper_identity(
+            candidate["paper"].get("identifier"), candidate["paper"].get("version"), kernel
+        )
+        m_entries = []
+        for m_key in ("doi", "identifier"):
+            m_val = manifest.get(m_key)
+            if m_val:
+                m_entries.append((m_key, *_normalize_paper_identity(m_val, manifest.get("version"), kernel)))
+        if m_entries:
+            same_kind = [e for e in m_entries if e[1] == cand_kind]
+            target_entries = same_kind if same_kind else m_entries
+            if not any((e[1], e[2]) == (cand_kind, cand_base) for e in target_entries):
+                raise ValueError(f"Candidate paper {target_entries[0][0]} differs from acquired manifest identity")
+            for e in target_entries:
+                if (e[1], e[2]) == (cand_kind, cand_base) and e[3] is not None and cand_ver != e[3]:
+                    raise ValueError("Candidate paper version differs from acquired manifest identity")
+        if manifest.get("version") and not m_entries:
+            _, _, m_ver_only = _normalize_paper_identity(None, manifest.get("version"), kernel)
+            if m_ver_only is not None and cand_ver != m_ver_only:
+                raise ValueError("Candidate paper version differs from acquired manifest identity")
     docmap = {doc["document_id"]: doc for doc in documents["documents"]}
     successful = {key for key, doc in docmap.items() if doc.get("segments")}
     if set(candidate["search_scope"]) != successful:
@@ -168,6 +292,23 @@ def validate_candidate(project: str | Path, candidate: dict, *, documents: dict 
                 word_present = word_literal and re.search(r"\b" + re.escape(field["literal"].strip()) + r"\b", source["quote"], re.I)
                 if not word_present and literal not in tokens:
                     raise ValueError(f"{field['id']}: numeric literal/precision absent from quoted source")
+                if not word_literal:
+                    raw_lit = _space((field["literal"] or "").replace("−", "-"))
+                    stripped_op = re.sub(r"^(?:p\s*)?(?:<=|>=|<|>|≤|≥|=)\s*", "", raw_lit, flags=re.I).strip()
+                    if stripped_op and _numeric_token(stripped_op) != literal:
+                        if stripped_op not in _space(source["quote"].replace("−", "-")):
+                            raise ValueError(f"{field['id']}: literal unit/token {field['literal']!r} absent from quoted source")
+                    declared_unit = _canonical_unit(field.get("unit"))
+                    lit_units = _units_attached_to_number(stripped_op, literal)
+                    quote_units = _units_attached_to_number(source["quote"], literal)
+                    if lit_units and declared_unit not in lit_units:
+                        raise ValueError(f"{field['id']}: literal unit {field['literal']!r} conflicts with declared unit {field.get('unit')!r}")
+                    if len(quote_units) > 1 and not lit_units:
+                        raise ValueError(f"{field['id']}: numeric literal {literal} appears with multiple units {sorted(quote_units)} in quoted source; disambiguate in literal")
+                    if quote_units and declared_unit and declared_unit not in quote_units:
+                        raise ValueError(f"{field['id']}: unit {field.get('unit')!r} conflicts with unit attached to {literal} in quoted source")
+                    if declared_unit == "%" and "%" not in quote_units:
+                        raise ValueError(f"{field['id']}: percentage unit requires '%' or 'percent' attached to {literal} in quoted source")
                 if field["type"] == "p_value":
                     operator = re.search(r"(<=|>=|<|>|≤|≥)", field["literal"])
                     relation = operator.group(1).replace("≤", "<=").replace("≥", ">=") if operator else "="
@@ -434,23 +575,43 @@ def compute_checks(candidate: dict, documents: dict) -> list[dict]:
                 call_args = {"ci_estimate": values["estimate"], "ci_lower": values["lower"], "ci_upper": values["upper"]}
                 if "level" in values:
                     call_args["ci_level"] = values["level"]
+                est_field = fields[check["inputs"]["estimate"]]
+                low_field = fields[check["inputs"]["lower"]]
+                up_field = fields[check["inputs"]["upper"]]
                 explicit_log = check.get("log_scale")
                 if isinstance(explicit_log, bool):
                     call_args["ci_log_scale"] = explicit_log
                 else:
-                    est_field = fields[check["inputs"]["estimate"]]
                     if check.get("metric") in {"odds_ratio", "risk_ratio"} or re.search(
                         r"\b(?:OR|RR|HR|odds\s*ratio|risk\s*ratio|hazard\s*ratio)\b|比值比|优势比|风险比|危险比",
                         est_field["name"], re.I
                     ):
                         call_args["ci_log_scale"] = True
+                explicit_ci_method = check.get("ci_method") or check.get("method")
+                if not explicit_ci_method:
+                    probe_texts = [
+                        str(check.get("note") or ""),
+                        est_field.get("name", ""),
+                        low_field.get("name", ""),
+                        up_field.get("name", ""),
+                        " ".join(str(v) for v in (est_field.get("context") or {}).values() if v),
+                    ]
+                    m_asym = re.search(
+                        r"\b(clopper[\s-]*pearson|exact\s+binomial|wilson(?:\s+score)?|agresti[\s-]*coull|jeffreys|bootstrap|profile[\s-]*likelihood)\b",
+                        " | ".join(probe_texts),
+                        re.I,
+                    )
+                    if m_asym:
+                        explicit_ci_method = m_asym.group(1)
+                if explicit_ci_method:
+                    call_args["ci_method"] = explicit_ci_method
                 output = kernel.handle_tool_call("academic_recompute_statistics", call_args)
                 ci_res = output.get("ci_consistency", {})
                 result.update(tool="academic_recompute_statistics",
                               recomputed={"ci_midpoint": ci_res.get("ci_midpoint"), "implied_se": ci_res.get("implied_se")},
                               consistent=ci_res.get("consistent"), formula=ci_res.get("formula"),
                               library=ci_res.get("library"),
-                              precision={"relative_deviation": ci_res.get("relative_deviation")})
+                              precision={"relative_deviation": ci_res.get("relative_deviation"), "applicable": ci_res.get("applicable", True)})
             elif kind == "or_rr_2x2":
                 call_args = {"cell_a": values["a"], "cell_b": values["b"], "cell_c": values["c"], "cell_d": values["d"]}
                 if "level" in values:
@@ -523,11 +684,16 @@ def compute_checks(candidate: dict, documents: dict) -> list[dict]:
                               precision=precision)
             else:
                 percent = fields[check["inputs"]["percent"]]
-                values["percent"] = _literal(percent)
-                output = kernel.handle_tool_call("academic_check_percentage", values)
-                result.update(tool="academic_check_percentage", recomputed=output.get("recomputed_percent"), consistent=output.get("consistent"),
-                              formula=output.get("formula"), library=output.get("library"),
-                              precision={key: output[key] for key in ("decimals", "tolerance", "tolerance_decimal", "precision_source") if key in output})
+                p_unit = _canonical_unit(percent.get("unit"))
+                if p_unit and p_unit != "%":
+                    output = {"error": f"percentage check requires a percentage unit, got {percent.get('unit')!r}"}
+                    result.update(tool="academic_check_percentage", recomputed=None, consistent=None)
+                else:
+                    values["percent"] = _literal(percent)
+                    output = kernel.handle_tool_call("academic_check_percentage", values)
+                    result.update(tool="academic_check_percentage", recomputed=output.get("recomputed_percent"), consistent=output.get("consistent"),
+                                  formula=output.get("formula"), library=output.get("library"),
+                                  precision={key: output[key] for key in ("decimals", "tolerance", "tolerance_decimal", "precision_source") if key in output})
             result["raw_result"] = output
             if output.get("error"):
                 result.update(status="failed", reason=output["error"])
@@ -739,11 +905,22 @@ def _ingest(project: Path, run: Path, candidate: dict, documents: dict, results:
             raise ValueError(f"Kernel rejected {schema}: {receipt.failure_reason}")
         receipts.append(receipt.to_dict())
     identifier = candidate["paper"]["identifier"]
-    doi = kernel.id_mod.normalize("doi", identifier)
-    is_doi = bool(re.match(r"^10\.\d{4,9}/", doi))
-    object_id = ("work:doi:" + doi) if is_doi else "work:paper:" + _digest(identifier)[:32]
+    id_kind, id_base, id_ver = _normalize_paper_identity(identifier, candidate["paper"].get("version"), kernel)
+    is_doi = id_kind == "doi"
+    if is_doi:
+        object_id = "work:doi:" + id_base
+        norm_id_str = id_base
+        id_type_str = "doi"
+    elif id_kind == "arxiv":
+        object_id = "work:arxiv:" + id_base
+        norm_id_str = f"arxiv:{id_base}{id_ver or ''}"
+        id_type_str = "arxiv"
+    else:
+        object_id = "work:paper:" + _digest(identifier)[:32]
+        norm_id_str = identifier
+        id_type_str = "other"
     research_object = {"object_id": object_id, "object_type": "Work", "title": candidate["paper"]["title"],
-                       "identifiers": [{"type": "doi" if is_doi else "other", "value": identifier, "normalized": doi if is_doi else identifier}],
+                       "identifiers": [{"type": id_type_str, "value": identifier, "normalized": norm_id_str}],
                        "manifestations": [], "relations": [], "lineage": [], "source_observations": [], "uncertainty": []}
     ingest(research_object, "research-object-identity", "research-object-1.0", "research_object")
     ingest(lineage, "research-object-identity", "lineage-receipt-1.0", "lineage_receipt")
@@ -913,7 +1090,10 @@ def compare(left: str | Path, right: str | Path, analysis_path: str | Path | Non
                     same_name = [other for other in other_side if other["name"] == field["name"]]
                     if not same_name:
                         raise ValueError("Direct numeric comparison requires the same named metric on both sides")
-                    if not any(field["unit"] == other["unit"] and field["context"] == other["context"] for other in same_name):
+                    if not _is_known_complete_for_direct(field) or not any(
+                        _is_known_complete_for_direct(other) and field["unit"] == other["unit"] and field["context"] == other["context"]
+                        for other in same_name
+                    ):
                         raise ValueError("Direct numeric comparison requires identical named metrics, units and evaluation contexts; use conditional/not_comparable")
     destination = Path(output).resolve() if output else roots[0] / "comparisons" / _digest(analysis)[:24]
     destination.mkdir(parents=True, exist_ok=True)

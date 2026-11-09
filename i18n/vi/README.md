@@ -15,19 +15,19 @@ Tác giả: Junfu Shi (SJF, xngg1021). Phạm vi cấp phép hiện hành: [Sour
 
 ### Bắt đầu nhanh
 
-Chạy phiên bản 2.3.0 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Chạy phiên bản 2.3.1 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-[Bản phát hành 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 12 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
+[Bản phát hành 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 12 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
 
 ### Kiểm tra cài đặt
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, 
 
 ### Nghiên cứu bài báo khoa học với Agent cục bộ
 
-Cài đặt `academic-research-kernel[research]==2.3.0` và xuất quy trình làm việc đóng gói sẵn:
+Cài đặt `academic-research-kernel[research]==2.3.1` và xuất quy trình làm việc đóng gói sẵn:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### Kiểm chứng thực nghiệm không tham số trên dữ liệu bình duyệt quy mô lớn (ICLR 2026, $N = 19,473$)
+### Phân bố vĩ mô của 5 nhóm lỗi tất định trong bình duyệt (ICLR 2026, $N = 19,473$)
 
-Để xác nhận các quy tắc kiểm tra tất định phản ánh đúng những lỗi thực tế bị phản biện chỉ ra mà không cần khớp trọng số kinh nghiệm hay ngưỡng điểm chủ quan, cả năm nhóm lỗi tất định (thiếu thanh sai số/độ phân tán, vi phạm định dạng/số trang, bất nhất bảng/ablation, thiếu baseline và thiếu mã nguồn tái lập) đã được đối chiếu trên `19,473` bài nộp có điểm và `75,769` nhận xét phản biện chính thức của ICLR 2026 (kiểm chứng chia đôi `SHA-256`; từng bài báo được ẩn danh hoàn toàn):
+Để làm rõ cơ sở thực tế của năm nhóm lỗi tất định (thiếu thanh sai số/độ phân tán, vi phạm định dạng/mục/giới hạn trang, mâu thuẫn bảng/ablation, thiếu baseline/trích dẫn và thiếu khả năng tái lập/mã nguồn) mà không khớp trọng số thực nghiệm hay ngưỡng điểm chủ quan, chúng tôi đo tỷ lệ xuất hiện theo bài `k / N` trên `19,473` bài nộp có điểm (`18,791` quyết định tiêu chuẩn cộng `682` bài bị loại vòng đầu có nhận xét) và `75,769` nhận xét chính thức của ICLR 2026 (kiểm chứng chia đôi `SHA-256` `Split 0: N = 9,765` so với `Split 1: N = 9,708`; từng bản thảo đều ẩn danh; [biên nhận tổng hợp](../../docs/benchmarks/iclr2026-openreview-incidence-receipt.json)):
 
 | Nhóm quyết định / Soundness | Số bài ($N$) | Điểm TB / Soundness | Tỷ lệ trùng khớp phản biện trên 5 nhóm lỗi tất định |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; độ phân tán 12.1%, bảng/ablation 7.1%, thiếu baseline 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; độ phân tán 15.8%, bảng/ablation 8.9%, thiếu baseline 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; độ phân tán 21.4%, bảng/ablation 11.6%, thiếu baseline 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; độ phân tán 19.5%, bảng/ablation 7.9%, thiếu baseline 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; độ phân tán 23.4%, bảng/ablation 10.5%, thiếu baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; độ phân tán 23.8%, bảng/ablation 12.4%, thiếu baseline 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; độ phân tán 14.9% $\to$ 27.5%, thiếu mã 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; độ phân tán 14.9% $\to$ 27.5%, thiếu mã 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ Mười bốn kỹ năng bao gồm tổng cộng 22 tệp tham chiếu Markdown.
 ### Cài đặt gói phần mềm
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.3.0` hoặc chạy `python -m pip install academic-research-kernel==2.3.0` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==6.19.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
+Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.3.1` hoặc chạy `python -m pip install academic-research-kernel==2.3.1` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==7.0.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
 
 ### Tích hợp và sử dụng di động
 
@@ -214,7 +214,7 @@ Xem thêm [xác thực OpenAlex](https://help.openalex.org/api/authentication/),
 
 ---
 
-## 6. Kiểm định cục bộ, xác minh gói phân phối (2.3.0) và giấy phép
+## 6. Kiểm định cục bộ, xác minh gói phân phối (2.3.1) và giấy phép
 
 ### Kiểm định (Validation)
 
@@ -240,7 +240,7 @@ Thư mục [tools/longtail/](../../tools/longtail/README.md) chứa bộ sinh nh
 
 Thư mục `scripts/scfabric/` là tầng thực thi của bộ công cụ tính toán khoa học và thống kê: thăm dò phần cứng, danh mục phụ trợ có cổng kiểm soát kiểu dữ liệu (`dtype`), năm hồ sơ tải công việc, phép đo chuẩn ghép cặp kèm kiểm tra tương đương số học và `ComputeReceipt`. Kết quả đo đạc vòng đầu tiên trên máy thử nghiệm được ghi tại [docs/scientific-compute-fabric.md](../../docs/scientific-compute-fabric.md); nguyên tắc vận hành chung là mặc định dùng CPU và chỉ kích hoạt bộ tăng tốc khi có biên nhận xác thực.
 
-Bản phát hành sản phẩm 2.3.0 bao gồm các bản sửa lỗi độ chính xác cho tính toán thống kê, theo dõi rút bài và phiên giao tiếp MCP. Công cụ công khai `academic_recompute_statistics` cung cấp tính năng tính lại giá trị p của kiểm định t và chỉ số Cohen's d / Hedges' g cho hai nhóm. Khoảng tin cậy (CI) và tỷ số chênh / tỷ số nguy cơ (OR/RR) được giữ ở tầng hàm Python cấp thấp. Hãy truyền `p_value_literal` (ví dụ `"1.0e-5"`) hoặc `p_value_decimals` khi độ chính xác chữ số thập phân trong báo cáo gốc đóng vai trò quan trọng. Chuỗi nguyên bản giữ lại các chữ số 0 ở cuối; đầu vào kiểu số chỉ giữ biểu diễn giá trị số của nó. Nếu các nguồn chỉ định độ chính xác mâu thuẫn nhau, công cụ sẽ báo lỗi tường minh. Phép so sánh làm tròn nửa lên (round-half-up) bao gồm biên làm tròn dưới và loại trừ biên làm tròn trên. Một sự sai lệch số liệu thống kê thông thường vẫn được ghi nhận là kết quả kiểm tra khoa học thành công; các phép tính không hợp lệ hoặc thất bại một phần sẽ đặt cờ `isError`.
+Bản phát hành sản phẩm 2.3.1 bao gồm các bản sửa lỗi độ chính xác cho tính toán thống kê, theo dõi rút bài và phiên giao tiếp MCP. Công cụ công khai `academic_recompute_statistics` cung cấp tính năng tính lại giá trị p của kiểm định t và chỉ số Cohen's d / Hedges' g cho hai nhóm. Khoảng tin cậy (CI) và tỷ số chênh / tỷ số nguy cơ (OR/RR) được giữ ở tầng hàm Python cấp thấp. Hãy truyền `p_value_literal` (ví dụ `"1.0e-5"`) hoặc `p_value_decimals` khi độ chính xác chữ số thập phân trong báo cáo gốc đóng vai trò quan trọng. Chuỗi nguyên bản giữ lại các chữ số 0 ở cuối; đầu vào kiểu số chỉ giữ biểu diễn giá trị số của nó. Nếu các nguồn chỉ định độ chính xác mâu thuẫn nhau, công cụ sẽ báo lỗi tường minh. Phép so sánh làm tròn nửa lên (round-half-up) bao gồm biên làm tròn dưới và loại trừ biên làm tròn trên. Một sự sai lệch số liệu thống kê thông thường vẫn được ghi nhận là kết quả kiểm tra khoa học thành công; các phép tính không hợp lệ hoặc thất bại một phần sẽ đặt cờ `isError`.
 
 Bước kiểm tra rút bài ghi nhận quan sát hiện tại (`True`/`False`/`unknown`) tách biệt với giá trị đã biết gần nhất (`last-known`). Một cơ chế giữ chỗ ngắn trước truy vấn giúp sắp thứ tự các quan sát trên cùng một DOI và bảo toàn các bản cập nhật của những DOI khác. Quan sát hiện tại và xác nhận lịch sử có số phiên bản riêng: một xác nhận hợp lệ đến muộn có thể cập nhật lịch sử được lưu giữ, trong khi trạng thái `unknown` mới hơn vẫn được đánh dấu rõ là chưa xác minh cho lượt kiểm tra hiện tại. Các dữ liệu mẫu HTTP trong chuỗi kiểm thử hồi quy đều được gắn nhãn là dữ liệu thử nghiệm.
 

@@ -15,19 +15,19 @@ Autor: Junfu Shi (SJF, xngg1021). Aktueller Lizenzumfang: [Source Lineage Licens
 
 ### Schnellstart
 
-Version 2.3.0 mit [uv](https://docs.astral.sh/uv/getting-started/installation/) starten:
+Version 2.3.1 mit [uv](https://docs.astral.sh/uv/getting-started/installation/) starten:
 
 ```bash
-uvx academic-research-kernel@2.3.0 mcp
+uvx academic-research-kernel@2.3.1 mcp
 ```
 
-Das [Release 2.3.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.0) verzeichnet die Distributions-Hashes und den Veröffentlichungsstatus. Das Release-Wheel lässt sich auch lokal mit `uvx --from ./academic_research_kernel-2.3.0-py3-none-any.whl academic-research-kernel mcp` ausführen. Unterstützt wird Python 3.10–3.14; `uvx --python 3.12` wählt explizit einen unterstützten Interpreter. Alle 12 deterministischen Werkzeuge einschließlich der Statistikfunktionen sind in der Basisinstallation enthalten.
+Das [Release 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) verzeichnet die Distributions-Hashes und den Veröffentlichungsstatus. Das Release-Wheel lässt sich auch lokal mit `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp` ausführen. Unterstützt wird Python 3.10–3.14; `uvx --python 3.12` wählt explizit einen unterstützten Interpreter. Alle 12 deterministischen Werkzeuge einschließlich der Statistikfunktionen sind in der Basisinstallation enthalten.
 
 ### Installation prüfen
 
 ```bash
-uvx academic-research-kernel@2.3.0 doctor
-uvx academic-research-kernel@2.3.0 --version
+uvx academic-research-kernel@2.3.1 doctor
+uvx academic-research-kernel@2.3.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Die Offline-Diagnose überprüft Abhängigkeiten, Schemata und alle 12 Werkzeugd
 
 ### Paper-Analyse mit einem lokalen Agenten
 
-Installieren Sie `academic-research-kernel[research]==2.3.0` und exportieren Sie den mitgelieferten Workflow:
+Installieren Sie `academic-research-kernel[research]==2.3.1` und exportieren Sie den mitgelieferten Workflow:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -91,17 +91,17 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ```
 
-### Parameterfreie empirische Validierung an großen Peer-Review-Korpora (ICLR 2026, $N = 19.473$)
+### Makro-Verteilung der 5 deterministischen Fehlerfamilien im Peer-Review (ICLR 2026, $N = 19,473$)
 
-Um nachzuweisen, dass die deterministischen Prüfungen reale Peer-Review-Mängel erfassen, ohne empirische Gewichte oder subjektive Schwellenwerte anzupassen, wurden alle fünf deterministischen Fehlerkategorien (fehlende Streuungsmaße/Fehlerbalken, Format-/Seitenverstöße, Tabellen-/Ablationsinkonsistenzen, fehlende Baselines sowie Reproduzierbarkeitslücken) gegen `19.473` bewertete Einreichungen und `75.769` offizielle Gutachten der ICLR 2026 (`SHA-256`-Split-Half-verifiziert, Einzelmanuskripte vollständig anonymisiert) geprüft:
+Um die fünf deterministischen Fehlerfamilien (fehlende Fehlerbalken/Streuung, Format-/Abschnitts-/Seitenlimitverstöße, Tabellen-/Ablationsinkonsistenzen, fehlende Baselines/Zitate sowie Reproduzierbarkeits-/Code-Lücken) ohne Anpassung empirischer Gewichte oder subjektiver Schwellenwerte zu motivieren, wurde die papierbezogene Auftrittsrate `k / N` über `19,473` bewertete Einreichungen (`18,791` reguläre Entscheidungen plus `682` Desk-Rejects mit Gutachten) und `75,769` offizielle Gutachten der ICLR 2026 gemessen (`SHA-256`-Split-Half-Verifikation `Split 0: N = 9,765` vs. `Split 1: N = 9,708`; Einzelmanuskripte anonymisiert; [Aggregat-Beleg](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)):
 
 | Entscheidungs- / Soundness-Stufe | Einreichungen ($N$) | Mittelwert Bewertung / Soundness | Trefferquote der Gutachten über die 5 deterministischen Fehlerkategorien |
 | --- | --- | --- | --- |
 | **Oral** | 224 | 6.40 / 3.07 | **48.2%** (`108/224`; Streuung 12.1%, Tabelle/Ablation 7.1%, fehlende Baseline 2.7%) |
-| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; Streuung 15.8%, Tabelle/Ablation 8.9%, fehlende Baseline 4.1%) |
-| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,055/8,453`; Streuung 21.4%, Tabelle/Ablation 11.6%, fehlende Baseline 6.2%) |
+| **Poster** | 5,134 | 5.36 / 2.83 | **54.0%** (`2,772/5,134`; Streuung 19.5%, Tabelle/Ablation 7.9%, fehlende Baseline 4.9%) |
+| **Rejected** | 8,453 | 3.96 / 2.49 | **59.8%** (`5,057/8,453`; Streuung 23.4%, Tabelle/Ablation 10.5%, fehlende Baseline 6.1%) |
 | **Withdrawn** | 4,980 | 3.35 / 2.33 | **62.6%** (`3,117/4,980`; Streuung 23.8%, Tabelle/Ablation 12.4%, fehlende Baseline 6.8%) |
-| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; Streuung 14.9% $\to$ 27.5%, fehlender Code 17.8% $\to$ 27.7%) |
+| **Soundness $\ge 3.25 \to \le 2.0$** | 1,077 $\to$ 2,861 | $\ge 3.25 \to \le 2.0$ | **49.1% $\to$ 67.4%** (`529/1,077` $\to$ `1,928/2,861`; Streuung 14.9% $\to$ 27.5%, fehlender Code 15.6% $\to$ 27.7%) |
 
 ---
 
@@ -131,12 +131,12 @@ Die vierzehn Skills umfassen 22 Markdown-Referenzdateien, die nur bei Bedarf gel
 ### Paketinstallation
 
 ```bash
-uv tool install academic-research-kernel==2.3.0
+uv tool install academic-research-kernel==2.3.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternativ kann die Installation mit `pipx install academic-research-kernel==2.3.0` oder innerhalb einer unterstützten virtuellen Umgebung über `python -m pip install academic-research-kernel==2.3.0` erfolgen. `[full]` ergänzt Bibliotheken für erweiterte wissenschaftliche Berechnungsbeispiele; `[qa]` installiert Repository-Validierungswerkzeuge einschließlich des PDF-Parsers. `[research]` fügt `pypdf==6.19.0` und `fonttools==4.65.0` für eine konsistente PDF-Schriftdekodierung auf frischen Installationen hinzu (beide unterstützen Python 3.10). Das Lesen von strukturiertem HTML/XML sowie größenbegrenzten DOCX/XLSX-Dateien nutzt die Standardbibliothek. GPU-Backends und kostenpflichtige Dienste bleiben optional.
+Alternativ kann die Installation mit `pipx install academic-research-kernel==2.3.1` oder innerhalb einer unterstützten virtuellen Umgebung über `python -m pip install academic-research-kernel==2.3.1` erfolgen. `[full]` ergänzt Bibliotheken für erweiterte wissenschaftliche Berechnungsbeispiele; `[qa]` installiert Repository-Validierungswerkzeuge einschließlich des PDF-Parsers. `[research]` fügt `pypdf==7.0.0` und `fonttools==4.65.0` für eine konsistente PDF-Schriftdekodierung auf frischen Installationen hinzu (beide unterstützen Python 3.10). Das Lesen von strukturiertem HTML/XML sowie größenbegrenzten DOCX/XLSX-Dateien nutzt die Standardbibliothek. GPU-Backends und kostenpflichtige Dienste bleiben optional.
 
 ### Integration & Portabler Einsatz
 
@@ -190,7 +190,7 @@ Hinweise zur Klassifizierung der Abhängigkeiten, zur Reproduktion, zur Release-
 
 ### Deterministische Erfassung und öffentliche Kernel-Schnittstelle
 
-Version 2.3.0 stellt `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 Adapter (die 14 Skills sowie ein Opaque-Fallback) und 12 zustandslose stdio-MCP-Werkzeuge bereit. Akzeptierte Erfassungsnachweise binden jede gespeicherte semantische Änderung nach Typ, Identität und kanonischem SHA-256: Forschungsobjekte, Verknüpfungen von Aussagen und Belegen, Einträge im Protokoll zu Forschungsentscheidungen und Fehlversuchen, offene Prüfpunkte, physische Prüfnachweise sowie Artefaktregistrierungen. Das Cache-Replay überprüft diese Bindungen unabhängig von den Hashwerten der Transportsnapshots. Leere Protokolle sind gültig; fehlgeschlagene atomare Batches hinterlassen keinen Teilzustand.
+Version 2.3.1 stellt `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 Adapter (die 14 Skills sowie ein Opaque-Fallback) und 12 zustandslose stdio-MCP-Werkzeuge bereit. Akzeptierte Erfassungsnachweise binden jede gespeicherte semantische Änderung nach Typ, Identität und kanonischem SHA-256: Forschungsobjekte, Verknüpfungen von Aussagen und Belegen, Einträge im Protokoll zu Forschungsentscheidungen und Fehlversuchen, offene Prüfpunkte, physische Prüfnachweise sowie Artefaktregistrierungen. Das Cache-Replay überprüft diese Bindungen unabhängig von den Hashwerten der Transportsnapshots. Leere Protokolle sind gültig; fehlgeschlagene atomare Batches hinterlassen keinen Teilzustand.
 
 Die Berechtigung zum Lesen von Provenienzinhalten wird explizit außerhalb des Bandes erteilt. Vertrauenswürdige Python-Aufrufer übergeben `LineageVerificationContext` beim Replay serialisierter Prüfnachweise oder Snapshots; MCP-Aufrufer dürfen nur begrenzte Inhaltsbytes übergeben, niemals ein Dateisystem-Stammverzeichnis des Hosts. Das Standardbudget für Inhalte beträgt 10 MiB; ein vertrauenswürdiger Host kann größere Artefakte unter derselben Erzeuger-/Prüfer-Richtlinie explizit autorisieren. Ohne Inhaltsautorisierung kann eine `fully_verified`-Aussage nicht unabhängig reproduziert werden und liefert ein strukturiertes ungültiges Prüfergebnis. Unstrukturierter Text bleibt opak, abweichende Bewertungen bleiben sichtbar, und Forschende behalten die Kontrolle über Commits, das Beenden oder Wiederaufnehmen von Routen, das Routing sowie fachliche Urteile.
 
@@ -200,7 +200,7 @@ Siehe [die Kernel-Architektur](docs/kernel-architecture.md) für Verträge und K
 
 Zitierstile, Berichtsrichtlinien und Metadatenspezifikationen hängen von der jeweiligen Zeitschrift, Förderorganisation, Disziplin und Rechtsprechung ab. Das Repository etabliert **ISO 690:2021** (Bibliografische Referenzen), **ISO 5127:2017** (Information und Dokumentation – Vokabular) und **W3C PROV** (Provenienz-Datenmodell) als internationale Baselines, ergänzt durch regionale Profile (z. B. DIN ISO 690:2021 in Deutschland, GB/T 7714-2025 in Festlandchina, UNE-ISO 690:2024 in Spanien) sowie Fachstandards (APA 7th, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Die Vorgaben des Zielpublikationsorgans haben stets Vorrang vor Standardprofilen. Details siehe [Scholarly Standards Architecture](docs/standards/README.md) und [Terminologie-Leitfaden](docs/terminology/README.md).
 
-Version 2.3.0 validiert die Konsistenz von DOI- und Ressourcenidentifikatoren, wechselseitig ausschließende quantitative Prüfflags sowie den gemeinsamen Vertrag für offene Prüfpunkte zwischen Kernel und Prüfnachweisen. Die Vollständigkeit des Caches wird unabhängig von den Änderungslisten eines Prüfnachweises aus den gespeicherten Quell-Envelopes und normalisierten Bindungen rekonstruiert; das gleichzeitige Entfernen eines Eintrags und seiner Cache-Deklaration führt daher zu keinem akzeptierten Replay. Siehe den [Abschlussbericht der vier Blocker](docs/kernel-architecture.md).
+Version 2.3.1 validiert die Konsistenz von DOI- und Ressourcenidentifikatoren, wechselseitig ausschließende quantitative Prüfflags sowie den gemeinsamen Vertrag für offene Prüfpunkte zwischen Kernel und Prüfnachweisen. Die Vollständigkeit des Caches wird unabhängig von den Änderungslisten eines Prüfnachweises aus den gespeicherten Quell-Envelopes und normalisierten Bindungen rekonstruiert; das gleichzeitige Entfernen eines Eintrags und seiner Cache-Deklaration führt daher zu keinem akzeptierten Replay. Siehe den [Abschlussbericht der vier Blocker](docs/kernel-architecture.md).
 
 ### Datenquellenzugriff
 
@@ -214,7 +214,7 @@ Siehe [OpenAlex-Authentifizierung](https://help.openalex.org/api/authentication/
 
 ---
 
-## 6. Lokale Validierung, Distributionsprüfung (2.3.0) & Lizenz
+## 6. Lokale Validierung, Distributionsprüfung (2.3.1) & Lizenz
 
 ### Validierung
 
@@ -240,7 +240,7 @@ CI führt die vollständige QA-Suite auf Linux x86_64 (Python 3.10–3.14), Linu
 
 scripts/scfabric/ bildet die Ausführungsschicht für wissenschaftliche Berechnungs- und Statistikwerkzeuge: Hardware-Sonde, Backend-Katalog mit Dtype-Schranken, fünf Auslastungsprofile, gepaarte Benchmarks mit Paritätsprüfung und ComputeReceipt. Erste Messungen auf dieser Maschine finden sich in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md); als Faustregel gilt standardmäßig CPU und ein Beschleuniger nur mit entsprechendem Prüfnachweis.
 
-Seit Produktversion 2.3.0 stellt das öffentliche Werkzeug `academic_recompute_statistics` p-Werte für t-Tests sowie Cohen's d / Hedges' g für zwei Gruppen bereit; Konfidenzintervalle (CI) und OR/RR bleiben Python-Funktionen auf niedrigerer Ebene. Übergeben Sie `p_value_literal` (beispielsweise `"1.0e-5"`) oder `p_value_decimals`, wenn die berichtete Genauigkeit relevant ist. Literale erhalten nachfolgende Nullen; numerische Eingaben bewahren nur ihre numerische Darstellung. Widersprüchliche Genauigkeitsangaben schlagen explizit fehl. Kaufmännische Rundungsvergleiche (round-half-up) schließen die untere Rundungsgrenze ein und die obere Grenze aus. Eine gewöhnliche numerische Abweichung ist ein reguläres wissenschaftliches Prüfergebnis; ungültige oder teilweise fehlgeschlagene Berechnungen setzen `isError`.
+Seit Produktversion 2.3.1 stellt das öffentliche Werkzeug `academic_recompute_statistics` p-Werte für t-Tests sowie Cohen's d / Hedges' g für zwei Gruppen bereit; Konfidenzintervalle (CI) und OR/RR bleiben Python-Funktionen auf niedrigerer Ebene. Übergeben Sie `p_value_literal` (beispielsweise `"1.0e-5"`) oder `p_value_decimals`, wenn die berichtete Genauigkeit relevant ist. Literale erhalten nachfolgende Nullen; numerische Eingaben bewahren nur ihre numerische Darstellung. Widersprüchliche Genauigkeitsangaben schlagen explizit fehl. Kaufmännische Rundungsvergleiche (round-half-up) schließen die untere Rundungsgrenze ein und die obere Grenze aus. Eine gewöhnliche numerische Abweichung ist ein reguläres wissenschaftliches Prüfergebnis; ungültige oder teilweise fehlgeschlagene Berechnungen setzen `isError`.
 
 Rücknahmeprüfungen zeichnen die aktuelle Beobachtung (`True` / `False` / `unknown`) getrennt vom zuletzt bekannten Wert auf. Eine kurze Vorab-Reservierung ordnet Beobachtungen derselben DOI und bewahrt Aktualisierungen anderer DOIs. Aktuelle Beobachtungen und historische Bestätigungen führen getrennte Versionen: Eine verspätet eintreffende Bestätigung kann die gespeicherte Historie ergänzen, während ein neueres `unknown` für die aktuelle Prüfung explizit als unbestätigt erhalten bleibt. HTTP-Fixtures in den Regressionsketten sind als Testdaten gekennzeichnet.
 

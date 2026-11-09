@@ -7,19 +7,24 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from datetime import timedelta
+import contextlib
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from html.parser import HTMLParser
 from importlib import metadata
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
 import socket
+import subprocess
+import sys
+import threading
 import ipaddress
 import time
 from urllib.parse import urlparse, urljoin, quote
-from urllib.request import Request, urlopen, HTTPRedirectHandler, build_opener
+from urllib.request import Request, urlopen, HTTPRedirectHandler, ProxyHandler, build_opener
 from urllib.error import HTTPError
 import xml.etree.ElementTree as ET
 import zipfile
@@ -37,11 +42,50 @@ def canonical(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode('utf-8')
 
 
+def _is_link_or_reparse(path: Path) -> bool:
+    try:
+        if path.is_symlink():
+            return True
+    except OSError:
+        return True
+    is_junc = getattr(os.path, 'isjunction', None)
+    if is_junc is not None:
+        try:
+            if is_junc(path):
+                return True
+        except OSError:
+            return True
+    try:
+        st = os.lstat(path)
+        if bool(getattr(st, 'st_file_attributes', 0) & 0x400):
+            return True
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return True
+    return False
+
+
+def _reject_ancestor_links(path: Path) -> None:
+    cur = path
+    while True:
+        if _is_link_or_reparse(cur):
+            raise ValueError('source path escapes project')
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+
+
 def atomic_json(path, value):
     path = Path(path)
+    _reject_ancestor_links(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    _reject_ancestor_links(path.parent)
     tmp = path.with_suffix(path.suffix + '.tmp')
+    if _is_link_or_reparse(tmp):
+        raise ValueError('source path escapes project')
     tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False), encoding='utf-8')
+    _reject_ancestor_links(path)
     tmp.replace(path)
 
 
@@ -50,11 +94,20 @@ def digest(path):
 
 
 def inside(root, relative):
-    root = Path(root).resolve()
+    raw_root = Path(root)
+    _reject_ancestor_links(raw_root)
+    root_res = raw_root.resolve()
     if Path(relative).is_absolute() or '..' in PurePosixPath(str(relative).replace('\\', '/')).parts:
         raise ValueError('source path escapes project')
-    path = (root / relative).resolve()
-    if not path.is_relative_to(root):
+    cur = raw_root
+    for part in PurePosixPath(str(relative).replace('\\', '/')).parts:
+        if part in ('', '.'):
+            continue
+        cur = cur / part
+        if _is_link_or_reparse(cur):
+            raise ValueError('source path escapes project')
+    path = (root_res / relative).resolve()
+    if not path.is_relative_to(root_res):
         raise ValueError('source path escapes project')
     return path
 
@@ -235,6 +288,84 @@ def parse_office(path):
         return out, ''
 
 
+MAX_PDF_EXTRACTED_CHARS = 8 * 1024 * 1024
+MAX_PDF_WORKER_STDOUT_BYTES = 16 * 1024 * 1024
+
+
+def _extract_pdf_text_isolated(path: Path, timeout_sec: float = 15.0) -> tuple[list[str], str]:
+    """Run pypdf extraction in an isolated subprocess with a hard wall-clock timeout and output byte cap."""
+    worker_code = (
+        "import json, sys\n"
+        "from pypdf import PdfReader\n"
+        "reader = PdfReader(sys.argv[1])\n"
+        "if len(reader.pages) > 500:\n"
+        "    sys.stderr.write('PDF page budget exceeded\\n')\n"
+        "    raise SystemExit(2)\n"
+        "pages = []\n"
+        "total_chars = 0\n"
+        f"max_chars = {MAX_PDF_EXTRACTED_CHARS}\n"
+        "for page in reader.pages:\n"
+        "    txt = page.extract_text(extraction_mode='layout') or ''\n"
+        "    total_chars += len(txt)\n"
+        "    if total_chars > max_chars:\n"
+        "        sys.stderr.write('PDF extracted text budget exceeded\\n')\n"
+        "        raise SystemExit(3)\n"
+        "    pages.append(txt)\n"
+        "title = str((reader.metadata or {}).get('/Title', ''))\n"
+        "sys.stdout.write(json.dumps({'pages': pages, 'title': title}, ensure_ascii=True))\n"
+    )
+    proc = subprocess.Popen(
+        [sys.executable, "-c", worker_code, str(path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        out_chunks: list[bytes] = []
+        total_b = 0
+        deadline = time.monotonic() + timeout_sec
+
+        def _read_bounded():
+            nonlocal total_b
+            assert proc.stdout is not None
+            while True:
+                chunk = proc.stdout.read(65536)
+                if not chunk:
+                    break
+                total_b += len(chunk)
+                if total_b > MAX_PDF_WORKER_STDOUT_BYTES:
+                    proc.kill()
+                    break
+                out_chunks.append(chunk)
+
+        reader_thread = threading.Thread(target=_read_bounded, daemon=True)
+        reader_thread.start()
+        rem = max(0.01, deadline - time.monotonic())
+        proc.wait(timeout=rem)
+        reader_thread.join(timeout=2.0)
+        stderr_bytes = proc.stderr.read(65536) if proc.stderr is not None else b""
+    except subprocess.TimeoutExpired as exc:
+        proc.kill()
+        proc.wait()
+        raise ValueError(f"PDF parsing timed out after {timeout_sec}s") from exc
+    finally:
+        if proc.stdout is not None:
+            proc.stdout.close()
+        if proc.stderr is not None:
+            proc.stderr.close()
+
+    if total_b > MAX_PDF_WORKER_STDOUT_BYTES or proc.returncode == 3:
+        raise ValueError("PDF extracted text budget exceeded")
+    if proc.returncode == 2:
+        raise ValueError("PDF page budget exceeded")
+    if proc.returncode != 0:
+        err_str = stderr_bytes.decode("utf-8", errors="replace").strip()
+        err_msg = err_str.splitlines()[-1:] or ["subprocess failed"]
+        raise ValueError(f"PDF parsing failed in isolated worker: {err_msg[0]}")
+    raw_out = b"".join(out_chunks).decode("ascii", errors="strict")
+    payload = json.loads(raw_out or "{}")
+    return list(payload.get("pages") or []), str(payload.get("title") or "")
+
+
 def parse(path):
     path = Path(path)
     data = path.read_bytes()
@@ -245,21 +376,17 @@ def parse(path):
         if not data.startswith(b'%PDF-'):
             raise ValueError('PDF signature missing (HTML/error response is not a PDF)')
         try:
-            from pypdf import PdfReader
+            import pypdf  # noqa: F401
         except ImportError as exc:
             raise ValueError('PDF requires the research extra: academic-research-kernel[research]') from exc
-        reader = PdfReader(path)
-        if len(reader.pages) > 500:
-            raise ValueError('PDF page budget exceeded')
+        raw_pages, title = _extract_pdf_text_isolated(path, timeout_sec=15.0)
         out = []
-        for idx, page in enumerate(reader.pages):
-            text = page.extract_text(extraction_mode='layout') or ''
+        for idx, text in enumerate(raw_pages):
             # A page is a stable address; PDF table layout remains in the raw
             # page text. The viewer is authoritative for visual ambiguities.
             if text.strip():
                 out.append(segment(f'pdf:page={idx + 1}', text, page_index=idx,
                                    printed_page=None))
-        title = str((reader.metadata or {}).get('/Title', ''))
         if len(''.join(x['text'] for x in out)) < 200:
             raise ValueError('digital text unavailable; targeted visual reading required')
         return out, title
@@ -373,6 +500,69 @@ def parse_bib(text: str):
     return blocks, ''
 
 
+_ACTIVE_DNS_PIN = None
+
+
+def _validate_resolved_ip(addr_str: str, allow_synthetic: bool) -> None:
+    fake_ranges = (ipaddress.ip_network('198.18.0.0/15'), ipaddress.ip_network('2001:2::/48'))
+    address = ipaddress.ip_address(addr_str)
+    mapped = getattr(address, 'ipv4_mapped', None)
+    if mapped is not None and not mapped.is_global:
+        raise ValueError('private/local network source is outside acquisition scope')
+    synthetic = allow_synthetic and any(address.version == net.version and address in net for net in fake_ranges)
+    if not address.is_global and not synthetic:
+        raise ValueError('private/local network source is outside acquisition scope')
+
+
+_DNS_PIN_LOCK = threading.RLock()
+
+
+@contextlib.contextmanager
+def _pinned_public_dns():
+    global _ACTIVE_DNS_PIN
+    with _DNS_PIN_LOCK:
+        prev_pin = _ACTIVE_DNS_PIN
+        pin_cache = {} if prev_pin is None else prev_pin
+        _ACTIVE_DNS_PIN = pin_cache
+        orig_getaddrinfo = socket.getaddrinfo
+
+        def guarded_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+            host_norm = str(host).lower()
+            port_num = int(port or 0)
+            key = (host_norm, port_num, family, type, proto, flags)
+            if key in pin_cache:
+                return pin_cache[key]
+            base_key = (host_norm, port_num)
+            if base_key in pin_cache:
+                cached = pin_cache[base_key]
+                filtered = [
+                    a for a in cached
+                    if (not family or a[0] == family) and (not type or a[1] == type) and (not proto or a[2] == proto)
+                ]
+                if filtered:
+                    pin_cache[key] = filtered
+                    return filtered
+            try:
+                lit = ipaddress.ip_address(str(host))
+            except ValueError:
+                lit = None
+            ans = orig_getaddrinfo(host, port, family, type, proto, flags)
+            if not ans:
+                raise ValueError('private/local network source is outside acquisition scope')
+            for a in ans:
+                _validate_resolved_ip(a[4][0], allow_synthetic=(lit is None))
+            pin_cache[key] = ans
+            pin_cache.setdefault(base_key, ans)
+            return ans
+
+        socket.getaddrinfo = guarded_getaddrinfo
+        try:
+            yield
+        finally:
+            socket.getaddrinfo = orig_getaddrinfo
+            _ACTIVE_DNS_PIN = prev_pin
+
+
 def public_url(url):
     u = urlparse(url)
     if u.scheme not in ('https', 'http') or not u.hostname or u.username or u.password:
@@ -388,12 +578,14 @@ def public_url(url):
     # Some local VPN resolvers use RFC2544 / RFC5180 synthetic addresses for
     # public hostnames. Accept only these dedicated synthetic ranges for a DNS
     # name, never a literal IP; RFC1918, loopback and link-local remain rejected.
-    fake_ranges = (ipaddress.ip_network('198.18.0.0/15'), ipaddress.ip_network('2001:2::/48'))
-    for answer in socket.getaddrinfo(u.hostname, u.port or (443 if u.scheme == 'https' else 80)):
-        address = ipaddress.ip_address(answer[4][0])
-        synthetic = literal_ip is None and any(address.version == net.version and address in net for net in fake_ranges)
-        if not address.is_global and not synthetic:
-            raise ValueError('private/local network source is outside acquisition scope')
+    port = u.port or (443 if u.scheme == 'https' else 80)
+    answers = socket.getaddrinfo(u.hostname, port)
+    if not answers:
+        raise ValueError('private/local network source is outside acquisition scope')
+    for answer in answers:
+        _validate_resolved_ip(answer[4][0], allow_synthetic=(literal_ip is None))
+    if _ACTIVE_DNS_PIN is not None:
+        _ACTIVE_DNS_PIN[(u.hostname.lower(), int(port))] = answers
     return url
 
 
@@ -404,23 +596,27 @@ class PublicRedirect(HTTPRedirectHandler):
 
 
 def fetch(url, path):
-    public_url(url)
-    for attempt in range(2):
-        try:
-            req = Request(url, headers={'User-Agent': 'AcademicResearchKernel/2.1 (bounded open research reader)'})
-            with build_opener(PublicRedirect).open(req, timeout=25) as r:
-                data = r.read(MAX_FILE + 1)
-                if len(data) > MAX_FILE:
-                    raise ValueError('download size budget exceeded')
-                final = r.url
-                content_type = r.headers.get('Content-Type', '')
-            Path(path).write_bytes(data)
-            return final, content_type
-        except HTTPError as exc:
-            delay = exc.headers.get('Retry-After', '')
-            if attempt or exc.code not in (429, 503) or not delay.isdigit() or int(delay) > 30:
-                raise
-            time.sleep(int(delay))
+    p_out = Path(path)
+    _reject_ancestor_links(p_out)
+    with _pinned_public_dns():
+        public_url(url)
+        for attempt in range(2):
+            try:
+                req = Request(url, headers={'User-Agent': 'AcademicResearchKernel/2.1 (bounded open research reader)'})
+                with build_opener(ProxyHandler({}), PublicRedirect).open(req, timeout=25) as r:
+                    data = r.read(MAX_FILE + 1)
+                    if len(data) > MAX_FILE:
+                        raise ValueError('download size budget exceeded')
+                    final = r.url
+                    content_type = r.headers.get('Content-Type', '')
+                _reject_ancestor_links(p_out)
+                p_out.write_bytes(data)
+                return final, content_type
+            except HTTPError as exc:
+                delay = exc.headers.get('Retry-After', '')
+                if attempt or exc.code not in (429, 503) or not delay.isdigit() or int(delay) > 30:
+                    raise
+                time.sleep(int(delay))
     raise RuntimeError('download exhausted')
 
 
@@ -431,17 +627,18 @@ def discover_oa_fallback_urls(doi: str) -> list[tuple[str, str, str]]:
     if not clean_doi:
         return []
     api_url = 'https://api.openalex.org/works/https://doi.org/' + quote(clean_doi, safe='')
-    public_url(api_url)
-    opener = build_opener(PublicRedirect())
-    req = Request(api_url, headers={'User-Agent': 'academic-research-kernel/2.2', 'Accept': 'application/json'})
-    try:
-        with opener.open(req, timeout=15) as resp:
-            raw_bytes = resp.read(2 * 1024 * 1024 + 1)
-            if len(raw_bytes) > 2 * 1024 * 1024:
-                return []
-            work = json.loads(raw_bytes.decode('utf-8'))
-    except Exception:
-        return []
+    with _pinned_public_dns():
+        public_url(api_url)
+        opener = build_opener(ProxyHandler({}), PublicRedirect())
+        req = Request(api_url, headers={'User-Agent': 'academic-research-kernel/2.2', 'Accept': 'application/json'})
+        try:
+            with opener.open(req, timeout=15) as resp:
+                raw_bytes = resp.read(2 * 1024 * 1024 + 1)
+                if len(raw_bytes) > 2 * 1024 * 1024:
+                    return []
+                work = json.loads(raw_bytes.decode('utf-8'))
+        except Exception:
+            return []
     if not isinstance(work, dict):
         return []
     rec_doi = re.sub(r'^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)', '', str(work.get('doi') or '').strip(), flags=re.I).strip('/')
@@ -485,9 +682,9 @@ def acquire(value, project):
     redownloading successful files. Failures stay visible beside successes.
     """
     project = Path(project)
-    raw = project / 'raw'
+    raw = inside(project, 'raw')
     raw.mkdir(parents=True, exist_ok=True)
-    existing = project / 'acquisition.json'
+    existing = inside(project, 'acquisition.json')
     state = json.loads(existing.read_text('utf-8')) if existing.exists() else {'input': value, 'files': [], 'failures': []}
     if state['input'] != value:
         raise ValueError('project already belongs to a different input')
@@ -520,7 +717,7 @@ def acquire(value, project):
     for url, filename, role in urls:
         if len(state['files']) + len(failures) >= 12:
             break
-        path = raw / filename
+        path = inside(project, 'raw/' + filename)
         cached = done.get(url)
         if cached:
             path = inside(project, cached['path'])
@@ -613,7 +810,7 @@ def acquire(value, project):
             if len(state['files']) + len(failures) >= 12:
                 break
             cached = done.get(fb_url)
-            fb_path = inside(project, cached['path']) if cached else (raw / fb_name)
+            fb_path = inside(project, cached['path'] if cached else ('raw/' + fb_name))
             if cached and fb_path.exists() and digest(fb_path) == cached.get('sha256'):
                 break
             failure = failures.get(fb_url, {})

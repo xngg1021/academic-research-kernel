@@ -11,6 +11,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -141,14 +142,16 @@ def scaffold_manuscript(
     if ckey not in ctypes:
         raise ValueError(f"Unknown contribution_type {contribution_type!r}")
 
-    base = Path(workspace_dir).resolve()
+    raw_base = Path(workspace_dir)
+    _reject_symlink_chain(raw_base, raw_base)
+    base = raw_base.resolve()
     target_dir = base / slug
-    if target_dir.is_symlink() or not target_dir.resolve().is_relative_to(base):
+    if _is_link_or_reparse(target_dir) or not target_dir.resolve().is_relative_to(base):
         raise ValueError("Resolved target directory escapes workspace_dir or is a symlink")
     target_dir.mkdir(parents=True, exist_ok=True)
     for subdir in ("tables", "figures", "styles"):
         sd = target_dir / subdir
-        if sd.is_symlink():
+        if _is_link_or_reparse(sd):
             raise ValueError(f"Subdirectory {subdir} is a symlink")
         sd.mkdir(exist_ok=True)
 
@@ -205,32 +208,97 @@ def scaffold_manuscript(
     return target_dir
 
 
+def _is_link_or_reparse(path: Path) -> bool:
+    try:
+        if path.is_symlink():
+            return True
+    except OSError:
+        return True
+    is_junc = getattr(os.path, "isjunction", None)
+    if is_junc is not None:
+        try:
+            if is_junc(path):
+                return True
+        except OSError:
+            return True
+    try:
+        st = os.lstat(path)
+        if bool(getattr(st, "st_file_attributes", 0) & 0x400):
+            return True
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return True
+    return False
+
+
+def _reject_symlink_chain(root: Path, target: Path) -> None:
+    cur_anc = root
+    while True:
+        if _is_link_or_reparse(cur_anc):
+            raise ValueError(f"Workspace path cannot be a symlink or junction: {cur_anc}")
+        if cur_anc.parent == cur_anc:
+            break
+        cur_anc = cur_anc.parent
+    root_res = root.resolve()
+    rel_parts = target.relative_to(root).parts if target != root else ()
+    cur = root
+    for part in rel_parts:
+        cur = cur / part
+        if _is_link_or_reparse(cur):
+            raise ValueError(f"Symlink or junction not permitted in workspace path: {cur}")
+    if target.exists() and not target.resolve().is_relative_to(root_res):
+        raise ValueError(f"Path escapes workspace root: {target}")
+
+
 def verify_style_directory(manuscript_dir: str | Path, specs_path: str | Path | None = None) -> dict[str, Any]:
-    mdir = Path(manuscript_dir).resolve()
+    raw_mdir = Path(manuscript_dir)
+    _reject_symlink_chain(raw_mdir, raw_mdir / "venue-manifest.json")
+    mdir = raw_mdir.resolve()
     manifest_path = mdir / "venue-manifest.json"
-    if not manifest_path.is_file():
-        raise ValueError(f"venue-manifest.json not found in {mdir}")
+    if _is_link_or_reparse(manifest_path) or not manifest_path.is_file():
+        raise ValueError(f"venue-manifest.json not found or invalid in {mdir}")
+    for dirpath, dirnames, filenames in os.walk(mdir, followlinks=False):
+        dp = Path(dirpath)
+        _reject_symlink_chain(mdir, dp)
+        for dname in dirnames:
+            _reject_symlink_chain(mdir, dp / dname)
+        for fname in filenames:
+            _reject_symlink_chain(mdir, dp / fname)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     specs = _load_specs(specs_path)
     vspec = specs["venues"][manifest["venue"]]
 
     style_records = []
     warnings = []
+    trusted_hashes = set(vspec.get("trusted_style_sha256") or [])
+    verified_count = 0
     for ext in ("*.sty", "*.cls", "*.bst"):
         for f in sorted(mdir.rglob(ext)):
-            if not f.is_file() or f.is_symlink():
+            _reject_symlink_chain(mdir, f)
+            if not f.is_file():
                 continue
             raw = f.read_bytes()
             sha = hashlib.sha256(raw).hexdigest()
             rel = f.relative_to(mdir).as_posix()
-            style_records.append({"path": rel, "sha256": sha, "size_bytes": len(raw)})
+            is_verified_file = bool(trusted_hashes and sha in trusted_hashes)
+            if is_verified_file:
+                verified_count += 1
+            style_records.append({"path": rel, "sha256": sha, "size_bytes": len(raw), "verified_origin": is_verified_file})
             for pat in vspec.get("forbidden_patterns_in_review", []):
                 if f.stem in pat:
                     warnings.append(f"Style file {rel} matches forbidden legacy pattern {pat!r}")
 
+    official_verified = bool(style_records and trusted_hashes and verified_count == len(style_records))
     manifest["style_files"] = style_records
-    manifest["official_style_installed"] = len(style_records) > 0
+    manifest["style_files_detected"] = len(style_records) > 0
+    manifest["official_style_verified"] = official_verified
+    manifest["official_style_installed"] = official_verified
+    manifest["style_verification_status"] = (
+        "verified_official_style" if official_verified else ("unverified_local_style" if style_records else "no_style_files")
+    )
     manifest["style_warnings"] = warnings
+    _reject_symlink_chain(raw_mdir, raw_mdir / "venue-manifest.json")
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return manifest
 

@@ -41,7 +41,7 @@ def _make_minimal_pdf(text_line: str) -> bytes:
     return bytes(out)
 
 
-def research_smoke(execute, directory, pdf_ready=False, expected_version='2.3.0'):
+def research_smoke(execute, directory, pdf_ready=False, expected_version='2.3.1'):
     """Exercise installed workflow on explicitly synthetic raw source material."""
     from importlib.resources import files
     root = Path(directory)
