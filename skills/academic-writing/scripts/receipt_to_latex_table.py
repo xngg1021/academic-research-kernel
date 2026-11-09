@@ -24,6 +24,7 @@ import math
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 if sys.platform == "win32":
     for _s in (sys.stdout, sys.stderr):
@@ -161,10 +162,190 @@ def render_booktabs_table(spec: dict, source_sha256: str | None = None) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _reject_nonfinite_research_value(value: Any, location: str = "data") -> None:
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(f"Non-finite numeric value at {location}: {value!r}")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            _reject_nonfinite_research_value(item, f"{location}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _reject_nonfinite_research_value(item, f"{location}[{index}]")
+
+
+def convert_research_artifact_to_spec(
+    data: Any,
+    mode: str,
+    *,
+    caption: str | None = None,
+    label: str | None = None,
+    left_extraction: dict | None = None,
+    right_extraction: dict | None = None,
+) -> dict:
+    """Convert paper-research extraction.json, results.json, or comparison.json into a deterministic table spec."""
+    mode_norm = str(mode or "").strip().lower()
+    if mode_norm not in ("extraction", "results", "comparison"):
+        raise ValueError(f"Unsupported --from-research mode {mode!r}; expected extraction, results, or comparison")
+    _reject_nonfinite_research_value(data, "data")
+    _reject_nonfinite_research_value(left_extraction, "left_extraction")
+    _reject_nonfinite_research_value(right_extraction, "right_extraction")
+
+    if mode_norm == "extraction":
+        if not isinstance(data, dict) or not isinstance(data.get("fields"), list) or not data["fields"]:
+            raise ValueError("extraction artifact must be a JSON object with a non-empty 'fields' list")
+        paper = data.get("paper") if isinstance(data.get("paper"), dict) else {}
+        default_cap = f"Extracted fields: {paper.get('title') or paper.get('identifier') or 'Paper'}"
+        columns = ["Field ID", "Metric / Variable", "Reported Literal", "Unit", "Context", "Source Locator"]
+        rows = []
+        for idx, f in enumerate(data["fields"]):
+            if not isinstance(f, dict):
+                raise ValueError(f"fields[{idx}] must be an object")
+            fid = str(f.get("id") or f"field_{idx + 1}")
+            fname = str(f.get("name") or fid)
+            status = str(f.get("status") or "unknown")
+            if status == "extracted":
+                lit = f.get("literal")
+                val = f.get("value")
+                rep = str(lit) if lit not in (None, "") else (str(val) if val is not None else "N/A")
+            else:
+                reason = str(f.get("reason") or "").strip()
+                rep = f"[{status}] {reason}".strip()
+            unit = str(f.get("unit")) if f.get("unit") not in (None, "") else "-"
+            ctx_obj = f.get("context") if isinstance(f.get("context"), dict) else {}
+            ctx = "; ".join(f"{k}={v}" for k, v in ctx_obj.items() if v not in (None, "")) or "-"
+            srcs = f.get("sources") if isinstance(f.get("sources"), list) else []
+            loc = "; ".join(
+                f"{s.get('document_id', '?')}#{s.get('locator', '?')}"
+                for s in srcs
+                if isinstance(s, dict)
+            ) or "-"
+            rows.append([fid, fname, rep, unit, ctx, loc])
+        return {
+            "caption": caption or default_cap,
+            "label": label or "tab:extracted_fields",
+            "columns": columns,
+            "rows": rows,
+            "decimals": 2,
+            "bold_max_cols": [],
+            "bold_min_cols": [],
+        }
+
+    if mode_norm == "results":
+        items = data.get("results") if isinstance(data, dict) and isinstance(data.get("results"), list) else data
+        if not isinstance(items, list) or not items:
+            raise ValueError("results artifact must be a non-empty JSON list of check results")
+        columns = ["Check ID", "Kind", "Reported", "Recomputed", "Status", "Consistency"]
+        rows = []
+        for idx, r in enumerate(items):
+            if not isinstance(r, dict):
+                raise ValueError(f"results[{idx}] must be an object")
+            cid = str(r.get("id") or f"check_{idx + 1}")
+            kind = str(r.get("kind") or "unknown")
+            rep = str(r.get("reported")) if r.get("reported") not in (None, "") else "unreported"
+            rec_val = r.get("recomputed")
+            if rec_val is None:
+                rec_str = "N/A"
+            elif isinstance(rec_val, dict):
+                parts = []
+                for k, v in rec_val.items():
+                    if v is None:
+                        continue
+                    if isinstance(v, bool):
+                        parts.append(f"{k}={'true' if v else 'false'}")
+                    elif isinstance(v, float):
+                        if not math.isfinite(v):
+                            raise ValueError(f"Non-finite recomputed value in {cid}: {v!r}")
+                        parts.append(f"{k}={v:.6g}")
+                    else:
+                        parts.append(f"{k}={v}")
+                rec_str = ", ".join(parts) if parts else "N/A"
+            elif isinstance(rec_val, bool):
+                rec_str = "true" if rec_val else "false"
+            elif isinstance(rec_val, float):
+                if not math.isfinite(rec_val):
+                    raise ValueError(f"Non-finite recomputed value in {cid}: {rec_val!r}")
+                rec_str = f"{rec_val:.6g}"
+            else:
+                rec_str = str(rec_val)
+            status = str(r.get("status") or "unknown")
+            cons_val = r.get("consistent")
+            cons = "consistent" if cons_val is True else ("discrepant" if cons_val is False else "uncompared")
+            rows.append([cid, kind, rep, rec_str, status, cons])
+        return {
+            "caption": caption or "Deterministic statistical recomputation results",
+            "label": label or "tab:recomputed_results",
+            "columns": columns,
+            "rows": rows,
+            "decimals": 2,
+            "bold_max_cols": [],
+            "bold_min_cols": [],
+        }
+
+    # mode_norm == "comparison"
+    if not isinstance(data, dict) or not isinstance(data.get("rows"), list) or not data["rows"]:
+        raise ValueError("comparison artifact must be a JSON object with a non-empty 'rows' list")
+
+    def _build_fmap(ext: dict | None) -> dict[str, dict]:
+        if not isinstance(ext, dict) or not isinstance(ext.get("fields"), list):
+            return {}
+        return {str(f["id"]): f for f in ext["fields"] if isinstance(f, dict) and f.get("id")}
+
+    left_map = _build_fmap(left_extraction)
+    right_map = _build_fmap(right_extraction)
+
+    def _fmt_side(fids: Any, fmap: dict[str, dict], side_label: str) -> str:
+        if not isinstance(fids, list):
+            raise ValueError(f"{side_label}_field_ids must be a list")
+        if not fids:
+            return "-"
+        pieces = []
+        for fid in fids:
+            fid_s = str(fid)
+            if fmap:
+                if fid_s not in fmap:
+                    raise ValueError(f"Comparison references unknown {side_label} field_id: {fid_s!r}")
+                f = fmap[fid_s]
+                lit = f.get("literal")
+                val = f.get("value")
+                rep = str(lit) if lit not in (None, "") else (str(val) if val is not None else str(f.get("reason") or "N/A"))
+                unit = f" {f['unit']}" if f.get("unit") not in (None, "") else ""
+                pieces.append(f"{f.get('name', fid_s)}: {rep}{unit}")
+            else:
+                pieces.append(fid_s)
+        return "; ".join(pieces)
+
+    columns = ["Dimension", "Paper A (Reported)", "Paper B (Reported)", "Comparability", "Rationale"]
+    rows = []
+    for idx, r in enumerate(data["rows"]):
+        if not isinstance(r, dict):
+            raise ValueError(f"comparison rows[{idx}] must be an object")
+        dim = str(r.get("dimension") or f"dim_{idx + 1}")
+        left_cell = _fmt_side(r.get("left_field_ids", []), left_map, "left")
+        right_cell = _fmt_side(r.get("right_field_ids", []), right_map, "right")
+        assess = str(r.get("assessment") or "unknown")
+        reason = str(r.get("reason") or "-")
+        rows.append([dim, left_cell, right_cell, assess, reason])
+
+    return {
+        "caption": caption or "Two-paper structured comparison",
+        "label": label or "tab:paper_comparison",
+        "columns": columns,
+        "rows": rows,
+        "decimals": 2,
+        "bold_max_cols": [],
+        "bold_min_cols": [],
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input_pos", nargs="?", help="实验收据表规格 JSON 文件路径（可选位置参数）")
     parser.add_argument("--input", dest="input_opt", help="实验收据表规格 JSON 文件路径")
+    parser.add_argument("--from-research", choices=["extraction", "results", "comparison"],
+                        help="将 paper-research 产出的 extraction.json / results.json / comparison.json 显式转换为 LaTeX 三线表")
+    parser.add_argument("--left-extraction", help="当 --from-research comparison 时，可选传入左论文 extraction.json 以展开字段字面量与单位")
+    parser.add_argument("--right-extraction", help="当 --from-research comparison 时，可选传入右论文 extraction.json 以展开字段字面量与单位")
     parser.add_argument("--output", help="可选，输出 .tex 文件路径")
     parser.add_argument("--rows", help="可选，JSON 路径（当输入为嵌套字典时提取指定行列表键）")
     parser.add_argument("--cols", help="可选，逗号分隔的列名覆盖列表")
@@ -175,23 +356,45 @@ def main(argv=None) -> int:
     if not input_path:
         parser.error("必须提供 --input <path> 或位置参数 <path>")
     try:
-        raw_bytes = Path(input_path).read_bytes()
+        try:
+            from academic_research_kernel.research.sources import reject_link_or_reparse
+        except ImportError:
+            _src_dir = Path(__file__).resolve().parents[3] / "src"
+            if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+                sys.path.insert(0, str(_src_dir))
+            from academic_research_kernel.research.sources import reject_link_or_reparse
+        p_in = reject_link_or_reparse(input_path)
+        raw_bytes = p_in.read_bytes()
         sha = hashlib.sha256(raw_bytes).hexdigest()
-        spec = json.loads(raw_bytes.decode("utf-8"))
-        if args.caption and isinstance(spec, dict):
-            spec = dict(spec, caption=args.caption)
-        if args.label and isinstance(spec, dict):
-            spec = dict(spec, label=args.label)
-        if args.rows and isinstance(spec, dict) and args.rows in spec and "rows" not in spec:
-            spec = dict(spec, rows=spec[args.rows])
-        if args.cols and isinstance(spec, dict):
-            if args.cols in spec and isinstance(spec[args.cols], list):
-                spec = dict(spec, columns=spec[args.cols])
-            elif "," in args.cols:
-                spec = dict(spec, columns=[c.strip() for c in args.cols.split(",") if c.strip()])
+        loaded = json.loads(raw_bytes.decode("utf-8"))
+        if args.from_research:
+            left_ext = json.loads(reject_link_or_reparse(args.left_extraction).read_text(encoding="utf-8")) if args.left_extraction else None
+            right_ext = json.loads(reject_link_or_reparse(args.right_extraction).read_text(encoding="utf-8")) if args.right_extraction else None
+            spec = convert_research_artifact_to_spec(
+                loaded,
+                args.from_research,
+                caption=args.caption,
+                label=args.label,
+                left_extraction=left_ext,
+                right_extraction=right_ext,
+            )
+        else:
+            spec = loaded
+            if args.caption and isinstance(spec, dict):
+                spec = dict(spec, caption=args.caption)
+            if args.label and isinstance(spec, dict):
+                spec = dict(spec, label=args.label)
+            if args.rows and isinstance(spec, dict) and args.rows in spec and "rows" not in spec:
+                spec = dict(spec, rows=spec[args.rows])
+            if args.cols and isinstance(spec, dict):
+                if args.cols in spec and isinstance(spec[args.cols], list):
+                    spec = dict(spec, columns=spec[args.cols])
+                elif "," in args.cols:
+                    spec = dict(spec, columns=[c.strip() for c in args.cols.split(",") if c.strip()])
         latex = render_booktabs_table(spec, source_sha256=sha)
         if args.output:
-            Path(args.output).write_text(latex, encoding="utf-8")
+            p_out = reject_link_or_reparse(args.output)
+            p_out.write_text(latex, encoding="utf-8")
         print(json.dumps({
             "status": "ok",
             "source_sha256": sha,

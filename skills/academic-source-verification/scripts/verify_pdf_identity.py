@@ -83,19 +83,16 @@ def find_doi(doi: str, page_text: str) -> bool:
 
 
 def read_pdf(path: str, max_pages: int = 1) -> dict:
-    """用 pymupdf 提取前 max_pages 页文字与页数；pymupdf 缺失时明确报错。"""
+    """在受控隔离子进程中提取前 max_pages 页文字与页数（支持 pymupdf 或 pypdf），校验符号链接、文件大小与超时。"""
     try:
-        import pymupdf
-    except ImportError as exc:
-        raise RuntimeError('pymupdf 未安装；请先 pip install pymupdf 再运行本脚本') from exc
-    doc = pymupdf.open(path)
-    try:
-        pages = min(max_pages, doc.page_count)
-        text = '\n'.join(doc[i].get_text() for i in range(pages))
-        return {'page_count': doc.page_count, 'pages_read': pages,
-                'text': text, 'metadata': dict(doc.metadata or {})}
-    finally:
-        doc.close()
+        from academic_research_kernel.research.sources import controlled_read_pdf_pages
+    except ImportError:
+        from pathlib import Path as _Path
+        _src_dir = _Path(__file__).resolve().parents[3] / "src"
+        if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+            sys.path.insert(0, str(_src_dir))
+        from academic_research_kernel.research.sources import controlled_read_pdf_pages
+    return controlled_read_pdf_pages(path, max_pages=max_pages)
 
 
 def _utf8_stdio() -> None:
@@ -119,11 +116,15 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     if not args.title and not args.doi:
         parser.error('至少给 --title 或 --doi 之一；不凭空判定身份')
+    if args.pages < 1 or args.pages > 500:
+        parser.error('--pages 必须在 1 到 500 之间')
+    if not (0.0 < args.threshold <= 1.0):
+        parser.error('--threshold 必须在 (0.0, 1.0] 之间')
     _utf8_stdio()
 
     try:
         pdf = read_pdf(args.pdf, max_pages=args.pages)
-    except (RuntimeError, OSError) as error:
+    except (RuntimeError, OSError, ValueError) as error:
         print(json.dumps({'pdf': args.pdf, 'status': 'failed', 'error': str(error)},
                          ensure_ascii=False, indent=2))
         return 1

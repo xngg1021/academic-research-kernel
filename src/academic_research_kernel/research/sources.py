@@ -12,7 +12,10 @@ from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from html.parser import HTMLParser
 from importlib import metadata
+import html
+import io
 import json
+import math
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -23,13 +26,20 @@ import sys
 import threading
 import ipaddress
 import time
+from typing import Any
 from urllib.parse import urlparse, urljoin, quote
 from urllib.request import Request, urlopen, HTTPRedirectHandler, ProxyHandler, build_opener
 from urllib.error import HTTPError
 import xml.etree.ElementTree as ET
 import zipfile
 
-from ..identity import normalize
+try:
+    from ..identity import normalize
+except ImportError:
+    _id_dir = Path(__file__).resolve().parents[3] / "skills" / "research-object-identity" / "scripts"
+    if _id_dir.is_dir() and str(_id_dir) not in sys.path:
+        sys.path.insert(0, str(_id_dir))
+    from identity import normalize
 
 PARSER_VERSION = '1.0.1'
 MAX_FILE = 32 * 1024 * 1024
@@ -76,6 +86,12 @@ def _reject_ancestor_links(path: Path) -> None:
         if cur.parent == cur:
             break
         cur = cur.parent
+
+
+def reject_link_or_reparse(path: str | Path) -> Path:
+    p = Path(path)
+    _reject_ancestor_links(p)
+    return p
 
 
 def atomic_json(path, value):
@@ -296,6 +312,8 @@ MAX_PDF_WORKER_STDOUT_BYTES = 16 * 1024 * 1024
 
 def _extract_pdf_text_isolated(path: Path, timeout_sec: float = 15.0) -> tuple[list[str], str]:
     """Run pypdf extraction in an isolated subprocess with a hard wall-clock timeout and output byte cap."""
+    if isinstance(timeout_sec, bool) or not isinstance(timeout_sec, (int, float)) or not math.isfinite(timeout_sec) or timeout_sec <= 0:
+        raise ValueError(f"timeout_sec must be a positive finite number, got {timeout_sec!r}")
     worker_code = (
         "import json, sys\n"
         "from pypdf import PdfReader\n"
@@ -317,44 +335,63 @@ def _extract_pdf_text_isolated(path: Path, timeout_sec: float = 15.0) -> tuple[l
         "sys.stdout.write(json.dumps({'pages': pages, 'title': title}, ensure_ascii=True))\n"
     )
     proc = subprocess.Popen(
-        [sys.executable, "-c", worker_code, str(path)],
+        [sys.executable, "-I", "-c", worker_code, str(path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    out_chunks: list[bytes] = []
+    err_chunks: list[bytes] = []
+    total_b = 0
+    total_err_b = 0
+
+    def _read_bounded():
+        nonlocal total_b
+        assert proc.stdout is not None
+        while True:
+            chunk = proc.stdout.read(65536)
+            if not chunk:
+                break
+            total_b += len(chunk)
+            if total_b > MAX_PDF_WORKER_STDOUT_BYTES:
+                proc.kill()
+                break
+            out_chunks.append(chunk)
+
+    def _read_stderr_bounded():
+        nonlocal total_err_b
+        assert proc.stderr is not None
+        while True:
+            chunk = proc.stderr.read(65536)
+            if not chunk:
+                break
+            if total_err_b < 65536:
+                err_chunks.append(chunk[: max(0, 65536 - total_err_b)])
+            total_err_b += len(chunk)
+
+    reader_thread = threading.Thread(target=_read_bounded, daemon=True)
+    stderr_thread = threading.Thread(target=_read_stderr_bounded, daemon=True)
     try:
-        out_chunks: list[bytes] = []
-        total_b = 0
         deadline = time.monotonic() + timeout_sec
-
-        def _read_bounded():
-            nonlocal total_b
-            assert proc.stdout is not None
-            while True:
-                chunk = proc.stdout.read(65536)
-                if not chunk:
-                    break
-                total_b += len(chunk)
-                if total_b > MAX_PDF_WORKER_STDOUT_BYTES:
-                    proc.kill()
-                    break
-                out_chunks.append(chunk)
-
-        reader_thread = threading.Thread(target=_read_bounded, daemon=True)
         reader_thread.start()
+        stderr_thread.start()
         rem = max(0.01, deadline - time.monotonic())
         proc.wait(timeout=rem)
-        reader_thread.join(timeout=2.0)
-        stderr_bytes = proc.stderr.read(65536) if proc.stderr is not None else b""
     except subprocess.TimeoutExpired as exc:
         proc.kill()
         proc.wait()
         raise ValueError(f"PDF parsing timed out after {timeout_sec}s") from exc
     finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        reader_thread.join(timeout=2.0)
+        stderr_thread.join(timeout=2.0)
         if proc.stdout is not None:
             proc.stdout.close()
         if proc.stderr is not None:
             proc.stderr.close()
 
+    stderr_bytes = b"".join(err_chunks)
     if total_b > MAX_PDF_WORKER_STDOUT_BYTES or proc.returncode == 3:
         raise ValueError("PDF extracted text budget exceeded")
     if proc.returncode == 2:
@@ -366,6 +403,145 @@ def _extract_pdf_text_isolated(path: Path, timeout_sec: float = 15.0) -> tuple[l
     raw_out = b"".join(out_chunks).decode("ascii", errors="strict")
     payload = json.loads(raw_out or "{}")
     return list(payload.get("pages") or []), str(payload.get("title") or "")
+
+
+def controlled_read_pdf_pages(path: str | Path, max_pages: int = 1, timeout_sec: float = 15.0) -> dict:
+    """Extract up to max_pages of PDF text and metadata in an isolated subprocess with symlink/size/timeout guards."""
+    if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages < 1 or max_pages > 500:
+        raise ValueError(f"max_pages must be an integer between 1 and 500, got {max_pages!r}")
+    if isinstance(timeout_sec, bool) or not isinstance(timeout_sec, (int, float)) or not math.isfinite(timeout_sec) or timeout_sec <= 0:
+        raise ValueError(f"timeout_sec must be a positive finite number, got {timeout_sec!r}")
+    p = reject_link_or_reparse(path)
+    if not p.is_file():
+        raise FileNotFoundError(f"PDF file not found: {p}")
+    size = p.stat().st_size
+    if size > MAX_FILE:
+        raise ValueError("file size budget exceeded")
+    with p.open("rb") as fh:
+        sig = fh.read(5)
+    if sig != b"%PDF-":
+        raise ValueError("PDF signature missing (HTML/error response is not a PDF)")
+    worker_code = (
+        "import json, sys\n"
+        "path, max_p, max_chars = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])\n"
+        "pages, meta, page_count = [], {}, 0\n"
+        "used = None\n"
+        "try:\n"
+        "    import pymupdf\n"
+        "    used = 'pymupdf'\n"
+        "except ImportError:\n"
+        "    try:\n"
+        "        from pypdf import PdfReader\n"
+        "        used = 'pypdf'\n"
+        "    except ImportError:\n"
+        "        sys.stderr.write('Neither pymupdf nor pypdf is installed\\n')\n"
+        "        raise SystemExit(4)\n"
+        "total_chars = 0\n"
+        "if used == 'pymupdf':\n"
+        "    doc = pymupdf.open(path)\n"
+        "    try:\n"
+        "        page_count = int(doc.page_count)\n"
+        "        if page_count > 500:\n"
+        "            sys.stderr.write('PDF page budget exceeded\\n')\n"
+        "            raise SystemExit(2)\n"
+        "        n_read = min(max_p, page_count)\n"
+        "        for i in range(n_read):\n"
+        "            txt = doc[i].get_text() or ''\n"
+        "            total_chars += len(txt)\n"
+        "            if total_chars > max_chars:\n"
+        "                sys.stderr.write('PDF extracted text budget exceeded\\n')\n"
+        "                raise SystemExit(3)\n"
+        "            pages.append(txt)\n"
+        "        meta = {str(k): str(v) for k, v in (doc.metadata or {}).items() if v is not None}\n"
+        "    finally:\n"
+        "        doc.close()\n"
+        "else:\n"
+        "    reader = PdfReader(path)\n"
+        "    page_count = len(reader.pages)\n"
+        "    if page_count > 500:\n"
+        "        sys.stderr.write('PDF page budget exceeded\\n')\n"
+        "        raise SystemExit(2)\n"
+        "    n_read = min(max_p, page_count)\n"
+        "    for i in range(n_read):\n"
+        "        txt = reader.pages[i].extract_text() or ''\n"
+        "        total_chars += len(txt)\n"
+        "        if total_chars > max_chars:\n"
+        "            sys.stderr.write('PDF extracted text budget exceeded\\n')\n"
+        "            raise SystemExit(3)\n"
+        "        pages.append(txt)\n"
+        "    meta = {str(k).lstrip('/'): str(v) for k, v in (reader.metadata or {}).items() if v is not None}\n"
+        "sys.stdout.write(json.dumps({'page_count': page_count, 'pages_read': len(pages), 'text': '\\n'.join(pages), 'metadata': meta}, ensure_ascii=True))\n"
+    )
+    proc = subprocess.Popen(
+        [sys.executable, "-I", "-c", worker_code, str(p), str(max_pages), str(MAX_PDF_EXTRACTED_CHARS)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    out_chunks: list[bytes] = []
+    err_chunks: list[bytes] = []
+    total_b = 0
+    total_err_b = 0
+
+    def _read_bounded():
+        nonlocal total_b
+        assert proc.stdout is not None
+        while True:
+            chunk = proc.stdout.read(65536)
+            if not chunk:
+                break
+            total_b += len(chunk)
+            if total_b > MAX_PDF_WORKER_STDOUT_BYTES:
+                proc.kill()
+                break
+            out_chunks.append(chunk)
+
+    def _read_stderr_bounded():
+        nonlocal total_err_b
+        assert proc.stderr is not None
+        while True:
+            chunk = proc.stderr.read(65536)
+            if not chunk:
+                break
+            if total_err_b < 65536:
+                err_chunks.append(chunk[: max(0, 65536 - total_err_b)])
+            total_err_b += len(chunk)
+
+    reader_thread = threading.Thread(target=_read_bounded, daemon=True)
+    stderr_thread = threading.Thread(target=_read_stderr_bounded, daemon=True)
+    try:
+        deadline = time.monotonic() + timeout_sec
+        reader_thread.start()
+        stderr_thread.start()
+        rem = max(0.01, deadline - time.monotonic())
+        proc.wait(timeout=rem)
+    except subprocess.TimeoutExpired as exc:
+        proc.kill()
+        proc.wait()
+        raise RuntimeError(f"PDF parsing timed out after {timeout_sec}s") from exc
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        reader_thread.join(timeout=2.0)
+        stderr_thread.join(timeout=2.0)
+        if proc.stdout is not None:
+            proc.stdout.close()
+        if proc.stderr is not None:
+            proc.stderr.close()
+
+    stderr_bytes = b"".join(err_chunks)
+    if total_b > MAX_PDF_WORKER_STDOUT_BYTES or proc.returncode == 3:
+        raise RuntimeError("PDF extracted text budget exceeded")
+    if proc.returncode == 2:
+        raise RuntimeError("PDF page budget exceeded")
+    if proc.returncode == 4:
+        raise RuntimeError("pymupdf 或 pypdf 未安装；请先安装 academic-research-kernel[research] 或 pymupdf")
+    if proc.returncode != 0:
+        err_str = stderr_bytes.decode("utf-8", errors="replace").strip()
+        err_msg = err_str.splitlines()[-1:] or ["subprocess failed"]
+        raise RuntimeError(f"PDF parsing failed in isolated worker: {err_msg[0]}")
+    raw_out = b"".join(out_chunks).decode("ascii", errors="strict")
+    return json.loads(raw_out or "{}")
 
 
 def parse(path):
@@ -595,6 +771,51 @@ class PublicRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         public_url(newurl)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+class _ControlledHTTPResponse(io.BytesIO):
+    def __init__(self, body: bytes, url: str, headers: Any, status: int = 200):
+        super().__init__(body)
+        self.url = url
+        self.headers = headers
+        self.status = status
+        self.code = status
+
+    def geturl(self) -> str:
+        return self.url
+
+    def info(self) -> Any:
+        return self.headers
+
+    def getcode(self) -> int:
+        return self.status
+
+
+@contextlib.contextmanager
+def controlled_urlopen(req_or_url, timeout: float = 20.0, max_bytes: int = 8 * 1024 * 1024):
+    """Bounded, proxy-disabled, DNS-pinned HTTP(S) opener that validates redirects and caps response size."""
+    if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
+        raise ValueError("max_bytes must be a positive integer")
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("timeout must be a positive finite number")
+    target_url = req_or_url.full_url if isinstance(req_or_url, Request) else str(req_or_url)
+    req = (
+        req_or_url
+        if isinstance(req_or_url, Request)
+        else Request(str(req_or_url), headers={'User-Agent': 'AcademicResearchKernel/2.3 (bounded open research reader)'})
+    )
+    with _pinned_public_dns():
+        public_url(target_url)
+        opener = build_opener(ProxyHandler({}), PublicRedirect())
+        with opener.open(req, timeout=timeout) as resp:
+            data = resp.read(max_bytes + 1)
+            if len(data) > max_bytes:
+                raise ValueError('response size budget exceeded')
+            final_url = getattr(resp, 'url', target_url)
+            headers = getattr(resp, 'headers', {})
+            status = getattr(resp, 'status', getattr(resp, 'code', 200))
+    with _ControlledHTTPResponse(data, final_url, headers, status) as buffered_response:
+        yield buffered_response
 
 
 def fetch(url, path):

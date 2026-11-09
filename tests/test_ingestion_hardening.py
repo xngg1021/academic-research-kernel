@@ -903,7 +903,7 @@ def test_real_stdio_transport_handles_tools_list_and_tools_call():
     )
     responses = [json.loads(line) for line in completed.stdout.splitlines()]
     assert [item["id"] for item in responses] == [1, 2, 3]
-    assert len(responses[1]["result"]["tools"]) == 12
+    assert len(responses[1]["result"]["tools"]) == 18
     tool_result = json.loads(responses[2]["result"]["content"][0]["text"])
     assert tool_result["consistent"] is True
     assert responses[2]["result"]["isError"] is False

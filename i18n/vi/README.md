@@ -15,26 +15,26 @@ Tác giả: Junfu Shi (SJF, xngg1021). Phạm vi cấp phép hiện hành: [Sour
 
 ### Bắt đầu nhanh
 
-Chạy phiên bản 2.3.1 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Chạy phiên bản 2.4.0 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[Bản phát hành 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 12 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
+[Bản phát hành 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10–3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 18 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
 
 ### Kiểm tra cài đặt
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, lược đồ dữ liệu và toàn bộ 12 định nghĩa công cụ. Các dịch vụ bên ngoài tùy chọn có thể để trống mà không gây lỗi. Sử dụng `doctor --json` để nhận kết quả ở định dạng máy đọc được.
+Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, lược đồ dữ liệu và toàn bộ 18 định nghĩa công cụ. Các dịch vụ bên ngoài tùy chọn có thể để trống mà không gây lỗi. Sử dụng `doctor --json` để nhận kết quả ở định dạng máy đọc được.
 
 ---
 
@@ -42,7 +42,7 @@ Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, 
 
 ### Nghiên cứu bài báo khoa học với Agent cục bộ
 
-Cài đặt `academic-research-kernel[research]==2.3.1` và xuất quy trình làm việc đóng gói sẵn:
+Cài đặt `academic-research-kernel[research]==2.4.0` và xuất quy trình làm việc đóng gói sẵn:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ Mười bốn kỹ năng bao gồm tổng cộng 22 tệp tham chiếu Markdown.
 ### Cài đặt gói phần mềm
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.3.1` hoặc chạy `python -m pip install academic-research-kernel==2.3.1` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==7.0.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
+Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.4.0` hoặc chạy `python -m pip install academic-research-kernel==2.4.0` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==7.0.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
 
 ### Tích hợp và sử dụng di động
 
@@ -190,7 +190,7 @@ Xem [tài liệu phân phối và phát hành](../../docs/distribution-release.m
 
 ### Tiếp nhận tất định và nhân công khai
 
-Tầng tiếp nhận và phân tích tài liệu nghiên cứu cung cấp `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 bộ chuyển đổi (gồm 14 kỹ năng cùng cơ chế dự phòng dữ liệu thô opaque fallback) và 12 công cụ MCP stdio phi trạng thái. Các biên nhận tiếp nhận được chấp thuận sẽ ràng buộc từng biến đổi ngữ nghĩa được lưu giữ theo phân loại, định danh và mã băm chuẩn SHA-256: đối tượng nghiên cứu, bản ghi CEG, bản ghi nhật ký quyết định, các mục cần xác minh lại, biên nhận vật lý và đăng ký tư liệu. Cơ chế phát lại bộ nhớ đệm kiểm tra các cam kết này độc lập với mã băm bản chụp truyền tải. Nhật ký rỗng vẫn hợp lệ; các lô xử lý nguyên tử nếu thất bại sẽ không để lại trạng thái dở dang.
+Tầng tiếp nhận và phân tích tài liệu nghiên cứu cung cấp `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 bộ chuyển đổi (gồm 14 kỹ năng cùng cơ chế dự phòng dữ liệu thô opaque fallback) và 18 công cụ MCP stdio phi trạng thái. Các biên nhận tiếp nhận được chấp thuận sẽ ràng buộc từng biến đổi ngữ nghĩa được lưu giữ theo phân loại, định danh và mã băm chuẩn SHA-256: đối tượng nghiên cứu, bản ghi CEG, bản ghi nhật ký quyết định, các mục cần xác minh lại, biên nhận vật lý và đăng ký tư liệu. Cơ chế phát lại bộ nhớ đệm kiểm tra các cam kết này độc lập với mã băm bản chụp truyền tải. Nhật ký rỗng vẫn hợp lệ; các lô xử lý nguyên tử nếu thất bại sẽ không để lại trạng thái dở dang.
 
 Quyền truy cập nội dung truy xuất nguồn gốc được cấp tường minh ngoài băng tần (out of band). Các lệnh gọi Python tin cậy truyền `LineageVerificationContext` khi phát lại biên nhận hoặc bản chụp đã tuần tự hóa; các lệnh gọi qua MCP chỉ được phép cung cấp luồng byte nội dung có giới hạn dung lượng, tuyệt đối không được truyền thư mục gốc của hệ thống tệp máy chủ. Ngân sách nội dung mặc định là 10 MiB; máy chủ tin cậy có thể cho phép tư liệu lớn hơn một cách tường minh khi bên tạo và bên kiểm chứng áp dụng cùng chính sách. Nếu thiếu quyền truy cập nội dung, một tuyên bố `fully_verified` sẽ không thể tái lập độc lập và trả về kết quả xác minh không hợp lệ có cấu trúc. Văn bản xuôi chưa cấu trúc được giữ nguyên trạng thái không trong suốt, các ý kiến bất đồng vẫn hiển thị rõ ràng, và nhà nghiên cứu giữ toàn quyền đối với việc chốt trạng thái, dừng hướng đi, mở lại nhánh nghiên cứu, định tuyến và phán đoán tính xác thực.
 
@@ -214,7 +214,7 @@ Xem thêm [xác thực OpenAlex](https://help.openalex.org/api/authentication/),
 
 ---
 
-## 6. Kiểm định cục bộ, xác minh gói phân phối (2.3.1) và giấy phép
+## 6. Kiểm định cục bộ, xác minh gói phân phối (2.4.0) và giấy phép
 
 ### Kiểm định (Validation)
 

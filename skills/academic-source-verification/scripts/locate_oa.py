@@ -13,7 +13,16 @@ import sys
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+try:
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
+except ImportError:
+    from pathlib import Path as _Path
+    _src_dir = _Path(__file__).resolve().parents[3] / "src"
+    if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+        sys.path.insert(0, str(_src_dir))
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
 
 if sys.platform == "win32":
     for _s in (sys.stdout, sys.stderr):
@@ -217,7 +226,8 @@ def main(argv=None) -> int:
 
     if args.record:
         try:
-            with open(args.record, encoding='utf-8') as handle:
+            p = reject_link_or_reparse(args.record)
+            with p.open(encoding='utf-8') as handle:
                 record = json.load(handle)
         except (OSError, ValueError) as error:
             print(json.dumps({'doi': doi, 'status': 'failed',
@@ -236,7 +246,8 @@ def main(argv=None) -> int:
         mode = 'offline-file'
     elif args.openalex_record:
         try:
-            with open(args.openalex_record, encoding='utf-8') as handle:
+            p = reject_link_or_reparse(args.openalex_record)
+            with p.open(encoding='utf-8') as handle:
                 oa_work = json.load(handle)
         except (OSError, ValueError) as error:
             print(json.dumps({'doi': doi, 'status': 'failed',

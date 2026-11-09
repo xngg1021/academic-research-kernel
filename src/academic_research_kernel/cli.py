@@ -190,7 +190,7 @@ def doctor():
     try:
         mcp_server = _load_mcp_server()
         report['mcp'] = {'importable': True, 'tool_count': len(mcp_server.TOOLS)}
-        if len(mcp_server.TOOLS) != 12:
+        if len(mcp_server.TOOLS) != 18:
             raise ValueError('unexpected tool count')
         pct = mcp_server.handle_tool_call('academic_check_percentage', {'count': 10, 'percent': 50, 'sample_size': 20})
         if pct.get('consistent') is not True:
@@ -216,17 +216,34 @@ def main(argv=None):
     commands = parser.add_subparsers(dest='command', required=True)
     check = commands.add_parser('doctor', help='offline environment diagnostic')
     check.add_argument('--json', action='store_true', help='machine-readable JSON')
-    commands.add_parser('mcp', help='serve the existing 12 MCP tools over stdio')
-    verify_cmd = commands.add_parser('verify-source', help='normalize scholarly identifiers and verify OpenAlex/Crossref records')
-    verify_cmd.add_argument('identifier', help='DOI, arXiv ID, PMID, OpenAlex ID, or URL')
+    commands.add_parser('mcp', help='serve the 18 MCP tools over stdio')
+    verify_cmd = commands.add_parser('verify-source', help='normalize scholarly identifiers and verify OpenAlex/Crossref records, PDF identity, or update/retraction signals')
+    verify_cmd.add_argument('identifier', nargs='?', help='DOI, arXiv ID, PMID, OpenAlex ID, or URL')
     verify_cmd.add_argument('--openalex-json', help='offline OpenAlex work JSON file')
     verify_cmd.add_argument('--crossref-json', help='offline Crossref message JSON file')
     verify_cmd.add_argument('--offline', action='store_true', help='disable network requests')
     verify_cmd.add_argument('--normalize-only', action='store_true', help='only normalize identifier without querying metadata')
-    bib_cmd = commands.add_parser('bibliography', help='convert between BibTeX, RIS, CSL-JSON, Crossref, and OpenAlex records')
-    bib_cmd.add_argument('--from', dest='source_format', required=True, choices=['bibtex', 'ris', 'csl', 'crossref', 'openalex'])
-    bib_cmd.add_argument('--to', dest='target_format', required=True, choices=['bibtex', 'ris', 'csl', 'canonical'])
-    bib_cmd.add_argument('--input', required=True, help='input file path')
+    verify_cmd.add_argument('--check-updates', action='store_true', help='query Crossref update-to signals (retraction/withdrawal/correction/expression-of-concern)')
+    verify_cmd.add_argument('--records', help='offline Crossref records JSON file for --check-updates')
+    verify_cmd.add_argument('--rows', type=int, default=100, help='rows per page for --check-updates')
+    verify_cmd.add_argument('--max-pages', type=int, default=10, help='max pages budget for --check-updates')
+    verify_cmd.add_argument('--verify-pdf', help='verify a local PDF file against --title and/or DOI')
+    verify_cmd.add_argument('--title', help='expected paper title for --verify-pdf')
+    verify_cmd.add_argument('--doi', help='expected DOI for --verify-pdf or --check-updates')
+    verify_cmd.add_argument('--pages', type=int, default=1, help='number of leading PDF pages to inspect for --verify-pdf')
+    verify_cmd.add_argument('--threshold', type=float, default=0.8, help='title token coverage threshold for --verify-pdf')
+    bib_cmd = commands.add_parser('bibliography', help='convert, export BibTeX with acronym protection, deduplicate works, build citation graphs, or render review matrices')
+    bib_cmd.add_argument('--action', choices=['convert', 'export-bibtex', 'deduplicate', 'citation-graph', 'review-matrix'], default='convert', help='bibliography operation')
+    bib_cmd.add_argument('--from', dest='source_format', choices=['bibtex', 'ris', 'csl', 'crossref', 'openalex'], help='source format for --action convert')
+    bib_cmd.add_argument('--to', dest='target_format', choices=['bibtex', 'ris', 'csl', 'canonical'], help='target format for --action convert')
+    bib_cmd.add_argument('--input', help='input file path (or - for stdin where supported)')
+    bib_cmd.add_argument('--source', choices=['crossref', 'openalex'], default='crossref', help='metadata source for --action export-bibtex')
+    bib_cmd.add_argument('--doi', help='target DOI for live --action export-bibtex')
+    bib_cmd.add_argument('--wid', help='OpenAlex work ID for live --action citation-graph')
+    bib_cmd.add_argument('--per-page', type=int, default=25, help='results per page for --action citation-graph')
+    bib_cmd.add_argument('--pages', type=int, default=4, help='max pages budget for --action citation-graph')
+    bib_cmd.add_argument('--query', help='search query for --action review-matrix coverage declaration')
+    bib_cmd.add_argument('--date', help='search date YYYY-MM-DD for --action review-matrix coverage declaration')
     meta_cmd = commands.add_parser('meta-analyze', help='run fixed/random-effects pooling, heterogeneity, and publication-bias checks')
     meta_cmd.add_argument('--input', required=True, help='JSON file with {"studies": [{"yi": float, "vi": float, ...}]}')
     tf_cmd = commands.add_parser('table-forensics', help='audit AI/CS paper tables for partition conservation, constant-offset deltas, and bandwidth bounds')
@@ -250,6 +267,9 @@ def main(argv=None):
     ltx_cmd = commands.add_parser('receipt-to-latex', help='render a deterministic booktabs LaTeX table from a JSON receipt')
     ltx_cmd.add_argument('input_pos', nargs='?', help='JSON table specification file (positional)')
     ltx_cmd.add_argument('--input', dest='input_opt', help='JSON table specification file')
+    ltx_cmd.add_argument('--from-research', choices=['extraction', 'results', 'comparison'], help='convert paper-research extraction.json, results.json, or comparison.json into a booktabs table')
+    ltx_cmd.add_argument('--left-extraction', help='optional left paper extraction.json for --from-research comparison')
+    ltx_cmd.add_argument('--right-extraction', help='optional right paper extraction.json for --from-research comparison')
     ltx_cmd.add_argument('--output', help='optional output .tex path')
     ltx_cmd.add_argument('--rows', help='optional nested JSON key for rows list')
     ltx_cmd.add_argument('--cols', help='optional comma-separated column names')
@@ -269,10 +289,11 @@ def main(argv=None):
     ps_cmd.add_argument('--pdf', help='optional compiled PDF path')
     ps_cmd.add_argument('--ceg', help='optional ClaimEvidenceGraph JSON path')
     ps_cmd.add_argument('--require-ceg-binding', action='store_true', help='flag ungrounded quantitative claims in abstract/conclusion')
+    ps_cmd.add_argument('--check-academic-style', action='store_true', help='emit advisory hits for academic LLM cliches, unanchored strong claims, and vague passive methods')
     ps_cmd.add_argument('--output', help='optional output JSON path')
     vt_cmd = commands.add_parser('venue-template', help='list target venue contracts or scaffold an external manuscript workspace')
     vt_cmd.add_argument('--list', action='store_true', help='list supported venue specifications')
-    vt_cmd.add_argument('--action', choices=['list-venues', 'scaffold', 'verify-styles'], default='list-venues')
+    vt_cmd.add_argument('--action', choices=['list-venues', 'scaffold', 'verify-styles', 'export-ceg-anchors'], default='list-venues')
     vt_cmd.add_argument('--workspace-dir', help='target parent workspace directory for scaffold')
     vt_cmd.add_argument('--slug', help='project directory slug')
     vt_cmd.add_argument('--venue', default='iclr', help='venue key')
@@ -280,6 +301,25 @@ def main(argv=None):
     vt_cmd.add_argument('--contribution-type', default='general_empirical', help='contribution type key')
     vt_cmd.add_argument('--force', action='store_true', help='overwrite existing workspace if venue differs')
     vt_cmd.add_argument('--manuscript-dir', help='manuscript directory for verify-styles')
+    vt_cmd.add_argument('--ceg', help='ClaimEvidenceGraph or kernel-state JSON path for export-ceg-anchors')
+    rc_cmd = commands.add_parser('repro-checklist', help='adjudicate a 14-stage reproduction checklist into a ReproductionReceipt')
+    rc_cmd.add_argument('input_pos', nargs='?', help='checklist JSON path (positional)')
+    rc_cmd.add_argument('--input', dest='input_opt', help='checklist JSON path')
+    rc_cmd.add_argument('-o', '--out', help='also write the receipt JSON to this path')
+    rc_cmd.add_argument('--evidence-receipt', help='merge an AcademicEvidenceReceipt before adjudicating')
+    rc_cmd.add_argument('--generated-at', help='fixed ISO-8601 timestamp for deterministic output')
+    rc_cmd.add_argument('--pretty', action='store_true', help='indent JSON output')
+    lw_cmd = commands.add_parser('literature-watch', help='bounded incremental OpenAlex/Crossref literature watcher')
+    lw_cmd.add_argument('--self-test', action='store_true', help='run offline self-test')
+    lw_cmd.add_argument('--run', action='store_true', help='run live query against watchlist')
+    lw_cmd.add_argument('--watchlist', help='watchlist JSON path')
+    lw_cmd.add_argument('--state', help='state JSON path')
+    lw_cmd.add_argument('--days', type=int, default=7, help='lookback window in days')
+    rw_cmd = commands.add_parser('retraction-watch', help='bounded OpenAlex/Crossref retraction and correction signal watcher')
+    rw_cmd.add_argument('--self-test', action='store_true', help='run offline self-test')
+    rw_cmd.add_argument('--run', action='store_true', help='run live query against watchlist')
+    rw_cmd.add_argument('--watchlist', help='watchlist JSON path')
+    rw_cmd.add_argument('--state', help='state JSON path')
     research = commands.add_parser('research', help='prepare/read/verify/recompute/report with a local agent')
     steps = research.add_subparsers(dest='step', required=True)
     prep = steps.add_parser('prepare', help='acquire and locate raw materials; agent continues semantic reading')
@@ -308,8 +348,47 @@ def main(argv=None):
                 if key not in ('version', 'status'):
                     print(f'{key}: {json.dumps(value, ensure_ascii=False)}')
         return 0 if report['status'] == 'ok' else 1
-    if args.command in ('locate-oa', 'table-forensics', 'openreview-audit', 'repo-forensics', 'receipt-to-latex', 'sanitize-blind', 'double-blind-sanitize', 'pre-submission-lint', 'venue-template'):
+    if args.command in ('locate-oa', 'table-forensics', 'openreview-audit', 'repo-forensics', 'receipt-to-latex', 'sanitize-blind', 'double-blind-sanitize', 'pre-submission-lint', 'venue-template', 'repro-checklist', 'literature-watch', 'retraction-watch'):
         try:
+            if args.command == 'repro-checklist':
+                rc_mod = _load_bundled_module('repro_checklist', 'skills/research-reproducibility/scripts/repro_checklist.py')
+                rc_in = args.input_opt or args.input_pos or '-'
+                sub_argv = [rc_in]
+                if args.out:
+                    sub_argv.extend(['--out', args.out])
+                if args.evidence_receipt:
+                    sub_argv.extend(['--evidence-receipt', args.evidence_receipt])
+                if args.generated_at:
+                    sub_argv.extend(['--generated-at', args.generated_at])
+                if args.pretty:
+                    sub_argv.append('--pretty')
+                return rc_mod.main(sub_argv)
+            if args.command == 'literature-watch':
+                lw_mod = _load_bundled_module('literature_watch', 'skills/literature-watch/scripts/watch.py')
+                sub_argv = []
+                if args.self_test:
+                    sub_argv.append('--self-test')
+                if args.run:
+                    sub_argv.append('--run')
+                if args.watchlist:
+                    sub_argv.extend(['--watchlist', args.watchlist])
+                if args.state:
+                    sub_argv.extend(['--state', args.state])
+                if args.days is not None:
+                    sub_argv.extend(['--days', str(args.days)])
+                return lw_mod.main(sub_argv)
+            if args.command == 'retraction-watch':
+                rw_mod = _load_bundled_module('retraction_watch', 'skills/retraction-watch/scripts/watch.py')
+                sub_argv = []
+                if args.self_test:
+                    sub_argv.append('--self-test')
+                if args.run:
+                    sub_argv.append('--run')
+                if args.watchlist:
+                    sub_argv.extend(['--watchlist', args.watchlist])
+                if args.state:
+                    sub_argv.extend(['--state', args.state])
+                return rw_mod.main(sub_argv)
             if args.command == 'table-forensics':
                 recomp_mod = _load_bundled_module('recompute', 'skills/quantitative-paper-audit/scripts/recompute.py')
                 spec = json.loads(Path(args.input).read_text(encoding='utf-8'))
@@ -404,6 +483,12 @@ def main(argv=None):
                     raise ValueError('receipt-to-latex requires --input <path> or a positional input file')
                 ltx_mod = _load_bundled_module('receipt_to_latex_table', 'skills/academic-writing/scripts/receipt_to_latex_table.py')
                 sub_argv = ['--input', ltx_in]
+                if args.from_research:
+                    sub_argv.extend(['--from-research', args.from_research])
+                if args.left_extraction:
+                    sub_argv.extend(['--left-extraction', args.left_extraction])
+                if args.right_extraction:
+                    sub_argv.extend(['--right-extraction', args.right_extraction])
                 if args.output:
                     sub_argv.extend(['--output', args.output])
                 if args.rows:
@@ -439,6 +524,8 @@ def main(argv=None):
                     sub_argv.extend(['--ceg', args.ceg])
                 if args.require_ceg_binding:
                     sub_argv.append('--require-ceg-binding')
+                if getattr(args, 'check_academic_style', False):
+                    sub_argv.append('--check-academic-style')
                 if args.output:
                     sub_argv.extend(['--output', args.output])
                 return ps_mod.main(sub_argv)
@@ -453,6 +540,8 @@ def main(argv=None):
                     sub_argv.append('--force')
                 if args.manuscript_dir:
                     sub_argv.extend(['--manuscript-dir', args.manuscript_dir])
+                if getattr(args, 'ceg', None):
+                    sub_argv.extend(['--ceg', args.ceg])
                 return vt_mod.main(sub_argv)
         except Exception as exc:
             print(json.dumps({
@@ -465,9 +554,38 @@ def main(argv=None):
     if args.command in ('verify-source', 'bibliography', 'meta-analyze'):
         try:
             if args.command == 'verify-source':
+                active_modes = sum([
+                    bool(args.normalize_only),
+                    bool(getattr(args, 'check_updates', False)),
+                    bool(getattr(args, 'verify_pdf', None)),
+                ])
+                if active_modes > 1:
+                    raise ValueError('verify-source options --normalize-only, --check-updates, and --verify-pdf are mutually exclusive')
+                if getattr(args, 'verify_pdf', None):
+                    vpi_mod = _load_bundled_module('verify_pdf_identity', 'skills/academic-source-verification/scripts/verify_pdf_identity.py')
+                    sub_argv = ['--pdf', args.verify_pdf, '--pages', str(args.pages), '--threshold', str(args.threshold)]
+                    if args.title:
+                        sub_argv.extend(['--title', args.title])
+                    doi_val = args.doi or args.identifier
+                    if doi_val:
+                        sub_argv.extend(['--doi', doi_val])
+                    if not args.title and not doi_val:
+                        raise ValueError('verify-source --verify-pdf requires --title and/or --doi (or positional DOI)')
+                    return vpi_mod.main(sub_argv)
+                target_raw = args.doi or args.identifier
+                if not target_raw:
+                    raise ValueError('verify-source requires an identifier (or --verify-pdf)')
+                if getattr(args, 'check_updates', False):
+                    if args.offline and not args.records:
+                        raise ValueError('--offline with --check-updates requires --records')
+                    cu_mod = _load_bundled_module('check_updates', 'skills/academic-source-verification/scripts/check_updates.py')
+                    sub_argv = ['--doi', target_raw, '--rows', str(args.rows), '--max-pages', str(args.max_pages)]
+                    if args.records:
+                        sub_argv.extend(['--records', args.records])
+                    return cu_mod.main(sub_argv)
                 norm_mod = _load_bundled_module('normalize_identifier', 'skills/academic-source-verification/scripts/normalize_identifier.py')
                 ver_mod = _load_bundled_module('verify_work', 'skills/academic-source-verification/scripts/verify_work.py')
-                norm = norm_mod.normalize_identifier(args.identifier)
+                norm = norm_mod.normalize_identifier(target_raw)
                 if args.normalize_only or norm['type'] != 'doi':
                     print(json.dumps(norm, ensure_ascii=False, indent=2))
                     return 0 if norm['type'] != 'unknown' else 1
@@ -507,6 +625,44 @@ def main(argv=None):
                     return 1
                 return 0 if (args.offline or any(s['status'] == 'ok' for s in sources_out.values())) else 1
             if args.command == 'bibliography':
+                action = getattr(args, 'action', 'convert') or 'convert'
+                if action == 'export-bibtex':
+                    eb_mod = _load_bundled_module('export_bibtex', 'skills/literature-analysis/scripts/export_bibtex.py')
+                    sub_argv = ['--source', args.source]
+                    if args.input:
+                        sub_argv.extend(['--input', args.input])
+                    if args.doi:
+                        sub_argv.extend(['--doi', args.doi])
+                    if not args.input and not args.doi:
+                        raise ValueError('bibliography --action export-bibtex requires --input or --doi')
+                    return eb_mod.main(sub_argv)
+                if action == 'deduplicate':
+                    if not args.input:
+                        raise ValueError('bibliography --action deduplicate requires --input')
+                    dd_mod = _load_bundled_module('deduplicate_works', 'skills/literature-analysis/scripts/deduplicate_works.py')
+                    return dd_mod.main(['--input', args.input])
+                if action == 'citation-graph':
+                    cg_mod = _load_bundled_module('build_citation_graph', 'skills/literature-analysis/scripts/build_citation_graph.py')
+                    sub_argv = ['--per-page', str(args.per_page), '--pages', str(args.pages)]
+                    if args.input:
+                        sub_argv.extend(['--input', args.input])
+                    if args.wid:
+                        sub_argv.extend(['--wid', args.wid])
+                    if not args.input and not args.wid:
+                        raise ValueError('bibliography --action citation-graph requires --input or --wid')
+                    return cg_mod.main(sub_argv)
+                if action == 'review-matrix':
+                    if not args.input:
+                        raise ValueError('bibliography --action review-matrix requires --input')
+                    rm_mod = _load_bundled_module('build_review_matrix', 'skills/literature-analysis/scripts/build_review_matrix.py')
+                    sub_argv = ['--input', args.input]
+                    if args.query:
+                        sub_argv.extend(['--query', args.query])
+                    if args.date:
+                        sub_argv.extend(['--date', args.date])
+                    return rm_mod.main(sub_argv)
+                if not args.source_format or not args.target_format or not args.input:
+                    raise ValueError('bibliography --action convert requires --from, --to, and --input')
                 interop_mod = _load_bundled_module('interop', 'skills/literature-analysis/scripts/interop.py')
                 raw_text = Path(args.input).read_text(encoding='utf-8')
                 sf = args.source_format
@@ -589,7 +745,7 @@ def main(argv=None):
                 'status': 'error',
                 'command': args.command,
                 'error': str(exc),
-                'hint': _error_hint(str(exc)),
+                'hint': _error_hint(args.command, str(exc)),
             }, ensure_ascii=False, indent=2))
             return 1
     if args.command == 'research':

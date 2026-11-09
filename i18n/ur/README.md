@@ -15,26 +15,26 @@
 
 ### فوری آغاز
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) کے ساتھ ورژن 2.3.1 چلائیں:
+[uv](https://docs.astral.sh/uv/getting-started/installation/) کے ساتھ ورژن 2.4.0 چلائیں:
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.3.1 ریلیز](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) ڈسٹری بیوشن ہیشز اور اشاعت کی حیثیت کو ریکارڈ کرتی ہے۔ ریلیز وہیل کو مقامی طور پر `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp` کے ذریعے بھی چلایا جا سکتا ہے۔ Python 3.10–3.14 معاونت یافتہ ہے؛ `uvx --python 3.12` واضح طور پر ایک معاون انٹرپریٹر منتخب کرتا ہے۔ سائنسی حساب کتاب اور شماریاتی آلات سمیت تمام 12 قطعی ٹولز بنیادی انسٹالیشن میں شامل ہیں۔
+[2.4.0 ریلیز](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ڈسٹری بیوشن ہیشز اور اشاعت کی حیثیت کو ریکارڈ کرتی ہے۔ ریلیز وہیل کو مقامی طور پر `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` کے ذریعے بھی چلایا جا سکتا ہے۔ Python 3.10–3.14 معاونت یافتہ ہے؛ `uvx --python 3.12` واضح طور پر ایک معاون انٹرپریٹر منتخب کرتا ہے۔ سائنسی حساب کتاب اور شماریاتی آلات سمیت تمام 18 قطعی ٹولز بنیادی انسٹالیشن میں شامل ہیں۔
 
 ### تنصیب کی تصدیق
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-آف لائن تشخیصی عمل انحصار (dependencies)، اسکیماز اور تمام 12 ٹول تعریفوں کی جانچ کرتا ہے۔ اختیاری بیرونی خدمات کو بغیر کنفیگر کیے چھوڑا جا سکتا ہے۔ مشین کے پڑھنے کے قابل آؤٹ پٹ کے لیے `doctor --json` استعمال کریں۔
+آف لائن تشخیصی عمل انحصار (dependencies)، اسکیماز اور تمام 18 ٹول تعریفوں کی جانچ کرتا ہے۔ اختیاری بیرونی خدمات کو بغیر کنفیگر کیے چھوڑا جا سکتا ہے۔ مشین کے پڑھنے کے قابل آؤٹ پٹ کے لیے `doctor --json` استعمال کریں۔
 
 ---
 
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### مقامی Agent کے ذریعے تحقیقی مقالے کا مطالعہ
 
-`academic-research-kernel[research]==2.3.1` انسٹال کریں اور پیکیج شدہ ورک فلو ایکسپورٹ کریں:
+`academic-research-kernel[research]==2.4.0` انسٹال کریں اور پیکیج شدہ ورک فلو ایکسپورٹ کریں:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ### پیکیج کی تنصیب
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-متبادل کے طور پر، کسی معاون ورچوئل ماحول کے اندر `pipx install academic-research-kernel==2.3.1` یا `python -m pip install academic-research-kernel==2.3.1` کے ذریعے انسٹال کریں۔ `[full]` توسیعی سائنسی مثالوں کے لیے لائبریریاں شامل کرتا ہے؛ `[qa]` پی ڈی ایف پارسر سمیت ریپوزٹری کی تصدیق کے ٹولز شامل کرتا ہے۔ `[research]` صاف انسٹالیشنز میں یکساں پی ڈی ایف فونٹ ڈی کوڈنگ کے لیے `pypdf==7.0.0` اور `fonttools==4.65.0` شامل کرتا ہے؛ دونوں Python 3.10 کی معاونت کرتے ہیں۔ منظم HTML/XML اور محدود حجم کی DOCX/XLSX فائلوں کو پڑھنے کے لیے معیاری لائبریری استعمال ہوتی ہے۔ GPU بیک اینڈز اور بامعاوضہ خدمات اختیاری رہتی ہیں۔
+متبادل کے طور پر، کسی معاون ورچوئل ماحول کے اندر `pipx install academic-research-kernel==2.4.0` یا `python -m pip install academic-research-kernel==2.4.0` کے ذریعے انسٹال کریں۔ `[full]` توسیعی سائنسی مثالوں کے لیے لائبریریاں شامل کرتا ہے؛ `[qa]` پی ڈی ایف پارسر سمیت ریپوزٹری کی تصدیق کے ٹولز شامل کرتا ہے۔ `[research]` صاف انسٹالیشنز میں یکساں پی ڈی ایف فونٹ ڈی کوڈنگ کے لیے `pypdf==7.0.0` اور `fonttools==4.65.0` شامل کرتا ہے؛ دونوں Python 3.10 کی معاونت کرتے ہیں۔ منظم HTML/XML اور محدود حجم کی DOCX/XLSX فائلوں کو پڑھنے کے لیے معیاری لائبریری استعمال ہوتی ہے۔ GPU بیک اینڈز اور بامعاوضہ خدمات اختیاری رہتی ہیں۔
 
 ### انضمام اور پورٹیبل استعمال
 
@@ -190,7 +190,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### قطعی شمولیت اور عوامی کرنل
 
-تحقیقی مواد کی شمولیت اور تجزیہ کرنے والی تہہ `ResearchArtifactEnvelope v1`، `ArtifactIngestionReceipt v1`، 15 اڈاپٹرز (14 مہارتیں بمعہ غیر منظم متن کا متبادل opaque fallback)، اور 12 اسٹیٹ لیس stdio MCP ٹولز فراہم کرتی ہے۔ منظور شدہ شمولیت کی رسیدیں ہر محفوظ کردہ معنوی تبدیلی کو قسم، شناخت اور معیاری SHA-256 کے ذریعے پابند کرتی ہیں: اشیاء، CEG ریکارڈز، فیصلوں کے لاگ ریکارڈز، جائزے کے متقاضی امور، طبعی رسیدیں اور تحقیقی فن پاروں کی رجسٹریشن۔ کیشے ری پلے ٹرانسپورٹ اسنیپ شاٹ ہیشز سے آزادانہ طور پر ان وعدوں کی جانچ کرتا ہے۔ خالی لاگز درست ہیں؛ ناکام ایٹمی بیچز کوئی ادھوری حالت پیچھے نہیں چھوڑتے۔
+تحقیقی مواد کی شمولیت اور تجزیہ کرنے والی تہہ `ResearchArtifactEnvelope v1`، `ArtifactIngestionReceipt v1`، 15 اڈاپٹرز (14 مہارتیں بمعہ غیر منظم متن کا متبادل opaque fallback)، اور 18 اسٹیٹ لیس stdio MCP ٹولز فراہم کرتی ہے۔ منظور شدہ شمولیت کی رسیدیں ہر محفوظ کردہ معنوی تبدیلی کو قسم، شناخت اور معیاری SHA-256 کے ذریعے پابند کرتی ہیں: اشیاء، CEG ریکارڈز، فیصلوں کے لاگ ریکارڈز، جائزے کے متقاضی امور، طبعی رسیدیں اور تحقیقی فن پاروں کی رجسٹریشن۔ کیشے ری پلے ٹرانسپورٹ اسنیپ شاٹ ہیشز سے آزادانہ طور پر ان وعدوں کی جانچ کرتا ہے۔ خالی لاگز درست ہیں؛ ناکام ایٹمی بیچز کوئی ادھوری حالت پیچھے نہیں چھوڑتے۔
 
 شجرے کے مواد کا اختیار واضح اور آؤٹ آف بینڈ ہے۔ قابل اعتماد Python کالرز سیریلائزڈ رسیدوں یا اسنیپ شاٹس کو ری پلے کرتے وقت `LineageVerificationContext` پاس کرتے ہیں؛ MCP کالرز صرف محدود حجم کے مواد کے بائٹس فراہم کر سکتے ہیں، کبھی بھی ہوسٹ فائل سسٹم کا روٹ نہیں۔ مواد کا ڈیفالٹ بجٹ 10 MiB ہے؛ ایک قابل اعتماد ہوسٹ یکساں پیدا کنندہ اور تصدیق کنندہ پالیسی کے تحت بڑے فن پاروں کی واضح طور پر اجازت دے سکتا ہے۔ مواد کے اختیار کے بغیر، `fully_verified` دعوے کو آزادانہ طور پر دوبارہ پیدا نہیں کیا جا سکتا اور وہ ایک منظم غیر درست تصدیقی نتیجہ واپس کرتا ہے۔ غیر منظم نثر مبہم رہتی ہے، اختلافی رائے نمایاں رہتی ہے، اور محققین کمٹ کرنے، راستہ ترک کرنے، دوبارہ کھولنے، روٹنگ اور سچائی کے فیصلوں پر مکمل اختیار برقرار رکھتے ہیں۔
 
@@ -214,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. مقامی توثیق، ڈسٹری بیوشن کی تصدیق (2.3.1) اور لائسنس
+## 6. مقامی توثیق، ڈسٹری بیوشن کی تصدیق (2.4.0) اور لائسنس
 
 ### توثیق اور جانچ (Validation)
 

@@ -6,7 +6,7 @@
 
 平時用大型語言模型讀論文或寫論文，最容易撞上兩類硬傷。讀別人的論文時，模型按機率續寫文字，經常順著作者的敘述把算錯的統計量與湊出來的消融表格，或者已經撤稿的文獻與空殼程式碼倉庫當成事實複述出來。寫自己的論文時，單靠提示詞叮囑模型檢查格式，很難攔住雙盲匿名殘留與手抄表格塗改，也難以自動發現圖表懸空引用或漏掉目標會議的必寫章節。
 
-本倉庫從第一性原理出發，把這兩件事拆開處理：讓大型語言模型專心負責自然語言閱讀與語義提煉，把所有能用數學公式與公開資料庫介面，以及語法解析樹和雜湊校驗定死的環節，全部交給確定性程式碼執行。全倉將 14 項科研工作流與 12 個標準 MCP 服務工具，以及 13 組命令列子命令收攏在同一套狀態核心之上，原生支援 Claude Code 與 Cursor，也直接相容 Codex、Gemini CLI 與 Hermes Agent。詳細的驗證範圍與外部介面範圍見[審計文件](docs/kernel-architecture.md)。
+本倉庫從第一性原理出發，把這兩件事拆開處理：讓大型語言模型專心負責自然語言閱讀與語義提煉，把所有能用數學公式與公開資料庫介面，以及語法解析樹和雜湊校驗定死的環節，全部交給確定性程式碼執行。全倉將 14 項科研工作流與 18 個標準 MCP 服務工具，以及 16 組命令列子命令收攏在同一套狀態核心之上，原生支援 Claude Code 與 Cursor，也直接相容 Codex、Gemini CLI 與 Hermes Agent。詳細的驗證範圍與外部介面範圍見[審計文件](docs/kernel-architecture.md)。
 
 作者為 Junfu Shi，筆名 SJF，GitHub 帳號 xngg1021。當前授權範圍適用 [Source Lineage License 1.0](LICENSE)。
 
@@ -14,15 +14,15 @@
 
 ## 一、兩分鐘快速上手
 
-先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任選一條命令安裝 `2.3.1` 版本：
+先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任選一條命令安裝 `2.4.0` 版本：
 
 ```bash
 # 方式一：安裝帶 PDF 解析支援的完整命令列工具，並匯出論文精讀技能給本機智慧體
-uv tool install "academic-research-kernel[research]==2.3.1"
+uv tool install "academic-research-kernel[research]==2.4.0"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作為標準 stdio MCP 服務啟動，供 Claude Code / Cursor / Codex 等用戶端呼叫
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
 安裝完成後，可以先跑一次離線環境自檢，並直接試試文獻查核與會刊規則查詢：
@@ -33,7 +33,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-`doctor` 命令預設離線執行，負責檢查執行環境依賴、26 套 JSON 資料格式與全部 12 個 MCP 工具介面；即使沒有設定可選的外部資料庫金鑰，自檢也不會報錯。直接在終端機執行 `mcp` 子命令會讓程式進入標準輸入輸出監聽狀態，等待 MCP 用戶端發來請求。[2.3.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) 頁面記錄了建置產物的 SHA-256 雜湊值。本工具支援 Python 3.10 至 3.14，基礎安裝套件已內建全部工具，科學計算套件只在呼叫分佈檢定或檢定力重算時按需載入。
+`doctor` 命令預設離線執行，負責檢查執行環境依賴、26 套 JSON 資料格式與全部 18 個 MCP 工具介面；即使沒有設定可選的外部資料庫金鑰，自檢也不會報錯。直接在終端機執行 `mcp` 子命令會讓程式進入標準輸入輸出監聽狀態，等待 MCP 用戶端發來請求。[2.4.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) 頁面記錄了建置產物的 SHA-256 雜湊值。本工具支援 Python 3.10 至 3.14，基礎安裝套件已內建全部工具，科學計算套件只在呼叫分佈檢定或檢定力重算時按需載入。
 
 ---
 
@@ -159,9 +159,9 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 1. **Python 軟體套件與可選依賴安裝**
    ```bash
-   uv tool install academic-research-kernel==2.3.1
+   uv tool install academic-research-kernel==2.4.0
    ```
-   您也可以使用 `pipx install academic-research-kernel==2.3.1` 或在虛擬環境內執行 `python -m pip install academic-research-kernel==2.3.1`。加上 `[research]` 會固定安裝 `pypdf==7.0.0` 與 `fonttools==4.65.0`，保證不同機器解析數位 PDF 字型時結果一致；加上 `[full]` 會一併安裝擴展科學計算範例所需的函式庫；加上 `[qa]` 會安裝倉庫自檢與測試所需的解析依賴。
+   您也可以使用 `pipx install academic-research-kernel==2.4.0` 或在虛擬環境內執行 `python -m pip install academic-research-kernel==2.4.0`。加上 `[research]` 會固定安裝 `pypdf==7.0.0` 與 `fonttools==4.65.0`，保證不同機器解析數位 PDF 字型時結果一致；加上 `[full]` 會一併安裝擴展科學計算範例所需的函式庫；加上 `[qa]` 會安裝倉庫自檢與測試所需的解析依賴。
 
 2. **通用 Agent Plugins v1 與 MCP 用戶端掛載**
    本倉庫遵循 **Agent Plugins v1** 規範並提供 `plugin.json`，透過標準輸入輸出協定執行 `mcp.json` 與 `scripts/mcp_server.py` 定義的 **MCP 伺服器**。雖然倉庫名為 `academic-research-kernel`，但外掛名稱 `name: "academic-skills"` 與原有的 MCP 設定別名保持不變，舊設定無需修改即可繼續使用。
@@ -196,7 +196,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 ### 1. 研究紀錄保存與位元組級複核規則
 
-系統的資料接入層採用 `ResearchArtifactEnvelope v1` 與 `ArtifactIngestionReceipt v1` 格式，內建 15 個解析器，涵蓋全部 14 項學術技能外加 1 個普通文本兜底解析器，對外提供 12 個無狀態的 stdio MCP 工具。每當系統保存研究對象與學術論斷關聯，或者寫入研究決策紀錄與待核實事項及證據檔案時，核驗紀錄都會記下對應的類型、唯一編號與 SHA-256 雜湊值。離線重放時會直接根據保存下來的原始材料與雜湊紀錄重新核對完整性；一旦某次批次寫入中途出錯，系統會自動原子回滾，不會留下半截損壞的資料。
+系統的資料接入層採用 `ResearchArtifactEnvelope v1` 與 `ArtifactIngestionReceipt v1` 格式，內建 15 個解析器，涵蓋全部 14 項學術技能外加 1 個普通文本兜底解析器，對外提供 18 個無狀態的 stdio MCP 工具。每當系統保存研究對象與學術論斷關聯，或者寫入研究決策紀錄與待核實事項及證據檔案時，核驗紀錄都會記下對應的類型、唯一編號與 SHA-256 雜湊值。離線重放時會直接根據保存下來的原始材料與雜湊紀錄重新核對完整性；一旦某次批次寫入中途出錯，系統會自動原子回滾，不會留下半截損壞的資料。
 
 如果某條核驗紀錄要標記為 `fully_verified` 已完全核實，呼叫方必須提供對應的原始檔案內容，以便系統獨立複核。Python 本機呼叫可透過 `LineageVerificationContext` 傳入原文，MCP 協定呼叫則只允許直接傳入檔案內容位元組流，不允許讀取主機任意檔案路徑，單次讀取的檔案大小預設上限為 10 MiB。如果沒有提供原文內容，系統不會把結果標為已完全核實。未經提取的自由文本保持原樣儲存，不同審稿模型的分歧意見全部公開保留；何時保存紀錄、放棄哪條路線以及最終採納哪條學術結論，始終由研究者自己決定。
 
@@ -242,7 +242,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1340 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.3.1 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
+GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1340 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.4.0 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
 
 ### 2. 授權條款
 

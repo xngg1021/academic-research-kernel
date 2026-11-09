@@ -12,7 +12,16 @@ import sys
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+try:
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
+except ImportError:
+    from pathlib import Path as _Path
+    _src_dir = _Path(__file__).resolve().parents[3] / "src"
+    if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+        sys.path.insert(0, str(_src_dir))
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
 
 import sys as _sys
 if _sys.platform == "win32":
@@ -62,10 +71,16 @@ def bibtex_name(author: dict) -> str:
 
 
 def protect_acronyms(title) -> str:
-    """全大写缩写词（≥2 字符）加花括号，防止 LaTeX 转小写。"""
+    """全大写缩写词（≥2 字符）加花括号，防止 LaTeX 转小写（幂等：已加花括号的词不重复包裹）。"""
     protected = []
     for token in str(title or '').split(' '):
+        if (token.startswith('{') and token.endswith('}')) or (token.startswith(r'\{') and token.endswith(r'\}')):
+            protected.append(token)
+            continue
         core = token.strip('.,:;()[]')
+        if (core.startswith('{') and core.endswith('}')) or (core.startswith(r'\{') and core.endswith(r'\}')):
+            protected.append(token)
+            continue
         if len(core) >= 2 and core.isupper() and any(c.isalpha() for c in core):
             protected.append('{' + token + '}')
         else:
@@ -250,7 +265,8 @@ def live_crossref(doi: str) -> dict:
 
 
 def _load_works(path: str, source: str) -> list:
-    with open(path, encoding='utf-8') as handle:
+    p = reject_link_or_reparse(path)
+    with p.open(encoding='utf-8') as handle:
         data = json.load(handle)
     if isinstance(data, list):
         return data

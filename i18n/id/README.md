@@ -15,19 +15,19 @@ Penulis: Junfu Shi (SJF, xngg1021). Penawaran lisensi saat ini: [Source Lineage 
 
 ### Mulai cepat
 
-Jalankan versi 2.3.1 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Jalankan versi 2.4.0 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-Catatan [rilis 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 12 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
+Catatan [rilis 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 18 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
 
 ### Verifikasi instalasi
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-12 alat. L
 
 ### Meneliti makalah dengan Agen lokal
 
-Instal `academic-research-kernel[research]==2.3.1` dan ekspor alur kerja terpaket:
+Instal `academic-research-kernel[research]==2.4.0` dan ekspor alur kerja terpaket:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ Terdapat 22 berkas referensi Markdown yang tersebar di keempat belas keahlian te
 ### Instalasi paket
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.3.1` atau `python -m pip install academic-research-kernel==2.3.1` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==7.0.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
+Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.4.0` atau `python -m pip install academic-research-kernel==2.4.0` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==7.0.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
 
 ### Integrasi dan Penggunaan Portabel
 
@@ -214,7 +214,7 @@ Lihat panduan [autentikasi OpenAlex](https://help.openalex.org/api/authenticatio
 
 ---
 
-## 6. Validasi lokal, verifikasi distribusi (2.3.1), dan lisensi
+## 6. Validasi lokal, verifikasi distribusi (2.4.0), dan lisensi
 
 ### Validasi
 

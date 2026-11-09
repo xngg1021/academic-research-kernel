@@ -4,6 +4,25 @@
 
 ---
 
+## 2.4.0 — 2026-11-09 end-to-end pipeline bridges, 18-tool MCP surface & academic style advisory linter
+
+- **Unified controlled I/O extraction & idempotent BibTeX acronym protection (`src/academic_research_kernel/research/sources.py`, `skills/academic-source-verification/scripts/*`, `skills/literature-analysis/scripts/*`, `skills/literature-watch/scripts/watch.py`, `skills/retraction-watch/scripts/watch.py`, `skills/research-reproducibility/scripts/repro_checklist.py`)**:
+  - Extracted public `reject_link_or_reparse()`, `controlled_read_pdf_pages()` (isolated `python -I -c` worker subprocess with concurrent `stdout`/`stderr` bounded drain threads, wall-clock timeout, 50 MByte file cap, and `%PDF-` signature check), and `controlled_urlopen()` (DNS-pinned, proxy-disabled, redirect-revalidated, byte-bounded HTTP(S) context manager) in `sources.py`, migrating all 11 verification/literature scripts and both watch scripts onto the unified controlled I/O layer.
+  - Made `export_bibtex.py:protect_acronyms()` idempotent across balanced `{...}` spans so already-braced tokens such as `{LLM}` or `{\LaTeX}` are never double-wrapped into `{{LLM}}`.
+- **Research-to-LaTeX table bridge & CEG anchor readiness export (`skills/academic-writing/scripts/receipt_to_latex_table.py`, `skills/academic-writing/scripts/venue_template_manager.py`)**:
+  - Added `--from-research {extraction,results,comparison}` (plus optional `--left-extraction` and `--right-extraction`) and `convert_research_artifact_to_spec()` to `receipt_to_latex_table.py`, recursively rejecting non-finite `NaN`/`Inf` values, preserving source literals/units/locators/recompute status, and rendering `not_comparable` comparison rows without bolding winners.
+  - Added `--action export-ceg-anchors --ceg <path>` and `export_ceg_anchors()` to `venue_template_manager.py`, supporting both `evidence_anchors` and `evidence` graph payloads, rejecting CR/LF or whitespace-colliding `claim_id` keys, classifying `unverifiable`/`out_of_scope` or dangling-evidence edges as `unsupported`, and removing the ungrounded default `% ark:claim=C1` comment from `scaffold_manuscript`.
+- **Bundled wheel completeness & CLI subcommand wiring (`pyproject.toml`, `src/academic_research_kernel/cli.py`, `scripts/release_manifest.py`, `scripts/distribution_smoke.py`)**:
+  - Packaged 10 additional scholarly utility modules into the `>= 2.4.0` wheel under `force-include` (`compute_receipt.py`, `verify_pdf_identity.py`, `check_updates.py`, `export_bibtex.py`, `deduplicate_works.py`, `build_citation_graph.py`, `build_review_matrix.py`, `repro_checklist.py`, and uniquely named `literature_watch.py` / `retraction_watch.py`), while keeping `>= 2.2.0` / `2.3.x` historical wheel inspection rules intact.
+  - Extended `verify-source` (`--verify-pdf`, `--check-updates` with offline record validation), `bibliography` (`--action {validate,export-bibtex,deduplicate,citation-graph,review-matrix}`), `receipt-to-latex`, `venue-template`, and `pre-submission-lint`, and added top-level `repro-checklist`, `literature-watch`, and `retraction-watch` CLI subcommands.
+- **Pre-submission academic prose & claim-boundary advisory linter (`skills/academic-writing/scripts/pre_submission_linter.py`)**:
+  - Added opt-in `--check-academic-style` to emit non-blocking `advisory` hits (`ACADEMIC_AI_CLICHE_CANDIDATE`, `VAGUE_METHOD_DESCRIPTION_CANDIDATE`, `UNANCHORED_STRONG_CLAIM_CANDIDATE`) on line-preserving prose views with math, verbatim, quote, bibliography, and custom macro definitions masked, checking clause-local negation windows, defined theorem-environment `\label` targets, and normalized CEG claim text matches.
+- **18-tool MCP server parity & double-blind redaction (`scripts/mcp_server.py`)**:
+  - Exposed 6 additional named MCP tools (`academic_pre_submission_lint`, `academic_double_blind_sanitize`, `academic_table_forensics`, `academic_meta_analyze`, `academic_verify_source`, `academic_openreview_audit`), expanding the public stdio MCP surface from 12 to 18 tools.
+  - Hardened `_load_lazy_helper()` to dispatch directly to packaged wheel modules when installed, and enforced a strict output allowlist on `academic_double_blind_sanitize` (`matched="[REDACTED]"`, line number, and leak kind only, with file paths and raw author strings stripped).
+
+---
+
 ## 2.3.1 — 2026-11-09 deterministic verification contract, pre-submission gate, security & multi-agent MCP hardening
 
 - **Scientific correctness & statistical recomputation hardening (`COR-01`..`COR-07`, `scripts/shared_contracts/evidence.py`, `src/academic_research_kernel/research/analysis.py`, `skills/quantitative-paper-audit/scripts/recompute.py`, `skills/systematic-review-meta-analysis/scripts/meta_core.py`, `scripts/mcp_server.py`)**:
