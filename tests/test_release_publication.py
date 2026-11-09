@@ -58,6 +58,12 @@ def packages(directory, internal_version=VERSION, runtime_version=None, version=
                          'receipt_to_latex_table.py', 'double_blind_sanitizer.py',
                          'pre_submission_linter.py', 'venue_template_manager.py', 'venue-specs.json'):
                 archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
+        if tuple(map(int, version.split('.'))) >= (2, 4, 0):
+            for name in ('compute_receipt.py', 'verify_pdf_identity.py', 'check_updates.py',
+                         'export_bibtex.py', 'deduplicate_works.py', 'build_citation_graph.py',
+                         'build_review_matrix.py', 'repro_checklist.py',
+                         'literature_watch.py', 'retraction_watch.py'):
+                archive.writestr('academic_research_kernel/' + name, '# source fixture\n')
     sdist = directory / f'academic_research_kernel-{version}.tar.gz'
     with tarfile.open(sdist, 'w:gz') as archive:
         members = {'PKG-INFO': metadata(internal_version),
@@ -410,3 +416,12 @@ def test_package_acceptance_rejects_empty_or_extra_dist_under_python_optimize(tm
                           text=True, capture_output=True, timeout=30)
     assert proc.returncode != 0 and 'expected exactly 1 wheel and 1 sdist' in proc.stderr
     assert 'PASS fresh wheel + sdist' not in proc.stdout
+
+
+def test_historical_231_wheel_compatibility(tmp_path):
+    dist = tmp_path / 'dist231'
+    wheel, sdist = packages(dist, internal_version='2.3.1', version='2.3.1')
+    w_info = manifests.inspect_artifact(wheel, '2.3.1')
+    s_info = manifests.inspect_artifact(sdist, '2.3.1')
+    assert w_info['filename'].endswith('.whl') and w_info['file_count'] > 0
+    assert s_info['filename'].endswith('.tar.gz') and s_info['file_count'] > 0

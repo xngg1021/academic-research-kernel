@@ -15,19 +15,19 @@ Mwandishi: Junfu Shi (SJF, xngg1021). Ofa ya leseni ya sasa: [Source Lineage Lic
 
 ### Kuanza haraka
 
-Endesha toleo la 2.3.1 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Endesha toleo la 2.4.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[Toleo la 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 12 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
+[Toleo la 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10–3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 18 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
 
 ### Thibitisha usakinishaji
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data 
 
 ### Fanya utafiti wa makala ukitumia Agent wa ndani
 
-Sakinisha `academic-research-kernel[research]==2.3.1` na uhamishe mtiririko wa kazi uliofungashwa:
+Sakinisha `academic-research-kernel[research]==2.4.0` na uhamishe mtiririko wa kazi uliofungashwa:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ Kuna faili 22 za marejeleo ya Markdown katika stadi kumi na nne. Marejeleo hupak
 ### Usakinishaji wa kifurushi
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.3.1` au `python -m pip install academic-research-kernel==2.3.1` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==7.0.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
+Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.4.0` au `python -m pip install academic-research-kernel==2.4.0` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==7.0.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
 
 ### Muunganisho na matumizi yanayohamishika
 
@@ -190,7 +190,7 @@ Angalia [usambazaji na utoaji](../../docs/distribution-release.md) kwa uainishaj
 
 ### Upokeaji thabiti na kiini cha umma
 
-Safu ya upokeaji wa mabaki ya utafiti hutoa `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, viunganishi (adapters) 15 (stadi 14 pamoja na hifadhi rudufu ya maandishi ghafi opaque fallback), na zana 12 za stdio MCP zisizohifadhi hali. Stakabadhi za upokeaji zinazokubaliwa hufunga kila mabadiliko ya kisemantiki yanayohifadhiwa kwa aina, utambulisho na SHA-256 sanifu: vitu vya utafiti, rekodi za CEG, rekodi za maamuzi, vipengele vinavyohitaji ukaguzi, stakabadhi halisi na usajili wa mabaki ya utafiti. Marudio ya hifadhi ya muda (cache replay) hukagua ahadi hizo bila kutegemea alama zaรหัส za picha ya usafirishaji. Kumbukumbu tupu ni halali; makundi ya miamala yanayoshindwa hayaachi hali nusu.
+Safu ya upokeaji wa mabaki ya utafiti hutoa `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, viunganishi (adapters) 15 (stadi 14 pamoja na hifadhi rudufu ya maandishi ghafi opaque fallback), na zana 18 za stdio MCP zisizohifadhi hali. Stakabadhi za upokeaji zinazokubaliwa hufunga kila mabadiliko ya kisemantiki yanayohifadhiwa kwa aina, utambulisho na SHA-256 sanifu: vitu vya utafiti, rekodi za CEG, rekodi za maamuzi, vipengele vinavyohitaji ukaguzi, stakabadhi halisi na usajili wa mabaki ya utafiti. Marudio ya hifadhi ya muda (cache replay) hukagua ahadi hizo bila kutegemea alama zaรหัส za picha ya usafirishaji. Kumbukumbu tupu ni halali; makundi ya miamala yanayoshindwa hayaachi hali nusu.
 
 Mamlaka ya maudhui ya ufuatiliaji wa asili yanawekwa wazi nje ya mfumo mkuu. Wapigaji wa Python wanaoaminika hupitisha `LineageVerificationContext` wanaporudia stakabadhi au picha zilizohifadhiwa; wapigaji wa MCP wanaweza kutoa baiti za maudhui zenye ukomo pekee, na kamwe si mzizi wa mfumo wa faili wa kompyuta mwenyeji. Bajeti chaguo-msingi ya maudhui ni 10 MiB; mwenyeji anayeaminika anaweza kuruhusu waziwazi mabaki makubwa zaidi chini ya sera sawa ya mzalishaji na mthibitishaji. Bila mamlaka ya maudhui, dai lililowekwa `fully_verified` haliwezi kurudiwa kwa uhuru na hurudisha matokeo batili ya uthibitishaji yenye muundo maalum. Maandishi yasiyo na muundo yanabaki kama yalivyo, hoja kinzani zinabaki kuonekana wazi, na watafiti wanabaki na udhibiti wa kuhifadhi, kusitisha mwelekeo, kufungua upya, kuelekeza na kutoa maamuzi ya ukweli.
 
@@ -214,7 +214,7 @@ Angalia [uthibitishaji wa OpenAlex](https://help.openalex.org/api/authentication
 
 ---
 
-## 6. Uthibitishaji wa ndani, ukaguzi wa usambazaji (2.3.1) na leseni
+## 6. Uthibitishaji wa ndani, ukaguzi wa usambazaji (2.4.0) na leseni
 
 ### Uthibitishaji
 

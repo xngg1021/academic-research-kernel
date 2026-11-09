@@ -27,9 +27,25 @@ import uuid
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
+import importlib
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+
+def _load_controlled_io():
+    try:
+        mod = importlib.import_module("academic_research_kernel.research.sources")
+        return mod.controlled_urlopen, mod.reject_link_or_reparse
+    except ImportError:
+        _src_dir = Path(__file__).resolve().parents[3] / "src"
+        if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+            sys.path.insert(0, str(_src_dir))
+        mod = importlib.import_module("academic_research_kernel.research.sources")
+        return mod.controlled_urlopen, mod.reject_link_or_reparse
+
+
+urlopen, reject_link_or_reparse = _load_controlled_io()
 
 import sys as _sys
 if _sys.platform == "win32":
@@ -48,7 +64,8 @@ def normalize_doi(value) -> str:
 
 
 def load_watchlist(path) -> list:
-    data = json.loads(Path(path).expanduser().read_text(encoding='utf-8'))
+    p = reject_link_or_reparse(Path(path).expanduser())
+    data = json.loads(p.read_text(encoding='utf-8'))
     dois = data.get('dois') if isinstance(data, dict) else None
     if not isinstance(dois, list):
         raise ValueError('watchlist 必须是含 dois 数组的 JSON 对象')

@@ -1,2 +1,2 @@
 """Canonical product release version (independent of skill/schema versions)."""
-__version__ = "2.3.1"
+__version__ = "2.4.0"

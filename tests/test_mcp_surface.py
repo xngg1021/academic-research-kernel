@@ -56,7 +56,7 @@ def test_mcp_tools_list():
     resp = mcp_server.process_message(req)
     tools = resp["result"]["tools"]
     tool_names = [t["name"] for t in tools]
-    assert len(tools) == 12
+    assert len(tools) == 18
     assert "research_artifact_validate" in tool_names
     assert "research_artifact_ingest" in tool_names
     assert "research_receipt_verify" in tool_names
@@ -276,7 +276,7 @@ def test_mcp_server_discover_and_meta_protocol_version():
     assert res["ttlMs"] == 3600000
     assert res["cacheScope"] == "public"
     assert res["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "academic-research-kernel"
-    assert len(res["tools"]) == 12
+    assert len(res["tools"]) == 18
 
     bad_cap_meta = mcp_server.process_message({
         "jsonrpc": "2.0",
@@ -307,7 +307,7 @@ def test_mcp_server_discover_and_meta_protocol_version():
     assert ok_official_meta["result"]["resultType"] == "complete"
     assert ok_official_meta["result"]["ttlMs"] == 3600000
     assert ok_official_meta["result"]["cacheScope"] == "public"
-    assert len(ok_official_meta["result"]["tools"]) == 12
+    assert len(ok_official_meta["result"]["tools"]) == 18
 
     call_resp = mcp_server.process_message({
         "jsonrpc": "2.0",

@@ -12,7 +12,10 @@ import os
 import platform
 from datetime import datetime, timezone
 
-import hardware_probe as hp
+try:
+    from . import hardware_probe as hp
+except ImportError:
+    import hardware_probe as hp
 
 PROTOCOL = "compute-receipt-1.0"
 

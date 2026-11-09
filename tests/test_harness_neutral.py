@@ -278,7 +278,7 @@ def test_mcp_multi_agent_protocol_versions_and_resource_prompt_probes():
             "params": {"_meta": {"io.modelcontextprotocol/protocolVersion": proto}},
         })
         assert "result" in list_resp
-        assert len(list_resp["result"]["tools"]) == 12
+        assert len(list_resp["result"]["tools"]) == 18
 
     for method, key in (
         ("resources/list", "resources"),

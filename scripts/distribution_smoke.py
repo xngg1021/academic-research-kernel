@@ -11,12 +11,17 @@ import subprocess
 import sys
 import tempfile
 
-EXPECTED_TOOLS = {
+BASE_EXPECTED_TOOLS = {
     'research_artifact_validate', 'research_artifact_ingest', 'research_receipt_verify',
     'research_object_resolve', 'research_lineage_trace', 'claim_evidence_validate',
     'claim_evidence_trace', 'decision_ledger_validate', 'decision_trace',
     'academic_recompute_statistics', 'academic_check_percentage', 'academic_scfabric_hardware_probe',
 }
+EXTENDED_TOOLS_240 = {
+    'academic_pre_submission_lint', 'academic_double_blind_sanitize', 'academic_table_forensics',
+    'academic_meta_analyze', 'academic_verify_source', 'academic_openreview_audit',
+}
+EXPECTED_TOOLS = BASE_EXPECTED_TOOLS | EXTENDED_TOOLS_240
 
 
 def _make_minimal_pdf(text_line: str) -> bytes:
@@ -41,7 +46,7 @@ def _make_minimal_pdf(text_line: str) -> bytes:
     return bytes(out)
 
 
-def research_smoke(execute, directory, pdf_ready=False, expected_version='2.3.1'):
+def research_smoke(execute, directory, pdf_ready=False, expected_version='2.4.0'):
     """Exercise installed workflow on explicitly synthetic raw source material."""
     from importlib.resources import files
     root = Path(directory)
@@ -163,6 +168,29 @@ def research_smoke(execute, directory, pdf_ready=False, expected_version='2.3.1'
         or_out = json.loads(execute(['openreview-audit', '--venue-stats', str(or_mirror), '--topic-regex', 'memory|agent']))
         require(or_out.get('mode') == 'venue-stats' and or_out.get('total_submissions') == 2, 'installed openreview-audit venue-stats CLI failed')
         require('locate-oa' in execute(['locate-oa', '--help']), 'installed locate-oa CLI help failed')
+    if tuple(map(int, expected_version.split('.'))) >= (2, 4, 0):
+        # Verify newly wired 2.4.0+ CLI subcommands and bridges inside isolated installed environment
+        ext_r2l = json.loads(execute(['receipt-to-latex', '--input', str(receipt['extraction']), '--from-research', 'extraction']))
+        require('\\toprule' in ext_r2l.get('latex', '') and 'Field ID' in ext_r2l.get('latex', ''), 'installed receipt-to-latex --from-research extraction failed')
+        res_r2l = json.loads(execute(['receipt-to-latex', '--input', str(receipt['results']), '--from-research', 'results']))
+        require('\\toprule' in res_r2l.get('latex', '') and 'Check ID' in res_r2l.get('latex', ''), 'installed receipt-to-latex --from-research results failed')
+        ks_path = Path(receipt['run_directory']) / 'kernel-state.json'
+        ceg_anc = json.loads(execute(['venue-template', '--action', 'export-ceg-anchors', '--ceg', str(ks_path)]))
+        require(ceg_anc.get('total_claims', 0) >= 1 and 'ceg_sha256' in ceg_anc, 'installed venue-template export-ceg-anchors failed')
+        psl_style = json.loads(execute(['pre-submission-lint', '--tex', str(tex_file), '--venue', 'iclr', '--contribution-type', 'systems_architecture', '--check-academic-style']))
+        require(psl_style.get('passed') is True and psl_style.get('style_check', {}).get('enabled') is True, 'installed pre-submission-lint --check-academic-style failed')
+        lw_self = execute(['literature-watch', '--self-test'])
+        require('self-test PASS' in lw_self, 'installed literature-watch --self-test failed')
+        rw_self = execute(['retraction-watch', '--self-test'])
+        require('self-test PASS' in rw_self, 'installed retraction-watch --self-test failed')
+        rc_in = root / 'repro-checklist.json'
+        rc_in.write_text(json.dumps({'paper': {'title': 'Synth Paper', 'doi': '10.1000/synth'}, 'stages': [{'id': 'identity', 'status': 'pass'}]}), encoding='utf-8')
+        rc_out = json.loads(execute(['repro-checklist', str(rc_in)]))
+        require(rc_out.get('kind') == 'ReproductionReceipt' and rc_out.get('status') == 'blocked', 'installed repro-checklist CLI failed')
+        dd_in = root / 'dedup-works.json'
+        dd_in.write_text(json.dumps([{'title': 'Work 1', 'doi': '10.1000/w1'}, {'title': 'Work 1 dup', 'doi': 'https://doi.org/10.1000/W1'}]), encoding='utf-8')
+        dd_out = json.loads(execute(['bibliography', '--action', 'deduplicate', '--input', str(dd_in)]))
+        require(dd_out.get('summary', {}).get('kept') == 1 and dd_out.get('summary', {}).get('removed') == 1, 'installed bibliography --action deduplicate failed')
     pdf_smoke = 'skipped_no_extra'
     if pdf_ready:
         pdf_file = root / 'synthetic-fixture.pdf'
@@ -205,11 +233,14 @@ def run(command=None, expected_version=None, require_pdf=False):
             require(result.returncode == 0, result.stderr)
             require('test-doctor-private-value' not in result.stdout + result.stderr, 'doctor exposed a configured credential')
             return result.stdout
+        ver_tuple = tuple(map(int, expected_version.split('.')))
+        expected_tools = BASE_EXPECTED_TOOLS | (EXTENDED_TOOLS_240 if ver_tuple >= (2, 4, 0) else set())
+        expected_tool_count = len(expected_tools)
         require(execute(['--version']).strip() == expected_version, 'command version mismatch')
         doctor = json.loads(execute(['doctor', '--json']))
         require(doctor['status'] == 'ok', doctor)
         require('site-packages' in Path(doctor['package_location']).parts, 'command must use an installed package')
-        require(doctor['mcp']['tool_count'] == 12, 'doctor tool inventory mismatch')
+        require(doctor['mcp']['tool_count'] == expected_tool_count, 'doctor tool inventory mismatch')
         require(doctor['external_services']['OPENALEX_API_KEY'] == 'configured', 'doctor configuration status mismatch')
         envelope = ArtifactEnvelope.create(payload={
             'schema_version': '1.0', 'query': 'distribution smoke', 'identifiers': {},
@@ -233,6 +264,13 @@ def run(command=None, expected_version=None, require_pdf=False):
                 'bandwidth_item_count': 10000, 'bandwidth_vector_dim': 128,
                 'bandwidth_reported_size_mb': 12.0, 'bandwidth_reported_latency_us': 500.0,
             }))
+        if tuple(map(int, expected_version.split('.'))) >= (2, 4, 0):
+            calls.extend([
+                ('academic_table_forensics', {'partition': {'total': 100, 'parts': [60, 40]}}),
+                ('academic_meta_analyze', {'studies': [{'yi': 0.4, 'vi': 0.04}, {'yi': 0.5, 'vi': 0.05}, {'yi': 0.3, 'vi': 0.03}]}),
+                ('academic_verify_source', {'identifier': 'https://doi.org/10.1038/nature14539', 'normalize_only': True}),
+                ('academic_openreview_audit', {'venue_records': [{'forum_id': 'F1', 'title': 'Agent Study', 'decision': 'Accept (Poster)', 'ratings': [8, 6]}]}),
+            ])
         messages = [{'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2024-11-05'}},
                     {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
                     {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'}]
@@ -247,7 +285,7 @@ def run(command=None, expected_version=None, require_pdf=False):
         require(len(replies) == len(messages) - 2, 'missing replies or non-silent notifications')
         require(replies[0]['result']['serverInfo'] == {'name': 'academic-research-kernel', 'version': expected_version}, 'MCP server version mismatch')
         require(replies[0]['result']['protocolVersion'] == '2024-11-05', 'MCP protocol mismatch')
-        require({t['name'] for t in replies[1]['result']['tools']} == EXPECTED_TOOLS, 'MCP tool inventory mismatch')
+        require({t['name'] for t in replies[1]['result']['tools']} == expected_tools, 'MCP tool inventory mismatch')
         data = {}
         successful_replies = replies[2:2 + len(calls)]
         for response, (name, _) in zip(successful_replies, calls):
@@ -282,7 +320,7 @@ def run(command=None, expected_version=None, require_pdf=False):
             research = research_smoke(execute, directory, pdf_ready=pdf_ready, expected_version=expected_version)
             if require_pdf:
                 require(research.get('pdf_smoke') == 'passed', 'require-pdf set but pdf_smoke did not pass')
-    print(json.dumps({'installed_e2e': 'PASS', 'version': __version__, 'tools': 12,
+    print(json.dumps({'installed_e2e': 'PASS', 'version': __version__, 'tools': expected_tool_count,
                       'calls': [name for name, _ in calls], 'clean_shutdown': True,
                       'arbitrary_cwd': True, 'source_independent': True, 'import_path': str(package_file),
                       'command_package_location': doctor['package_location'],

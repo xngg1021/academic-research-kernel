@@ -6,7 +6,7 @@
 
 平时用大语言模型读论文或写论文，最容易撞上两类硬伤。读别人的论文时，模型按概率续写文字，经常顺着作者的叙述把算错的统计量与凑出来的消融表格，或者已经撤稿的文献与空壳代码仓库当成事实复述出来。写自己的论文时，单靠提示词叮嘱模型检查格式，很难拦住双盲匿名残留与手抄表格涂改，也难以自动发现图表悬空引用或漏掉目标会议的必写章节。
 
-本仓库从第一性原理出发，把这两件事拆开处理：让大语言模型专心负责自然语言阅读与语义提炼，把所有能用数学公式与公开数据库接口，以及语法解析树和哈希校验定死的环节，全部交给确定性代码执行。全仓将 14 项科研工作流与 12 个标准 MCP 服务工具，以及 13 组命令行子命令收拢在同一套状态内核之上，原生支持 Claude Code 与 Cursor，也直接兼容 Codex、Gemini CLI 与 Hermes Agent。详细的验证范围与外部接口范围见[审计文档](docs/kernel-architecture.md)。
+本仓库从第一性原理出发，把这两件事拆开处理：让大语言模型专心负责自然语言阅读与语义提炼，把所有能用数学公式与公开数据库接口，以及语法解析树和哈希校验定死的环节，全部交给确定性代码执行。全仓将 14 项科研工作流与 18 个标准 MCP 服务工具，以及 16 组命令行子命令收拢在同一套状态内核之上，原生支持 Claude Code 与 Cursor，也直接兼容 Codex、Gemini CLI 与 Hermes Agent。详细的验证范围与外部接口范围见[审计文档](docs/kernel-architecture.md)。
 
 作者为 Junfu Shi，笔名 SJF，GitHub 账号 xngg1021。当前授权范围适用 [Source Lineage License 1.0](LICENSE)。
 
@@ -14,11 +14,11 @@
 
 ## 一、两分钟快速上手
 
-先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任选一条命令安装 `2.3.1` 版本：
+先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任选一条命令安装 `2.4.0` 版本：
 
 ```bash
 # 方式一：安装带 PDF 解析支持的完整命令行工具，并导出论文精读技能给本地智能体
-uv tool install "academic-research-kernel[research]==2.3.1"
+uv tool install "academic-research-kernel[research]==2.4.0"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作为标准 stdio MCP 服务启动，供 Claude Code / Cursor / Codex 等客户端调用
@@ -33,7 +33,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-`doctor` 命令默认离线运行，负责检查运行环境依赖、26 套 JSON 数据格式与全部 12 个 MCP 工具接口；即使没有配置可选的外部数据库密钥，自检也不会报错。直接在终端运行 `mcp` 子命令会让程序进入标准输入输出监听状态，等待 MCP 客户端发来请求。[2.3.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) 页面记录了构建产物的 SHA-256 哈希值。本工具支持 Python 3.10 至 3.14，基础安装包已内置全部工具，科学计算库只在调用分布检验或功效重算时按需加载。
+`doctor` 命令默认离线运行，负责检查运行环境依赖、26 套 JSON 数据格式与全部 18 个 MCP 工具接口；即使没有配置可选的外部数据库密钥，自检也不会报错。直接在终端运行 `mcp` 子命令会让程序进入标准输入输出监听状态，等待 MCP 客户端发来请求。[2.4.0 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) 页面记录了构建产物的 SHA-256 哈希值。本工具支持 Python 3.10 至 3.14，基础安装包已内置全部工具，科学计算库只在调用分布检验或功效重算时按需加载。
 
 ---
 
@@ -159,9 +159,9 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 1. **Python 软件包与可选依赖安装**
    ```bash
-   uv tool install academic-research-kernel==2.3.1
+   uv tool install academic-research-kernel==2.4.0
    ```
-   您也可以使用 `pipx install academic-research-kernel==2.3.1` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.3.1`。加上 `[research]` 会固定安装 `pypdf==7.0.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
+   您也可以使用 `pipx install academic-research-kernel==2.4.0` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.4.0`。加上 `[research]` 会固定安装 `pypdf==7.0.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
 
 2. **通用 Agent Plugins v1 与跨智能体 MCP 一键挂载**
    本仓库遵循 **Agent Plugins v1** 规范并提供 `plugin.json`，通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 定义的 **MCP 服务器**，支持 `2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25` 与 `2026-07-28` 协议版本协商及 `resources/list`、`prompts/list` 探测响应，可挂载至 Claude Code、OpenAI Codex、Cursor 与 Gemini CLI：
@@ -203,7 +203,7 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 
 ### 1. 研究记录保存与字节级复核规则
 
-系统的数据接入层采用 `ResearchArtifactEnvelope v1` 与 `ArtifactIngestionReceipt v1` 格式，内置 15 个解析器，涵盖全部 14 项学术技能外加 1 个普通文本兜底解析器，对外提供 12 个无状态的 stdio MCP 工具。每当系统保存研究对象与学术论断关联，或者写入研究决策记录与待核实事项及证据文件时，核验记录都会记下对应的类型、唯一编号与 SHA-256 哈希值。离线重放时会直接根据保存下来的原始材料与哈希记录重新核对完整性；一旦某次批量写入中途出错，系统会自动原子回滚，不会留下半截损坏的数据。
+系统的数据接入层采用 `ResearchArtifactEnvelope v1` 与 `ArtifactIngestionReceipt v1` 格式，内置 15 个解析器，涵盖全部 14 项学术技能外加 1 个普通文本兜底解析器，对外提供 18 个无状态的 stdio MCP 工具。每当系统保存研究对象与学术论断关联，或者写入研究决策记录与待核实事项及证据文件时，核验记录都会记下对应的类型、唯一编号与 SHA-256 哈希值。离线重放时会直接根据保存下来的原始材料与哈希记录重新核对完整性；一旦某次批量写入中途出错，系统会自动原子回滚，不会留下半截损坏的数据。
 
 如果某条核验记录要标记为 `fully_verified` 已完全核实，调用方必须提供对应的原始文件内容，以便系统独立复核。Python 本地调用可通过 `LineageVerificationContext` 传入原文，MCP 协议调用则只允许直接传入文件内容字节流，不允许读取宿主机任意文件路径，单次读取的文件大小默认上限为 10 MiB。如果没有提供原文内容，系统不会把结果标为已完全核实。未经提取的自由文本保持原样存储，不同审稿模型的分歧意见全部公开保留；何时保存记录、放弃哪条路线以及最终采纳哪条学术结论，始终由研究者自己决定。
 
@@ -249,7 +249,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1340 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.3.1 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
+GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1340 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.4.0 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
 
 ### 2. 许可证
 

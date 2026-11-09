@@ -5,6 +5,7 @@
 4. Author-side receipt-to-LaTeX booktabs generator & double-blind anonymity sanitizer
 """
 from __future__ import annotations
+from collections import Counter
 
 import importlib.util
 import io
@@ -1193,10 +1194,269 @@ def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Pa
     tf_checked = 0
     for rm in all_readmes:
         rm_txt = rm.read_text(encoding="utf-8")
-        assert "2.3.1" in rm_txt
+        assert "2.4.0" in rm_txt
         assert "iclr2026-openreview-incidence-receipt.json" in rm_txt
         tf_lines = [ln for ln in rm_txt.splitlines() if "table-forensics --input spec.json" in ln]
         if tf_lines:
             tf_checked += 1
-            assert all("2.3.0" in ln and "2.3.1" not in ln for ln in tf_lines)
+            assert all("2.3.0" in ln and "2.4.0" not in ln for ln in tf_lines)
     assert tf_checked == 5
+
+
+def test_stage1_and_stage2_controlled_io_and_pipeline_bridges(tmp_path):
+    """Verify Stage 1 controlled I/O, idempotent acronym protection, and Stage 2 research-to-writing bridges."""
+    from academic_research_kernel.research import sources
+    from academic_research_kernel import cli as ark_cli
+
+    # 1. controlled_urlopen rejects private/loopback URLs
+    for bad_url in ("http://127.0.0.1:8080/api", "http://localhost/test", "http://169.254.169.254/latest"):
+        with pytest.raises(ValueError, match="outside acquisition scope"):
+            with sources.controlled_urlopen(bad_url):
+                pass
+
+    # 2. controlled_read_pdf_pages rejects invalid max_pages and non-PDF files
+    bad_pdf = tmp_path / "fake.pdf"
+    bad_pdf.write_text("<html>not a pdf</html>", encoding="utf-8")
+    with pytest.raises(ValueError, match="PDF signature missing"):
+        sources.controlled_read_pdf_pages(bad_pdf)
+    with pytest.raises(ValueError, match="max_pages"):
+        sources.controlled_read_pdf_pages(bad_pdf, max_pages=0)
+    with pytest.raises(ValueError, match="max_pages"):
+        sources.controlled_read_pdf_pages(bad_pdf, max_pages=True)
+
+    # 3. export_bibtex protect_acronyms is strictly idempotent
+    eb_mod = _load_script("skills/literature-analysis/scripts/export_bibtex.py", "eb_stage1")
+    once = eb_mod.protect_acronyms("A Survey on {RAG} and LLM Systems")
+    twice = eb_mod.protect_acronyms(once)
+    assert once == "A Survey on {RAG} and {LLM} Systems"
+    assert twice == once
+
+    # 4. receipt_to_latex_table --from-research extraction / results / comparison
+    r2l_mod = _load_script("skills/academic-writing/scripts/receipt_to_latex_table.py", "r2l_stage2")
+    ext_data = {
+        "paper": {"title": r"Study \input{secret}", "identifier": "10.1000/test"},
+        "fields": [
+            {
+                "id": "f_zero",
+                "name": "Zero Loss_Metric",
+                "status": "extracted",
+                "literal": "0",
+                "value": 0,
+                "unit": "%",
+                "context": {"dataset": "EvalA"},
+                "sources": [{"document_id": "doc1", "locator": "pdf:page=1"}],
+            },
+            {
+                "id": "f_miss",
+                "name": "Unreported Metric",
+                "status": "not_reported",
+                "literal": None,
+                "value": None,
+                "unit": None,
+                "reason": "omitted by authors",
+                "context": {},
+                "sources": [],
+            },
+        ],
+    }
+    ext_spec = r2l_mod.convert_research_artifact_to_spec(ext_data, "extraction")
+    ext_tex = r2l_mod.render_booktabs_table(ext_spec)
+    assert r"\textbackslash{}input\{secret\}" in ext_tex
+    assert "0 & \\%" in ext_tex
+    assert "[not\\_reported] omitted by authors" in ext_tex
+
+    res_data = [
+        {"id": "chk1", "kind": "t_p", "reported": "0.042", "recomputed": 0.0418, "status": "computed", "consistent": True},
+        {"id": "chk2", "kind": "effect_size", "reported": None, "recomputed": {"cohens_d": 0.85, "hedges_g": 0.84}, "status": "computed", "consistent": None},
+    ]
+    res_spec = r2l_mod.convert_research_artifact_to_spec(res_data, "results")
+    res_tex = r2l_mod.render_booktabs_table(res_spec)
+    assert "0.042 & 0.0418 & computed & consistent" in res_tex
+    assert "unreported & cohens\\_d=0.85, hedges\\_g=0.84 & computed & uncompared" in res_tex
+
+    comp_data = {
+        "rows": [
+            {
+                "dimension": "Accuracy",
+                "left_field_ids": ["f_zero"],
+                "right_field_ids": ["f_miss"],
+                "assessment": "not_comparable",
+                "reason": "different split",
+            }
+        ]
+    }
+    comp_spec = r2l_mod.convert_research_artifact_to_spec(
+        comp_data, "comparison", left_extraction=ext_data, right_extraction=ext_data
+    )
+    comp_tex = r2l_mod.render_booktabs_table(comp_spec)
+    assert "not\\_comparable" in comp_tex and r"\textbf" not in comp_tex
+    with pytest.raises(ValueError, match="Non-finite"):
+        r2l_mod.convert_research_artifact_to_spec(
+            {"fields": [{"id": "f1", "name": "Bad", "status": "extracted", "value": float("nan")}]},
+            "extraction",
+        )
+
+    # 5. venue_template_manager --action export-ceg-anchors
+    vtm_mod = _load_script("skills/academic-writing/scripts/venue_template_manager.py", "vtm_stage2")
+    ceg_file = tmp_path / "ceg.json"
+    ceg_file.write_text(
+        json.dumps({
+            "claims": [
+                {"id": "C_OK", "text": "Our model reduces latency by 25%.", "status": "supported"},
+                {"id": "C_CONFLICT", "text": "Our model reduces latency by 90%.", "status": "supported"},
+                {"id": "C_UNSUP", "text": "Preliminary observation.", "status": "unverified"},
+                {"id": "C_UNVER", "text": "External claim.", "status": "supported"},
+                {"id": "C_NO_EVID", "text": "No evidence id edge.", "status": "supported"},
+            ],
+            "evidence_anchors": [{"id": "E1"}, {"id": "E2"}],
+            "support_edges": [
+                {"claim_id": "C_OK", "evidence_id": "E1", "status": "supported"},
+                {"claim_id": "C_CONFLICT", "evidence_id": "E1", "status": "supported"},
+                {"claim_id": "C_CONFLICT", "evidence_id": "E2", "status": "contradicted"},
+                {"claim_id": "C_GHOST", "evidence_id": "E1", "status": "supported"},
+                {"claim_id": "C_UNSUP", "evidence_id": "E_MISSING", "status": "supported"},
+                {"claim_id": "C_UNVER", "evidence_id": "E1", "status": "unverifiable"},
+                {"claim_id": "C_NO_EVID", "status": "supported"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    exported = vtm_mod.export_ceg_anchors(ceg_file)
+    assert exported["total_claims"] == 5
+    assert exported["eligible_count"] == 1
+    assert exported["conflicted_count"] == 1
+    assert exported["unsupported_count"] == 3
+    assert len(exported["dangling_edges"]) == 3
+    by_cid = {a["claim_id"]: a for a in exported["anchors"]}
+    assert by_cid["C_OK"]["anchor_status"] == "eligible"
+    assert by_cid["C_CONFLICT"]["anchor_status"] == "conflicted"
+    assert by_cid["C_UNSUP"]["anchor_status"] == "unsupported"
+    assert by_cid["C_UNVER"]["anchor_status"] == "unsupported" and by_cid["C_UNVER"]["unresolved_edge_count"] == 1
+    assert by_cid["C_NO_EVID"]["anchor_status"] == "unsupported" and by_cid["C_NO_EVID"]["unresolved_edge_count"] == 1
+    for bad_cid in ("C1\n", "\rC1", "C\n1"):
+        bad_ceg = tmp_path / "bad_ceg.json"
+        bad_ceg.write_text(json.dumps({"claims": [{"id": bad_cid, "text": "x"}], "evidence_anchors": [], "support_edges": []}), encoding="utf-8")
+        with pytest.raises(ValueError, match="line breaks"):
+            vtm_mod.export_ceg_anchors(bad_ceg)
+        bad_ceg_dict = tmp_path / "bad_ceg_dict.json"
+        bad_ceg_dict.write_text(json.dumps({"claims": {bad_cid: {"text": "x"}}, "evidence_anchors": [], "support_edges": []}), encoding="utf-8")
+        with pytest.raises(ValueError, match="line breaks"):
+            vtm_mod.export_ceg_anchors(bad_ceg_dict)
+    for dup_claims in ({"C1": {"text": "a"}, " C1 ": {"text": "b"}}, {" C1 ": {"text": "b"}, "C1": {"text": "a"}}):
+        dup_ceg = tmp_path / "dup_ceg.json"
+        dup_ceg.write_text(json.dumps({"claims": dup_claims, "evidence_anchors": [{"id": "E1"}], "support_edges": [{"claim_id": "C1", "evidence_id": "E1", "status": "supported"}]}), encoding="utf-8")
+        with pytest.raises(ValueError, match="Duplicate claim_id"):
+            vtm_mod.export_ceg_anchors(dup_ceg)
+
+
+def test_stage3_and_stage4_cli_wiring_and_academic_style_linter(tmp_path, capsys):
+    """Verify Stage 3 CLI wiring and Stage 4 academic prose & claim-boundary linter."""
+    from academic_research_kernel import cli as ark_cli
+    psl_mod = _load_script("skills/academic-writing/scripts/pre_submission_linter.py", "psl_stage4")
+
+    # 1. CLI mutual exclusion and --check-updates --offline check on verify-source
+    rc_err = ark_cli.main(["verify-source", "10.1038/nature14539", "--normalize-only", "--check-updates"])
+    assert rc_err == 1
+    out_err = json.loads(capsys.readouterr().out)
+    assert "mutually exclusive" in out_err["error"]
+
+    rc_off = ark_cli.main(["verify-source", "10.1038/nature14539", "--check-updates", "--offline"])
+    assert rc_off == 1
+    out_off = json.loads(capsys.readouterr().out)
+    assert "--records" in out_off["error"]
+
+    # 2. CLI repro-checklist, literature-watch --self-test, retraction-watch --self-test
+    assert ark_cli.main(["literature-watch", "--self-test"]) == 0
+    assert "self-test PASS" in capsys.readouterr().out
+    assert ark_cli.main(["retraction-watch", "--self-test"]) == 0
+    assert "self-test PASS" in capsys.readouterr().out
+
+    # 3. Stage 4: --check-academic-style on manuscript with positives & true negatives
+    tex_file = tmp_path / "main.tex"
+    tex_file.write_text(
+        "\\documentclass{article}\n"
+        "\\newcommand{\\mycliche}{delve into}\n"
+        "\\begin{document}\n"
+        "\\begin{abstract}\n"
+        "We delve into optimal transport and universal approximation. % delve into comment\n"
+        "We cannot prove global convergence in general.\n"
+        "The difference is not statistically significant ($p = 0.42$).\n"
+        "Theorem \\ref{thm:main} proves that the bound holds.\n"
+        "Theorem \\ref{thm:missing} proves that the bound holds globally.\n"
+        "We do not use augmentation, but we prove that the bound holds unconditionally.\n"
+        "We prove that optimal transport converges.\n"
+        "Our method achieves a statistically significant gain.\n"
+        "Our method achieves a statistically significant gain ($p < 0.01$, $95\\%$ CI).\n"
+        "\\end{abstract}\n"
+        "\\section{Introduction}\n"
+        "随着大模型的飞速发展，本文在此基础上展开分析。\n"
+        "\\begin{quote}\n"
+        " Prior authors delve into a rich tapestry and prove that everything works.\n"
+        "\\end{quote}\n"
+        "\\section{Method}\n"
+        "\\begin{theorem}\\label{thm:main}Main bound.\\end{theorem}\n"
+        "All hyperparameters were tuned appropriately.\n"
+        "All hyperparameters were tuned appropriately as listed in Table \\ref{tab:res}.\n"
+        "\\section{Experiments}\n"
+        "\\begin{table}\\label{tab:res}\\begin{tabular}{lr}A & $1.0 \\pm 0.1$\\\\\\end{tabular}\\end{table}\n"
+        "\\section{Limitations}\n"
+        "Bounded scope.\n"
+        "\\section{Reproducibility Statement}\n"
+        "Code provided.\n"
+        "\\section{Conclusion}\n"
+        "Our optimal transport estimator is globally optimal.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep = psl_mod.lint_manuscript(tex_file, venue="iclr", check_academic_style=True)
+    assert rep["passed"] is True  # Advisories never fail the gate
+    assert rep["style_check"] == {"enabled": True, "custom_macros_masked": 1}
+    adv_hits = [h for h in rep["hits"] if h["severity"] == "advisory"]
+    codes = Counter(h["code"] for h in adv_hits)
+    assert codes["ACADEMIC_AI_CLICHE_CANDIDATE"] == 2
+    assert codes["VAGUE_METHOD_DESCRIPTION_CANDIDATE"] == 1
+    assert codes["UNANCHORED_STRONG_CLAIM_CANDIDATE"] == 5
+
+
+def test_stage5_mcp_new_tools_and_redaction(tmp_path):
+    """Verify the 6 new MCP tools and strict redaction on academic_double_blind_sanitize."""
+    mcp_mod = _load_script("scripts/mcp_server.py", "mcp_stage5")
+
+    # 1. academic_double_blind_sanitize redacts forbidden tokens in MCP output
+    leak_dir = tmp_path / "leak_pkg"
+    leak_dir.mkdir()
+    (leak_dir / "main.tex").write_text("Contact SecretAuthorName123 at LabXYZ.\n", encoding="utf-8")
+    resp = mcp_mod.process_message({
+        "jsonrpc": "2.0",
+        "id": 501,
+        "method": "tools/call",
+        "params": {
+            "name": "academic_double_blind_sanitize",
+            "arguments": {
+                "target_path": str(leak_dir),
+                "forbidden_tokens": ["SecretAuthorName123"],
+            },
+        },
+    })
+    raw_json_str = resp["result"]["content"][0]["text"]
+    assert "SecretAuthorName123" not in raw_json_str
+    parsed = json.loads(raw_json_str)
+    assert parsed["status"] == "leaks_detected"
+    assert parsed["findings"][0]["matched"] == "[REDACTED]"
+
+    # 2. academic_table_forensics, academic_meta_analyze, academic_verify_source, academic_openreview_audit
+    for call_id, t_name, t_args, expected_key in [
+        (502, "academic_table_forensics", {"partition": {"total": 50, "parts": [20, 30]}}, "consistent"),
+        (503, "academic_meta_analyze", {"studies": [{"yi": 0.2, "vi": 0.02}, {"yi": 0.4, "vi": 0.04}]}, "random_effects_dl"),
+        (504, "academic_verify_source", {"identifier": "https://doi.org/10.1038/nature14539", "normalize_only": True}, "canonical"),
+        (505, "academic_openreview_audit", {"venue_records": [{"forum_id": "F1", "title": "Test", "decision": "Reject", "ratings": [4, 5]}]}, "total_submissions"),
+    ]:
+        r = mcp_mod.process_message({
+            "jsonrpc": "2.0",
+            "id": call_id,
+            "method": "tools/call",
+            "params": {"name": t_name, "arguments": t_args},
+        })
+        assert r["result"]["isError"] is False
+        body = json.loads(r["result"]["content"][0]["text"])
+        assert expected_key in body

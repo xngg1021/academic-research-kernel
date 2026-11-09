@@ -262,7 +262,15 @@ def _now():
 def _load_json(value):
     if value is None or value == '-':
         return json.loads(sys.stdin.read())
-    return json.loads(Path(value).read_text(encoding='utf-8'))
+    try:
+        from academic_research_kernel.research.sources import reject_link_or_reparse
+    except ImportError:
+        _src_dir = Path(__file__).resolve().parents[3] / "src"
+        if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+            sys.path.insert(0, str(_src_dir))
+        from academic_research_kernel.research.sources import reject_link_or_reparse
+    p = reject_link_or_reparse(value)
+    return json.loads(p.read_text(encoding='utf-8'))
 
 
 def main(argv=None):

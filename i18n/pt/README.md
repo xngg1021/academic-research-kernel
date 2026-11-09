@@ -15,26 +15,26 @@ Autor: Junfu Shi (SJF, xngg1021). Oferta de licença atual: [Source Lineage Lice
 
 ### Início rápido
 
-Execute a versão 2.3.1 com o [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Execute a versão 2.4.0 com o [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-O [lançamento 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) registra os hashes de distribuição e o status de publicação. O pacote wheel distribuído também pode ser executado localmente com `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Há suporte para Python 3.10–3.14, e `uvx --python 3.12` seleciona explicitamente um interpretador compatível. Todas as 12 ferramentas determinísticas, incluindo os módulos estatísticos, fazem parte da instalação básica.
+O [lançamento 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) registra os hashes de distribuição e o status de publicação. O pacote wheel distribuído também pode ser executado localmente com `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Há suporte para Python 3.10–3.14, e `uvx --python 3.12` seleciona explicitamente um interpretador compatível. Todas as 18 ferramentas determinísticas, incluindo os módulos estatísticos, fazem parte da instalação básica.
 
 ### Verificar instalação
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-O diagnóstico offline verifica dependências, esquemas e as definições das 12 ferramentas. Serviços externos opcionais podem permanecer não configurados sem impedir o uso. Utilize `doctor --json` para obter saída estruturada legível por máquina.
+O diagnóstico offline verifica dependências, esquemas e as definições das 18 ferramentas. Serviços externos opcionais podem permanecer não configurados sem impedir o uso. Utilize `doctor --json` para obter saída estruturada legível por máquina.
 
 ---
 
@@ -42,7 +42,7 @@ O diagnóstico offline verifica dependências, esquemas e as definições das 12
 
 ### Pesquisar um artigo com um Agente local
 
-Instale `academic-research-kernel[research]==2.3.1` e exporte o fluxo de trabalho empacotado:
+Instale `academic-research-kernel[research]==2.4.0` e exporte o fluxo de trabalho empacotado:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ Existem 22 arquivos de referência Markdown distribuídos entre as quatorze habi
 ### Instalação do pacote
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Como alternativa, instale com `pipx install academic-research-kernel==2.3.1` ou `python -m pip install academic-research-kernel==2.3.1` dentro de um ambiente virtual compatível. O extra `[full]` adiciona bibliotecas para exemplos científicos estendidos; `[qa]` instala as ferramentas de validação do repositório, incluindo o analisador de PDF. O extra `[research]` adiciona `pypdf==7.0.0` e `fonttools==4.65.0` para decodificação consistente de fontes em arquivos PDF em instalações limpas, ambos compatíveis com Python 3.10. A leitura estruturada de HTML/XML e de arquivos DOCX/XLSX delimitados utiliza apenas a biblioteca padrão. Backends de GPU e serviços pagos permanecem opcionais.
+Como alternativa, instale com `pipx install academic-research-kernel==2.4.0` ou `python -m pip install academic-research-kernel==2.4.0` dentro de um ambiente virtual compatível. O extra `[full]` adiciona bibliotecas para exemplos científicos estendidos; `[qa]` instala as ferramentas de validação do repositório, incluindo o analisador de PDF. O extra `[research]` adiciona `pypdf==7.0.0` e `fonttools==4.65.0` para decodificação consistente de fontes em arquivos PDF em instalações limpas, ambos compatíveis com Python 3.10. A leitura estruturada de HTML/XML e de arquivos DOCX/XLSX delimitados utiliza apenas a biblioteca padrão. Backends de GPU e serviços pagos permanecem opcionais.
 
 ### Integração e Uso Portátil
 
@@ -190,7 +190,7 @@ Consulte [distribuição e lançamento](../../docs/distribution-release.md) para
 
 ### Ingestão determinística e núcleo público
 
-A camada de ingestão fornece `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (correspondentes às 14 habilidades mais o fallback opaco) e 12 ferramentas MCP stdio sem estado. Os registros de ingestão aceitos vinculam cada mutação semântica retida por tipo, identidade e resumo SHA-256 canônico: objetos, registros de relações entre alegações e evidências (CEG), entradas do registro de decisões de pesquisa e tentativas falhas, itens pendentes de revisão, comprovantes físicos e registros de artefatos. A repetição via cache valida esses compromissos de maneira independente dos hashes de instantâneo de transporte. Registros vazios são válidos e lotes atômicos que falham não deixam estado parcial.
+A camada de ingestão fornece `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (correspondentes às 14 habilidades mais o fallback opaco) e 18 ferramentas MCP stdio sem estado. Os registros de ingestão aceitos vinculam cada mutação semântica retida por tipo, identidade e resumo SHA-256 canônico: objetos, registros de relações entre alegações e evidências (CEG), entradas do registro de decisões de pesquisa e tentativas falhas, itens pendentes de revisão, comprovantes físicos e registros de artefatos. A repetição via cache valida esses compromissos de maneira independente dos hashes de instantâneo de transporte. Registros vazios são válidos e lotes atômicos que falham não deixam estado parcial.
 
 A autoridade sobre o conteúdo de linhagem é explícita e transmitida fora de banda. Chamadores Python confiáveis fornecem `LineageVerificationContext` ao reproduzir recibos ou instantâneos serializados; chamadores MCP podem enviar bytes de conteúdo dentro do limite estabelecido, mas nunca uma raiz do sistema de arquivos hospedeiro. O orçamento padrão de conteúdo é de 10 MiB, podendo um host confiável autorizar explicitamente artefatos maiores sob a mesma política entre produtor e verificador. Sem autoridade de conteúdo, uma alegação `fully_verified` não pode ser reproduzida de modo independente e retorna um resultado estruturado de verificação inválida. Textos não estruturados permanecem opacos, divergências permanecem visíveis e os pesquisadores mantêm o controle sobre confirmações, encerramento ou reabertura de rotas, roteamento e julgamentos de validade científica.
 
@@ -214,7 +214,7 @@ Consulte a documentação sobre [autenticação no OpenAlex](https://help.openal
 
 ---
 
-## 6. Validação local, verificação de distribuição (2.3.1) e licença
+## 6. Validação local, verificação de distribuição (2.4.0) e licença
 
 ### Validação
 

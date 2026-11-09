@@ -27,7 +27,7 @@ The installed program handles acquisition, parsing, source validation, determini
 
 ## Prepare and read
 
-Install the optional PDF parser with `python -m pip install 'academic-research-kernel[research]==2.3.1'` in a project environment if it is absent. Keep the existing `doctor`, `mcp`, `verify-source`, `locate-oa`, `openreview-audit`, `repo-forensics`, `bibliography`, `meta-analyze`, `receipt-to-latex`, `double-blind-sanitize`, `pre-submission-lint` and `venue-template` entrypoints available.
+Install the optional PDF parser with `python -m pip install 'academic-research-kernel[research]==2.4.0'` in a project environment if it is absent. Keep the existing `doctor`, `mcp`, `verify-source`, `locate-oa`, `openreview-audit`, `repo-forensics`, `bibliography`, `meta-analyze`, `receipt-to-latex`, `double-blind-sanitize`, `pre-submission-lint`, `venue-template`, `repro-checklist`, `literature-watch` and `retraction-watch` entrypoints available.
 
 ```sh
 academic-research-kernel research prepare INPUT --project PROJECT

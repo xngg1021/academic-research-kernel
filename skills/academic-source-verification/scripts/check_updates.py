@@ -12,7 +12,16 @@ import sys
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+try:
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
+except ImportError:
+    from pathlib import Path as _Path
+    _src_dir = _Path(__file__).resolve().parents[3] / "src"
+    if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+        sys.path.insert(0, str(_src_dir))
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
 
 import sys as _sys
 if _sys.platform == "win32":
@@ -88,7 +97,8 @@ def live_reverse_lookup(doi: str, rows: int = 100, max_pages: int = 10) -> dict:
 
 
 def _load_records(path: str) -> list:
-    with open(path, encoding='utf-8') as handle:
+    p = reject_link_or_reparse(path)
+    with p.open(encoding='utf-8') as handle:
         data = json.load(handle)
     if isinstance(data, list):
         return data

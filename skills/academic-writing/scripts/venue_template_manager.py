@@ -84,7 +84,7 @@ def _render_main_tex(venue_key: str, vspec: dict[str, Any], year: int) -> str:
         "\\begin{document}\n"
         "\\maketitle\n\n"
         "\\begin{abstract}\n"
-        "% ark:claim=C1\n"
+        "% Attach verified CEG anchors via venue-template --action export-ceg-anchors --ceg <path>\n"
         "State the formal problem, core method, and receipt-backed findings here.\n"
         "\\end{abstract}\n\n"
         "\\section{Introduction}\n"
@@ -173,7 +173,10 @@ def scaffold_manuscript(
     if bib_path.is_symlink():
         raise ValueError("references.bib cannot be a symlink")
     if not bib_path.exists():
-        bib_path.write_text("% Verified BibTeX entries exported via literature-analysis/scripts/export_bibtex.py\n", encoding="utf-8")
+        bib_path.write_text(
+            "% Verified BibTeX entries exported via: academic-research-kernel bibliography --action export-bibtex\n",
+            encoding="utf-8",
+        )
 
     check_py = target_dir / "check_submission.py"
     if check_py.is_symlink():
@@ -305,9 +308,175 @@ def verify_style_directory(manuscript_dir: str | Path, specs_path: str | Path | 
     return manifest
 
 
+def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
+    """Read-only export of all CEG claims with support/contradiction status and CEG SHA-256 fingerprint."""
+    p = Path(ceg_path)
+    cur = p
+    while True:
+        if _is_link_or_reparse(cur):
+            raise ValueError(f"CEG path cannot be a symlink or junction: {cur}")
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    if not p.is_file():
+        raise FileNotFoundError(f"CEG file not found: {p}")
+    raw_bytes = p.read_bytes()
+    ceg_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+    data = json.loads(raw_bytes.decode("utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("CEG file must be a JSON object")
+
+    ceg_root = data.get("ceg") if isinstance(data.get("ceg"), dict) else data
+    raw_claims = ceg_root.get("claims")
+    raw_edges = (
+        ceg_root.get("support_edges")
+        if ceg_root.get("support_edges") is not None
+        else (ceg_root.get("edges") if ceg_root.get("edges") is not None else data.get("support_edges"))
+    )
+    raw_evidence = (
+        ceg_root.get("evidence_anchors")
+        if ceg_root.get("evidence_anchors") is not None
+        else (
+            ceg_root.get("evidence")
+            if ceg_root.get("evidence") is not None
+            else (
+                data.get("evidence_anchors")
+                if data.get("evidence_anchors") is not None
+                else data.get("evidence")
+            )
+        )
+    )
+
+    # Normalize claims
+    claims_by_id: dict[str, dict[str, Any]] = {}
+    if isinstance(raw_claims, dict):
+        for cid, cobj in raw_claims.items():
+            if not isinstance(cobj, dict):
+                raise ValueError(f"Claim entry {cid!r} must be an object")
+            cid_s = str(cid)
+            if "\r" in cid_s or "\n" in cid_s:
+                raise ValueError(f"claim_id must not contain line breaks: {cid_s!r}")
+            cid_s = cid_s.strip()
+            if not cid_s:
+                raise ValueError("Claim key must not be empty")
+            if cid_s in claims_by_id:
+                raise ValueError(f"Duplicate claim_id in CEG: {cid_s!r}")
+            claims_by_id[cid_s] = cobj
+    elif isinstance(raw_claims, list):
+        for idx, cobj in enumerate(raw_claims):
+            if not isinstance(cobj, dict):
+                raise ValueError(f"claims[{idx}] must be an object")
+            cid = str(cobj.get("id") or cobj.get("claim_id") or "")
+            if "\r" in cid or "\n" in cid:
+                raise ValueError(f"claim_id must not contain line breaks: {cid!r}")
+            cid = cid.strip()
+            if not cid:
+                raise ValueError(f"claims[{idx}] is missing 'id' / 'claim_id'")
+            if cid in claims_by_id:
+                raise ValueError(f"Duplicate claim_id in CEG: {cid!r}")
+            claims_by_id[cid] = cobj
+    else:
+        raise ValueError("CEG must contain a 'claims' list or object")
+
+    # Normalize evidence IDs if an evidence collection is present
+    known_evidence_ids: set[str] | None = None
+    if isinstance(raw_evidence, dict):
+        known_evidence_ids = {str(k) for k in raw_evidence.keys()}
+    elif isinstance(raw_evidence, list):
+        known_evidence_ids = {
+            str(e.get("id") or e.get("evidence_id"))
+            for e in raw_evidence
+            if isinstance(e, dict) and (e.get("id") or e.get("evidence_id"))
+        }
+
+    pos_by_claim: dict[str, list[dict[str, Any]]] = {cid: [] for cid in claims_by_id}
+    neg_by_claim: dict[str, list[dict[str, Any]]] = {cid: [] for cid in claims_by_id}
+    unresolved_by_claim: dict[str, int] = {cid: 0 for cid in claims_by_id}
+    dangling_edges: list[dict[str, Any]] = []
+
+    if raw_edges is not None:
+        if not isinstance(raw_edges, list):
+            raise ValueError("CEG edges / support_edges must be a list")
+        for idx, edge in enumerate(raw_edges):
+            if not isinstance(edge, dict):
+                raise ValueError(f"edges[{idx}] must be an object")
+            cid = str(edge.get("claim_id") or edge.get("target_claim_id") or edge.get("target") or "").strip()
+            ev_id = str(edge.get("evidence_id") or edge.get("source_id") or edge.get("source") or "").strip()
+            if not cid or cid not in claims_by_id:
+                dangling_edges.append({"edge_index": idx, "reason": "unknown_claim_id", "claim_id": cid or None})
+                continue
+            endpoint_problem = None
+            if not ev_id:
+                endpoint_problem = "missing_evidence_id"
+            elif known_evidence_ids is None:
+                endpoint_problem = "evidence_collection_missing"
+            elif ev_id not in known_evidence_ids:
+                endpoint_problem = "unknown_evidence_id"
+            if endpoint_problem is not None:
+                dangling_edges.append({
+                    "edge_index": idx,
+                    "reason": endpoint_problem,
+                    "claim_id": cid,
+                    "evidence_id": ev_id or None,
+                })
+                unresolved_by_claim[cid] += 1
+                continue
+            status = str(
+                edge.get("support_status")
+                if edge.get("support_status") is not None
+                else (edge.get("status") or edge.get("relation") or edge.get("polarity") or "")
+            ).strip().lower()
+            if status in ("supported", "supports", "support", "verified_by"):
+                pos_by_claim[cid].append(edge)
+            elif status in ("contradicted", "contradicts", "refuted", "refutes"):
+                neg_by_claim[cid].append(edge)
+            else:
+                unresolved_by_claim[cid] += 1
+
+    anchors: list[dict[str, Any]] = []
+    for cid, cobj in claims_by_id.items():
+        raw_txt = str(cobj.get("text") or cobj.get("statement") or "").strip()
+        norm_txt = " ".join(raw_txt.split()).rstrip(".").strip()
+        c_status = str(cobj.get("support_status") or cobj.get("status") or "").strip().lower()
+        pos_cnt = len(pos_by_claim.get(cid, ()))
+        neg_cnt = len(neg_by_claim.get(cid, ()))
+        unres_cnt = unresolved_by_claim.get(cid, 0)
+        if neg_cnt > 0 or c_status in ("conflicted", "contradicted", "refuted"):
+            anchor_status = "conflicted"
+        elif pos_cnt > 0 and norm_txt and unres_cnt == 0 and c_status not in ("unverifiable", "out_of_scope"):
+            anchor_status = "eligible"
+        else:
+            anchor_status = "unsupported"
+        anchors.append({
+            "claim_id": cid,
+            "anchor_comment": f"% ark:claim={cid}",
+            "anchor_status": anchor_status,
+            "claim_status": c_status or "unknown",
+            "normalized_text": norm_txt,
+            "support_edge_count": pos_cnt,
+            "contradiction_edge_count": neg_cnt,
+            "unresolved_edge_count": unres_cnt,
+        })
+
+    return {
+        "schema_version": "1.0.0",
+        "ceg_sha256": ceg_sha256,
+        "total_claims": len(anchors),
+        "eligible_count": sum(1 for a in anchors if a["anchor_status"] == "eligible"),
+        "conflicted_count": sum(1 for a in anchors if a["anchor_status"] == "conflicted"),
+        "unsupported_count": sum(1 for a in anchors if a["anchor_status"] == "unsupported"),
+        "dangling_edges": dangling_edges,
+        "anchors": anchors,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="External manuscript workspace and venue template manager.")
-    parser.add_argument("--action", choices=["list-venues", "scaffold", "verify-styles"], default="list-venues")
+    parser.add_argument(
+        "--action",
+        choices=["list-venues", "scaffold", "verify-styles", "export-ceg-anchors"],
+        default="list-venues",
+    )
     parser.add_argument("--workspace-dir", help="Target parent workspace directory for scaffold")
     parser.add_argument("--slug", help="Project directory slug")
     parser.add_argument("--venue", default="iclr", help="Venue key")
@@ -315,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--contribution-type", default="general_empirical", help="Contribution type key")
     parser.add_argument("--force", action="store_true", help="Overwrite existing main.tex and venue-manifest.json if venue differs")
     parser.add_argument("--manuscript-dir", help="Manuscript directory for verify-styles")
+    parser.add_argument("--ceg", help="ClaimEvidenceGraph or kernel-state JSON path for export-ceg-anchors")
     args = parser.parse_args(argv)
 
     if args.action == "list-venues":
@@ -337,6 +507,12 @@ def main(argv: list[str] | None = None) -> int:
         if not args.manuscript_dir:
             parser.error("--action verify-styles requires --manuscript-dir")
         res = verify_style_directory(args.manuscript_dir)
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+        return 0
+    if args.action == "export-ceg-anchors":
+        if not args.ceg:
+            parser.error("--action export-ceg-anchors requires --ceg")
+        res = export_ceg_anchors(args.ceg)
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
     return 1

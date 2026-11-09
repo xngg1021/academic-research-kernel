@@ -15,19 +15,19 @@
 
 ### দ্রুত শুরু
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) ব্যবহার করে সংস্করণ 2.3.1 চালান:
+[uv](https://docs.astral.sh/uv/getting-started/installation/) ব্যবহার করে সংস্করণ 2.4.0 চালান:
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.3.1 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10–3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১২টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
+[2.4.0 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10–3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১২টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
 
 ### ইনস্টলেশন যাচাই
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### স্থানীয় Agent দিয়ে গবেষণাপত্র বিশ্লেষণ
 
-`academic-research-kernel[research]==2.3.1` ইনস্টল করুন এবং প্যাকেজকৃত কর্মপ্রবাহটি এক্সপোর্ট করুন:
+`academic-research-kernel[research]==2.4.0` ইনস্টল করুন এবং প্যাকেজকৃত কর্মপ্রবাহটি এক্সপোর্ট করুন:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ### প্যাকেজ ইনস্টল
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-বিকল্পভাবে, সমর্থিত ভার্চুয়াল এনভায়রনমেন্টের ভেতরে `pipx install academic-research-kernel==2.3.1` অথবা `python -m pip install academic-research-kernel==2.3.1` দিয়ে ইনস্টল করা যাবে। `[full]` অপশনটি বর্ধিত বৈজ্ঞানিক উদাহরণের জন্য অতিরিক্ত লাইব্রেরি যোগ করে; `[qa]` অপশনটি পিডিএফ পার্সারসহ রিপোজিটরি যাচাইকরণ টুল যোগ করে। `[research]` অপশনটি নতুন ইনস্টলেশনে পিডিএফ ফন্ট ডিকোডিং সুসংগত রাখতে `pypdf==7.0.0` এবং `fonttools==4.65.0` যুক্ত করে; দুটিই Python 3.10 সমর্থন করে। কাঠামোগত HTML/XML এবং নির্ধারিত আকারের DOCX/XLSX পাঠের কাজে স্ট্যান্ডার্ড লাইব্রেরি ব্যবহৃত হয়। GPU ব্যাকএন্ড এবং অর্থপ্রদত্ত পরিষেবাগুলো ঐচ্ছিক থাকে।
+বিকল্পভাবে, সমর্থিত ভার্চুয়াল এনভায়রনমেন্টের ভেতরে `pipx install academic-research-kernel==2.4.0` অথবা `python -m pip install academic-research-kernel==2.4.0` দিয়ে ইনস্টল করা যাবে। `[full]` অপশনটি বর্ধিত বৈজ্ঞানিক উদাহরণের জন্য অতিরিক্ত লাইব্রেরি যোগ করে; `[qa]` অপশনটি পিডিএফ পার্সারসহ রিপোজিটরি যাচাইকরণ টুল যোগ করে। `[research]` অপশনটি নতুন ইনস্টলেশনে পিডিএফ ফন্ট ডিকোডিং সুসংগত রাখতে `pypdf==7.0.0` এবং `fonttools==4.65.0` যুক্ত করে; দুটিই Python 3.10 সমর্থন করে। কাঠামোগত HTML/XML এবং নির্ধারিত আকারের DOCX/XLSX পাঠের কাজে স্ট্যান্ডার্ড লাইব্রেরি ব্যবহৃত হয়। GPU ব্যাকএন্ড এবং অর্থপ্রদত্ত পরিষেবাগুলো ঐচ্ছিক থাকে।
 
 ### ইন্টিগ্রেশন ও পোর্টেবল ব্যবহার
 
@@ -190,7 +190,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### সুনির্দিষ্ট অন্তর্ভুক্তি ও পাবলিক কার্নেল
 
-গবেষণা উপকরণ অন্তর্ভুক্তি ও পার্সিং স্তরটি `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, ১৫টি অ্যাডাপ্টার (১৪টি দক্ষতা এবং একটি ওপেক ফলব্যাক opaque fallback), এবং ১২টি স্টেটলেস stdio MCP টুল সরবরাহ করে। গৃহীত রসিদগুলো সংরক্ষিত প্রতিটি অর্থগত পরিবর্তনকে ধরন, পরিচয় এবং ক্যানোনিকাল SHA-256 দ্বারা আবদ্ধ করে: অবজেক্ট, CEG রেকর্ড, সিদ্ধান্ত লগ রেকর্ড, পর্যালোচনা প্রয়োজন এমন আইটেম, ভৌত রসিদ এবং আর্টিফ্যাক্ট নিবন্ধন। ক্যাশ রিপ্লে প্রক্রিয়া ট্রান্সপোর্ট স্ন্যাপশট হ্যাশ থেকে স্বাধীনভাবে সেই প্রতিশ্রুতিগুলো পরীক্ষা করে। খালি লগ বৈধ; ব্যর্থ অ্যাটমিক ব্যাচ কোনো আংশিক অবস্থা রেখে যায় না।
+গবেষণা উপকরণ অন্তর্ভুক্তি ও পার্সিং স্তরটি `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, ১৫টি অ্যাডাপ্টার (১৪টি দক্ষতা এবং একটি ওপেক ফলব্যাক opaque fallback), এবং ১৮টি স্টেটলেস stdio MCP টুল সরবরাহ করে। গৃহীত রসিদগুলো সংরক্ষিত প্রতিটি অর্থগত পরিবর্তনকে ধরন, পরিচয় এবং ক্যানোনিকাল SHA-256 দ্বারা আবদ্ধ করে: অবজেক্ট, CEG রেকর্ড, সিদ্ধান্ত লগ রেকর্ড, পর্যালোচনা প্রয়োজন এমন আইটেম, ভৌত রসিদ এবং আর্টিফ্যাক্ট নিবন্ধন। ক্যাশ রিপ্লে প্রক্রিয়া ট্রান্সপোর্ট স্ন্যাপশট হ্যাশ থেকে স্বাধীনভাবে সেই প্রতিশ্রুতিগুলো পরীক্ষা করে। খালি লগ বৈধ; ব্যর্থ অ্যাটমিক ব্যাচ কোনো আংশিক অবস্থা রেখে যায় না।
 
 বংশপরম্পরা কন্টেন্টের কর্তৃত্ব সুস্পষ্ট এবং আউট-অফ-ব্যান্ড। বিশ্বস্ত Python কলাররা সিরিয়ালাইজড রসিদ বা স্ন্যাপশট রিপ্লে করার সময় `LineageVerificationContext` পাস করে; MCP কলাররা কেবল নির্ধারিত সীমার কন্টেন্ট বাইট সরবরাহ করতে পারে, কখনোই হোস্ট ফাইলসিস্টেম রুট নয়। ডিফল্ট কন্টেন্ট বাজেট ১০ MiB; উৎপাদক ও যাচাইকারীর অভিন্ন নীতির অধীনে বিশ্বস্ত হোস্ট সুস্পষ্টভাবে বড় আর্টিফ্যাক্ট অনুমোদন করতে পারে। কন্টেন্ট কর্তৃত্ব ছাড়া কোনো `fully_verified` দাবি স্বাধীনভাবে পুনরুৎপাদন করা যায় না এবং তা একটি কাঠামোগত অকার্যকর যাচাইকরণ ফলাফল ফেরত দেয়। অকাঠামোগত গদ্য অপরিবর্তিত (opaque) থাকে, ভিন্নমত দৃশ্যমান থাকে এবং কমিট, পথ বন্ধ করা, পুনরায় খোলা, রাউটিং ও সত্যতা নির্ধারণের নিয়ন্ত্রণ গবেষকদের হাতেই থাকে।
 
@@ -214,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. স্থানীয় যাচাইকরণ, ডিস্ট্রিবিউশন যাচাই (2.3.1) ও লাইসেন্স
+## 6. স্থানীয় যাচাইকরণ, ডিস্ট্রিবিউশন যাচাই (2.4.0) ও লাইসেন্স
 
 ### যাচাইকরণ (Validation)
 

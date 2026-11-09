@@ -1,11 +1,11 @@
-# Distribution and manuscript engineering release 2.3.1
+# Distribution and manuscript engineering release 2.4.0
 
-Release 2.3.1 extends the unified wheel, CLI, and MCP runtime with pre-submission manuscript engineering gates (`receipt-to-latex`, `double-blind-sanitize`, `pre-submission-lint`, `venue-template`, and `venue-specs.json`), external forensic utilities (`locate-oa`, `openreview-audit`, `repo-forensics`), and four additional statistical/physical-bound checks (`partition_conservation`, `ablation_delta_regularity`, `storage_bandwidth_bounds`, `nonparametric_test`) while preserving all 12 public MCP tool names, 26 JSON schemas, and `>= 2.2.0` historical artifact compatibility.
+Release 2.4.0 extends the unified wheel, CLI, and MCP runtime with end-to-end research-to-LaTeX and CEG-anchor pipeline bridges (`receipt-to-latex --from-research`, `venue-template --action export-ceg-anchors`), 10 newly bundled scholarly utility modules (`repro-checklist`, `literature-watch`, `retraction-watch`, `verify-source --verify-pdf/--check-updates`, `bibliography --action export-bibtex/deduplicate/citation-graph/review-matrix`, and `compute_receipt`), optional pre-submission academic style & claim-boundary advisories (`pre-submission-lint --check-academic-style`), and 6 additional public MCP tools (18 total MCP tools, 26 JSON schemas, and `>= 2.2.0` historical artifact compatibility).
 
 Install the current release with digital PDF support using:
 
 ```bash
-uv tool install "academic-research-kernel[research]==2.3.1"
+uv tool install "academic-research-kernel[research]==2.4.0"
 academic-research-kernel doctor
 ```
 

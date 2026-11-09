@@ -12,7 +12,16 @@ import sys
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+try:
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
+except ImportError:
+    from pathlib import Path as _Path
+    _src_dir = _Path(__file__).resolve().parents[3] / "src"
+    if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+        sys.path.insert(0, str(_src_dir))
+    from academic_research_kernel.research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
 
 import sys as _sys
 if _sys.platform == "win32":
@@ -143,7 +152,8 @@ def main(argv=None) -> int:
 
     if args.input:
         try:
-            with open(args.input, encoding='utf-8') as handle:
+            p = reject_link_or_reparse(args.input)
+            with p.open(encoding='utf-8') as handle:
                 works = json.load(handle)
             # LA-03: 适配上游产物形状 ({candidates: [...]} 或去重器 {kept: [...]})
             if isinstance(works, dict):

@@ -93,7 +93,16 @@ def main(argv=None) -> int:
     _utf8_stdio()
 
     try:
-        with open(args.input, encoding='utf-8') as handle:
+        try:
+            from academic_research_kernel.research.sources import reject_link_or_reparse
+        except ImportError:
+            from pathlib import Path as _Path
+            _src_dir = _Path(__file__).resolve().parents[3] / "src"
+            if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+                sys.path.insert(0, str(_src_dir))
+            from academic_research_kernel.research.sources import reject_link_or_reparse
+        p = reject_link_or_reparse(args.input)
+        with p.open(encoding='utf-8') as handle:
             works = json.load(handle)
         if isinstance(works, dict) and isinstance(works.get('results'), list):
             works = works['results']

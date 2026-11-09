@@ -15,26 +15,26 @@ Yazar: Junfu Shi (SJF, xngg1021). Geçerli kapsamlı lisans teklifi: [Source Lin
 
 ### Hızlı başlangıç
 
-2.3.1 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
+2.4.0 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-[2.3.1 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 12 deterministik aracın tamamı temel kuruluma dahildir.
+[2.4.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10–3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 18 deterministik aracın tamamı temel kuruluma dahildir.
 
 ### Kurulumu doğrulama
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-Çevrimdışı tanılama aracı; bağımlılıkları, veri şemalarını ve 12 araç tanımının tamamını kontrol eder. İsteğe bağlı harici hizmetler yapılandırılmadan bırakılabilir. Makine tarafından okunabilir çıktı almak için `doctor --json` komutunu kullanın.
+Çevrimdışı tanılama aracı; bağımlılıkları, veri şemalarını ve 18 araç tanımının tamamını kontrol eder. İsteğe bağlı harici hizmetler yapılandırılmadan bırakılabilir. Makine tarafından okunabilir çıktı almak için `doctor --json` komutunu kullanın.
 
 ---
 
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### Yerel bir Ajan ile makale araştırma
 
-`academic-research-kernel[research]==2.3.1` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
+`academic-research-kernel[research]==2.4.0` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ On dört beceri genelinde 22 adet Markdown referans dosyası bulunmaktadır. Ref
 ### Paket kurulumu
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.3.1` veya `python -m pip install academic-research-kernel==2.3.1` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==7.0.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
+Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.4.0` veya `python -m pip install academic-research-kernel==2.4.0` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==7.0.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
 
 ### Entegrasyon ve Taşınabilir Kullanım
 
@@ -190,7 +190,7 @@ Bağımlılık sınıflandırması, yeniden üretim, sürüm kimliği, yayın ko
 
 ### Deterministik içeri aktarım ve açık çekirdek
 
-Araştırma materyallerinin içeri aktarımı katmanı; `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptör (14 beceri artı `opaque fallback`) ve 12 durumsuz (stateless) stdio MCP aracı sağlar. Kabul edilen içeri aktarım alındıları, korunan her anlamsal değişikliği türüne, kimliğine ve kurallı SHA-256 özetine göre bağlar: araştırma nesneleri, iddia ve kanıt ilişkileri (CEG) kayıtları, karar günlüğü kayıtları, incelenmesi gereken hususlar, fiziksel alındılar ve materyal kayıtları. Önbellekten yeniden oynatma, bu taahhütleri aktarım anlık görüntüsü özetlerinden bağımsız olarak denetler. Boş günlükler geçerlidir; başarısız olan atomik toplu işlemler kısmi durum bırakmaz.
+Araştırma materyallerinin içeri aktarımı katmanı; `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptör (14 beceri artı `opaque fallback`) ve 18 durumsuz (stateless) stdio MCP aracı sağlar. Kabul edilen içeri aktarım alındıları, korunan her anlamsal değişikliği türüne, kimliğine ve kurallı SHA-256 özetine göre bağlar: araştırma nesneleri, iddia ve kanıt ilişkileri (CEG) kayıtları, karar günlüğü kayıtları, incelenmesi gereken hususlar, fiziksel alındılar ve materyal kayıtları. Önbellekten yeniden oynatma, bu taahhütleri aktarım anlık görüntüsü özetlerinden bağımsız olarak denetler. Boş günlükler geçerlidir; başarısız olan atomik toplu işlemler kısmi durum bırakmaz.
 
 Köken içerik yetkisi açıktır ve bant dışından (out-of-band) iletilir. Güvenilir Python çağrıcıları, serileştirilmiş alındıları veya anlık görüntüleri yeniden oynatırken `LineageVerificationContext` nesnesini iletir; MCP çağrıcıları ise yalnızca sınırlandırılmış içerik baytları sağlayabilir, hiçbir zaman ana bilgisayar dosya sistemi kökünü iletemez. Varsayılan içerik bütçesi 10 MiB'dir; güvenilir bir ana sistem, üretici ve doğrulayıcı arasında aynı politika altında daha büyük materyallere açıkça izin verebilir. İçerik yetkisi olmadan `fully_verified` iddiası bağımsız olarak yeniden üretilemez ve yapılandırılmış bir geçersiz doğrulama sonucu döndürür. Yapılandırılmamış düz metinler opak kalır, karşıt görüşler görünür biçimde korunur ve araştırmacılar işlemeler, araştırma rotalarını sonlandırma veya yeniden açma, yönlendirme ve bilimsel doğruluk kararları üzerindeki kontrolü elinde tutar.
 
@@ -214,7 +214,7 @@ Ayrıntılar için [OpenAlex kimlik doğrulaması](https://help.openalex.org/api
 
 ---
 
-## 6. Yerel doğrulama, dağıtım doğrulaması (2.3.1) ve lisans
+## 6. Yerel doğrulama, dağıtım doğrulaması (2.4.0) ve lisans
 
 ### Doğrulama
 

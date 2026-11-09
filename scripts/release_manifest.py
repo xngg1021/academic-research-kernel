@@ -179,6 +179,13 @@ def inspect_artifact(path, version=None):
                          'receipt_to_latex_table.py', 'double_blind_sanitizer.py',
                          'pre_submission_linter.py', 'venue_template_manager.py', 'venue-specs.json')),
                     'wheel 2.3.0 bundled scholarly utility files missing')
+        if tuple(map(int, version.split('.'))) >= (2, 4, 0):
+            require(all('academic_research_kernel/' + name in files for name in
+                        ('compute_receipt.py', 'verify_pdf_identity.py', 'check_updates.py',
+                         'export_bibtex.py', 'deduplicate_works.py', 'build_citation_graph.py',
+                         'build_review_matrix.py', 'repro_checklist.py',
+                         'literature_watch.py', 'retraction_watch.py')),
+                    'wheel 2.4.0+ bundled scholarly utility files missing')
         require('academic_research_kernel/artifact-adapter-matrix.json' in files, 'wheel adapter matrix missing')
         require(all('academic_research_kernel/' + name in files for name in ('cli.py', 'mcp_server.py', 'recompute.py', 'ingestion/engine.py')),
                 'wheel runtime files missing')
@@ -208,11 +215,12 @@ def create_manifest(dist, version=None, tag=None, release=False, root=ROOT):
     mcp_server_path = root / 'scripts/mcp_server.py'
     require(mcp_server_path.is_file(), 'scripts/mcp_server.py must exist in release source root')
     protocols = read_supported_protocols(mcp_server_path.read_text(encoding='utf-8'))
+    mcp_tool_count = 18 if tuple(map(int, version.split('.'))) >= (2, 4, 0) else 12
     manifest = {'package': PACKAGE, 'version': version,
                 'source_commit': commit, 'source_tree': tree, 'source_dirty': dirty,
                 'git_tag': tag if release else None, 'intended_tag': tag,
                 'artifacts': artifacts, 'requires_python': '>=3.10,<3.15',
-                'mcp': {'protocols': protocols, 'public_tool_count': 12},
+                'mcp': {'protocols': protocols, 'public_tool_count': mcp_tool_count},
                 'plugin': {'name': 'academic-skills', 'version': version},
                 'license_reference': 'LicenseRef-Source-Lineage-1.0',
                 'build': {'backend': 'hatchling==1.29.0', 'source_date_epoch': epoch,

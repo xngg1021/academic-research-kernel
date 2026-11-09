@@ -15,26 +15,26 @@
 
 ### Быстрый старт
 
-Запустите версию 2.3.1 с помощью [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Запустите версию 2.4.0 с помощью [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.3.1 mcp
+uvx academic-research-kernel@2.4.0 mcp
 ```
 
-В описании [релиза 2.3.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.3.1) приведены контрольные суммы пакетов и статус публикации. Собранный wheel-пакет также можно запустить локально командой `uvx --from ./academic_research_kernel-2.3.1-py3-none-any.whl academic-research-kernel mcp`. Поддерживаются версии Python 3.10–3.14; параметр `uvx --python 3.12` явно выбирает совместимый интерпретатор. Все 12 детерминированных инструментов, включая статистические модули, входят в базовую установку.
+В описании [релиза 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) приведены контрольные суммы пакетов и статус публикации. Собранный wheel-пакет также можно запустить локально командой `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Поддерживаются версии Python 3.10–3.14; параметр `uvx --python 3.12` явно выбирает совместимый интерпретатор. Все 18 детерминированных инструментов, включая статистические модули, входят в базовую установку.
 
 ### Проверка установки
 
 ```bash
-uvx academic-research-kernel@2.3.1 doctor
-uvx academic-research-kernel@2.3.1 --version
+uvx academic-research-kernel@2.4.0 doctor
+uvx academic-research-kernel@2.4.0 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
 academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex --venue iclr --contribution-type systems_architecture
 ```
 
-Автономная диагностика проверяет зависимости, схемы данных и описания всех 12 инструментов. Дополнительные внешние сервисы могут оставаться ненастроенными. Используйте `doctor --json` для получения машиночитаемого вывода.
+Автономная диагностика проверяет зависимости, схемы данных и описания всех 18 инструментов. Дополнительные внешние сервисы могут оставаться ненастроенными. Используйте `doctor --json` для получения машиночитаемого вывода.
 
 ---
 
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### Исследование научной статьи с помощью локального агента
 
-Установите пакет `academic-research-kernel[research]==2.3.1` и экспортируйте встроенный рабочий процесс:
+Установите пакет `academic-research-kernel[research]==2.4.0` и экспортируйте встроенный рабочий процесс:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -131,12 +131,12 @@ academic-research-kernel bibliography --from bibtex --to csl --input refs.bib
 ### Установка пакета
 
 ```bash
-uv tool install academic-research-kernel==2.3.1
+uv tool install academic-research-kernel==2.4.0
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Пакет также можно установить через `pipx install academic-research-kernel==2.3.1` или `python -m pip install academic-research-kernel==2.3.1` в поддерживаемом виртуальном окружении. Профиль `[full]` добавляет библиотеки для расширенных вычислительных примеров; `[qa]` включает инструменты проверки репозитория, в том числе анализатор PDF. Профиль `[research]` устанавливает `pypdf==7.0.0` и `fonttools==4.65.0` для единообразного декодирования шрифтов PDF в чистых окружениях (оба пакета совместимы с Python 3.10). Структурированное чтение HTML/XML и ограниченное по размеру чтение DOCX/XLSX выполняются средствами стандартной библиотеки. Вычислительные бэкенды GPU и платные внешние сервисы остаются необязательными.
+Пакет также можно установить через `pipx install academic-research-kernel==2.4.0` или `python -m pip install academic-research-kernel==2.4.0` в поддерживаемом виртуальном окружении. Профиль `[full]` добавляет библиотеки для расширенных вычислительных примеров; `[qa]` включает инструменты проверки репозитория, в том числе анализатор PDF. Профиль `[research]` устанавливает `pypdf==7.0.0` и `fonttools==4.65.0` для единообразного декодирования шрифтов PDF в чистых окружениях (оба пакета совместимы с Python 3.10). Структурированное чтение HTML/XML и ограниченное по размеру чтение DOCX/XLSX выполняются средствами стандартной библиотеки. Вычислительные бэкенды GPU и платные внешние сервисы остаются необязательными.
 
 ### Интеграция и переносимое использование
 
@@ -214,7 +214,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. Локальная валидация, проверка дистрибутивов (2.3.1) и лицензия
+## 6. Локальная валидация, проверка дистрибутивов (2.4.0) и лицензия
 
 ### Валидация и тестирование
 

@@ -88,6 +88,37 @@ def _get_hardware_probe():
     return _HARDWARE_PROBE_MOD
 
 
+def _load_lazy_helper(mod_name: str, fallback_rel_path: str):
+    from importlib import import_module
+    import importlib.util
+
+    here = Path(__file__).resolve().parent
+    bundled_path = here / f"{mod_name}.py"
+    if bundled_path.is_file():
+        return import_module(f"academic_research_kernel.{mod_name}")
+
+    source_path = here.parent / fallback_rel_path
+    if not source_path.is_file():
+        raise ImportError(f"Bundled helper is unavailable: {mod_name}")
+
+    cache_key = f"_mcp_{mod_name}"
+    cached = sys.modules.get(cache_key)
+    if cached is not None:
+        return cached
+
+    spec = importlib.util.spec_from_file_location(cache_key, source_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load helper: {mod_name}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[cache_key] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(cache_key, None)
+        raise
+    return module
+
+
 def __getattr__(name: str):
     if name == "recompute":
         return _get_recompute()
@@ -433,6 +464,136 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {}
+        }
+    },
+    # -------------------------------------------------------------------------
+    # 6. Pre-Submission Auditing, Table Forensics, Meta-Analysis & Verification
+    # -------------------------------------------------------------------------
+    {
+        "name": "academic_pre_submission_lint",
+        "description": "Audit a LaTeX manuscript against venue formatting rules, required sections, double-blind package options, statistical dispersion, CEG claim bindings, and optional academic prose style checks.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["tex_path"],
+            "properties": {
+                "tex_path": {"type": "string", "description": "Path to main .tex entry file or manuscript directory"},
+                "venue": {"type": "string", "enum": ["iclr", "neurips", "icml", "acl", "kdd", "ieee_tmm", "acm_tois", "arxiv_preprint"], "description": "Target venue key, default iclr"},
+                "phase": {"type": "string", "enum": ["submission", "rebuttal", "camera_ready"], "description": "Submission phase, default submission"},
+                "contribution_type": {"type": "string", "description": "Contribution type key, default general_empirical"},
+                "pdf_path": {"type": "string", "description": "Optional compiled PDF path for page-limit verification"},
+                "ceg_path": {"type": "string", "description": "Optional ClaimEvidenceGraph JSON path"},
+                "require_ceg_binding": {"type": "boolean", "description": "Flag quantitative claims in Abstract/Conclusion without verified CEG binding"},
+                "check_academic_style": {"type": "boolean", "description": "Emit advisory hits for academic LLM cliches, unanchored strong claims, and vague passive methods"}
+            }
+        }
+    },
+    {
+        "name": "academic_double_blind_sanitize",
+        "description": "Read-only scan of a manuscript or reproduction directory for double-blind anonymity leaks (PDF metadata, local paths, Git credentials, unblinded acks, forbidden tokens). Never modifies files and redacts matched forbidden tokens in output.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["target_path"],
+            "properties": {
+                "target_path": {"type": "string", "description": "Manuscript file or directory to scan"},
+                "forbidden_tokens": {"type": "array", "items": {"type": "string"}, "description": "Optional list of author/affiliation/repo tokens to flag and redact"}
+            }
+        }
+    },
+    {
+        "name": "academic_table_forensics",
+        "description": "Audit AI/CS paper tables for partition conservation, constant-offset ablation regularity, and physical storage/bandwidth lower bounds.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "partition": {
+                    "type": "object",
+                    "required": ["total", "parts"],
+                    "properties": {
+                        "total": {"type": "integer"},
+                        "parts": {"type": "array", "items": {"type": "integer"}},
+                        "reported_shares": {"type": "array", "items": {"type": "number"}},
+                        "tol": {"type": "integer"},
+                        "share_tol_pct": {"type": "number"},
+                        "share_unit": {"type": "string", "enum": ["auto", "percent", "fraction"]}
+                    },
+                    "additionalProperties": False
+                },
+                "ablation_matrix": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}},
+                "ablation_baseline_col": {"type": "integer"},
+                "ablation_min_rows": {"type": "integer"},
+                "ablation_tol": {"type": "number"},
+                "storage_bandwidth": {
+                    "type": "object",
+                    "required": ["item_count", "vector_dim"],
+                    "properties": {
+                        "item_count": {"type": "integer"},
+                        "vector_dim": {"type": "integer"},
+                        "bytes_per_element": {"type": "integer"},
+                        "reported_size_mb": {"type": "number"},
+                        "reported_latency_us": {"type": "number"},
+                        "max_bandwidth_gbps": {"type": "number"},
+                        "rel_tol": {"type": "number"},
+                        "claims_full_system_storage": {"type": "boolean"},
+                        "storage_unit": {"type": "string", "enum": ["auto", "MB", "MiB"]},
+                        "reported_literal": {"type": "string"},
+                        "reported_decimals": {"type": "integer", "minimum": 0},
+                        "min_metadata_overhead_bytes": {"type": "integer", "minimum": 0}
+                    },
+                    "additionalProperties": False
+                }
+            }
+        }
+    },
+    {
+        "name": "academic_meta_analyze",
+        "description": "Run deterministic fixed-effect and DerSimonian-Laird random-effects meta-analysis, heterogeneity (Q, I2, tau2), leave-one-out sensitivity, Egger regression, and Duval-Tweedie trim-and-fill.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["studies"],
+            "properties": {
+                "studies": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": ["yi", "vi"],
+                        "properties": {
+                            "yi": {"type": "number", "description": "Effect size estimate"},
+                            "vi": {"type": "number", "description": "Within-study sampling variance (> 0)"},
+                            "study_id": {"type": "string", "description": "Optional study identifier"}
+                        },
+                        "additionalProperties": False
+                    }
+                }
+            }
+        }
+    },
+    {
+        "name": "academic_verify_source",
+        "description": "Normalize scholarly identifiers (DOI, arXiv, PMID, PMCID, OpenAlex) and cross-verify metadata across OpenAlex and Crossref records.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["identifier"],
+            "properties": {
+                "identifier": {"type": "string", "description": "DOI, arXiv ID, PMID, OpenAlex ID, or URL"},
+                "normalize_only": {"type": "boolean", "description": "Only normalize the identifier without querying metadata"},
+                "offline": {"type": "boolean", "description": "Disable network requests"},
+                "openalex_record": {"type": "object", "description": "Optional pre-fetched OpenAlex work JSON object"},
+                "crossref_record": {"type": "object", "description": "Optional pre-fetched Crossref message JSON object"}
+            }
+        }
+    },
+    {
+        "name": "academic_openreview_audit",
+        "description": "Audit OpenReview submission status, ratings, review word counts, or macro venue acceptance/rating distributions from offline notes or mirror records.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "forum_id": {"type": "string", "description": "OpenReview forum ID"},
+                "notes": {"type": "array", "items": {"type": "object"}, "description": "Optional offline OpenReview notes list for single-paper audit"},
+                "venue_records": {"type": "array", "items": {"type": "object"}, "description": "Optional venue mirror records list for macro statistics"},
+                "topic_regex": {"type": "string", "description": "Optional regex filter for venue_records"}
+            }
         }
     }
 ]
@@ -1102,6 +1263,197 @@ def handle_tool_call(name: str, arguments: dict, *, verification_context: Option
         elif name == "academic_scfabric_hardware_probe":
             probe_mod = globals().get("hardware_probe") if "hardware_probe" in globals() else _get_hardware_probe()
             return probe_mod.probe()
+
+        # 13. academic_pre_submission_lint
+        elif name == "academic_pre_submission_lint":
+            psl_mod = _load_lazy_helper("pre_submission_linter", "skills/academic-writing/scripts/pre_submission_linter.py")
+            tex_target = Path(arguments["tex_path"])
+            if tex_target.is_dir() and (tex_target / "main.tex").is_file():
+                tex_target = tex_target / "main.tex"
+            return psl_mod.lint_manuscript(
+                tex_path=tex_target,
+                venue=arguments.get("venue", "iclr"),
+                contribution_type=arguments.get("contribution_type", "general_empirical"),
+                phase=arguments.get("phase", "submission"),
+                pdf_path=arguments.get("pdf_path"),
+                ceg_path=arguments.get("ceg_path"),
+                require_ceg_binding=bool(arguments.get("require_ceg_binding", False)),
+                check_academic_style=bool(arguments.get("check_academic_style", False)),
+            )
+
+        # 14. academic_double_blind_sanitize
+        elif name == "academic_double_blind_sanitize":
+            try:
+                dbs_mod = _load_lazy_helper("double_blind_sanitizer", "skills/academic-writing/scripts/double_blind_sanitizer.py")
+                forb = [str(t) for t in (arguments.get("forbidden_tokens") or []) if str(t)]
+                rep = dbs_mod.scan_target(Path(arguments["target_path"]), forbidden_tokens=forb)
+                if not isinstance(rep, dict):
+                    raise ValueError("Invalid scan report")
+                raw_findings = rep.get("findings", [])
+                if not isinstance(raw_findings, list):
+                    raise ValueError("Invalid findings list")
+                public_findings = []
+                for idx, f_item in enumerate(raw_findings, 1):
+                    if not isinstance(f_item, dict):
+                        continue
+                    pub_item: Dict[str, Any] = {
+                        "finding_id": idx,
+                        "kind": str(f_item.get("kind") or "leak"),
+                        "matched": "[REDACTED]",
+                    }
+                    line_val = f_item.get("line")
+                    if type(line_val) is int and line_val >= 0:
+                        pub_item["line"] = line_val
+                    public_findings.append(pub_item)
+                unsupported = rep.get("unsupported_files", [])
+                skipped = rep.get("skipped_symlinks", [])
+                return {
+                    "status": str(rep.get("status") or "incomplete"),
+                    "files_scanned": int(rep.get("files_scanned", 0)),
+                    "unsupported_file_count": len(unsupported) if isinstance(unsupported, list) else 0,
+                    "skipped_symlink_count": len(skipped) if isinstance(skipped, list) else 0,
+                    "leak_count": len(public_findings),
+                    "findings": public_findings,
+                }
+            except Exception:
+                return {
+                    "error": "Anonymity scan failed",
+                    "details": ["Source path and error details were withheld to prevent identifier leakage"],
+                }
+
+        # 15. academic_table_forensics
+        elif name == "academic_table_forensics":
+            recomp_mod = globals().get("recompute") if "recompute" in globals() else _get_recompute()
+            out: dict[str, Any] = {}
+            if "partition" in arguments and arguments["partition"] is not None:
+                p = arguments["partition"]
+                out["partition_conservation"] = recomp_mod.check_partition_conservation(
+                    p["total"], p["parts"],
+                    reported_shares=p.get("reported_shares"),
+                    tol=p.get("tol", 0),
+                    share_tol_pct=p.get("share_tol_pct", 0.5),
+                    share_unit=p.get("share_unit", "auto"),
+                )
+            if "ablation_matrix" in arguments and arguments["ablation_matrix"] is not None:
+                out["ablation_delta_regularity"] = recomp_mod.check_ablation_delta_regularity(
+                    arguments["ablation_matrix"],
+                    baseline_col=arguments.get("ablation_baseline_col", 0),
+                    min_rows=arguments.get("ablation_min_rows", 3),
+                    tol=arguments.get("ablation_tol", 1e-9),
+                )
+            if "storage_bandwidth" in arguments and arguments["storage_bandwidth"] is not None:
+                sb = arguments["storage_bandwidth"]
+                out["storage_bandwidth_bounds"] = recomp_mod.check_storage_bandwidth_bounds(
+                    sb["item_count"], sb["vector_dim"],
+                    bytes_per_element=sb.get("bytes_per_element", 4),
+                    reported_size_mb=sb.get("reported_size_mb"),
+                    reported_latency_us=sb.get("reported_latency_us"),
+                    max_bandwidth_gbps=sb.get("max_bandwidth_gbps", 4000.0),
+                    rel_tol=sb.get("rel_tol", 1e-2),
+                    claims_full_system_storage=sb.get("claims_full_system_storage", True),
+                    storage_unit=sb.get("storage_unit", "auto"),
+                    reported_literal=sb.get("reported_literal"),
+                    reported_decimals=sb.get("reported_decimals"),
+                    min_metadata_overhead_bytes=sb.get("min_metadata_overhead_bytes", 0),
+                )
+            if not out:
+                return {"error": "Invalid tool input", "details": ["Provide at least one of: partition, ablation_matrix, storage_bandwidth"]}
+            out["consistent"] = all(v.get("consistent") is True for v in out.values() if isinstance(v, dict))
+            return out
+
+        # 16. academic_meta_analyze
+        elif name == "academic_meta_analyze":
+            from dataclasses import asdict
+            meta_mod = _load_lazy_helper("meta_core", "skills/systematic-review-meta-analysis/scripts/meta_core.py")
+            studies = arguments["studies"]
+            yi, vi = [], []
+            for idx, s in enumerate(studies):
+                yv, vv = float(s["yi"]), float(s["vi"])
+                if not (math.isfinite(yv) and math.isfinite(vv)) or vv <= 0:
+                    raise ValueError(f"studies[{idx}] requires finite yi and positive finite vi")
+                yi.append(yv)
+                vi.append(vv)
+            fixed = asdict(meta_mod.pool_fixed(yi, vi))
+            random_dl = asdict(meta_mod.pool_random(yi, vi))
+            loo = [asdict(r) for r in meta_mod.leave_one_out(yi, vi)] if len(yi) >= 2 else []
+            bias = None
+            if len(yi) >= 3:
+                try:
+                    intercept, t_val, p_val = meta_mod.egger_test(yi, vi)
+                    egger_out = {
+                        "status": "ok",
+                        "intercept": intercept,
+                        "t": t_val if math.isfinite(t_val) else None,
+                        "p": p_val if math.isfinite(p_val) else None,
+                    }
+                except (ValueError, ZeroDivisionError) as exc:
+                    egger_out = {"status": "not_estimable", "reason": str(exc)}
+                try:
+                    tf_res = meta_mod.trim_and_fill(yi, vi)
+                except (ValueError, ZeroDivisionError) as exc:
+                    tf_res = {"status": "not_estimable", "reason": str(exc)}
+                bias = {"egger": egger_out, "trim_and_fill": tf_res}
+            return {
+                "study_count": len(yi),
+                "fixed_effect": fixed,
+                "random_effects_dl": random_dl,
+                "leave_one_out": loo,
+                "publication_bias": bias,
+            }
+
+        # 17. academic_verify_source
+        elif name == "academic_verify_source":
+            norm_mod = _load_lazy_helper("normalize_identifier", "skills/academic-source-verification/scripts/normalize_identifier.py")
+            ver_mod = _load_lazy_helper("verify_work", "skills/academic-source-verification/scripts/verify_work.py")
+            norm = norm_mod.normalize_identifier(arguments["identifier"])
+            if arguments.get("normalize_only") or norm["type"] != "doi":
+                return norm
+            doi = norm["value"]
+            sources_out, parsed = {}, []
+            oa_rec = arguments.get("openalex_record")
+            cr_rec = arguments.get("crossref_record")
+            for s_name, pre_rec, live_fn, parse_fn in (
+                ("openalex", oa_rec, ver_mod.fetch_openalex, ver_mod.parse_openalex_work),
+                ("crossref", cr_rec, ver_mod.fetch_crossref, ver_mod.parse_crossref_work),
+            ):
+                if pre_rec is not None:
+                    w = parse_fn(pre_rec)
+                    sources_out[s_name] = {"status": "ok", "mode": "offline-record", "work": w}
+                    parsed.append(w)
+                elif arguments.get("offline"):
+                    sources_out[s_name] = {"status": "skipped", "reason": "offline mode; no record provided; no result inferred"}
+                else:
+                    try:
+                        w = parse_fn(live_fn(doi))
+                        sources_out[s_name] = {"status": "ok", "mode": "live", "work": w}
+                        parsed.append(w)
+                    except Exception as exc:
+                        sources_out[s_name] = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+            comparison = ver_mod.compare_works(parsed, target_doi=doi) if parsed else None
+            return {
+                "normalized": norm,
+                "target_doi": doi,
+                "sources": sources_out,
+                "comparison": comparison,
+            }
+
+        # 18. academic_openreview_audit
+        elif name == "academic_openreview_audit":
+            or_mod = _load_lazy_helper("openreview_audit", "skills/academic-source-verification/scripts/openreview_audit.py")
+            if arguments.get("venue_records") is not None:
+                return or_mod.summarize_venue_mirror(
+                    arguments["venue_records"],
+                    topic_regex=arguments.get("topic_regex"),
+                )
+            if arguments.get("notes") is not None:
+                fid = arguments.get("forum_id")
+                if not fid and arguments["notes"]:
+                    first_n = arguments["notes"][0]
+                    fid = first_n.get("forum") or first_n.get("id")
+                return or_mod.parse_openreview_notes(arguments["notes"], forum_id=fid or "unknown")
+            if arguments.get("forum_id"):
+                return or_mod.fetch_openreview_forum(arguments["forum_id"])
+            return {"error": "Invalid tool input", "details": ["Provide one of: venue_records, notes, or forum_id"]}
 
         return {"error": f"Unknown tool: {name}"}
 

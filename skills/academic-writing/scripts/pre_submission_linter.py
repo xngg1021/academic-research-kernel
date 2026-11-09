@@ -129,6 +129,225 @@ RUNNING_HEADER_LINE_RE = re.compile(
 CAMERA_READY_HEADER_RE = re.compile(r"^\s*(?:Published|Accepted)\s+as\s+a\s+conference\s+paper\b", re.M | re.I)
 FORBIDDEN_DOUBLE_BLIND_OPTION_TOKENS = {"final", "accepted", "preprint", "cameraready", "camera-ready", "nonblind"}
 
+MATH_OR_QUOTE_OR_BIB_MASK_RE = re.compile(
+    r"\\begin\{(?:equation\*?|align\*?|gather\*?|multline\*?|flalign\*?|math|displaymath|quote|quotation|thebibliography)\}.*?\\end\{(?:equation\*?|align\*?|gather\*?|multline\*?|flalign\*?|math|displaymath|quote|quotation|thebibliography)\}"
+    r"|\$\$.*?\$\$"
+    r"|\\\[.*?\\\]"
+    r"|\\\(.*?\\\)"
+    r"|(?<!\\)\$[^\n$]+?(?<!\\)\$"
+    r"|\\(?:cite[a-zA-Z*]*|ref|eqref|autoref|Cref|cref|pageref|label|url)\*?\s*(?:\[[^\]]*\])*\s*\{[^}]*\}",
+    re.S,
+)
+ACADEMIC_CLICHE_EN_RE = re.compile(
+    r"\b(?:"
+    r"delve(?:s|d|ing)?\s+into|"
+    r"pivotal\s+role|"
+    r"testament\s+to|"
+    r"rich\s+tapestry|tapestry\s+of|"
+    r"shed(?:s|ding)?\s+light\s+on|"
+    r"in\s+the\s+realm\s+of|"
+    r"paradigm\s+shift|"
+    r"embark(?:s|ed|ing)?\s+on\s+a\s+journey|"
+    r"a\s+myriad\s+of|"
+    r"underscore(?:s|d|ing)?\s+the\s+(?:importance|significance|necessity)|"
+    r"with\s+the\s+rapid\s+(?:development|advancement|proliferation|evolution)\s+of"
+    r")\b",
+    re.I,
+)
+ACADEMIC_CLICHE_ZH_RE = re.compile(
+    r"(?:随着[^\n，。；]{1,25}的(?:飞速发展|蓬勃发展|日益普及|不断演进)|不仅[^\n，。；]{1,35}更为[^\n，。；]{1,35}提供了|赋能|抓手|形成闭环|底层逻辑|范式跃迁|注入新动能)"
+)
+STRONG_CLAIM_CANDIDATE_RE = re.compile(
+    r"(?:\b(?:"
+    r"we\s+prove|proves?\s+that|formally\s+guarantee(?:s|d)?|theoretically\s+guarantee(?:s|d)?|"
+    r"statistically\s+significant(?:ly)?|"
+    r"globally\s+optimal|universally\s+superior|unconditionally\s+outperforms?|always\s+outperforms?"
+    r")\b|统计显著)",
+    re.I,
+)
+NEGATION_WINDOW_RE = re.compile(
+    r"(?:\b(?:not|no|never|neither|cannot|can\s+not|could\s+not|did\s+not|do\s+not|does\s+not|fail(?:s|ed)?\s+to|without|hard\s+to|difficult\s+to|impossible\s+to|open\s+problem|future\s+work|remains?\s+to\s+be)\b|并未|未能|无法|不能|难以|尚不|尚未|不一定|并非)",
+    re.I,
+)
+CLAUSE_BREAK_RE = re.compile(r"(?:[,;，；:]|\b(?:but|however|yet|whereas|while|although)\b)", re.I)
+THEOREM_ENV_BLOCK_RE = re.compile(
+    r"\\begin\{(theorem|lemma|proposition|corollary)\*?\}(.*?)\\end\{\1\*?\}",
+    re.S | re.I,
+)
+VAGUE_METHOD_PASSIVE_RE = re.compile(
+    r"(?:\b(?:"
+    r"hyperparameters?\s+(?:were|are|was)\s+(?:tuned|selected|chosen|set)\s+(?:appropriately|properly|carefully|empirically|suitably)|"
+    r"data(?:sets?)?\s+(?:were|are|was)\s+(?:preprocessed|filtered|cleaned)\s+(?:appropriately|properly|carefully|suitably)"
+    r")\b|超参数经过(?:适当|合理|精心)调优|数据经过(?:适当|合理|妥善)预处理)",
+    re.I,
+)
+CONCRETE_METHOD_ANCHOR_RE = re.compile(
+    r"(?:\b\d+(?:\.\d+)?\b|\\(?:ref|eqref|autoref|Cref|cref)\b|\b(?:Table|Tab\.|Section|Sec\.|Appendix|Algorithm|Alg\.)\b)",
+    re.I,
+)
+
+
+def _mask_math_quotes_and_bib_preserving_lines(masked_body: str) -> str:
+    """Mask math, direct quote environments, bibliography, and cite/ref/url commands into spaces while preserving line numbers."""
+    chars = list(masked_body)
+    for m in MATH_OR_QUOTE_OR_BIB_MASK_RE.finditer(masked_body):
+        for idx in range(m.start(), m.end()):
+            if chars[idx] != "\n":
+                chars[idx] = " "
+    return "".join(chars)
+
+
+def _extract_Strong_claim_sentences(prose_block: str, full_block: str) -> list[tuple[int, int, int, str, str]]:
+    """Return (sent_start, match_start, sent_end, sentence_text, matched_token) scanning prose_block and slicing full_block."""
+    n = len(prose_block)
+    spans: list[tuple[int, int, int, str, str]] = []
+    sent_punct = "!?;\u3002\uff01\uff1f\uff1b"
+    for m in STRONG_CLAIM_CANDIDATE_RE.finditer(prose_block):
+        s_idx = m.start()
+        while s_idx > 0:
+            ch = prose_block[s_idx - 1]
+            if ch == "\n" and s_idx >= 2 and prose_block[s_idx - 2] == "\n":
+                break
+            if ch in sent_punct or (ch == "." and _is_sentence_boundary_dot(prose_block, s_idx - 1)):
+                break
+            s_idx -= 1
+        e_idx = m.end()
+        while e_idx < n:
+            ch = prose_block[e_idx]
+            if ch == "\n" and e_idx + 1 < n and prose_block[e_idx + 1] == "\n":
+                break
+            if ch in sent_punct or (ch == "." and _is_sentence_boundary_dot(prose_block, e_idx)):
+                e_idx += 1
+                break
+            e_idx += 1
+        # Check negation only within the current clause immediately preceding the match
+        clause_prefix = prose_block[max(s_idx, m.start() - 60) : m.start()]
+        clause_breaks = list(CLAUSE_BREAK_RE.finditer(clause_prefix))
+        if clause_breaks:
+            clause_prefix = clause_prefix[clause_breaks[-1].end() :]
+        if NEGATION_WINDOW_RE.search(clause_prefix):
+            continue
+        sentence_raw = full_block[s_idx:e_idx]
+        sentence = " ".join(sentence_raw.split()).strip()
+        if len(sentence) >= 8:
+            spans.append((s_idx, m.start(), e_idx, sentence, m.group(0)))
+    return spans
+
+
+def _scan_academic_style(
+    rel_name: str,
+    raw: str,
+    uncommented: str,
+    masked_body: str,
+    defined_theorem_labels: set[str],
+    verified_id_to_text: dict[str, str],
+) -> tuple[list[dict[str, Any]], int]:
+    """Run deterministic, non-scoring academic prose & claim-boundary checks returning (advisory_hits, macro_def_count)."""
+    advisory_hits: list[dict[str, Any]] = []
+    macro_def_count = sum(1 for _ in MACRO_DEF_HEAD_RE.finditer(uncommented))
+    prose_only = _mask_math_quotes_and_bib_preserving_lines(masked_body)
+    prose_lines = prose_only.splitlines()
+    raw_lines = raw.splitlines()
+    newline_offsets = [idx for idx, ch in enumerate(masked_body) if ch == "\n"]
+
+    file_line_tags: dict[int, list[str]] = {}
+    for l_idx, r_line in enumerate(raw_lines, 1):
+        tids = INLINE_CEG_TAG_RE.findall(r_line)
+        if tids:
+            file_line_tags[l_idx] = tids
+
+    # 1. Academic AI cliché scan on prose_only (comments, math, verbatim, quotes, bib masked)
+    for line_idx, p_line in enumerate(prose_lines, 1):
+        for pat_re in (ACADEMIC_CLICHE_EN_RE, ACADEMIC_CLICHE_ZH_RE):
+            for m_cl in pat_re.finditer(p_line):
+                advisory_hits.append({
+                    "code": "ACADEMIC_AI_CLICHE_CANDIDATE",
+                    "severity": "advisory",
+                    "locator": f"{rel_name}:L{line_idx}",
+                    "message": f"High-frequency template phrase {m_cl.group(0)!r} detected in prose; replace with concrete mechanism, boundary, or measurement.",
+                    "excerpt": (raw_lines[line_idx - 1].strip() if line_idx - 1 < len(raw_lines) else p_line.strip())[:160],
+                })
+
+    # 2. Vague passive methodological description scan on prose_only
+    sent_stops = ".!?\n\u3002\uff01\uff1f\uff1b"
+    for m_vm in VAGUE_METHOD_PASSIVE_RE.finditer(prose_only):
+        line_no = bisect_right(newline_offsets, m_vm.start()) + 1
+        s_idx = m_vm.start()
+        while s_idx > 0 and masked_body[s_idx - 1] not in sent_stops:
+            s_idx -= 1
+        e_idx = m_vm.end()
+        while e_idx < len(masked_body) and masked_body[e_idx] not in sent_stops:
+            e_idx += 1
+        sent_with_refs = masked_body[s_idx:e_idx]
+        if not CONCRETE_METHOD_ANCHOR_RE.search(sent_with_refs):
+            advisory_hits.append({
+                "code": "VAGUE_METHOD_DESCRIPTION_CANDIDATE",
+                "severity": "advisory",
+                "locator": f"{rel_name}:L{line_no}",
+                "message": f"Vague methodological phrase {m_vm.group(0)!r} lacks concrete parameter values or Section/Table/Appendix reference in the same sentence.",
+                "excerpt": " ".join(sent_with_refs.split())[:160],
+            })
+
+    # 3. Strong claim hedging calibration in Abstract & Conclusion blocks
+    for block_kind, block_re in (("abstract", ABSTRACT_BLOCK_RE), ("conclusion", CONCLUSION_BLOCK_RE)):
+        for m_blk in block_re.finditer(masked_body):
+            blk_full = m_blk.group(1)
+            blk_prose = prose_only[m_blk.start(1) : m_blk.end(1)]
+            blk_start_line = masked_body[: m_blk.start(1)].count("\n") + 1
+            blk_nl_offsets = [idx for idx, ch in enumerate(blk_full) if ch == "\n"]
+            for s_idx, m_start, sent_end, claim_sent, tok in _extract_Strong_claim_sentences(blk_prose, blk_full):
+                line_offset = bisect_right(blk_nl_offsets, m_start)
+                sent_start_line = bisect_right(blk_nl_offsets, s_idx)
+                sent_end_line = bisect_right(blk_nl_offsets, max(s_idx, sent_end - 1))
+                loc_line = blk_start_line + line_offset
+                abs_start_line = blk_start_line + sent_start_line
+                abs_end_line = blk_start_line + sent_end_line
+
+                norm_sent = _normalize_claim_text(claim_sent)
+                has_verified_ceg = False
+                for check_l in range(max(1, abs_start_line - 1), abs_end_line + 1):
+                    for tid in file_line_tags.get(check_l, ()):
+                        if tid not in verified_id_to_text:
+                            continue
+                        c_txt = _normalize_claim_text(verified_id_to_text[tid])
+                        if c_txt and c_txt == norm_sent:
+                            has_verified_ceg = True
+                            break
+                    if has_verified_ceg:
+                        break
+                if has_verified_ceg:
+                    continue
+
+                tok_low = tok.lower()
+                if "significant" in tok_low or "显著" in tok_low:
+                    if DISPERSION_MARKER_RE.search(claim_sent):
+                        continue
+                    advisory_hits.append({
+                        "code": "UNANCHORED_STRONG_CLAIM_CANDIDATE",
+                        "severity": "advisory",
+                        "locator": f"{rel_name}:L{loc_line}",
+                        "message": f"Statistical significance claim {tok!r} in {block_kind} has no same-sentence statistical test/p-value/CI marker or verified % ark:claim=<id> anchor.",
+                        "excerpt": claim_sent[:180],
+                    })
+                else:
+                    has_resolvable_thm = False
+                    for m_ref in REF_CALL_RE.finditer(claim_sent):
+                        for k in m_ref.group(1).split(","):
+                            if k.strip() in defined_theorem_labels:
+                                has_resolvable_thm = True
+                                break
+                    if has_resolvable_thm:
+                        continue
+                    advisory_hits.append({
+                        "code": "UNANCHORED_STRONG_CLAIM_CANDIDATE",
+                        "severity": "advisory",
+                        "locator": f"{rel_name}:L{loc_line}",
+                        "message": f"Strong formal/optimality claim {tok!r} in {block_kind} has no resolvable Theorem/Lemma/Proposition \\label reference or verified % ark:claim=<id> anchor.",
+                        "excerpt": claim_sent[:180],
+                    })
+
+    return advisory_hits, macro_def_count
+
 
 def _default_specs_path() -> Path:
     here = Path(__file__).resolve()
@@ -738,6 +957,7 @@ def lint_manuscript(
     pdf_path: str | Path | None = None,
     ceg_path: str | Path | None = None,
     require_ceg_binding: bool = False,
+    check_academic_style: bool = False,
     specs_path: str | Path | None = None,
 ) -> dict[str, Any]:
     specs = load_venue_specs(specs_path)
@@ -765,6 +985,7 @@ def lint_manuscript(
     verified_id_to_text, verified_texts = _load_ceg_claim_map(Path(ceg_path) if ceg_path else None)
     verified_ceg = set(verified_id_to_text.keys()) | verified_texts
     defined_labels: set[str] = set()
+    defined_theorem_labels: set[str] = set()
     ref_invocations: list[tuple[str, int, str, str]] = []
     bare_cite_invocations: list[tuple[str, int, str]] = []
     author_dup_candidates: list[tuple[str, int, str, str, str]] = []
@@ -800,6 +1021,11 @@ def lint_manuscript(
             lbl_key = m_lbl.group(1).strip()
             if lbl_key and "#" not in lbl_key:
                 defined_labels.add(lbl_key)
+        for m_thm_env in THEOREM_ENV_BLOCK_RE.finditer(masked_body):
+            for m_tlbl in LABEL_DEF_RE.finditer(m_thm_env.group(2)):
+                tlbl_key = m_tlbl.group(1).strip()
+                if tlbl_key and "#" not in tlbl_key:
+                    defined_theorem_labels.add(tlbl_key)
         for lbl_key in _extract_top_level_env_option_labels(masked_body):
             defined_labels.add(lbl_key)
 
@@ -954,6 +1180,23 @@ def lint_manuscript(
                     "excerpt": excerpt_line,
                 })
 
+    total_macros_masked = 0
+    if check_academic_style:
+        for fpath, raw in tex_files:
+            rel_name = fpath.name if len(tex_files) == 1 else fpath.relative_to(entry_tex.parent).as_posix()
+            uncommented = _strip_latex_comments(raw)
+            masked_body = _mask_macro_definitions_and_verbatim(uncommented)
+            adv_hits, macro_cnt = _scan_academic_style(
+                rel_name=rel_name,
+                raw=raw,
+                uncommented=uncommented,
+                masked_body=masked_body,
+                defined_theorem_labels=defined_theorem_labels,
+                verified_id_to_text=verified_id_to_text,
+            )
+            hits.extend(adv_hits)
+            total_macros_masked += macro_cnt
+
     if author_year_style_active and not numeric_cite_option_active:
         for rel_name, line_no, dup_author, dup_cite, dup_excerpt in author_dup_candidates:
             hits.append({
@@ -1027,10 +1270,15 @@ def lint_manuscript(
         "files_scanned": len(tex_files),
         "discovered_sections": discovered_sections,
         "pdf_check": pdf_info,
+        "style_check": {
+            "enabled": bool(check_academic_style),
+            "custom_macros_masked": total_macros_masked,
+        },
         "summary_counts": {
             "total_hits": len(hits),
             "blockers": blocker_count,
             "warnings": by_severity.get("warning", 0),
+            "advisories": by_severity.get("advisory", 0),
             "by_code": by_code,
         },
         "hits": hits,
@@ -1054,6 +1302,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pdf", help="Optional compiled PDF path for main-body page limit verification")
     parser.add_argument("--ceg", help="Optional ClaimEvidenceGraph JSON snapshot path")
     parser.add_argument("--require-ceg-binding", action="store_true", help="Flag quantitative claims in Abstract/Conclusion without CEG binding")
+    parser.add_argument("--check-academic-style", action="store_true", help="Emit advisory hits for academic LLM cliches, unanchored strong claims, and vague passive methods")
     parser.add_argument("--output", help="Optional output JSON file path")
     args = parser.parse_args(argv)
 
@@ -1065,6 +1314,7 @@ def main(argv: list[str] | None = None) -> int:
         pdf_path=args.pdf,
         ceg_path=args.ceg,
         require_ceg_binding=args.require_ceg_binding,
+        check_academic_style=args.check_academic_style,
     )
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
     if args.output:
