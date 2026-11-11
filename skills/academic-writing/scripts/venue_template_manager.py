@@ -263,13 +263,17 @@ def verify_style_directory(manuscript_dir: str | Path, specs_path: str | Path | 
     manifest_path = mdir / "venue-manifest.json"
     if _is_link_or_reparse(manifest_path) or not manifest_path.is_file():
         raise ValueError(f"venue-manifest.json not found or invalid in {mdir}")
+    style_candidates: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(mdir, followlinks=False):
         dp = Path(dirpath)
         _reject_symlink_chain(mdir, dp)
         for dname in dirnames:
             _reject_symlink_chain(mdir, dp / dname)
         for fname in filenames:
-            _reject_symlink_chain(mdir, dp / fname)
+            fpath = dp / fname
+            _reject_symlink_chain(mdir, fpath)
+            if fpath.suffix.lower() in (".sty", ".cls", ".bst"):
+                style_candidates.append(fpath)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     specs = _load_specs(specs_path)
     vspec = specs["venues"][manifest["venue"]]
@@ -278,21 +282,21 @@ def verify_style_directory(manuscript_dir: str | Path, specs_path: str | Path | 
     warnings = []
     trusted_hashes = set(vspec.get("trusted_style_sha256") or [])
     verified_count = 0
-    for ext in ("*.sty", "*.cls", "*.bst"):
-        for f in sorted(mdir.rglob(ext)):
-            _reject_symlink_chain(mdir, f)
-            if not f.is_file():
-                continue
-            raw = f.read_bytes()
-            sha = hashlib.sha256(raw).hexdigest()
-            rel = f.relative_to(mdir).as_posix()
-            is_verified_file = bool(trusted_hashes and sha in trusted_hashes)
-            if is_verified_file:
-                verified_count += 1
-            style_records.append({"path": rel, "sha256": sha, "size_bytes": len(raw), "verified_origin": is_verified_file})
-            for pat in vspec.get("forbidden_patterns_in_review", []):
-                if f.stem in pat:
-                    warnings.append(f"Style file {rel} matches forbidden legacy pattern {pat!r}")
+    ext_order = {".sty": 0, ".cls": 1, ".bst": 2}
+    for f in sorted(style_candidates, key=lambda p: (ext_order.get(p.suffix.lower(), 9), str(p))):
+        _reject_symlink_chain(mdir, f)
+        if not f.is_file():
+            continue
+        raw = f.read_bytes()
+        sha = hashlib.sha256(raw).hexdigest()
+        rel = f.relative_to(mdir).as_posix()
+        is_verified_file = bool(trusted_hashes and sha in trusted_hashes)
+        if is_verified_file:
+            verified_count += 1
+        style_records.append({"path": rel, "sha256": sha, "size_bytes": len(raw), "verified_origin": is_verified_file})
+        for pat in vspec.get("forbidden_patterns_in_review", []):
+            if f.stem in pat:
+                warnings.append(f"Style file {rel} matches forbidden legacy pattern {pat!r}")
 
     official_verified = bool(style_records and trusted_hashes and verified_count == len(style_records))
     manifest["style_files"] = style_records

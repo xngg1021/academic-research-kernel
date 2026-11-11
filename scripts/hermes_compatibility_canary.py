@@ -38,6 +38,8 @@ def check_loader(root, upstream):
         config = mcp.get('academic-skills')
         if diagnostics or not config or config.get('args', [])[-1:] != ['mcp']:
             raise ValueError('MCP command translation rejected')
+        if 'command' in config and (config.get('command') != 'uv' or '--frozen' not in config.get('args', []) or '--no-editable' not in config.get('args', [])):
+            raise ValueError('MCP command translation missing locked uv flags')
         return len(skills)
     finally:
         sys.path.pop(0)
@@ -70,7 +72,7 @@ def check_compatibility(upstream, channel, checkout_outcome='success', expected_
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--upstream', required=True, type=Path)
-    parser.add_argument('--channel', required=True, choices=('pinned', 'latest-upstream'))
+    parser.add_argument('--channel', required=True, choices=('pinned', 'supported-current', 'latest-upstream'))
     parser.add_argument('--checkout-outcome', default='success')
     parser.add_argument('--expected-sha')
     parser.add_argument('--output', required=True)

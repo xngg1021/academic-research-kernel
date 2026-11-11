@@ -15,19 +15,19 @@ Autor: Junfu Shi (SJF, xngg1021). Oferta actual: [Source Lineage License 1.0](LI
 
 ### Inicio rápido
 
-Ejecute la versión 2.4.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Ejecute la versión 2.4.1 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-La [versión 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10/3.12/3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 18 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
+La [versión 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) registra los hashes de distribución y el estado de publicación. El paquete wheel publicado también puede ejecutarse localmente con `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. Se admite Python 3.10/3.12/3.14; `uvx --python 3.12` selecciona explícitamente un intérprete compatible. Las 18 herramientas deterministas, incluido el cálculo estadístico, forman parte de la instalación base.
 
 ### Verificar la instalación
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ El diagnóstico sin conexión comprueba las dependencias, los esquemas y las 18 
 
 ### Investigar un artículo con un Agente local
 
-Instale `academic-research-kernel[research]==2.4.0` y exporte el flujo de trabajo empaquetado:
+Instale `academic-research-kernel[research]==2.4.1` y exporte el flujo de trabajo empaquetado:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Para fundamentar las cinco familias de defectos deterministas (ausencia de barra
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Contrastar identidad y recuentos de citas por fuente; inspeccionar señales de actualización y retractación; localizar texto en acceso abierto y verificar la identidad de los PDF; auditar revisiones en OpenReview y repositorios de código |
 | `skills/literature-analysis` | 1.3.0 | Doce flujos: similitud temática, solapamiento local de texto, contraevidencia, perfiles de autores, revisión simulada, comprobación de falacias, matriz de revisión, revistas candidatas, BibTeX, lectura bilingüe, cribado de lagunas, reproducción |
-| `skills/academic-writing` | 1.3.0 | Edición académica, pautas de citación (ISO 690, APA, MLA, Chicago, IEEE, AMA y perfiles regionales), directrices para autores, servicios opcionales de detección, materiales de envío y requisitos institucionales, validación previa al envío, limpieza doble ciego, conversión de recibos a tablas LaTeX y plantillas de congresos |
+| `skills/academic-writing` | 1.3.1 | Edición académica, pautas de citación (ISO 690, APA, MLA, Chicago, IEEE, AMA y perfiles regionales), directrices para autores, servicios opcionales de detección, materiales de envío y requisitos institucionales, validación previa al envío, limpieza doble ciego, conversión de recibos a tablas LaTeX y plantillas de congresos |
 | `skills/math-computation` | 1.2.1 | Enrutamiento de dominio y tarea existente con ejemplos numéricos y estadísticos corregidos; cuatro archivos de referencia por dominio |
 | `skills/quantitative-paper-audit` | 1.2.0 | Recalcular las estadísticas declaradas (tamaño del efecto, valores p, intervalos de confianza, OR/RR, potencia alcanzada) y detectar discrepancias numéricas, además de conservación de particiones, desplazamientos constantes en ablaciones y límites de almacenamiento y ancho de banda |
 | `skills/research-reproducibility` | 1.0.1 | Cadena de auditoría de reproducción en catorce etapas con listas de verificación estructuradas, cinco niveles de hechos y registros de auditoría reproducibles |
@@ -141,12 +141,12 @@ Las catorce competencias incluyen 22 archivos de referencia Markdown, cargados s
 ### Instalación del paquete
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternativamente, puede instalarlo con `pipx install academic-research-kernel==2.4.0` o mediante `python -m pip install academic-research-kernel==2.4.0` dentro de un entorno virtual compatible. `[full]` añade bibliotecas para ejemplos avanzados de cálculo científico; `[qa]` añade las herramientas de validación del repositorio, incluido el analizador de PDF. `[research]` incorpora `pypdf==7.0.0` y `fonttools==4.65.0` para garantizar una decodificación uniforme de fuentes PDF en instalaciones limpias (ambos compatibles con Python 3.10). La lectura de HTML/XML estructurado y de archivos DOCX/XLSX acotados utiliza la biblioteca estándar. Los backends de GPU y los servicios de pago siguen siendo opcionales.
+Alternativamente, puede instalarlo con `pipx install academic-research-kernel==2.4.1` o mediante `python -m pip install academic-research-kernel==2.4.1` dentro de un entorno virtual compatible. `[full]` añade bibliotecas para ejemplos avanzados de cálculo científico; `[qa]` añade las herramientas de validación del repositorio, incluido el analizador de PDF. `[research]` incorpora `pypdf==7.0.0` y `fonttools==4.65.0` para garantizar una decodificación uniforme de fuentes PDF en instalaciones limpias (ambos compatibles con Python 3.10). La lectura de HTML/XML estructurado y de archivos DOCX/XLSX acotados utiliza la biblioteca estándar. Los backends de GPU y los servicios de pago siguen siendo opcionales.
 
 ### Integración y uso portátil
 
@@ -200,7 +200,7 @@ Consulte [distribución y publicación](docs/distribution-release.md) para conoc
 
 ### Incorporación determinista e interfaz pública del núcleo
 
-La versión 2.4.0 proporciona `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (las 14 competencias más el respaldo opaco) y 18 herramientas MCP stdio sin estado. Los registros de incorporación aceptados vinculan cada mutación semántica conservada por tipo, identidad y SHA-256 canónico: objetos de investigación, registros de vínculos entre afirmaciones y evidencias, entradas del registro de decisiones de investigación y ensayos fallidos, elementos pendientes de verificación, registros físicos de verificación y registros de artefactos. La repetición de caché comprueba esos compromisos con independencia de los hashes de las instantáneas de transporte. Los registros vacíos son válidos; los lotes atómicos fallidos no dejan estado parcial.
+La versión 2.4.1 proporciona `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptadores (las 14 competencias más el respaldo opaco) y 18 herramientas MCP stdio sin estado. Los registros de incorporación aceptados vinculan cada mutación semántica conservada por tipo, identidad y SHA-256 canónico: objetos de investigación, registros de vínculos entre afirmaciones y evidencias, entradas del registro de decisiones de investigación y ensayos fallidos, elementos pendientes de verificación, registros físicos de verificación y registros de artefactos. La repetición de caché comprueba esos compromisos con independencia de los hashes de las instantáneas de transporte. Los registros vacíos son válidos; los lotes atómicos fallidos no dejan estado parcial.
 
 La autorización de lectura del contenido de procedencia es explícita y fuera de banda. Los invocadores de Python de confianza pasan `LineageVerificationContext` al reproducir registros de verificación o instantáneas serializados; los invocadores MCP pueden suministrar bytes de contenido acotados, pero nunca una raíz del sistema de archivos anfitrión. El presupuesto de contenido predeterminado es de 10 MiB; un anfitrión de confianza puede autorizar explícitamente artefactos mayores bajo la misma política entre productor y verificador. Sin autorización de contenido, una afirmación `fully_verified` no puede reproducirse de forma independiente y devuelve un resultado estructurado de verificación no válida. El texto no estructurado permanece opaco, las discrepancias siguen siendo visibles y los investigadores conservan el control sobre las confirmaciones, la detención o reapertura de vías, el enrutamiento y los juicios científicos.
 
@@ -210,7 +210,7 @@ Consulte [la arquitectura del núcleo](docs/kernel-architecture.md) para ver los
 
 Los estilos de citación, los criterios de presentación de informes y los contratos de metadatos dependen de la revista de destino, la institución, el organismo de financiación, la disciplina y la jurisdicción. El repositorio establece **ISO 690:2021** (referencias bibliográficas), **ISO 5127:2017** (vocabulario de información y documentación) y **W3C PROV** (modelo de datos de procedencia) como bases internacionales, junto con perfiles regionales (como UNE-ISO 690:2024 en España, GB/T 7714-2025 en China continental, DIN ISO 690:2021 en Alemania) y normas disciplinarias (APA 7.ª ed., IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Los requisitos de la entidad o revista de destino tienen siempre prioridad sobre los perfiles predeterminados. Consulte la [Arquitectura de estándares académicos](docs/standards/README.md) y la [Guía de terminología natural](docs/terminology/README.md).
 
-La versión 2.4.0 valida la coherencia de los DOI e identificadores externos, los indicadores booleanos mutuamente excluyentes de veredicto cuantitativo y el contrato de elementos pendientes de verificación compartido entre el núcleo y los registros de verificación. La integridad de la caché se reconstruye a partir de los sobres fuente conservados y las vinculaciones normalizadas, con independencia de las listas de mutaciones del registro; eliminar simultáneamente un registro y su declaración de caché no puede producir una repetición aceptada. Consulte el [cierre de los cuatro bloqueos](docs/kernel-architecture.md).
+La versión 2.4.1 valida la coherencia de los DOI e identificadores externos, los indicadores booleanos mutuamente excluyentes de veredicto cuantitativo y el contrato de elementos pendientes de verificación compartido entre el núcleo y los registros de verificación. La integridad de la caché se reconstruye a partir de los sobres fuente conservados y las vinculaciones normalizadas, con independencia de las listas de mutaciones del registro; eliminar simultáneamente un registro y su declaración de caché no puede producir una repetición aceptada. Consulte el [cierre de los cuatro bloqueos](docs/kernel-architecture.md).
 
 ### Acceso a fuentes de datos
 
@@ -224,7 +224,7 @@ Véanse [la autenticación de OpenAlex](https://help.openalex.org/api/authentica
 
 ---
 
-## 6. Validación local, verificación de distribución (2.4.0) y licencia
+## 6. Validación local, verificación de distribución (2.4.1) y licencia
 
 ### Validación
 
@@ -244,7 +244,7 @@ QA valida metadatos, referencias, patrones de rutas personales y secretos conoci
 
 Las pruebas de autoría de Hermes fijadas se reutilizan sin cambiar sus reglas por competencia. Las comprobaciones poblacionales de la distribución completa del upstream no se aplican a este tap; nuestro banco de pruebas comprueba catorce competencias y resuelve referencias contra el catálogo agrupado y opcional fijado. Esto no es una prueba completa de instalación de Hermes. La CI usa la red solo para instalar dependencias; las pruebas ordinarias no llaman a API académicas.
 
-La CI ejecuta la suite QA completa en Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), con validación Canary en vivo de la rama upstream. La suite de regresión actual supera 1348 pruebas locales (frente a 1165 en el candidato histórico de referencia); los resultados actuales de reparación y los límites de cobertura constan en [la reparación de corrección](docs/maintenance/correctness-repair-20261008.md), donde la evidencia remota identifica por separado el HEAD probado. Un flujo de integración tap separado se ejecuta en las subidas a main: instala el checkout de Hermes fijado registrado en tests/upstream/provenance.json y ejercita tap add, search, install y list contra este repositorio. Las versiones, comprobaciones y limitaciones exactas constan en [la auditoría](docs/kernel-architecture.md).
+La CI ejecuta la suite QA completa en Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), con validación Canary en vivo de la rama upstream. La suite de regresión actual supera 1364 pruebas locales (frente a 1165 en el candidato histórico de referencia); los resultados actuales de reparación y los límites de cobertura constan en [la reparación de corrección](docs/maintenance/correctness-repair-20261008.md), donde la evidencia remota identifica por separado el HEAD probado. Un flujo de integración tap separado se ejecuta en las subidas a main: instala el checkout de Hermes fijado registrado en tests/upstream/provenance.json y ejercita tap add, search, install y list contra este repositorio. Las versiones, comprobaciones y limitaciones exactas constan en [la auditoría](docs/kernel-architecture.md).
 
 [tools/longtail/](tools/longtail/README.md) aloja el generador determinista de factores de cola larga: 4096 candidatos con semilla SHA256, 30 escenarios seleccionados y un informe de cobertura de verificación calculado por máquina. El modelo v3 contabiliza por separado las familias de capacidades (E01), las 14 competencias reales del repositorio (E02) y los objetivos de tarea (E03). Cada escenario tiene una competencia principal, un objetivo de tarea admitido y capacidades compatibles; cada competencia debe aparecer al menos dos veces bajo dos objetivos distintos, incluido su objetivo principal declarado. Cualquier desviación respecto a los directorios de competencias hace fallar la validación. La expansión semántica (cadenas de tareas, oráculos e inyección de eventos ejecutados) permanece como una etapa separada; la cobertura de factores no demuestra la cobertura de ejecución de los flujos de trabajo.
 

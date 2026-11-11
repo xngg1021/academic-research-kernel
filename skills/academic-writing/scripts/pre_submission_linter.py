@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import argparse
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right
 from collections import Counter
 import json
 from pathlib import Path
@@ -20,15 +20,71 @@ if sys.platform == "win32":
         if _s and hasattr(_s, "reconfigure"):
             _s.reconfigure(encoding="utf-8")
 
+try:
+    from academic_research_kernel.research.sources import (
+        TEXLIVE_GLYPH_SYSTEM_INPUTS,
+        _TEX_BIB_HEAD_RE as BIB_FILE_CMD_RE,
+        _TEX_INPUT_RE as INPUT_RE,
+        _TEX_MACRO_HEAD_RE as MACRO_DEF_HEAD_RE,
+        _extract_cmd_brace_args_after_opt_brackets,
+        _find_tex_macro_body_open_brace as _find_macro_body_open_brace,
+        _mask_macro_definitions_and_verbatim,
+        _skip_balanced_braces,
+        _skip_optional_bracket_block,
+        _strip_comments_and_collect_verbatim_spans,
+        inside as _inside_bounded,
+    )
+except ImportError:
+    _src_dir = Path(__file__).resolve().parents[3] / "src"
+    if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+        sys.path.insert(0, str(_src_dir))
+    from academic_research_kernel.research.sources import (
+        TEXLIVE_GLYPH_SYSTEM_INPUTS,
+        _TEX_BIB_HEAD_RE as BIB_FILE_CMD_RE,
+        _TEX_INPUT_RE as INPUT_RE,
+        _TEX_MACRO_HEAD_RE as MACRO_DEF_HEAD_RE,
+        _extract_cmd_brace_args_after_opt_brackets,
+        _find_tex_macro_body_open_brace as _find_macro_body_open_brace,
+        _mask_macro_definitions_and_verbatim,
+        _skip_balanced_braces,
+        _skip_optional_bracket_block,
+        _strip_comments_and_collect_verbatim_spans,
+        inside as _inside_bounded,
+    )
+
 MAX_INCLUDE_DEPTH = 5
 MAX_TEX_FILES = 64
 MAX_TOTAL_BYTES = 20 * 1024 * 1024
 
-INPUT_RE = re.compile(r"\\(?:input|include)\s*\{([^}]+)\}")
 EXTERNAL_DOC_RE = re.compile(r"\\(?:externaldocument|includeonly)\b")
-PACKAGE_OR_CLASS_RE = re.compile(r"\\(?:usepackage|documentclass)\s*(?:\[([^\]]*)\])?\s*\{([^}]+)\}", re.S)
+PACKAGE_OR_CLASS_RE = re.compile(r"(?<!\\)(?:\\\\)*\\(usepackage|documentclass)\s*(?:\[([^\]]*)\]\s*)?\{([^}{]+)\}", re.S)
+_PKG_OR_CLS_HEAD_RE = re.compile(r"(?<!\\)(?:\\\\)*\\(usepackage|documentclass)(?![A-Za-z@])")
+BENIGN_FINAL_OPT_PACKAGES = frozenset({
+    "microtype", "graphicx", "hyperref", "listings", "pdfpages", "showkeys",
+    "todonotes", "changes", "fixme", "ifdraft", "babel", "subcaption",
+    "float", "booktabs", "amsmath", "amssymb", "geometry", "cleveref", "tikz",
+})
+CITE_CMD_HEAD_RE = re.compile(
+    r"(?<!\\)(?:\\\\)*\\(cite|nocite|citet|citep|citealt|citealp|citeauthor|citeyear|citeyearpar|citenum|citen|citeonline|"
+    r"Cite|Citet|Citep|Citealt|Citealp|Citeauthor|Citeyear|Citeyearpar|Citenum|"
+    r"parencite|Parencite|textcite|Textcite|footcite|Footcite|footcitetext|Footcitetext|footfullcite|Footfullcite|"
+    r"autocite|Autocite|smartcite|Smartcite|supercite|Supercite|fullcite|Fullcite|"
+    r"cites|Cites|parencites|Parencites|textcites|Textcites|footcites|Footcites|footcitetexts|Footcitetexts|smartcites|Smartcites|supercites|Supercites|autocites|Autocites)(?![A-Za-z@])\*?"
+)
+MULTI_CITE_CMDS = frozenset({
+    "cites", "Cites", "parencites", "Parencites", "textcites", "Textcites",
+    "footcites", "Footcites", "footcitetexts", "Footcitetexts",
+    "smartcites", "Smartcites", "supercites", "Supercites", "autocites", "Autocites",
+})
+BIBITEM_DEF_RE = re.compile(r"(?<!\\)(?:\\\\)*\\bibitem(?![A-Za-z@])")
+CUSTOM_CITE_CONSTRUCT_RE = re.compile(
+    r"(?<!\\)(?:\\\\)*\\(?:Declare(?:Cite|MultiCite|AutoCite)Command|defbibentryset|defcitealias|volcites?|pvolcites?|tvolcites?|fvolcites?|avolcites?)(?![A-Za-z@])"
+)
+LET_ALIAS_PREFIX_RE = re.compile(r"(?<!\\)(?:\\\\)*(?:\\global\s+)?\\let\s*(?:\{\s*\\[A-Za-z@]+\s*\}|\\[A-Za-z@]+)\s*(?:=\s*)?")
+BIBTEX_TOP_TOKEN_RE = re.compile(r"%[^\n]*|@\s*([A-Za-z]+)\s*[\{\(]")
+BIBTEX_META_TYPES = frozenset({"comment", "preamble", "string"})
 SECTION_RE = re.compile(
-    r"\\(?:section|subsection|paragraph|chapter)\*?\s*\{([^}]+)\}|^#{1,3}\s+(.+)$",
+    r"\\(?:section|subsection|paragraph|chapter)\*?\s*\{([^}{]+)\}|^#{1,3}\s+(.+)$",
     re.M,
 )
 ACKS_SECTION_BLOCK_RE = re.compile(
@@ -47,18 +103,19 @@ GRANT_DISCLOSURE_RE = re.compile(
 )
 CHECKLIST_ENV_RE = re.compile(r"\\begin\{(?:checklist|neuripschecklist)\}", re.I)
 UNRESOLVED_REF_RE = re.compile(
-    r"(?:\\cite[a-zA-Z*]*\s*\{[^}]*\?[^}]*\}|\\(?:ref|eqref|autoref|Cref|cref)\*?\s*\{\s*(?:\?+)?\s*\}|\b(?:Section|Sec\.|Table|Tab\.|Figure|Fig\.|Eq\.|Equation|Theorem|Appendix|Algorithm|Alg\.)\s+\?\?(?!\w))",
+    r"(?:\\(?:ref|eqref|autoref|Cref|cref)\*?\s*\{\s*(?:\?+\s*)?\}|\b(?:Section|Sec\.|Table|Tab\.|Figure|Fig\.|Eq\.|Equation|Theorem|Appendix|Algorithm|Alg\.)\s+\?\?(?!\w))",
 )
+UNRESOLVED_CITE_CALL_RE = re.compile(r"\\cite[a-zA-Z*]*\s*\{([^}{\n]*)\}")
 PDF_UNRESOLVED_REF_RE = re.compile(
     r"(?:\b(?:Section|Sec\.|Table|Tab\.|Figure|Fig\.|Eq\.|Equation|Theorem|Appendix|Algorithm|Alg\.)\s+\?\?(?!\w)|\[\s*\?\s*\])",
 )
-LABEL_DEF_RE = re.compile(r"\\label\s*\{([^}]+)\}")
+LABEL_DEF_RE = re.compile(r"\\label\s*\{([^}{]+)\}")
 ENV_OPT_HEAD_RE = re.compile(r"\\begin\{(?:lstlisting|minted|tcolorbox)\}\s*\[")
-REF_CALL_RE = re.compile(r"\\(?:ref|eqref|autoref|Cref|cref|pageref)\*?\s*\{([^}]+)\}")
-BARE_CITE_CALL_RE = re.compile(r"\\cite\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}")
-NATBIB_CITE_CALL_RE = re.compile(r"\\cite(?:p|t|alt|alp|author|year|num)\*?\s*(?:\[[^\]]*\])*\s*\{([^}]+)\}")
+REF_CALL_RE = re.compile(r"\\(?:ref|eqref|autoref|Cref|cref|pageref)\*?\s*\{([^}{]+)\}")
+BARE_CITE_CALL_RE = re.compile(r"\\cite\s*(?:\[[^\][]*\]\s*)?\{([^}{]+)\}")
+NATBIB_CITE_CALL_RE = re.compile(r"\\cite(?:p|t|alt|alp|author|year|num)\*?\s*(?:\[[^\][]*\]\s*)*\{([^}{]+)\}")
 AUTHOR_ET_AL_BARE_CITE_RE = re.compile(
-    r"\b([A-Z][A-Za-z'-]{1,30}\s+et\s+al\.)\s*(?:~|\s+)\s*(\\(?:cite|citet)\*?\s*\{[^}]+\})"
+    r"\b([A-Z][A-Za-z'-]{1,30}\s+et\s+al\.)[\s~]+(\\(?:cite|citet)\*?\s*\{[^}{]+\})"
 )
 AUTHOR_YEAR_STYLE_PKG_RE = re.compile(
     r"(?:^|,|\s)(?:iclr20\d{2}_conference|acl|emnlp|naacl|coling|arr|icml20\d{2}|natbib)\b",
@@ -69,14 +126,6 @@ CITE_RELEVANT_PKG_RE = re.compile(
     re.I,
 )
 TODO_MARKER_RE = re.compile(r"\b(?:TODO|FIXME|TBD|XXX)\b|\\(?:todo|TODO)\b(?![A-Za-z@])")
-MACRO_DEF_HEAD_RE = re.compile(
-    r"\\(?:(?:newcommand|renewcommand|providecommand|DeclareRobustCommand)[^\S\n]{0,40}\*?[^\S\n]{0,40}(?:\{[^\S\n]{0,40}\\[A-Za-z@]+[^\S\n]{0,40}\}|\\[A-Za-z@]+)[^\S\n]{0,40}(?:\[\s*\d+\s*\])?[^\S\n]{0,40}(?:\[[^\n\]]{0,200}\])?[^\S\n]{0,40}|def[^\S\n]{0,40}\\[A-Za-z@]+[^\n\\{]{0,120})\{"
-)
-INLINE_VERB_RE = re.compile(r"\\verb\*?([^a-zA-Z0-9\s]).*?\1")
-VERBATIM_ENV_RE = re.compile(
-    r"\\begin\{(verbatim\*?|lstlisting|minted)\}(.*?)\\end\{\1\}|\\verb\*?([^a-zA-Z0-9\s]).*?\3",
-    re.S,
-)
 TABLE_BLOCK_RE = re.compile(r"\\begin\{table\*?\}(.*?)\\end\{table\*?\}", re.S)
 NUMERIC_ROW_RE = re.compile(r"&[^\\]*\b\d+\.\d+\b")
 DISPERSION_MARKER_RE = re.compile(
@@ -84,9 +133,12 @@ DISPERSION_MARKER_RE = re.compile(
     re.I,
 )
 ABSTRACT_BLOCK_RE = re.compile(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", re.S)
-CONCLUSION_BLOCK_RE = re.compile(
-    r"\\section\*?\{[^}]*(?:Conclusion|Conclusions|Discussion)[^}]*\}(.*?)(?=\\section\*?\{|\\bibliography|\\appendix|\\end\{document\}|$)",
-    re.S | re.I,
+_SECTION_CMD_HEAD_RE = re.compile(r"(?<!\\)(?:\\\\)*\\section\*?(?![A-Za-z@])")
+_ANY_HEADING_CMD_HEAD_RE = re.compile(r"(?<!\\)(?:\\\\)*\\(?:section|subsection|paragraph|chapter)\*?(?![A-Za-z@])")
+_MD_HEADING_LINE_RE = re.compile(r"^#{1,3}\s+(.+)$", re.M)
+_CONCLUSION_TITLE_KW_RE = re.compile(r"Conclusion|Conclusions|Discussion", re.I)
+_CONCLUSION_END_BOUNDARY_RE = re.compile(
+    r"(?<!\\)(?:\\\\)*(\\(?:bibliography|appendix)(?![A-Za-z@])|\\end\{document\})"
 )
 CORE_QUANT_TOKEN_RE = re.compile(
     r"(?:\b\d+(?:\.\d+)?\s*(?:%|\\%|\bpercent\b|(?:x\b|×)|\bfold\b|\btimes\s+(?:faster|higher|lower|smaller|better)\b)|\b(?:outperforms?|improves?|reduces?|accelerates?)\b[^.\n]{0,60}?\b\d+(?:\.\d+)?\s*(?:%|\\%|(?:x\b|×)))",
@@ -135,7 +187,7 @@ MATH_OR_QUOTE_OR_BIB_MASK_RE = re.compile(
     r"|\\\[.*?\\\]"
     r"|\\\(.*?\\\)"
     r"|(?<!\\)\$[^\n$]+?(?<!\\)\$"
-    r"|\\(?:cite[a-zA-Z*]*|ref|eqref|autoref|Cref|cref|pageref|label|url)\*?\s*(?:\[[^\]]*\])*\s*\{[^}]*\}",
+    r"|\\(?:cite[a-zA-Z*]*|ref|eqref|autoref|Cref|cref|pageref|label|url)\*?\s*(?:\[[^\][]*\]\s*)*\{[^}{]*\}",
     re.S,
 )
 ACADEMIC_CLICHE_EN_RE = re.compile(
@@ -197,29 +249,38 @@ def _mask_math_quotes_and_bib_preserving_lines(masked_body: str) -> str:
     return "".join(chars)
 
 
-def _extract_Strong_claim_sentences(prose_block: str, full_block: str) -> list[tuple[int, int, int, str, str]]:
+def _extract_strong_claim_sentences(prose_block: str, full_block: str) -> list[tuple[int, int, int, str, str]]:
     """Return (sent_start, match_start, sent_end, sentence_text, matched_token) scanning prose_block and slicing full_block."""
     n = len(prose_block)
     spans: list[tuple[int, int, int, str, str]] = []
     sent_punct = "!?;\u3002\uff01\uff1f\uff1b"
+    cached_s_idx = -1
+    cached_e_idx = -1
+    cached_sentence = ""
     for m in STRONG_CLAIM_CANDIDATE_RE.finditer(prose_block):
-        s_idx = m.start()
-        while s_idx > 0:
-            ch = prose_block[s_idx - 1]
-            if ch == "\n" and s_idx >= 2 and prose_block[s_idx - 2] == "\n":
-                break
-            if ch in sent_punct or (ch == "." and _is_sentence_boundary_dot(prose_block, s_idx - 1)):
-                break
-            s_idx -= 1
-        e_idx = m.end()
-        while e_idx < n:
-            ch = prose_block[e_idx]
-            if ch == "\n" and e_idx + 1 < n and prose_block[e_idx + 1] == "\n":
-                break
-            if ch in sent_punct or (ch == "." and _is_sentence_boundary_dot(prose_block, e_idx)):
+        if cached_s_idx <= m.start() < cached_e_idx:
+            s_idx, e_idx, sentence = cached_s_idx, cached_e_idx, cached_sentence
+        else:
+            s_idx = m.start()
+            while s_idx > 0:
+                ch = prose_block[s_idx - 1]
+                if ch == "\n" and s_idx >= 2 and prose_block[s_idx - 2] == "\n":
+                    break
+                if ch in sent_punct or (ch == "." and _is_sentence_boundary_dot(prose_block, s_idx - 1)):
+                    break
+                s_idx -= 1
+            e_idx = m.end()
+            while e_idx < n:
+                ch = prose_block[e_idx]
+                if ch == "\n" and e_idx + 1 < n and prose_block[e_idx + 1] == "\n":
+                    break
+                if ch in sent_punct or (ch == "." and _is_sentence_boundary_dot(prose_block, e_idx)):
+                    e_idx += 1
+                    break
                 e_idx += 1
-                break
-            e_idx += 1
+            sentence_raw = full_block[s_idx:e_idx]
+            sentence = " ".join(sentence_raw.split()).strip()
+            cached_s_idx, cached_e_idx, cached_sentence = s_idx, e_idx, sentence
         # Check negation only within the current clause immediately preceding the match
         clause_prefix = prose_block[max(s_idx, m.start() - 60) : m.start()]
         clause_breaks = list(CLAUSE_BREAK_RE.finditer(clause_prefix))
@@ -227,8 +288,6 @@ def _extract_Strong_claim_sentences(prose_block: str, full_block: str) -> list[t
             clause_prefix = clause_prefix[clause_breaks[-1].end() :]
         if NEGATION_WINDOW_RE.search(clause_prefix):
             continue
-        sentence_raw = full_block[s_idx:e_idx]
-        sentence = " ".join(sentence_raw.split()).strip()
         if len(sentence) >= 8:
             spans.append((s_idx, m.start(), e_idx, sentence, m.group(0)))
     return spans
@@ -244,7 +303,22 @@ def _scan_academic_style(
 ) -> tuple[list[dict[str, Any]], int]:
     """Run deterministic, non-scoring academic prose & claim-boundary checks returning (advisory_hits, macro_def_count)."""
     advisory_hits: list[dict[str, Any]] = []
-    macro_def_count = sum(1 for _ in MACRO_DEF_HEAD_RE.finditer(uncommented))
+    macro_def_count = 0
+    pos_mc = 0
+    n_unc = len(uncommented)
+    while pos_mc < n_unc:
+        m = MACRO_DEF_HEAD_RE.search(uncommented, pos_mc)
+        if not m:
+            break
+        open_b, next_pos = _find_macro_body_open_brace(uncommented, m.end(1))
+        if open_b is None:
+            pos_mc = max(m.end(1), next_pos)
+            continue
+        after_b = _skip_balanced_braces(uncommented, open_b)
+        if after_b < 0:
+            break
+        macro_def_count += 1
+        pos_mc = after_b
     prose_only = _mask_math_quotes_and_bib_preserving_lines(masked_body)
     prose_lines = prose_only.splitlines()
     raw_lines = raw.splitlines()
@@ -289,20 +363,21 @@ def _scan_academic_style(
             })
 
     # 3. Strong claim hedging calibration in Abstract & Conclusion blocks
-    for block_kind, block_re in (("abstract", ABSTRACT_BLOCK_RE), ("conclusion", CONCLUSION_BLOCK_RE)):
-        for m_blk in block_re.finditer(masked_body):
-            blk_full = m_blk.group(1)
-            blk_prose = prose_only[m_blk.start(1) : m_blk.end(1)]
-            blk_start_line = masked_body[: m_blk.start(1)].count("\n") + 1
-            blk_nl_offsets = [idx for idx, ch in enumerate(blk_full) if ch == "\n"]
-            for s_idx, m_start, sent_end, claim_sent, tok in _extract_Strong_claim_sentences(blk_prose, blk_full):
-                line_offset = bisect_right(blk_nl_offsets, m_start)
+    for block_kind, blk_start_idx, blk_end_idx, blk_full in _iter_abstract_and_conclusion_blocks(masked_body):
+        blk_prose = prose_only[blk_start_idx:blk_end_idx]
+        blk_start_line = bisect_left(newline_offsets, blk_start_idx) + 1
+        blk_nl_offsets = [idx for idx, ch in enumerate(blk_full) if ch == "\n"]
+        sent_eval_cache: dict[tuple[int, int], tuple[bool, bool, bool]] = {}
+        for s_idx, m_start, sent_end, claim_sent, tok in _extract_strong_claim_sentences(blk_prose, blk_full):
+            line_offset = bisect_right(blk_nl_offsets, m_start)
+            loc_line = blk_start_line + line_offset
+            sent_key = (s_idx, sent_end)
+            cached_eval = sent_eval_cache.get(sent_key)
+            if cached_eval is None:
                 sent_start_line = bisect_right(blk_nl_offsets, s_idx)
                 sent_end_line = bisect_right(blk_nl_offsets, max(s_idx, sent_end - 1))
-                loc_line = blk_start_line + line_offset
                 abs_start_line = blk_start_line + sent_start_line
                 abs_end_line = blk_start_line + sent_end_line
-
                 norm_sent = _normalize_claim_text(claim_sent)
                 has_verified_ceg = False
                 for check_l in range(max(1, abs_start_line - 1), abs_end_line + 1):
@@ -315,36 +390,40 @@ def _scan_academic_style(
                             break
                     if has_verified_ceg:
                         break
-                if has_verified_ceg:
-                    continue
+                has_disp = bool(DISPERSION_MARKER_RE.search(claim_sent))
+                has_resolvable_thm = False
+                for m_ref in REF_CALL_RE.finditer(claim_sent):
+                    for k in m_ref.group(1).split(","):
+                        if k.strip() in defined_theorem_labels:
+                            has_resolvable_thm = True
+                            break
+                cached_eval = (has_verified_ceg, has_disp, has_resolvable_thm)
+                sent_eval_cache[sent_key] = cached_eval
+            has_verified_ceg, has_disp, has_resolvable_thm = cached_eval
+            if has_verified_ceg:
+                continue
 
-                tok_low = tok.lower()
-                if "significant" in tok_low or "显著" in tok_low:
-                    if DISPERSION_MARKER_RE.search(claim_sent):
-                        continue
-                    advisory_hits.append({
-                        "code": "UNANCHORED_STRONG_CLAIM_CANDIDATE",
-                        "severity": "advisory",
-                        "locator": f"{rel_name}:L{loc_line}",
-                        "message": f"Statistical significance claim {tok!r} in {block_kind} has no same-sentence statistical test/p-value/CI marker or verified % ark:claim=<id> anchor.",
-                        "excerpt": claim_sent[:180],
-                    })
-                else:
-                    has_resolvable_thm = False
-                    for m_ref in REF_CALL_RE.finditer(claim_sent):
-                        for k in m_ref.group(1).split(","):
-                            if k.strip() in defined_theorem_labels:
-                                has_resolvable_thm = True
-                                break
-                    if has_resolvable_thm:
-                        continue
-                    advisory_hits.append({
-                        "code": "UNANCHORED_STRONG_CLAIM_CANDIDATE",
-                        "severity": "advisory",
-                        "locator": f"{rel_name}:L{loc_line}",
-                        "message": f"Strong formal/optimality claim {tok!r} in {block_kind} has no resolvable Theorem/Lemma/Proposition \\label reference or verified % ark:claim=<id> anchor.",
-                        "excerpt": claim_sent[:180],
-                    })
+            tok_low = tok.lower()
+            if "significant" in tok_low or "显著" in tok_low:
+                if has_disp:
+                    continue
+                advisory_hits.append({
+                    "code": "UNANCHORED_STRONG_CLAIM_CANDIDATE",
+                    "severity": "advisory",
+                    "locator": f"{rel_name}:L{loc_line}",
+                    "message": f"Statistical significance claim {tok!r} in {block_kind} has no same-sentence statistical test/p-value/CI marker or verified % ark:claim=<id> anchor.",
+                    "excerpt": claim_sent[:180],
+                })
+            else:
+                if has_resolvable_thm:
+                    continue
+                advisory_hits.append({
+                    "code": "UNANCHORED_STRONG_CLAIM_CANDIDATE",
+                    "severity": "advisory",
+                    "locator": f"{rel_name}:L{loc_line}",
+                    "message": f"Strong formal/optimality claim {tok!r} in {block_kind} has no resolvable Theorem/Lemma/Proposition \\label reference or verified % ark:claim=<id> anchor.",
+                    "excerpt": claim_sent[:180],
+                })
 
     return advisory_hits, macro_def_count
 
@@ -366,169 +445,116 @@ def load_venue_specs(specs_path: str | Path | None = None) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-_BEGIN_VERB_ENV_RE = re.compile(r"\\begin\{(verbatim\*?|lstlisting|minted)\}")
-
 
 def _strip_latex_comments(text: str) -> str:
-    """Strip unescaped % comments in a single top-to-bottom pass so commented-out \\begin{verbatim} never enters verbatim mode."""
-    out_lines: list[str] = []
-    active_env: str | None = None
-    for line in text.splitlines():
-        pos = 0
-        n = len(line)
-        kept: list[str] = []
-        while pos < n:
-            if active_env is not None:
-                end_tok = f"\\end{{{active_env}}}"
-                end_idx = line.find(end_tok, pos)
-                if end_idx == -1:
-                    kept.append(line[pos:])
-                    pos = n
-                    break
-                after_end = end_idx + len(end_tok)
-                kept.append(line[pos:after_end])
-                pos = after_end
-                active_env = None
-                continue
-            ch = line[pos]
-            if ch == "%":
-                break
-            if ch == "\\":
-                m_v = INLINE_VERB_RE.match(line, pos)
-                if m_v:
-                    kept.append(m_v.group(0))
-                    pos = m_v.end()
-                    continue
-                m_b = _BEGIN_VERB_ENV_RE.match(line, pos)
-                if m_b:
-                    active_env = m_b.group(1)
-                    kept.append(m_b.group(0))
-                    pos = m_b.end()
-                    continue
-                if pos + 1 < n:
-                    kept.append(line[pos : pos + 2])
-                    pos += 2
-                    continue
-            kept.append(ch)
-            pos += 1
-        out_lines.append("".join(kept))
-    return "\n".join(out_lines)
+    """Strip unescaped % comments in a single top-to-bottom pass."""
+    uncommented, _ = _strip_comments_and_collect_verbatim_spans(text)
+    return uncommented
 
 
-def _mask_balanced_braces(chars: list[str], open_brace_idx: int) -> int:
-    """Replace characters inside balanced {...} starting at open_brace_idx with spaces, preserving newlines."""
+PACKAGE_OR_CLASS_BALANCED_RE = re.compile(
+    r"(?<!\\)(?:\\\\)*\\(usepackage|documentclass)(?![A-Za-z@])\s*(?:\[((?:[^\[\]{}]|\{[^{}]*\})*)\]\s*)?\{([^}{]+)\}",
+    re.S,
+)
+ABSTRACT_BLOCK_RE = re.compile(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", re.S)
+CONCLUSION_BLOCK_RE = re.compile(
+    r"(?<!\\)(?:\\\\)*\\section\*?(?:\s*\[(?:[^\[\]{}]|\{[^{}]*\})*\])?\s*\{[^}]*(?:Conclusion|Conclusions|Discussion)[^}]*\}(.*?)(?=(?<!\\)(?:\\\\)*\\(?:section\*?(?:\s*\[|\s*\{)|bibliography|addbibresource|appendix|end\{document\})|$)",
+    re.S | re.I,
+)
+
+
+def _iter_package_or_class_decls(text: str) -> list[tuple[int, int, str, str, str]]:
+    decls: list[tuple[int, int, str, str, str]] = []
+    n, pos = len(text), 0
+    while pos < n:
+        m = _PKG_OR_CLS_HEAD_RE.search(text, pos)
+        if not m:
+            break
+        cur = m.end()
+        opt_end = _skip_optional_bracket_block(text, cur)
+        if opt_end < 0:
+            break
+        opts_raw = text[text.find("[", cur, opt_end) + 1 : opt_end - 1] if opt_end > cur else ""
+        cur = opt_end
+        while cur < n and text[cur].isspace():
+            cur += 1
+        if cur >= n or text[cur] != "{":
+            pos = max(m.end(), cur)
+            continue
+        pkg_end = _skip_balanced_braces(text, cur)
+        if pkg_end < 0:
+            break
+        decls.append((m.start(1) - 1, pkg_end, m.group(1).lower(), opts_raw, text[cur + 1 : pkg_end - 1].strip()))
+        pos = max(m.end(), pkg_end)
+    return decls
+
+
+def _iter_section_titles(text: str) -> list[str]:
+    titles = [" ".join(arg.split()) for _, arg in _extract_cmd_brace_args_after_opt_brackets(text, _ANY_HEADING_CMD_HEAD_RE) if arg.strip()]
+    titles.extend(m.group(1).strip() for m in _MD_HEADING_LINE_RE.finditer(text) if m.group(1).strip())
+    return titles
+
+
+def _iter_abstract_and_conclusion_blocks(text: str) -> list[tuple[str, int, int, str]]:
+    blocks = [("abstract", m.start(1), m.end(1), m.group(1)) for m in ABSTRACT_BLOCK_RE.finditer(text)]
+    blocks.extend(("conclusion", m.start(1), m.end(1), m.group(1)) for m in CONCLUSION_BLOCK_RE.finditer(text))
+    return blocks
+
+
+def _split_top_level_tex_delim(
+    s: str,
+    sep: str = ",",
+    respect_quotes: bool = False,
+) -> tuple[list[str], bool]:
+    """Split s on sep at brace_depth == 0 (and outside quotes if respect_quotes). Returns (parts, balanced_ok)."""
+    parts: list[str] = []
+    cur: list[str] = []
     depth = 0
-    i = open_brace_idx
-    n = len(chars)
+    in_quotes = False
+    i, n = 0, len(s)
     while i < n:
-        ch = chars[i]
-        if ch == "\\":
-            if i + 1 < n:
-                if depth > 0 and chars[i] != "\n":
-                    chars[i] = " "
-                if depth > 0 and chars[i + 1] != "\n":
-                    chars[i + 1] = " "
-                i += 2
-                continue
-        if ch == "{":
-            depth += 1
-            if chars[i] != "\n":
-                chars[i] = " "
-        elif ch == "}":
-            if chars[i] != "\n":
-                chars[i] = " "
-            depth -= 1
-            if depth == 0:
-                return i + 1
-        else:
-            if depth > 0 and ch != "\n":
-                chars[i] = " "
-        i += 1
-    return n
-
-
-def _skip_optional_bracket_block(text: str, pos: int) -> int:
-    """If text[pos:] starts with optional whitespace and '[', return index after matching top-level ']'."""
-    n = len(text)
-    i = pos
-    while i < n and text[i].isspace():
-        i += 1
-    if i >= n or text[i] != "[":
-        return pos
-    i += 1
-    brace_depth = 0
-    while i < n:
-        ch = text[i]
+        ch = s[i]
         if ch == "\\" and i + 1 < n:
+            cur.append(s[i : i + 2])
             i += 2
             continue
         if ch == "{":
-            brace_depth += 1
+            depth += 1
         elif ch == "}":
-            brace_depth = max(0, brace_depth - 1)
-        elif ch == "]" and brace_depth == 0:
-            return i + 1
+            depth = max(0, depth - 1)
+        elif respect_quotes and ch == '"' and depth == 0:
+            in_quotes = not in_quotes
+        elif ch == sep and depth == 0 and not in_quotes:
+            parts.append("".join(cur))
+            cur = []
+            i += 1
+            continue
+        cur.append(ch)
         i += 1
-    return pos
+    parts.append("".join(cur))
+    return parts, (depth == 0 and not in_quotes)
 
 
-def _mask_macro_definitions_and_verbatim(uncommented: str) -> str:
-    """Mask verbatim bodies (preserving brace-balanced lstlisting options) and macro definition bodies."""
-    chars = list(uncommented)
-    for m_verb in VERBATIM_ENV_RE.finditer(uncommented):
-        if m_verb.group(2) is not None:
-            s_span = _skip_optional_bracket_block(uncommented, m_verb.start(2))
-            e_span = m_verb.end(2)
-        else:
-            s_span, e_span = m_verb.start(), m_verb.end()
-        for idx in range(s_span, e_span):
-            if chars[idx] != "\n":
-                chars[idx] = " "
-    masked_verb = "".join(chars)
-    pos = 0
-    while True:
-        m = MACRO_DEF_HEAD_RE.search(masked_verb, pos)
-        if not m:
-            break
-        open_idx = m.end() - 1
-        for idx in range(m.start(), open_idx):
-            if chars[idx] != "\n":
-                chars[idx] = " "
-        pos = _mask_balanced_braces(chars, open_idx)
-    return "".join(chars)
+def _split_top_level_tex_commas(s: str) -> list[str]:
+    return _split_top_level_tex_delim(s, ",")[0]
 
 
 def _extract_top_level_env_option_labels(text: str) -> list[str]:
     """Extract top-level label=... values from \\begin{lstlisting|minted|tcolorbox}[...] option blocks."""
     labels: list[str] = []
-    n = len(text)
-    for m in ENV_OPT_HEAD_RE.finditer(text):
-        i = m.end()
-        brace_depth = 0
-        entries: list[str] = []
-        cur: list[str] = []
-        while i < n:
-            ch = text[i]
-            if ch == "\\" and i + 1 < n:
-                cur.append(text[i : i + 2])
-                i += 2
-                continue
-            if ch == "{":
-                brace_depth += 1
-                cur.append(ch)
-            elif ch == "}":
-                brace_depth = max(0, brace_depth - 1)
-                cur.append(ch)
-            elif ch == "]" and brace_depth == 0:
-                entries.append("".join(cur))
-                break
-            elif ch == "," and brace_depth == 0:
-                entries.append("".join(cur))
-                cur = []
-            else:
-                cur.append(ch)
-            i += 1
-        for entry in entries:
+    n, pos_env = len(text), 0
+    while pos_env < n:
+        m = ENV_OPT_HEAD_RE.search(text, pos_env)
+        if not m:
+            break
+        opt_end = _skip_optional_bracket_block(text, m.end() - 1)
+        if opt_end < 0:
+            opt_block = text[m.end() :]
+            pos_env = n
+        else:
+            opt_block = text[m.end() : opt_end - 1]
+            pos_env = max(m.end(), opt_end)
+        for entry in _split_top_level_tex_commas(opt_block):
             if "=" not in entry:
                 continue
             k, v = entry.split("=", 1)
@@ -540,7 +566,6 @@ def _extract_top_level_env_option_labels(text: str) -> list[str]:
             if val and "#" not in val and "{" not in val and "}" not in val:
                 labels.append(val)
     return labels
-
 
 def _is_sentence_boundary_dot(text: str, dot_idx: int) -> bool:
     """Return True if text[dot_idx] == '.' is a true sentence boundary rather than a decimal or abbreviation."""
@@ -585,14 +610,18 @@ def _extract_quant_claim_spans(blk_uncommented: str) -> list[tuple[int, int, str
     return spans
 
 
-def collect_tex_tree(entry_tex: Path) -> tuple[list[tuple[Path, str]], list[dict[str, Any]]]:
-    r"""Collect entry .tex and bounded relative \input / \include files without escaping manuscript root."""
+
+
+def _collect_tex_tree_views(
+    entry_tex: Path,
+) -> tuple[list[tuple[Path, str, str, str, list[int]]], list[dict[str, Any]], int]:
+    r"""Collect entry .tex and bounded relative \input / \include files with cached preprocessed views."""
     entry_tex = entry_tex.resolve()
     if not entry_tex.is_file():
         raise ValueError(f"TeX entry file does not exist: {entry_tex}")
     root_dir = entry_tex.parent
     visited: set[Path] = set()
-    collected: list[tuple[Path, str]] = []
+    views: list[tuple[Path, str, str, str, list[int]]] = []
     include_hits: list[dict[str, Any]] = []
     total_bytes = 0
 
@@ -616,31 +645,29 @@ def collect_tex_tree(entry_tex: Path) -> tuple[list[tuple[Path, str]], list[dict
             raise ValueError(f"TeX include escapes manuscript root: {target}")
         return resolved_fb
 
-    def _walk(current: Path, depth: int, caller_locator: str | None = None) -> None:
+    def _walk(current: Path, depth: int, caller_locator: str | None = None, raw_target: str = "") -> None:
         nonlocal total_bytes
-        if depth > MAX_INCLUDE_DEPTH:
-            include_hits.append({
-                "code": "TEX_BUNDLE_TRUNCATED",
-                "severity": "blocker",
-                "locator": caller_locator or current.name,
-                "message": f"TeX include depth exceeded maximum limit ({MAX_INCLUDE_DEPTH}); bundle coverage is incomplete.",
-                "excerpt": str(current.name),
-            })
-            return
-        if len(collected) >= MAX_TEX_FILES:
-            include_hits.append({
-                "code": "TEX_BUNDLE_TRUNCATED",
-                "severity": "blocker",
-                "locator": caller_locator or current.name,
-                "message": f"TeX file count exceeded maximum limit ({MAX_TEX_FILES}); bundle coverage is incomplete.",
-                "excerpt": str(current.name),
-            })
-            return
         resolved = current.resolve()
         if resolved in visited:
             return
         if not resolved.is_relative_to(root_dir):
             raise ValueError(f"TeX include escapes manuscript root: {current}")
+        if not resolved.is_file() and raw_target in TEXLIVE_GLYPH_SYSTEM_INPUTS:
+            return
+        if depth > MAX_INCLUDE_DEPTH or len(views) >= MAX_TEX_FILES:
+            msg = (
+                f"TeX include depth exceeded maximum limit ({MAX_INCLUDE_DEPTH}); bundle coverage is incomplete."
+                if depth > MAX_INCLUDE_DEPTH
+                else f"TeX file count exceeded maximum limit ({MAX_TEX_FILES}); bundle coverage is incomplete."
+            )
+            include_hits.append({
+                "code": "TEX_BUNDLE_TRUNCATED",
+                "severity": "blocker",
+                "locator": caller_locator or current.name,
+                "message": msg,
+                "excerpt": str(current.name),
+            })
+            return
         if not resolved.is_file():
             include_hits.append({
                 "code": "UNRESOLVED_TEX_INCLUDE",
@@ -656,21 +683,28 @@ def collect_tex_tree(entry_tex: Path) -> tuple[list[tuple[Path, str]], list[dict
         visited.add(resolved)
         total_bytes += size
         raw = resolved.read_text(encoding="utf-8", errors="replace")
-        collected.append((resolved, raw))
-        uncommented = _strip_latex_comments(raw)
-        masked_for_include = _mask_macro_definitions_and_verbatim(uncommented)
+        uncommented, verb_spans = _strip_comments_and_collect_verbatim_spans(raw)
+        masked_for_include = _mask_macro_definitions_and_verbatim(uncommented, verb_spans)
+        newline_offsets = [idx for idx, ch in enumerate(uncommented) if ch == "\n"]
+        views.append((resolved, raw, uncommented, masked_for_include, newline_offsets))
         rel_self = resolved.relative_to(root_dir).as_posix()
         for m in INPUT_RE.finditer(masked_for_include):
-            target = m.group(1).strip()
+            raw_inc = m.group(1) or m.group(2) or m.group(3) or m.group(4) or ""
+            target = (raw_inc).strip().strip('"')
             if not target:
                 continue
-            line_no = uncommented[: m.start()].count("\n") + 1
+            line_no = bisect_right(newline_offsets, m.start()) + 1
             cand = _resolve_include_candidate(resolved, target)
-            _walk(cand, depth + 1, caller_locator=f"{rel_self}:L{line_no}")
+            _walk(cand, depth + 1, caller_locator=f"{rel_self}:L{line_no}", raw_target=target)
 
     _walk(entry_tex, 0)
-    return collected, include_hits
+    return views, include_hits, total_bytes
 
+
+def collect_tex_tree(entry_tex: Path) -> tuple[list[tuple[Path, str]], list[dict[str, Any]]]:
+    r"""Collect entry .tex and bounded relative \input / \include files without escaping manuscript root."""
+    views, include_hits, _ = _collect_tex_tree_views(entry_tex)
+    return [(fpath, raw) for fpath, raw, _, _, _ in views], include_hits
 
 def _extract_pdf_page_texts(pdf_path: Path) -> tuple[list[str] | None, str | None]:
     """Extract per-page text using fitz (PyMuPDF) or pypdf (bundled with [research] extra)."""
@@ -928,25 +962,362 @@ def _load_ceg_verified_claims(ceg_path: Path | None) -> set[str]:
     return set(id_to_text.keys()) | verified_texts
 
 
-def _check_package_options_for_double_blind(uncommented: str, rel_name: str) -> list[dict[str, Any]]:
+def _check_package_options_for_double_blind(
+    masked_body: str,
+    rel_name: str,
+    newline_offsets: list[int] | None = None,
+) -> list[dict[str, Any]]:
     hits: list[dict[str, Any]] = []
-    for m in PACKAGE_OR_CLASS_RE.finditer(uncommented):
-        opts_raw = m.group(1) or ""
-        pkg_name = (m.group(2) or "").strip()
+    if newline_offsets is None:
+        newline_offsets = [idx for idx, ch in enumerate(masked_body) if ch == "\n"]
+    for decl_start, decl_end, cmd_kind, opts_raw, pkg_name in _iter_package_or_class_decls(masked_body):
         if not opts_raw:
             continue
-        line_no = uncommented[: m.start()].count("\n") + 1
-        tokens = [t.strip().lower().replace(" ", "") for t in opts_raw.split(",") if t.strip()]
+        pkg_list = [p.strip().lower() for p in pkg_name.split(",") if p.strip()]
+        is_benign_utility_pkg = (
+            cmd_kind == "usepackage"
+            and bool(pkg_list)
+            and all(p in BENIGN_FINAL_OPT_PACKAGES for p in pkg_list)
+        )
+        line_no = bisect_right(newline_offsets, decl_start) + 1
+        tokens = ["".join(t.split()).lower() for t in _split_top_level_tex_commas(opts_raw) if t.strip()]
         for tok in tokens:
+            if tok == "final" and is_benign_utility_pkg:
+                continue
             if tok in FORBIDDEN_DOUBLE_BLIND_OPTION_TOKENS or tok == "anonymous=false" or tok == "review=false":
                 hits.append({
                     "code": "FORBIDDEN_REVIEW_PATTERN",
                     "severity": "blocker",
                     "locator": f"{rel_name}:L{line_no}",
                     "message": f"De-anonymizing or camera-ready package option {tok!r} on {pkg_name!r} is forbidden in double-blind review.",
-                    "excerpt": " ".join(m.group(0).split())[:160],
+                    "excerpt": " ".join(masked_body[decl_start:decl_end].split())[:160],
                 })
     return hits
+
+
+
+def _resolve_bounded_subpath(root_dir: Path, rel_str: str) -> Path | None:
+    """Resolve rel_str inside root_dir rejecting absolute paths, '..', and any symlink/reparse component."""
+    try:
+        return _inside_bounded(root_dir, rel_str)
+    except (ValueError, OSError):
+        return None
+
+
+def _consume_cite_invocation(
+    masked_body: str,
+    m: re.Match[str],
+    groups: list[str],
+    depth: int = 0,
+) -> int:
+    """Consume one citation invocation starting at match m, extracting nested citations inside option notes."""
+    n = len(masked_body)
+    is_multi = m.group(1) in MULTI_CITE_CMDS
+    seen_mandatory = False
+    pos = m.end()
+    while pos < n:
+        while pos < n and masked_body[pos].isspace():
+            pos += 1
+        if pos >= n:
+            break
+        ch = masked_body[pos]
+        if ch == "[" or (ch == "(" and is_multi and not seen_mandatory):
+            close_opt = "]" if ch == "[" else ")"
+            brace_depth = 0
+            pos += 1
+            closed_opt = False
+            while pos < n:
+                c = masked_body[pos]
+                if c == "\\":
+                    inner_m = CITE_CMD_HEAD_RE.match(masked_body, pos)
+                    if inner_m is not None and depth < 8:
+                        pos = _consume_cite_invocation(masked_body, inner_m, groups, depth + 1)
+                        continue
+                    if pos + 1 < n:
+                        pos += 2
+                        continue
+                if c == "{":
+                    brace_depth += 1
+                elif c == "}" and brace_depth > 0:
+                    brace_depth -= 1
+                elif c == close_opt and brace_depth == 0:
+                    pos += 1
+                    closed_opt = True
+                    break
+                pos += 1
+            if not closed_opt:
+                break
+            continue
+        if ch == "{":
+            end_b = _skip_balanced_braces(masked_body, pos)
+            if end_b < 0:
+                pos = n
+                break
+            groups.append(masked_body[pos + 1 : end_b - 1])
+            pos = end_b
+            seen_mandatory = True
+            if not is_multi:
+                break
+            continue
+        if not seen_mandatory:
+            groups.append("\\")
+        break
+    return max(m.end(), pos)
+
+
+def _extract_cite_key_groups(masked_body: str) -> list[str]:
+    """Extract mandatory {...} citation key arguments after \\cite* commands."""
+    groups: list[str] = []
+    n, outer_pos = len(masked_body), 0
+    while outer_pos < n:
+        m = CITE_CMD_HEAD_RE.search(masked_body, outer_pos)
+        if not m:
+            break
+        outer_pos = _consume_cite_invocation(masked_body, m, groups, 0)
+    return groups
+
+
+def _has_custom_cite_or_bib_macro(raw: str, masked_body: str) -> bool:
+    """Return True if manuscript defines custom citation commands/aliases or exotic citation constructs."""
+    if CUSTOM_CITE_CONSTRUCT_RE.search(masked_body):
+        return True
+    uncommented, verb_spans = _strip_comments_and_collect_verbatim_spans(raw)
+    chars = list(uncommented)
+    for s_span, e_span in verb_spans:
+        for idx in range(s_span, e_span):
+            if chars[idx] != "\n":
+                chars[idx] = " "
+    masked_verb = "".join(chars)
+    target_res = (CITE_CMD_HEAD_RE, BIB_FILE_CMD_RE, BIBITEM_DEF_RE, CUSTOM_CITE_CONSTRUCT_RE)
+    for m_let in LET_ALIAS_PREFIX_RE.finditer(masked_verb):
+        rhs = masked_verb[m_let.end() : m_let.end() + 64]
+        if any(r.match(rhs) for r in target_res):
+            return True
+    pos, n_mv = 0, len(masked_verb)
+    while pos < n_mv:
+        m = MACRO_DEF_HEAD_RE.search(masked_verb, pos)
+        if not m:
+            break
+        open_idx, next_pos = _find_macro_body_open_brace(masked_verb, m.end(1))
+        if open_idx is None:
+            pos = max(m.end(1), next_pos)
+            continue
+        end_idx = _skip_balanced_braces(masked_verb, open_idx)
+        end_idx = n_mv if end_idx < 0 else end_idx
+        span = masked_verb[m.start(1) : end_idx]
+        if any(r.search(span) for r in target_res):
+            return True
+        pos = end_idx
+    return False
+
+
+def _extract_top_level_crossref_targets(fields_chunk: str) -> tuple[set[str], set[str], bool]:
+    """Extract literal target keys from top-level crossref/xref/xdata/entryset/related and alias keys from ids."""
+    targets: set[str] = set()
+    aliases: set[str] = set()
+    items, balanced = _split_top_level_tex_delim(fields_chunk, ",", respect_quotes=True)
+    if not balanced:
+        return set(), set(), False
+    for item in items:
+        if "=" not in item:
+            continue
+        k_raw, v_raw = item.split("=", 1)
+        field_name = k_raw.strip().lower()
+        if field_name not in ("crossref", "xref", "xdata", "entryset", "related", "ids"):
+            continue
+        val = v_raw.strip()
+        if len(val) >= 2 and val[0] == "{" and _skip_balanced_braces(val, 0) == len(val):
+            lit = val[1:-1]
+        elif len(val) >= 2 and val[0] == '"' and val[-1] == '"':
+            lit = val[1:-1]
+        else:
+            return set(), set(), False
+        dest = aliases if field_name == "ids" else targets
+        for t in lit.split(","):
+            t_clean = t.strip()
+            if t_clean and "{" not in t_clean and "}" not in t_clean:
+                dest.add(t_clean)
+    return targets, aliases, True
+
+
+def _parse_bibtex_entries_with_crossrefs(
+    raw_bib: str,
+    rel_bib: str,
+) -> tuple[list[tuple[str, int, str, str, str]], dict[str, set[str]], bool]:
+    """Extract (rel_bib, line_no, key, excerpt, 'bib'), crossref/xdata dependency map, and parse_ok from .bib text."""
+    nl_offsets = [idx for idx, ch in enumerate(raw_bib) if ch == "\n"]
+    raw_lines = raw_bib.splitlines()
+    entries: list[tuple[str, int, str, str, str]] = []
+    deps: dict[str, set[str]] = {}
+    n_len, search_pos = len(raw_bib), 0
+    while search_pos < n_len:
+        m = BIBTEX_TOP_TOKEN_RE.search(raw_bib, search_pos)
+        if not m:
+            break
+        if m.group(1) is None:
+            search_pos = m.end()
+            continue
+        etype = m.group(1).strip().lower()
+        open_delim = raw_bib[m.end() - 1]
+        body_start = m.end()
+        if open_delim == "{":
+            end_b = _skip_balanced_braces(raw_bib, m.end() - 1)
+            closed = end_b >= 0
+            pos = end_b if closed else n_len
+        else:
+            paren_depth, brace_depth, in_quotes, pos = 1, 0, False, body_start
+            while pos < n_len and paren_depth > 0:
+                ch = raw_bib[pos]
+                if ch == "\\" and pos + 1 < n_len:
+                    pos += 2
+                    continue
+                if ch == "{":
+                    brace_depth += 1
+                elif ch == "}" and brace_depth > 0:
+                    brace_depth -= 1
+                elif ch == '"' and brace_depth == 0:
+                    in_quotes = not in_quotes
+                elif brace_depth == 0 and not in_quotes:
+                    if ch == "(":
+                        paren_depth += 1
+                    elif ch == ")":
+                        paren_depth -= 1
+                pos += 1
+            closed = paren_depth == 0
+        search_pos = pos
+        if not closed:
+            return entries, deps, False
+        if etype in BIBTEX_META_TYPES:
+            continue
+        chunk = raw_bib[body_start : pos - 1]
+        comma_pos = chunk.find(",")
+        if comma_pos == -1:
+            return entries, deps, False
+        key = chunk[:comma_pos].strip()
+        if not key or "{" in key or "}" in key or "\\" in key or "#" in key or any(ch.isspace() for ch in key):
+            return entries, deps, False
+        if etype != "xdata":
+            line_no = bisect_right(nl_offsets, m.start(1)) + 1
+            excerpt = (raw_lines[line_no - 1].strip() if 1 <= line_no <= len(raw_lines) else f"@{etype}{{{key},")[:160]
+            entries.append((rel_bib, line_no, key, excerpt, "bib"))
+        entry_deps, entry_aliases, ok_deps = _extract_top_level_crossref_targets(chunk[comma_pos + 1 :])
+        if not ok_deps:
+            return entries, deps, False
+        if entry_deps:
+            deps.setdefault(key, set()).update(entry_deps)
+        for al in entry_aliases:
+            deps.setdefault(al, set()).add(key)
+    return entries, deps, True
+
+
+def _scan_uncited_bibliography(
+    entry_tex: Path,
+    views: list[tuple[Path, str, str, str, list[int]]],
+    total_bytes_used: int,
+    include_hits_present: bool,
+    has_external_doc: bool,
+) -> list[dict[str, Any]]:
+    """Return advisory UNCITED_BIBLIOGRAPHY_ENTRY hits when check_academic_style is enabled."""
+    if include_hits_present or has_external_doc:
+        return []
+    root_dir = entry_tex.parent
+    cited_keys: set[str] = set()
+    bib_targets: list[str] = []
+    defined_entries: list[tuple[str, int, str, str, str]] = []
+    crossref_deps: dict[str, set[str]] = {}
+
+    for fpath, raw, _uncommented, masked_body, newline_offsets in views:
+        if _has_custom_cite_or_bib_macro(raw, masked_body):
+            return []
+        rel_name = fpath.name if len(views) == 1 else fpath.relative_to(root_dir).as_posix()
+        raw_lines = raw.splitlines()
+        for grp in _extract_cite_key_groups(masked_body):
+            for k in (grp).split(","):
+                k_clean = k.strip()
+                if not k_clean:
+                    continue
+                if k_clean == "*" or "\\" in k_clean or "#" in k_clean:
+                    return []
+                cited_keys.add(k_clean)
+        for _, bib_arg in _extract_cmd_brace_args_after_opt_brackets(masked_body, BIB_FILE_CMD_RE):
+            for part in (bib_arg).split(","):
+                if part.strip():
+                    bib_targets.append(part.strip())
+        for bi_start, raw_bkey in _extract_cmd_brace_args_after_opt_brackets(masked_body, BIBITEM_DEF_RE):
+            bkey = (raw_bkey).strip()
+            if not bkey:
+                continue
+            if "\\" in bkey or "#" in bkey or any(ch.isspace() for ch in bkey):
+                return []
+            line_no = bisect_right(newline_offsets, bi_start) + 1
+            excerpt = (raw_lines[line_no - 1].strip() if 1 <= line_no <= len(raw_lines) else f"\\bibitem{{{bkey}}}")[:160]
+            defined_entries.append((rel_name, line_no, bkey, excerpt, "bibitem"))
+
+    seen_bib_files: set[Path] = set()
+    bytes_budget = total_bytes_used
+    for btok in bib_targets:
+        if "\\" in btok:
+            return []
+        suffix_low = Path(btok).suffix.lower()
+        if suffix_low and suffix_low != ".bib":
+            return []
+        rel_cands = [btok] if suffix_low == ".bib" else [f"{btok}.bib", btok]
+        target_loaded = False
+        for rel_c in rel_cands:
+            try:
+                resolved = _resolve_bounded_subpath(root_dir, rel_c)
+                if resolved is None or not resolved.is_file() or resolved.suffix.lower() != ".bib":
+                    continue
+                if resolved in seen_bib_files:
+                    target_loaded = True
+                    break
+                fsize = resolved.stat().st_size
+                if bytes_budget + fsize > MAX_TOTAL_BYTES:
+                    return []
+                seen_bib_files.add(resolved)
+                bytes_budget += fsize
+                rel_bib = resolved.relative_to(root_dir).as_posix()
+                raw_bib = resolved.read_text(encoding="utf-8", errors="replace")
+                b_entries, b_deps, parse_ok = _parse_bibtex_entries_with_crossrefs(raw_bib, rel_bib)
+                if not parse_ok:
+                    return []
+                defined_entries.extend(b_entries)
+                for k, dset in b_deps.items():
+                    crossref_deps.setdefault(k, set()).update(dset)
+                target_loaded = True
+                break
+            except OSError:
+                return []
+        if not target_loaded:
+            return []
+
+    if not defined_entries:
+        return []
+
+    frontier = list(cited_keys)
+    while frontier:
+        cur_k = frontier.pop()
+        for dep_k in crossref_deps.get(cur_k, ()):
+            if dep_k not in cited_keys:
+                cited_keys.add(dep_k)
+                frontier.append(dep_k)
+
+    uncited_hits: list[dict[str, Any]] = []
+    for rel_path, line_no, key, excerpt, kind in defined_entries:
+        if key not in cited_keys:
+            kind_desc = (
+                f"BibTeX database entry {key!r} in {rel_path} is never cited in the manuscript text"
+                if kind == "bib"
+                else f"Bibliography item \\bibitem{{{key}}} is listed in references but never cited in the manuscript text"
+            )
+            uncited_hits.append({
+                "code": "UNCITED_BIBLIOGRAPHY_ENTRY",
+                "severity": "advisory",
+                "locator": f"{rel_path}:L{line_no}",
+                "message": f"{kind_desc}; cite it or remove unused reference entries.",
+                "excerpt": excerpt,
+            })
+    return uncited_hits
 
 
 def lint_manuscript(
@@ -978,7 +1349,7 @@ def lint_manuscript(
     cspec = ctypes[ctype_key]
 
     entry_tex = Path(tex_path).resolve()
-    tex_files, include_hits = collect_tex_tree(entry_tex)
+    views, include_hits, total_bytes_used = _collect_tex_tree_views(entry_tex)
     hits: list[dict[str, Any]] = list(include_hits)
     discovered_sections: list[str] = []
 
@@ -994,27 +1365,24 @@ def lint_manuscript(
     author_year_style_active = False
     numeric_cite_option_active = False
 
-    for fpath, raw in tex_files:
-        rel_name = fpath.name if len(tex_files) == 1 else fpath.relative_to(entry_tex.parent).as_posix()
-        uncommented = _strip_latex_comments(raw)
-        masked_body = _mask_macro_definitions_and_verbatim(uncommented)
+    for fpath, raw, uncommented, masked_body, newline_offsets in views:
+        rel_name = fpath.name if len(views) == 1 else fpath.relative_to(entry_tex.parent).as_posix()
         lines = uncommented.splitlines()
         masked_lines = masked_body.splitlines()
-        newline_offsets = [idx for idx, ch in enumerate(uncommented) if ch == "\n"]
 
         if EXTERNAL_DOC_RE.search(uncommented):
             has_external_doc = True
 
-        for m_pkg in PACKAGE_OR_CLASS_RE.finditer(uncommented):
-            opts_raw = (m_pkg.group(1) or "").lower()
-            pkgs_raw = (m_pkg.group(2) or "").lower()
+        for _d_start, _d_end, _cmd_kind, opts_raw_orig, pkgs_raw_orig in _iter_package_or_class_decls(masked_body):
+            opts_raw = opts_raw_orig.lower()
+            pkgs_raw = pkgs_raw_orig.lower()
             if CITE_RELEVANT_PKG_RE.search(pkgs_raw) and (
                 "numbers" in opts_raw or "super" in opts_raw or "nonatbib" in opts_raw
             ):
                 numeric_cite_option_active = True
             if AUTHOR_YEAR_STYLE_PKG_RE.search(pkgs_raw):
                 author_year_style_active = True
-        if re.search(r"\\setcitestyle\s*\{[^}]*\b(?:numbers|super)\b", uncommented, re.I):
+        if re.search(r"\\setcitestyle\s*\{[^}{\n]*\b(?:numbers|super)\b", uncommented, re.I):
             numeric_cite_option_active = True
 
         for m_lbl in LABEL_DEF_RE.finditer(masked_body):
@@ -1070,7 +1438,7 @@ def lint_manuscript(
                             "excerpt": line.strip()[:160],
                         })
             if vspec.get("review_mode") == "double_blind":
-                hits.extend(_check_package_options_for_double_blind(uncommented, rel_name))
+                hits.extend(_check_package_options_for_double_blind(masked_body, rel_name, newline_offsets))
                 if phase_key == "submission":
                     for m_ack in ACKS_SECTION_BLOCK_RE.finditer(uncommented):
                         ack_body = m_ack.group(2).strip()
@@ -1089,23 +1457,30 @@ def lint_manuscript(
                             "excerpt": " ".join((m_ack.group(1) + " " + ack_body).split())[:160],
                         })
 
-        for m in SECTION_RE.finditer(masked_body):
-            sec_title = (m.group(1) or m.group(2) or "").strip()
-            if sec_title:
-                discovered_sections.append(sec_title)
+        for sec_title in _iter_section_titles(masked_body):
+            discovered_sections.append(sec_title)
         if CHECKLIST_ENV_RE.search(masked_body):
             discovered_sections.append("NeurIPS Paper Checklist")
 
         for idx, line in enumerate(lines, 1):
             masked_line = masked_lines[idx - 1] if idx - 1 < len(masked_lines) else ""
             m_ref = UNRESOLVED_REF_RE.search(masked_line)
-            if m_ref:
+            unresolved_excerpt = m_ref.group(0) if m_ref else None
+            if unresolved_excerpt is None:
+                for m_uc in UNRESOLVED_CITE_CALL_RE.finditer(masked_line):
+                    uc_body = m_uc.group(1)
+                    if "?" in uc_body and any(
+                        tok.strip() and set(tok.strip()) == {"?"} for tok in uc_body.split(",")
+                    ):
+                        unresolved_excerpt = m_uc.group(0)
+                        break
+            if unresolved_excerpt is not None:
                 hits.append({
                     "code": "UNRESOLVED_LATEX_REFERENCE",
                     "severity": "blocker",
                     "locator": f"{rel_name}:L{idx}",
                     "message": "Unresolved citation or cross-reference placeholder detected.",
-                    "excerpt": m_ref.group(0)[:160],
+                    "excerpt": unresolved_excerpt[:160],
                 })
             m_todo = TODO_MARKER_RE.search(masked_line)
             if m_todo:
@@ -1135,39 +1510,37 @@ def lint_manuscript(
                 tids = INLINE_CEG_TAG_RE.findall(r_line)
                 if tids:
                     file_line_tags[l_idx] = tids
-            for block_kind, block_re in (("abstract", ABSTRACT_BLOCK_RE), ("conclusion", CONCLUSION_BLOCK_RE)):
-                for m_blk in block_re.finditer(masked_body):
-                    blk_uncommented = m_blk.group(1)
-                    blk_start_line = masked_body[: m_blk.start(1)].count("\n") + 1
-                    blk_nl_offsets = [idx for idx, ch in enumerate(blk_uncommented) if ch == "\n"]
-                    for token_start, sent_end, claim_sentence in _extract_quant_claim_spans(blk_uncommented):
-                        line_offset = bisect_right(blk_nl_offsets, token_start)
-                        sent_start_pos = blk_uncommented.rfind("\n", 0, token_start)
-                        sent_start_line = bisect_right(blk_nl_offsets, sent_start_pos + 1) if sent_start_pos != -1 else 0
-                        sent_end_line = bisect_right(blk_nl_offsets, max(token_start, sent_end - 1))
-                        loc_line = blk_start_line + line_offset
-                        abs_start_line = blk_start_line + sent_start_line
-                        abs_end_line = blk_start_line + sent_end_line
-                        norm_sent = _normalize_claim_text(claim_sentence)
-                        tag_matched = False
-                        for check_l in range(max(1, abs_start_line - 1), abs_end_line + 1):
-                            for tid in file_line_tags.get(check_l, ()):
-                                if tid not in verified_id_to_text:
-                                    continue
-                                c_txt = _normalize_claim_text(verified_id_to_text[tid])
-                                if c_txt and c_txt == norm_sent:
-                                    tag_matched = True
-                                    break
-                            if tag_matched:
+            for block_kind, blk_start_idx, _blk_end_idx, blk_uncommented in _iter_abstract_and_conclusion_blocks(masked_body):
+                blk_start_line = bisect_left(newline_offsets, blk_start_idx) + 1
+                blk_nl_offsets = [idx for idx, ch in enumerate(blk_uncommented) if ch == "\n"]
+                for token_start, sent_end, claim_sentence in _extract_quant_claim_spans(blk_uncommented):
+                    line_offset = bisect_right(blk_nl_offsets, token_start)
+                    sent_start_pos = blk_uncommented.rfind("\n", 0, token_start)
+                    sent_start_line = bisect_right(blk_nl_offsets, sent_start_pos + 1) if sent_start_pos != -1 else 0
+                    sent_end_line = bisect_right(blk_nl_offsets, max(token_start, sent_end - 1))
+                    loc_line = blk_start_line + line_offset
+                    abs_start_line = blk_start_line + sent_start_line
+                    abs_end_line = blk_start_line + sent_end_line
+                    norm_sent = _normalize_claim_text(claim_sentence)
+                    tag_matched = False
+                    for check_l in range(max(1, abs_start_line - 1), abs_end_line + 1):
+                        for tid in file_line_tags.get(check_l, ()):
+                            if tid not in verified_id_to_text:
+                                continue
+                            c_txt = _normalize_claim_text(verified_id_to_text[tid])
+                            if c_txt and c_txt == norm_sent:
+                                tag_matched = True
                                 break
-                        if not tag_matched:
-                            hits.append({
-                                "code": "UNGROUNDED_QUANTITATIVE_CLAIM",
-                                "severity": "warning",
-                                "locator": f"{rel_name}:L{loc_line}",
-                                "message": f"Quantitative claim in {block_kind} has no verified ClaimEvidenceGraph support edge or resolved % ark:claim=<id> anchor.",
-                                "excerpt": claim_sentence[:180],
-                            })
+                        if tag_matched:
+                            break
+                    if not tag_matched:
+                        hits.append({
+                            "code": "UNGROUNDED_QUANTITATIVE_CLAIM",
+                            "severity": "warning",
+                            "locator": f"{rel_name}:L{loc_line}",
+                            "message": f"Quantitative claim in {block_kind} has no verified ClaimEvidenceGraph support edge or resolved % ark:claim=<id> anchor.",
+                            "excerpt": claim_sentence[:180],
+                        })
 
     if not include_hits and not has_external_doc:
         for rel_name, line_no, ref_key, excerpt_line in ref_invocations:
@@ -1182,10 +1555,8 @@ def lint_manuscript(
 
     total_macros_masked = 0
     if check_academic_style:
-        for fpath, raw in tex_files:
-            rel_name = fpath.name if len(tex_files) == 1 else fpath.relative_to(entry_tex.parent).as_posix()
-            uncommented = _strip_latex_comments(raw)
-            masked_body = _mask_macro_definitions_and_verbatim(uncommented)
+        for fpath, raw, uncommented, masked_body, _ in views:
+            rel_name = fpath.name if len(views) == 1 else fpath.relative_to(entry_tex.parent).as_posix()
             adv_hits, macro_cnt = _scan_academic_style(
                 rel_name=rel_name,
                 raw=raw,
@@ -1196,6 +1567,15 @@ def lint_manuscript(
             )
             hits.extend(adv_hits)
             total_macros_masked += macro_cnt
+        hits.extend(
+            _scan_uncited_bibliography(
+                entry_tex=entry_tex,
+                views=views,
+                total_bytes_used=total_bytes_used,
+                include_hits_present=bool(include_hits),
+                has_external_doc=has_external_doc,
+            )
+        )
 
     if author_year_style_active and not numeric_cite_option_active:
         for rel_name, line_no, dup_author, dup_cite, dup_excerpt in author_dup_candidates:
@@ -1267,7 +1647,7 @@ def lint_manuscript(
         "review_mode": vspec["review_mode"],
         "contribution_type": ctype_key,
         "contribution_label": cspec["label"],
-        "files_scanned": len(tex_files),
+        "files_scanned": len(views),
         "discovered_sections": discovered_sections,
         "pdf_check": pdf_info,
         "style_check": {

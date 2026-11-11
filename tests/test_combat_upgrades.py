@@ -1196,7 +1196,7 @@ def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Pa
     for rm in all_readmes:
         rm_txt = rm.read_text(encoding="utf-8")
         rm_lines = rm_txt.splitlines()
-        assert "2.4.0" in rm_txt
+        assert "2.4.1" in rm_txt
         assert "iclr2026-openreview-incidence-receipt.json" in rm_txt
         dr_lines = [ln for ln in rm_lines if "Desk Reject" in ln and ln.strip().startswith("|")]
         assert len(dr_lines) == 1, f"Missing or duplicate Desk Reject table row in {rm}"
@@ -1226,7 +1226,7 @@ def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Pa
             "--action deduplicate",
         ):
             assert req_cmd in rm_txt, f"Missing {req_cmd!r} in {rm}"
-        assert any(t in rm_txt for t in ("1348", "১৩৪৮", "۱۳۴۸")), f"Missing current 1348 test count in {rm}"
+        assert any(t in rm_txt for t in ("1364", "১৩৬৪", "۱۳۶۴")), f"Missing current 1364 test count in {rm}"
         for stale_tok in ("26.04", "15-intel", "1340", "16 類", "16 类", "13 CLI", "13 组", "13 組"):
             assert stale_tok not in rm_txt, f"Stale token {stale_tok!r} in {rm}"
         for ln in rm_lines:
@@ -1237,7 +1237,7 @@ def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Pa
         tf_lines = [ln for ln in rm_lines if "table-forensics --input spec.json" in ln]
         if tf_lines:
             tf_checked += 1
-            assert all("2.3.0" in ln and "2.4.0" not in ln for ln in tf_lines)
+            assert all("2.3.0" in ln and "2.4.1" not in ln for ln in tf_lines)
     assert tf_checked == 5
 
 
@@ -1498,3 +1498,166 @@ def test_stage5_mcp_new_tools_and_redaction(tmp_path):
         assert r["result"]["isError"] is False
         body = json.loads(r["result"]["content"][0]["text"])
         assert expected_key in body
+
+
+def test_tex_bundle_discovery_and_uncited_bibliography_and_perf_dedup(tmp_path, monkeypatch):
+    """Verify multi-file TeX bundle discovery from single entry .tex, glyphtounicode & microtype[final] handling, and UNCITED_BIBLIOGRAPHY_ENTRY."""
+    import time
+    from academic_research_kernel.research import sources
+    psl_mod = _load_script("skills/academic-writing/scripts/pre_submission_linter.py", "psl_bundle_bib")
+
+    # 1. Single entry .tex in prepare() discovers relative \input chapters and .bib/.bbl files with distinct hashes and cycle safety
+    ms_dir = tmp_path / "ms_build"
+    (ms_dir / "sections").mkdir(parents=True)
+    (ms_dir / "subbib").mkdir(parents=True)
+    main_tex = ms_dir / "main.tex"
+    sec1_tex = ms_dir / "sections" / "01_intro.tex"
+    refs_bib = ms_dir / "refs.bib"
+    sub_bib = ms_dir / "subbib" / "sub_refs.bib"
+    inline_bbl = ms_dir / "inline refs.bbl"
+
+    inline_bbl.write_text(
+        "\\begin{thebibliography}{1}\n\\bibitem[{[1]}]{bbl_cited_key} BBL Author, 2025.\n\\end{thebibliography}\n",
+        encoding="utf-8",
+    )
+    sub_bib.write_text(
+        "@article{subbib_cited_key,\n  author = {Subbib Author},\n  title = {Subdirectory Bib Entry},\n  year = {2025}\n}\n"
+        "@article{subbib_phantom_key,\n  author = {Subbib Ghost},\n  title = {Subdirectory Uncited Entry},\n  year = {2024}\n}\n",
+        encoding="utf-8",
+    )
+    main_tex.write_text(
+        "\\documentclass{article}\n\\input{glyphtounicode}\n\\usepackage[\nfinal\n]{microtype,graphicx}\n"
+        "\\usepackage[pdfkeywords={x,anonymous=false,y}]{hyperref}\n"
+        "\\newcommand{\\unusedprobe}[1][{\\textbf{\\emph{X}}}]{\\input{missing_inside_macro}}\n"
+        "\\newcommand{\\unusedbracket}[1][[]{\\input{missing_inside_bracket_macro}}\n"
+        "\\addbibresource[label={A]B}]{subbib/sub_refs.bib}\n"
+        "\\title{Multi-File Proof Bundle}\n\\begin{document}\n"
+        "\\begin{abstract}\nWe study prime gaps.\n\\end{abstract}\n"
+        "Linebreak\\\\input{not_a_real_include} and \\\\usepackage[final]{iclr2026_conference}\n"
+        "\\input \"inline refs.bbl\"\n"
+        "Literal percent \\verb|%| and \\verb|\\usepackage[final]{iclr2026_conference}| in prose.\n"
+        "\\begin{minted}[linenos]{tex}\n\\input{ghost_in_minted}\n\\end{minted}\n"
+        "\\begin{lstlisting}[title={\\input{sections/01_intro}}]\n\\input{ignored_inside_lstlisting}\n\\end{lstlisting}\n"
+        "\\bibliography{refs}\n\\end{document}\n",
+        encoding="utf-8",
+    )
+    sec1_tex.write_text(
+        "\\input{glyphtounicode-cmex}\n"
+        "\\section{Introduction}\n"
+        "By Theorem~\\ref{thm:main}, \\cite[see \\emph{phantom_uncited_key}] [p.~2]{opt_ws_only_key}, "
+        "\\citep[see \\citealp[p.~1]{nested_prenote_only_key}]{cited_key}, \\cite{why?}, \\cite{entryset_parent}, "
+        "\\cite{ids_alias_key}, \\cite{bbl_cited_key}, \\cite{subbib_cited_key}, "
+        "\\footcites[p.~3]{footcite_only_k1}[p.~4]{footcite_only_k2}, "
+        "and \\cites(global pre)[p1]{cited_key}[p2]{child_key}[p3]{paren_child}, the bound holds.\n"
+        "\\begin{theorem}\\label{thm:main}\nEvery gap is bounded.\n\\end{theorem}\n"
+        "\\input main\n"
+        "\\section{Related\nWork}\nPrior bounds are reviewed.\n"
+        "\\section{Limitations}\nAssumes characteristic zero.\n"
+        "\\section{Reproducibility Statement}\nProofs are self-contained.\n",
+        encoding="utf-8",
+    )
+    refs_bib.write_text(
+        "% Top-level comment with fake @article{ignored_top_comment, title={x}}\n"
+        "@string{j_ann = \"Annals\"}\n"
+        "@comment{\n@article{fake_inside_comment,\n  author = {Should Be Ignored},\n  title = {Nested in comment},\n  year = {2020}\n}\n}\n"
+        "@article{cited_key,\n  author = {Ada Lovelace},\n  title = {Cited Work on crossref = {phantom_uncited_key}},\n  year = {2025}\n}\n"
+        "@article{nested_prenote_only_key,\n  author = {Nested Prenote Author},\n  title = {Cited Inside citep Prenote},\n  year = {2025}\n}\n"
+        "@article{why?,\n  author = {Question Key Author},\n  title = {Why Question Mark Key},\n  year = {2025}\n}\n"
+        "@set{entryset_parent,\n  entryset = {entryset_member_a, entryset_member_b}\n}\n"
+        "@article{entryset_member_a,\n  author = {Set Member A},\n  title = {Part A},\n  year = {2025}\n}\n"
+        "@article{entryset_member_b,\n  author = {Set Member B},\n  title = {Part B},\n  year = {2025}\n}\n"
+        "@misc{ids_primary_key,\n  ids = {ids_alias_key},\n  author = {Alias Author},\n  title = {Entry Cited Via Biblatex ids Alias},\n  year = {2025}\n}\n"
+        "@article{footcite_only_k1,\n  author = {Emmy Noether},\n  title = {Footcited First},\n  year = {2025}\n}\n"
+        "@article{footcite_only_k2,\n  author = {Sophie Germain},\n  title = {Footcited Second},\n  year = {2025}\n}\n"
+        "@inproceedings{child_key,\n  author = {Grace Hopper},\n  title = {Child Work},\n  crossref = {parent_proc},\n  year = {2025}\n}\n"
+        "@proceedings{parent_proc,\n  title = {Proceedings},\n  year = {2025}\n}\n"
+        "@inproceedings(paren_child,\n  author = {Alan Turing},\n  title = \"A {\"x)y\"} B\",\n  crossref = {paren_parent},\n  year = {2025}\n)\n"
+        "@proceedings(paren_parent,\n  title = {Paren Proceedings},\n  year = {2025}\n)\n"
+        "@misc{opt_ws_only_key, author = {Donald Knuth}, title = {Optional Whitespace Only}, year = {2025}, url = {https://example.test/a%20b}}\n"
+        "@article{phantom_uncited_key,\n  author = {Ghost Writer},\n  title = {Never Cited},\n  year = {2024}\n}\n",
+        encoding="utf-8",
+    )
+
+    exact_unique_bytes = sum(p.stat().st_size for p in (main_tex, sec1_tex, refs_bib, sub_bib, inline_bbl))
+    monkeypatch.setattr(sources, "MAX_TOTAL", exact_unique_bytes)
+    proj_dir = tmp_path / "prepared_proj"
+    prep_res = sources.prepare(str(main_tex), proj_dir)
+    monkeypatch.setattr(sources, "MAX_TOTAL", 50 * 1024 * 1024)
+    assert prep_res["parsed"] == 5
+    assert prep_res["failures"] == []
+    docs_payload = json.loads((proj_dir / "documents.json").read_text(encoding="utf-8"))
+    by_rel = {d["relative_path"]: d for d in docs_payload["documents"]}
+    assert by_rel["raw/main.tex"]["role"] == "main"
+    assert by_rel["raw/sections/01_intro.tex"]["role"] == "body"
+    assert by_rel["raw/inline refs.bbl"]["role"] == "body"
+    assert by_rel["raw/refs.bib"]["role"] == "supplement"
+    assert by_rel["raw/subbib/sub_refs.bib"]["role"] == "supplement"
+    assert by_rel["raw/main.tex"]["sha256"] != by_rel["raw/sections/01_intro.tex"]["sha256"]
+
+    # 2. pre_submission_linter exemptions, crossref/ids closure, and advisory UNCITED_BIBLIOGRAPHY_ENTRY
+    lint_rep = psl_mod.lint_manuscript(main_tex, venue="iclr", check_academic_style=True)
+    assert lint_rep["passed"] is True
+    assert lint_rep["files_scanned"] == 3
+    assert "Related Work" in lint_rep["discovered_sections"]
+    assert "RelatedWork" not in lint_rep["discovered_sections"]
+    hit_codes = [h["code"] for h in lint_rep["hits"]]
+    assert "UNRESOLVED_TEX_INCLUDE" not in hit_codes
+    assert "FORBIDDEN_REVIEW_PATTERN" not in hit_codes
+    uncited = [h for h in lint_rep["hits"] if h["code"] == "UNCITED_BIBLIOGRAPHY_ENTRY"]
+    assert len(uncited) == 2
+    assert all(u["severity"] == "advisory" for u in uncited)
+    uncited_msgs = " | ".join(u["message"] for u in uncited)
+    assert "'phantom_uncited_key'" in uncited_msgs
+    assert "'subbib_phantom_key'" in uncited_msgs
+    for cited_k in ("cited_key", "subbib_cited_key", "nested_prenote_only_key", "parent_proc", "paren_parent", "ids_primary_key"):
+        assert f"'{cited_k}'" not in uncited_msgs
+
+    # 3. Local glyphtounicode.tex is scanned when present; \nocite{*} and custom cite macros suppress uncited warnings
+    (ms_dir / "glyphtounicode.tex").write_text("\\section*{Glyph Map}\nLocal glyph mapping.\n\\nocite{*}\n", encoding="utf-8")
+    prep_res_glyph = sources.prepare(str(main_tex), tmp_path / "prepared_proj_glyph")
+    assert prep_res_glyph["parsed"] == 6
+    lint_rep_local = psl_mod.lint_manuscript(main_tex, venue="iclr", check_academic_style=True)
+    assert lint_rep_local["files_scanned"] == 4
+    assert not any(h["code"] == "UNCITED_BIBLIOGRAPHY_ENTRY" for h in lint_rep_local["hits"])
+    (ms_dir / "glyphtounicode.tex").unlink()
+
+    # 4. Missing child .tex, missing explicit .bib, and bundle file-count cap in sources.prepare are recorded in failures
+    ms_missing_dir = tmp_path / "ms_missing"
+    ms_missing_dir.mkdir()
+    m_missing_tex = ms_missing_dir / "main.tex"
+    m_missing_tex.write_text(
+        "\\documentclass{article}\n\\begin{document}\n\\section{Intro}\nMain body text.\n"
+        "\\input{missing_part}\n\\bibliography{missing_bib}\n\\end{document}\n",
+        encoding="utf-8",
+    )
+    prep_missing = sources.prepare(str(m_missing_tex), tmp_path / "proj_missing")
+    assert any(f["path"] == "missing_part.tex" and f["reason"] == "source file missing" for f in prep_missing["failures"])
+    assert any(f["path"] == "missing_bib.bib" and f["reason"] == "source file missing" for f in prep_missing["failures"])
+
+    monkeypatch.setattr(sources, "_MAX_TEX_BUNDLE_FILES", 1)
+    prep_capped = sources.prepare(str(main_tex), tmp_path / "proj_capped")
+    assert any("tex bundle limit exceeded" in f["reason"] for f in prep_capped["failures"])
+
+    # 5. Re-visiting visited files or missing system glyphtounicode at MAX_TEX_FILES does not falsely trigger TEX_BUNDLE_TRUNCATED
+    monkeypatch.setattr(psl_mod, "MAX_TEX_FILES", 3)
+    lint_rep_cap = psl_mod.lint_manuscript(main_tex, venue="iclr", check_academic_style=False)
+    assert not any(h["code"] == "TEX_BUNDLE_TRUNCATED" for h in lint_rep_cap["hits"])
+
+    # 6. Multiline package options and exact line numbers for UNGROUNDED_QUANTITATIVE_CLAIM
+    quant_tex = tmp_path / "quant_line.tex"
+    quant_tex.write_text(
+        "\\documentclass[\nfinal\n]{article}\n"
+        "\\usepackage[pdfkeywords={a,anonymous=false,b},anonymous=\n\tfalse]{iclr2026_conference}\n"
+        "\\begin{document}\n"
+        "\\begin{abstract}\n"
+        "We reduce latency by 42.5\\%.\n"
+        "\\end{abstract}\n"
+        "\\section[Short]{Conclusion}\nText\\\\appendix\n"
+        "\\section{Limitations}\nText.\n\\section{Reproducibility Statement}\nText.\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    q_rep = psl_mod.lint_manuscript(quant_tex, venue="iclr", require_ceg_binding=True)
+    assert sum(1 for h in q_rep["hits"] if h["code"] == "FORBIDDEN_REVIEW_PATTERN") == 2
+    q_hits = [h for h in q_rep["hits"] if h["code"] == "UNGROUNDED_QUANTITATIVE_CLAIM"]
+    assert len(q_hits) == 1 and q_hits[0]["locator"] == "quant_line.tex:L8"

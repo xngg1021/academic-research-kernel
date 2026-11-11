@@ -15,19 +15,19 @@ Tác giả: Junfu Shi (SJF, xngg1021). Phạm vi cấp phép hiện hành: [Sour
 
 ### Bắt đầu nhanh
 
-Chạy phiên bản 2.4.0 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Chạy phiên bản 2.4.1 bằng [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-[Bản phát hành 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10/3.12/3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 18 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
+[Bản phát hành 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) ghi lại mã băm của các gói phân phối và trạng thái công bố. Gói wheel phát hành cũng có thể chạy cục bộ bằng lệnh `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. Hệ thống hỗ trợ Python 3.10/3.12/3.14; tùy chọn `uvx --python 3.12` cho phép chỉ định rõ trình thông dịch được hỗ trợ. Toàn bộ 18 công cụ tất định cùng bộ công cụ tính toán khoa học và thống kê đều có sẵn ngay trong bản cài đặt cơ bản.
 
 ### Kiểm tra cài đặt
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Trình chẩn đoán ngoại tuyến kiểm tra các thư viện phụ thuộc, 
 
 ### Nghiên cứu bài báo khoa học với Agent cục bộ
 
-Cài đặt `academic-research-kernel[research]==2.4.0` và xuất quy trình làm việc đóng gói sẵn:
+Cài đặt `academic-research-kernel[research]==2.4.1` và xuất quy trình làm việc đóng gói sẵn:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Đối chiếu chéo định danh và số lượt trích dẫn theo từng nguồn; kiểm tra tín hiệu cập nhật hoặc rút bài; định vị toàn văn truy cập mở (OA) và xác minh tệp PDF; kiểm toán phản biện OpenReview và điều tra kho mã nguồn |
 | `skills/literature-analysis` | 1.3.0 | Mười hai quy trình: độ tương đồng chủ đề, trùng lặp văn bản cục bộ, bằng chứng phản biện, hồ sơ tác giả, phản biện mô phỏng, kiểm tra ngụy biện, ma trận tổng quan, gợi ý tạp chí, BibTeX, đọc song ngữ, rà soát khoảng trống nghiên cứu, tái lập kết quả |
-| `skills/academic-writing` | 1.3.0 | Biên tập học thuật, hướng dẫn trích dẫn (ISO 690, APA, MLA, Chicago, IEEE, AMA và hồ sơ khu vực), thể lệ tạp chí, dịch vụ kiểm tra tùy chọn, hồ sơ nộp bài và yêu cầu thẩm định khuyết danh của cơ sở đào tạo, kiểm tra quy chuẩn trước khi nộp, quét ẩn danh mù đôi, chuyển biên nhận thành bảng LaTeX và tạo khung hội nghị |
+| `skills/academic-writing` | 1.3.1 | Biên tập học thuật, hướng dẫn trích dẫn (ISO 690, APA, MLA, Chicago, IEEE, AMA và hồ sơ khu vực), thể lệ tạp chí, dịch vụ kiểm tra tùy chọn, hồ sơ nộp bài và yêu cầu thẩm định khuyết danh của cơ sở đào tạo, kiểm tra quy chuẩn trước khi nộp, quét ẩn danh mù đôi, chuyển biên nhận thành bảng LaTeX và tạo khung hội nghị |
 | `skills/math-computation` | 1.2.1 | Định tuyến bài toán theo lĩnh vực và nhiệm vụ với các ví dụ giải tích số và thống kê đã hiệu chỉnh; bốn tệp tham chiếu chuyên sâu |
 | `skills/quantitative-paper-audit` | 1.2.0 | Tính toán lại các chỉ số thống kê trong bài báo (độ lớn hiệu ứng, giá trị p, khoảng tin cậy, OR/RR, lực kiểm định thực tế) và phát hiện sai lệch số liệu, đồng thời kiểm tra bảo toàn phân hoạch mẫu, độ lệch hằng số trong thực nghiệm cắt bỏ và giới hạn vật lý của bộ nhớ và băng thông |
 | `skills/research-reproducibility` | 1.0.1 | Quy trình kiểm định khả năng tái lập gồm 14 giai đoạn với bộ kiểm tra quy tắc tái lập có cấu trúc, năm tầng dữ kiện và hồ sơ kiểm định có thể tái lập |
@@ -141,12 +141,12 @@ Mười bốn kỹ năng bao gồm tổng cộng 22 tệp tham chiếu Markdown.
 ### Cài đặt gói phần mềm
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.4.0` hoặc chạy `python -m pip install academic-research-kernel==2.4.0` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==7.0.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
+Ngoài ra, bạn có thể cài đặt bằng `pipx install academic-research-kernel==2.4.1` hoặc chạy `python -m pip install academic-research-kernel==2.4.1` bên trong một môi trường ảo được hỗ trợ. Tùy chọn `[full]` bổ sung các thư viện cho những ví dụ tính toán khoa học mở rộng; `[qa]` bổ sung công cụ kiểm định kho lưu trữ bao gồm trình phân tích PDF. Tùy chọn `[research]` cài đặt `pypdf==7.0.0` và `fonttools==4.65.0` nhằm bảo đảm giải mã phông chữ PDF nhất quán trên các môi trường cài đặt mới; cả hai đều tương thích với Python 3.10. Việc đọc HTML/XML có cấu trúc và DOCX/XLSX giới hạn dung lượng sử dụng thư viện chuẩn của Python. Các phụ trợ GPU và dịch vụ trả phí vẫn là tùy chọn không bắt buộc.
 
 ### Tích hợp và sử dụng di động
 
@@ -224,7 +224,7 @@ Xem thêm [xác thực OpenAlex](https://help.openalex.org/api/authentication/),
 
 ---
 
-## 6. Kiểm định cục bộ, xác minh gói phân phối (2.4.0) và giấy phép
+## 6. Kiểm định cục bộ, xác minh gói phân phối (2.4.1) và giấy phép
 
 ### Kiểm định (Validation)
 
@@ -244,7 +244,7 @@ Trình kiểm tra QA xác thực siêu dữ liệu, tệp tham chiếu, mẫu đ
 
 Các bài kiểm thử quy chuẩn biên soạn kỹ năng của Hermes (đã ghim phiên bản) được tái sử dụng mà không thay đổi quy tắc riêng của từng kỹ năng. Các bài kiểm tra quần thể toàn bộ bản phân phối thượng nguồn không áp dụng cho tap này; bộ khung kiểm thử tại đây kiểm tra đủ 14 kỹ năng và phân giải tệp tham chiếu đối chiếu với danh mục đi kèm/tùy chọn đã ghim. Đây không phải là bài kiểm tra cài đặt toàn bộ hệ thống Hermes. CI chỉ dùng mạng để cài đặt gói phụ thuộc; các bài kiểm thử thông thường không gọi API học thuật bên ngoài.
 
-Hệ thống CI chạy toàn bộ bộ kiểm thử QA trên Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), kèm theo bước kiểm tra canary trực tiếp với nhánh thượng nguồn. Bộ kiểm thử hồi quy hiện tại vượt qua 1348 bài kiểm thử cục bộ (mở rộng từ mốc cơ sở lịch sử 1165 bài kiểm thử). Kết quả hiệu chỉnh hiện tại và phạm vi bao phủ được ghi nhận trong [hồ sơ hiệu chỉnh độ chính xác](../../docs/maintenance/correctness-repair-20261008.md); bằng chứng kiểm thử từ xa ghi rõ mã HEAD được kiểm tra. Một quy trình tích hợp tap riêng biệt sẽ chạy khi đẩy mã lên nhánh main: quy trình này cài đặt bản Hermes đã ghim trong `tests/upstream/provenance.json` và thực thi các lệnh `tap add`, `search`, `install` và `list` đối với kho lưu trữ này. Phiên bản chính xác, hạng mục kiểm tra và các giới hạn được trình bày trong [báo cáo kiểm định](../../docs/kernel-architecture.md).
+Hệ thống CI chạy toàn bộ bộ kiểm thử QA trên Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), kèm theo bước kiểm tra canary trực tiếp với nhánh thượng nguồn. Bộ kiểm thử hồi quy hiện tại vượt qua 1364 bài kiểm thử cục bộ (mở rộng từ mốc cơ sở lịch sử 1165 bài kiểm thử). Kết quả hiệu chỉnh hiện tại và phạm vi bao phủ được ghi nhận trong [hồ sơ hiệu chỉnh độ chính xác](../../docs/maintenance/correctness-repair-20261008.md); bằng chứng kiểm thử từ xa ghi rõ mã HEAD được kiểm tra. Một quy trình tích hợp tap riêng biệt sẽ chạy khi đẩy mã lên nhánh main: quy trình này cài đặt bản Hermes đã ghim trong `tests/upstream/provenance.json` và thực thi các lệnh `tap add`, `search`, `install` và `list` đối với kho lưu trữ này. Phiên bản chính xác, hạng mục kiểm tra và các giới hạn được trình bày trong [báo cáo kiểm định](../../docs/kernel-architecture.md).
 
 Thư mục [tools/longtail/](../../tools/longtail/README.md) chứa bộ sinh nhân tố kịch bản đuôi dài tất định: 4096 tổ hợp ứng viên tạo từ hạt giống SHA256, 30 kịch bản được chọn và một báo cáo độ bao phủ xác minh do máy tính toán. Mô hình v3 thống kê riêng biệt các họ năng lực (E01), 14 kỹ năng thực tế trong kho lưu trữ (E02) và các mục tiêu tác vụ (E03). Mỗi kịch bản gắn với một kỹ năng chính, một mục tiêu tác vụ được hỗ trợ và các năng lực tương thích; mỗi kỹ năng phải xuất hiện ít nhất hai lần dưới hai mục tiêu khác nhau, bao gồm cả mục tiêu cốt lõi đã khai báo. Sự sai lệch giữa thư mục kỹ năng và danh mục nhân tố sẽ làm quá trình xác thực báo lỗi. Giai đoạn mở rộng ngữ nghĩa (chuỗi tác vụ, bộ tiêu chuẩn đối chiếu và tiêm sự kiện thực thi) vẫn là một bước tách biệt; độ bao phủ nhân tố không đồng nghĩa với độ bao phủ thực thi toàn bộ quy trình.
 

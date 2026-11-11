@@ -15,19 +15,19 @@
 
 ### クイックスタート
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) を用いてバージョン 2.4.0 を実行します：
+[uv](https://docs.astral.sh/uv/getting-started/installation/) を用いてバージョン 2.4.1 を実行します：
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-[2.4.0 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10/3.12/3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 18 個の決定論的ツールが基本インストールに含まれています。
+[2.4.1 リリース](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1)には配布パッケージのハッシュ値と公開状態が記録されています。配布用 wheel をダウンロードしたうえで、ローカル環境から `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` として実行することも可能です。Python 3.10/3.12/3.14 に対応しており、`uvx --python 3.12` で対応インタプリタを明示的に指定できます。統計計算を含む全 18 個の決定論的ツールが基本インストールに含まれています。
 
 ### インストールの確認
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### ローカル Agent による論文研究
 
-`academic-research-kernel[research]==2.4.0` をインストールし、パッケージ同梱のワークフローをエクスポートします：
+`academic-research-kernel[research]==2.4.1` をインストールし、パッケージ同梱のワークフローをエクスポートします：
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | 同一性とソース別引用数の照合、更新・撤回シグナルの検査、OA 本文の特定と PDF 同一性の検証、OpenReview 査読履歴およびコードリポジトリのフォレンジック監査 |
 | `skills/literature-analysis` | 1.3.0 | 12 のワークフロー：トピック類似度、局所テキスト重複、反証、著者プロファイル、模擬査読、誤謬検査、レビューマトリクス、投稿先候補、BibTeX、バイリンガル読解、研究ギャップ探索、再現 |
-| `skills/academic-writing` | 1.3.0 | 論文推敲、引用基準案内（ISO 690、APA、MLA、Chicago、IEEE、AMA および地域・機関別プロファイル）、投稿規程、任意の検出サービス、投稿資料、機関審査要件、投稿前リンティング、二重盲検匿名化チェック、検証結果からの LaTeX 三線表生成、会議テンプレート作成 |
+| `skills/academic-writing` | 1.3.1 | 論文推敲、引用基準案内（ISO 690、APA、MLA、Chicago、IEEE、AMA および地域・機関別プロファイル）、投稿規程、任意の検出サービス、投稿資料、機関審査要件、投稿前リンティング、二重盲検匿名化チェック、検証結果からの LaTeX 三線表生成、会議テンプレート作成 |
 | `skills/math-computation` | 1.2.1 | 既存の領域・タスク経路と修正済みの数値・統計例題、領域別リファレンス 4 編 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 論文が報告する統計量（効果量、p 値、信頼区間、OR/RR、達成検出力）の再計算と数値不整合の検出、およびサンプル分割保存、アブレーション定数オフセット、非圧縮ストレージ・帯域幅下界の検査 |
 | `skills/research-reproducibility` | 1.0.1 | 構造化チェックリスト、5 段階の事実階層、再現可能な監査記録を備えた 14 段階の再現監査パイプライン |
@@ -141,12 +141,12 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 ### パッケージのインストール
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-または、`pipx install academic-research-kernel==2.4.0`、あるいは対応する仮想環境内で `python -m pip install academic-research-kernel==2.4.0` を実行してインストールできます。`[full]` は拡張的な科学計算スキル例題向けのライブラリを追加し、`[qa]` は PDF パーサーを含むリポジトリ検証ツールを追加します。`[research]` はクリーンインストール環境間で一貫した PDF フォントデコードを行うため `pypdf==7.0.0` と `fonttools==4.65.0` を追加します（いずれも Python 3.10 に対応）。構造化 HTML/XML およびサイズ制限付き DOCX/XLSX の読み取りには標準ライブラリを使用します。GPU バックエンドと有償サービスは任意です。
+または、`pipx install academic-research-kernel==2.4.1`、あるいは対応する仮想環境内で `python -m pip install academic-research-kernel==2.4.1` を実行してインストールできます。`[full]` は拡張的な科学計算スキル例題向けのライブラリを追加し、`[qa]` は PDF パーサーを含むリポジトリ検証ツールを追加します。`[research]` はクリーンインストール環境間で一貫した PDF フォントデコードを行うため `pypdf==7.0.0` と `fonttools==4.65.0` を追加します（いずれも Python 3.10 に対応）。構造化 HTML/XML およびサイズ制限付き DOCX/XLSX の読み取りには標準ライブラリを使用します。GPU バックエンドと有償サービスは任意です。
 
 ### 統合とポータブル利用
 
@@ -200,7 +200,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### 決定論的取り込みと公開カーネルインターフェース
 
-バージョン 2.4.0 は `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、15 個のアダプター（14 のスキルおよび opaque fallback）、ならびに 18 個のステートレス stdio MCP ツールを提供します。受理された取り込み検証記録は、保持される各セマンティック変更（研究対象、主張と根拠の対応関係レコード、研究上の意思決定と失敗記録レコード、要確認事項、物理検証記録、成果物登録）を種別、識別子、正規化 SHA-256 によって拘束します。キャッシュ再生時はトランスポートスナップショットのハッシュとは独立してこれらのコミットメントを検証します。空の記録も有効であり、失敗したアトミックバッチは部分的な状態を残しません。
+バージョン 2.4.1 は `ResearchArtifactEnvelope v1`、`ArtifactIngestionReceipt v1`、15 個のアダプター（14 のスキルおよび opaque fallback）、ならびに 18 個のステートレス stdio MCP ツールを提供します。受理された取り込み検証記録は、保持される各セマンティック変更（研究対象、主張と根拠の対応関係レコード、研究上の意思決定と失敗記録レコード、要確認事項、物理検証記録、成果物登録）を種別、識別子、正規化 SHA-256 によって拘束します。キャッシュ再生時はトランスポートスナップショットのハッシュとは独立してこれらのコミットメントを検証します。空の記録も有効であり、失敗したアトミックバッチは部分的な状態を残しません。
 
 来歴コンテンツの読み取り権限は帯域外で明示的に付与されます。信頼された Python 呼び出し元はシリアライズ済み検証記録やスナップショットを再生する際に `LineageVerificationContext` を渡します。一方、MCP 呼び出し元は上限付きのコンテンツバイト列のみを渡すことができ、ホストのファイルシステムルートを指定することはできません。既定のコンテンツ予算は 10 MiB であり、信頼されたホストは生成側と検証側が同一ポリシーに従う条件下でより大きな成果物を明示的に許可できます。コンテンツ権限がない場合、`fully_verified` の主張は独立して再現できず、構造化された無効検証結果を返します。非構造化テキストは不透明なまま保持され、異論は可視状態に保たれ、コミット、路線の断念、再開、ルーティング、真偽判断の主導権は研究者に留保されます。
 
@@ -210,7 +210,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 引用スタイル、報告ガイドライン、メタデータ規約は対象ジャーナル、助成機関、学問分野、法域に依存します。本リポジトリは **ISO 690:2021**（書誌参照および引用指針）、**ISO 5127:2017**（情報・ドキュメンテーション用語）、**W3C PROV**（来歴データモデル）を国際基準として確立し、各国の地域プロファイル（日本の学協会指針・JIS X 0807 参考、中国大陸 GB/T 7714-2025、スペイン UNE-ISO 690:2024、ドイツ DIN ISO 690:2021 など）および分野別標準（APA 第 7 版、IEEE、ACM、Vancouver、Chicago、PRISMA 2020、ICMJE）に対応しています。投稿先機関・学会の要求事項が既定プロファイルより常に優先されます。詳細は[学術標準アーキテクチャ](docs/standards/README.md)および[自然な学術用語ガイド](docs/terminology/README.md)を参照してください。
 
-バージョン 2.4.0 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/kernel-architecture.md)を参照してください。
+バージョン 2.4.1 では、DOI 等の外部識別子の整合性、定量判定フラグの相互排他性、およびカーネルと検証記録で共有される要確認事項の契約を検証します。キャッシュの完全性は保持された元の成果物エンベロープと正規化バインディングから独立して再構築されるため、状態レコードとそのキャッシュ宣言の双方を削除しても不正なキャッシュ再生が成立することはありません。詳細は[4 項目のブロッカー解消記録](docs/kernel-architecture.md)を参照してください。
 
 ### データソースへのアクセス
 
@@ -224,7 +224,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. ローカル検証・配布パッケージ検証（2.4.0）・ライセンス
+## 6. ローカル検証・配布パッケージ検証（2.4.1）・ライセンス
 
 ### 検証とテスト
 
@@ -244,7 +244,7 @@ QA はメタデータ、リファレンス、個人パス・既知シークレ�
 
 固定バージョンの Hermes オーサリングテストは、スキルごとの規則を変えずに再利用されます。上流の全体配布チェックはこの tap には適用されず、本リポジトリのテストハーネスは 14 のスキルすべてを検査し、固定されたバンドル・任意カタログに対してリファレンスを解決します。これは完全な Hermes インストールテストではありません。CI は依存関係のインストールにのみネットワークを使用し、通常のテストは外部の学術 API を呼び出しません。
 
-CI は GitHub Actions により Linux x86_64（Python 3.10/3.12/3.14）、Linux ARM64（ubuntu-24.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）の全プラットフォーム・全アーキテクチャを網羅し、上流の最新ブランチに対するリアルタイム Canary 検証も実行します。現在のローカル回帰テストスイートでは 1348 件のテストが通過しており（初期ベースライン候補の 1165 件から拡張）、現在の修正結果とカバレッジ境界は[正確性修復記録](docs/maintenance/correctness-repair-20261008.md)に記録されています（リモート証跡は検証対象の HEAD を個別に識別します）。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、本リポジトリに対して tap add、search、install、list を検証します。正確なバージョン、チェック項目、制約は[監査文書](docs/kernel-architecture.md)に記載されています。
+CI は GitHub Actions により Linux x86_64（Python 3.10/3.12/3.14）、Linux ARM64（ubuntu-24.04-arm）、Windows x86_64、Windows ARM64（windows-11-arm）、macOS ARM64（macos-latest）の全プラットフォーム・全アーキテクチャを網羅し、上流の最新ブランチに対するリアルタイム Canary 検証も実行します。現在のローカル回帰テストスイートでは 1364 件のテストが通過しており（初期ベースライン候補の 1165 件から拡張）、現在の修正結果とカバレッジ境界は[正確性修復記録](docs/maintenance/correctness-repair-20261008.md)に記録されています（リモート証跡は検証対象の HEAD を個別に識別します）。別の tap 統合ワークフローが main へのプッシュ時に実行され、tests/upstream/provenance.json に記録された固定 Hermes チェックアウトをインストールし、本リポジトリに対して tap add、search、install、list を検証します。正確なバージョン、チェック項目、制約は[監査文書](docs/kernel-architecture.md)に記載されています。
 
 [tools/longtail/](tools/longtail/README.md) には決定論的な長尾因子生成器が格納されています：4096 個の SHA256 シード候補から 30 シナリオを選出し、機械計算による検証カバレッジ報告を出力します。v3 モデルでは能力ファミリー（E01）、リポジトリの実際の 14 スキル（E02）、タスク目標（E03）を個別に集計します。各シナリオは 1 つの主要スキル、サポートされるタスク目標、互換性のある能力を持ち、すべてのスキルは宣言された中核目標を含む少なくとも 2 つの異なる目標の下で 2 回以上出現する必要があります。スキルディレクトリの不一致は検証失敗となります。セマンティック展開（タスクチェーン、オラクル、実行イベント注入）は別段階であり、因子カバレッジはワークフロー実行カバレッジを証明するものではありません。
 

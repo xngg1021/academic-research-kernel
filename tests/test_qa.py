@@ -93,3 +93,13 @@ def test_command_adapter_utf8_stderr_under_non_utf8_env(tmp_path, monkeypatch):
     )
     res = ad.review(req)
     assert 'error-研究' in (res.error or '')
+
+
+def test_dependency_contract_gate_rejects_pypdf_downgrade_or_missing_floor(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    assert qa.dependency_contract_issues(root) == []
+    (tmp_path / 'pyproject.toml').write_text((root / 'pyproject.toml').read_text(encoding='utf-8'), encoding='utf-8')
+    bad_req = (root / 'requirements-qa.txt').read_text(encoding='utf-8').replace('pypdf==7.0.0', 'pypdf==6.19.0')
+    (tmp_path / 'requirements-qa.txt').write_text(bad_req, encoding='utf-8')
+    issues = qa.dependency_contract_issues(tmp_path)
+    assert any('pypdf==7.0.0' in msg for msg in issues)

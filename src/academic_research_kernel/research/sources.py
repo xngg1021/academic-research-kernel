@@ -1075,16 +1075,329 @@ def acquire(value, project):
     return state
 
 
+
+TEXLIVE_GLYPH_SYSTEM_INPUTS = frozenset({
+    'glyphtounicode', 'glyphtounicode.tex',
+    'glyphtounicode-cmex', 'glyphtounicode-cmex.tex',
+    'glyphtounicode-cmr', 'glyphtounicode-cmr.tex',
+})
+_TEX_INPUT_RE = re.compile(
+    r'(?<!\\)(?:\\\\)*\\(?:include(?![A-Za-z@])\s*\{([^}{]+)\}|input(?![A-Za-z@])\s*(?:\{([^}{]+)\}|"([^"\n{}]+)"|([^\s\\{}%"]+)))'
+)
+_TEX_BIB_HEAD_RE = re.compile(r'(?<!\\)(?:\\\\)*\\(?:bibliography|addbibresource)(?![A-Za-z@])')
+_TEX_INLINE_VERB_RE = re.compile(r'\\verb\*?([^a-zA-Z0-9\s]).*?\1')
+_TEX_BEGIN_VERB_ENV_RE = re.compile(r'\\begin\{(verbatim\*?|lstlisting|minted)\}')
+_TEX_MACRO_HEAD_RE = re.compile(
+    r'(?<!\\)(?:\\\\)*(\\(?:(?:newcommand|renewcommand|providecommand|DeclareRobustCommand)\s*(?:\*\s*)?(?:\{\s*\\[A-Za-z@]+\s*\}|\\[A-Za-z@]+)|(?:def|edef|gdef|xdef)\s*\\[A-Za-z@]+[^\n\\{]{0,120}))'
+)
+_MAX_TEX_BUNDLE_DEPTH = 16
+_MAX_TEX_BUNDLE_FILES = 128
+
+
+def _skip_balanced_braces(text: str, open_brace_idx: int) -> int:
+    """Return index immediately after balanced {...} starting at open_brace_idx, or -1 if unclosed."""
+    depth, i, n = 0, open_brace_idx, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == '\\' and i + 1 < n:
+            i += 2
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return -1
+
+
+def _skip_optional_bracket_block(text: str, pos: int, open_ch: str = '[', close_ch: str = ']') -> int:
+    """If text[pos:] starts with whitespace and open_ch, return index after matching close_ch, or -1 if unclosed."""
+    n, i = len(text), pos
+    while i < n and text[i].isspace():
+        i += 1
+    if i >= n or text[i] != open_ch:
+        return pos
+    if open_ch == '{':
+        return _skip_balanced_braces(text, i)
+    i += 1
+    brace_depth = 0
+    while i < n:
+        ch = text[i]
+        if ch == '\\' and i + 1 < n:
+            i += 2
+            continue
+        if ch == '{':
+            brace_depth += 1
+        elif ch == '}' and brace_depth > 0:
+            brace_depth -= 1
+        elif ch == close_ch and brace_depth == 0:
+            return i + 1
+        i += 1
+    return -1
+
+
+def _strip_comments_and_collect_verbatim_spans(text: str) -> tuple[str, list[tuple[int, int]]]:
+    """Single-pass TeX comment stripper recording exact (start, end) spans of verbatim bodies."""
+    if '\r' in text:
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+    n, pos, out_len = len(text), 0, 0
+    kept: list[str] = []
+    verb_spans: list[tuple[int, int]] = []
+
+    def _append(s: str) -> None:
+        nonlocal out_len
+        kept.append(s)
+        out_len += len(s)
+
+    while pos < n:
+        ch = text[pos]
+        if ch == '%':
+            nl = text.find('\n', pos)
+            if nl == -1:
+                break
+            _append('\n')
+            pos = nl + 1
+            continue
+        if ch == '\\':
+            if pos + 1 < n and text[pos + 1] == '\\':
+                _append('\\\\')
+                pos += 2
+                continue
+            m_v = _TEX_INLINE_VERB_RE.match(text, pos)
+            if m_v:
+                v_s = out_len
+                _append(m_v.group(0))
+                verb_spans.append((v_s, out_len))
+                pos = m_v.end()
+                continue
+            m_b = _TEX_BEGIN_VERB_ENV_RE.match(text, pos)
+            if m_b:
+                env_name = m_b.group(1)
+                v_s = out_len
+                _append(m_b.group(0))
+                pos = m_b.end()
+                if env_name in ('lstlisting', 'minted'):
+                    opt_end = _skip_optional_bracket_block(text, pos, '[', ']')
+                    if opt_end > pos:
+                        _append(text[pos:opt_end])
+                        pos = opt_end
+                        v_s = out_len
+                    if env_name == 'minted':
+                        lang_end = _skip_optional_bracket_block(text, pos, '{', '}')
+                        if lang_end > pos:
+                            _append(text[pos:lang_end])
+                            pos = lang_end
+                            v_s = out_len
+                end_tok = f'\\end{{{env_name}}}'
+                end_idx = text.find(end_tok, pos)
+                after_end = n if end_idx == -1 else end_idx + len(end_tok)
+                _append(text[pos:after_end])
+                verb_spans.append((v_s, out_len))
+                pos = after_end
+                continue
+            if pos + 1 < n:
+                _append(text[pos : pos + 2])
+                pos += 2
+                continue
+        _append(ch)
+        pos += 1
+    return ''.join(kept), verb_spans
+
+
+def _find_tex_macro_body_open_brace(text: str, prefix_end: int) -> tuple[int | None, int]:
+    n = len(text)
+    cur = _skip_optional_bracket_block(text, prefix_end)
+    if cur < 0:
+        return None, n
+    cur = _skip_optional_bracket_block(text, cur)
+    if cur < 0:
+        return None, n
+    while cur < n and text[cur].isspace():
+        cur += 1
+    return (cur, cur) if (cur < n and text[cur] == '{') else (None, max(prefix_end, cur))
+
+
+def _mask_macro_definitions_and_verbatim(
+    uncommented: str,
+    verb_spans: list[tuple[int, int]] | None = None,
+) -> str:
+    """Mask verbatim bodies and macro definition bodies into spaces while preserving newlines."""
+    if verb_spans is None:
+        _, verb_spans = _strip_comments_and_collect_verbatim_spans(uncommented)
+    chars = list(uncommented)
+    for s_span, e_span in verb_spans:
+        for idx in range(s_span, e_span):
+            if chars[idx] != '\n':
+                chars[idx] = ' '
+    masked_verb = ''.join(chars)
+    n, pos = len(masked_verb), 0
+    while pos < n:
+        m = _TEX_MACRO_HEAD_RE.search(masked_verb, pos)
+        if not m:
+            break
+        open_idx, next_pos = _find_tex_macro_body_open_brace(masked_verb, m.end(1))
+        if open_idx is None:
+            pos = max(m.end(1), next_pos)
+            continue
+        end_idx = _skip_balanced_braces(masked_verb, open_idx)
+        mask_end = n if end_idx < 0 else end_idx
+        for idx in range(m.start(1), mask_end):
+            if chars[idx] != '\n':
+                chars[idx] = ' '
+        pos = mask_end
+    return ''.join(chars)
+
+
+def _strip_tex_comments_and_verbatim(text: str) -> str:
+    uncommented, verb_spans = _strip_comments_and_collect_verbatim_spans(text)
+    return _mask_macro_definitions_and_verbatim(uncommented, verb_spans)
+
+
+def _extract_cmd_brace_args_after_opt_brackets(
+    text: str,
+    cmd_head_re: re.Pattern[str],
+) -> list[tuple[int, str]]:
+    """Find each match of cmd_head_re, skip optional [...] blocks, and return (match_start, brace_arg)."""
+    results: list[tuple[int, str]] = []
+    n, pos_cmd = len(text), 0
+    while pos_cmd < n:
+        m = cmd_head_re.search(text, pos_cmd)
+        if not m:
+            break
+        cur = m.end()
+        while True:
+            nxt = _skip_optional_bracket_block(text, cur)
+            if nxt <= cur:
+                cur = nxt
+                break
+            cur = nxt
+        if cur < 0:
+            break
+        while cur < n and text[cur].isspace():
+            cur += 1
+        if cur >= n or text[cur] != '{':
+            pos_cmd = max(m.end(), cur)
+            continue
+        end_b = _skip_balanced_braces(text, cur)
+        if end_b < 0:
+            break
+        results.append((m.start(), text[cur + 1 : end_b - 1]))
+        pos_cmd = max(m.end(), end_b)
+    return results
+
+
+def _discover_tex_bundle_entries(entry_tex: Path, base_dir: Path) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Discover bounded relative \\input/\\include .tex files and sibling/referenced .bib/.bbl files inside base_dir."""
+    entries: list[dict[str, str]] = []
+    bundle_failures: list[dict[str, str]] = []
+    visited_tex: set[Path] = set()
+    recorded_missing_or_capped: set[str] = set()
+    bib_candidates: list[str] = []
+    total_bytes = 0
+
+    def _resolve_rel_tex(cur_file: Path, raw_target: str) -> Path | None:
+        target = raw_target.strip().strip('"')
+        if not target:
+            return None
+        if Path(target).is_absolute() or '\\' in target or '..' in PurePosixPath(target).parts:
+            raise ValueError('source path escapes project')
+        for root_cand in (base_dir, cur_file.parent):
+            rel_posix = (Path(target) if root_cand == base_dir else (cur_file.parent.relative_to(base_dir) / target)).as_posix()
+            if not Path(rel_posix).suffix:
+                cand_tex = inside(base_dir, rel_posix + '.tex')
+                cand_bare = inside(base_dir, rel_posix)
+                cand = cand_tex if (cand_tex.is_file() or not cand_bare.is_file()) else cand_bare
+            else:
+                cand = inside(base_dir, rel_posix)
+            if cand.is_file():
+                return cand
+        if target in TEXLIVE_GLYPH_SYSTEM_INPUTS:
+            return None
+        fb = Path(target).as_posix()
+        return inside(base_dir, fb if Path(fb).suffix else fb + '.tex')
+
+    def _walk_tex(cur_path: Path, depth: int, is_root: bool = False) -> None:
+        nonlocal total_bytes
+        resolved = cur_path.resolve()
+        if resolved in visited_tex:
+            return
+        rel_posix = resolved.relative_to(base_dir).as_posix()
+        if depth > _MAX_TEX_BUNDLE_DEPTH or len(visited_tex) >= _MAX_TEX_BUNDLE_FILES:
+            if rel_posix not in recorded_missing_or_capped:
+                recorded_missing_or_capped.add(rel_posix)
+                bundle_failures.append({
+                    'path': rel_posix,
+                    'reason': f'tex bundle limit exceeded (max_depth={_MAX_TEX_BUNDLE_DEPTH}, max_files={_MAX_TEX_BUNDLE_FILES})',
+                })
+            return
+        if not resolved.is_file():
+            if rel_posix not in recorded_missing_or_capped:
+                recorded_missing_or_capped.add(rel_posix)
+                entries.append({'path': rel_posix, 'role': 'body'})
+            return
+        st_size = resolved.stat().st_size
+        if st_size > MAX_FILE or total_bytes + st_size > MAX_TOTAL:
+            raise ValueError('local package size budget exceeded')
+        visited_tex.add(resolved)
+        total_bytes += st_size
+        entries.append({'path': rel_posix, 'role': 'main' if is_root else 'body'})
+        cleaned = _strip_tex_comments_and_verbatim(resolved.read_text(encoding='utf-8', errors='replace'))
+        for _, bib_arg in _extract_cmd_brace_args_after_opt_brackets(cleaned, _TEX_BIB_HEAD_RE):
+            bib_candidates.extend(p.strip() for p in bib_arg.split(',') if p.strip())
+        for m_inc in _TEX_INPUT_RE.finditer(cleaned):
+            raw_inc = m_inc.group(1) or m_inc.group(2) or m_inc.group(3) or m_inc.group(4) or ''
+            cand = _resolve_rel_tex(resolved, raw_inc)
+            if cand is not None:
+                _walk_tex(cand, depth + 1, is_root=False)
+
+    _walk_tex(entry_tex, 0, is_root=True)
+
+    seen_bib: set[Path] = set(visited_tex)
+    for b_tok in bib_candidates:
+        if Path(b_tok).is_absolute() or '\\' in b_tok or '..' in PurePosixPath(b_tok).parts:
+            raise ValueError('source path escapes project')
+        b_rel = b_tok if Path(b_tok).suffix.lower() in ('.bib', '.bbl') else b_tok + '.bib'
+        b_path = inside(base_dir, b_rel).resolve()
+        b_rel_posix = b_path.relative_to(base_dir).as_posix()
+        bbl_alt = inside(base_dir, Path(b_rel).with_suffix('.bbl').as_posix()).resolve()
+        chosen = b_path if b_path.is_file() else (bbl_alt if bbl_alt.is_file() else None)
+        if chosen is not None:
+            if chosen not in seen_bib:
+                seen_bib.add(chosen)
+                entries.append({'path': chosen.relative_to(base_dir).as_posix(), 'role': 'supplement'})
+        elif b_rel_posix not in recorded_missing_or_capped:
+            recorded_missing_or_capped.add(b_rel_posix)
+            entries.append({'path': b_rel_posix, 'role': 'supplement'})
+
+    for sib in sorted(base_dir.iterdir()):
+        if not sib.is_file() or sib.suffix.lower() not in ('.bib', '.bbl') or sib.name.startswith('.'):
+            continue
+        try:
+            checked_sib = inside(base_dir, sib.name).resolve()
+        except ValueError:
+            continue
+        if checked_sib not in seen_bib:
+            seen_bib.add(checked_sib)
+            entries.append({'path': checked_sib.relative_to(base_dir).as_posix(), 'role': 'supplement'})
+
+    return entries, bundle_failures
+
+
 def input_files(value, project):
     source = Path(value)
     if not source.exists():
         return acquire(value, project)
+    _reject_ancestor_links(source)
     source = source.resolve()
     if source == project or project.is_relative_to(source):
         raise ValueError('project must be outside the input directory')
+    base_dir = source if source.is_dir() else source.parent
     mf = source / 'manifest.json' if source.is_dir() else None
     info = json.loads(mf.read_text('utf-8-sig')) if mf and mf.exists() else {}
     entries = info.get('files', info.get('documents', []))
+    bundle_failures: list[dict[str, str]] = []
     if not entries:
         if source.is_dir():
             top_files = [p for p in sorted(source.iterdir()) if p.is_file() and p.suffix.lower() in FORMATS]
@@ -1108,10 +1421,13 @@ def input_files(value, project):
                 }
                 for p in discovered
             ]
+        elif source.suffix.lower() == '.tex':
+            entries, bundle_failures = _discover_tex_bundle_entries(source, base_dir)
         elif source.suffix.lower() in FORMATS:
             entries = [{'path': source.name, 'role': 'main'}]
-    result = {**info, 'input': str(source), 'files': [], 'failures': info.get('failures', [])}
+    result = {**info, 'input': str(source), 'files': [], 'failures': list(info.get('failures', [])) + bundle_failures}
     size = 0
+    seen_paths: set[Path] = set()
     for entry in entries:
         name = entry.get('path', entry.get('filename', entry.get('name')))
         if source.is_dir() and Path(name).is_absolute():
@@ -1119,12 +1435,15 @@ def input_files(value, project):
             if not absolute.is_relative_to(source):
                 raise ValueError('manifest source path escapes input package')
             name = absolute.relative_to(source).as_posix()
-        path = inside(source, name) if source.is_dir() else source
+        path = inside(base_dir, name)
         if not path.is_file():
             result['failures'].append({'path': str(name), 'reason': 'source file missing'})
             continue
-        size += path.stat().st_size
-        if path.stat().st_size > MAX_FILE or size > MAX_TOTAL:
+        file_size = path.stat().st_size
+        if path not in seen_paths:
+            seen_paths.add(path)
+            size += file_size
+        if file_size > MAX_FILE or size > MAX_TOTAL:
             raise ValueError('local package size budget exceeded')
         file_hash = digest(path)
         if entry.get('sha256') and file_hash != entry['sha256']:

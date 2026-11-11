@@ -1,11 +1,11 @@
-# Distribution and manuscript engineering release 2.4.0
+# Distribution and manuscript engineering release 2.4.1
 
-Release 2.4.0 extends the unified wheel, CLI, and MCP runtime with end-to-end research-to-LaTeX and CEG-anchor pipeline bridges (`receipt-to-latex --from-research`, `venue-template --action export-ceg-anchors`), 10 newly bundled scholarly utility modules (`repro-checklist`, `literature-watch`, `retraction-watch`, `verify-source --verify-pdf/--check-updates`, `bibliography --action export-bibtex/deduplicate/citation-graph/review-matrix`, and `compute_receipt`), optional pre-submission academic style & claim-boundary advisories (`pre-submission-lint --check-academic-style`), and 6 additional public MCP tools (18 total MCP tools, 26 JSON schemas, and `>= 2.2.0` historical artifact compatibility).
+Release 2.4.1 (building on 2.4.0) extends the unified wheel, CLI, and MCP runtime with end-to-end research-to-LaTeX and CEG-anchor pipeline bridges (`receipt-to-latex --from-research`, `venue-template --action export-ceg-anchors`), 10 newly bundled scholarly utility modules (`repro-checklist`, `literature-watch`, `retraction-watch`, `verify-source --verify-pdf/--check-updates`, `bibliography --action export-bibtex/deduplicate/citation-graph/review-matrix`, and `compute_receipt`), optional pre-submission academic style & claim-boundary advisories (`pre-submission-lint --check-academic-style`), and 6 additional public MCP tools (18 total MCP tools, 26 JSON schemas, and `>= 2.2.0` historical artifact compatibility).
 
 Install the current release with digital PDF support using:
 
 ```bash
-uv tool install "academic-research-kernel[research]==2.4.0"
+uv tool install "academic-research-kernel[research]==2.4.1"
 academic-research-kernel doctor
 ```
 

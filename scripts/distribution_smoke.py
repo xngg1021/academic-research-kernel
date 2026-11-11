@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -46,7 +47,7 @@ def _make_minimal_pdf(text_line: str) -> bytes:
     return bytes(out)
 
 
-def research_smoke(execute, directory, pdf_ready=False, expected_version='2.4.0'):
+def research_smoke(execute, directory, pdf_ready=False, expected_version='2.4.1'):
     """Exercise installed workflow on explicitly synthetic raw source material."""
     from importlib.resources import files
     root = Path(directory)
@@ -117,16 +118,18 @@ def research_smoke(execute, directory, pdf_ready=False, expected_version='2.4.0'
     wf_state = json.loads((project / 'workflow-state.json').read_text(encoding='utf-8'))
     require(wf_state.get('stage') == 'complete' and wf_state.get('semantic_producer_required') is False,
             'workflow-state.json did not transition to complete')
-    vs_out = json.loads(execute(['verify-source', 'https://doi.org/10.1038/nature14539', '--normalize-only']))
-    require(vs_out.get('value') == '10.1038/nature14539', 'installed verify-source CLI failed')
-    bib_file = root / 'fixture.bib'
-    bib_file.write_text('@misc{ark2026,\n  title = {Synthetic Fixture},\n  author = {Doe, Jane},\n  year = {2026}\n}\n', encoding='utf-8')
-    csl_out = json.loads(execute(['bibliography', '--from', 'bibtex', '--to', 'csl', '--input', str(bib_file)]))
-    require(isinstance(csl_out, list) and csl_out[0].get('type') == 'document', 'installed bibliography CLI failed')
-    meta_file = root / 'meta-studies.json'
-    meta_file.write_text(json.dumps({'studies': [{'yi': 0.4, 'vi': 0.04}, {'yi': 0.5, 'vi': 0.05}, {'yi': 0.3, 'vi': 0.03}]}), encoding='utf-8')
-    meta_out = json.loads(execute(['meta-analyze', '--input', str(meta_file)]))
-    require(meta_out.get('study_count') == 3 and 'random_effects_dl' in meta_out, 'installed meta-analyze CLI failed')
+    ver_tuple = tuple(map(int, expected_version.split('.')))
+    if ver_tuple >= (2, 2, 0):
+        vs_out = json.loads(execute(['verify-source', 'https://doi.org/10.1038/nature14539', '--normalize-only']))
+        require(vs_out.get('value') == '10.1038/nature14539', 'installed verify-source CLI failed')
+        bib_file = root / 'fixture.bib'
+        bib_file.write_text('@misc{ark2026,\n  title = {Synthetic Fixture},\n  author = {Doe, Jane},\n  year = {2026}\n}\n@article{ghost2024,\n  title = {Uncited Ghost},\n  author = {Roe, Richard},\n  year = {2024}\n}\n', encoding='utf-8')
+        csl_out = json.loads(execute(['bibliography', '--from', 'bibtex', '--to', 'csl', '--input', str(bib_file)]))
+        require(isinstance(csl_out, list) and csl_out[0].get('type') == 'document', 'installed bibliography CLI failed')
+        meta_file = root / 'meta-studies.json'
+        meta_file.write_text(json.dumps({'studies': [{'yi': 0.4, 'vi': 0.04}, {'yi': 0.5, 'vi': 0.05}, {'yi': 0.3, 'vi': 0.03}]}), encoding='utf-8')
+        meta_out = json.loads(execute(['meta-analyze', '--input', str(meta_file)]))
+        require(meta_out.get('study_count') == 3 and 'random_effects_dl' in meta_out, 'installed meta-analyze CLI failed')
     if tuple(map(int, expected_version.split('.'))) >= (2, 3, 0):
         require(package.joinpath('venue-specs.json').is_file(), 'installed venue-specs.json missing for >=2.3.0')
         vspecs = json.loads(package.joinpath('venue-specs.json').read_text(encoding='utf-8'))
@@ -191,6 +194,20 @@ def research_smoke(execute, directory, pdf_ready=False, expected_version='2.4.0'
         dd_in.write_text(json.dumps([{'title': 'Work 1', 'doi': '10.1000/w1'}, {'title': 'Work 1 dup', 'doi': 'https://doi.org/10.1000/W1'}]), encoding='utf-8')
         dd_out = json.loads(execute(['bibliography', '--action', 'deduplicate', '--input', str(dd_in)]))
         require(dd_out.get('summary', {}).get('kept') == 1 and dd_out.get('summary', {}).get('removed') == 1, 'installed bibliography --action deduplicate failed')
+        rm_out = execute(['bibliography', '--action', 'review-matrix', '--input', str(dd_in), '--query', 'synthetic', '--date', '2026-11-11'])
+        require('Work 1' in rm_out and '10.1000/w1' in rm_out, 'installed bibliography --action review-matrix failed')
+    if ver_tuple >= (2, 4, 1):
+        shutil.copyfile(bib_file, tex_dir / 'refs.bib')
+        tex_file.write_text(
+            tex_file.read_text(encoding='utf-8').replace(
+                '\\end{document}',
+                '\\input{glyphtounicode}\n\\usepackage[final]{microtype}\nCited~\\cite{ark2026}.\n\\bibliography{refs}\n\\end{document}',
+            ),
+            encoding='utf-8',
+        )
+        psl_bib = json.loads(execute(['pre-submission-lint', '--tex', str(tex_file), '--venue', 'iclr', '--contribution-type', 'systems_architecture', '--check-academic-style']))
+        require(psl_bib.get('passed') is True and any(h.get('code') == 'UNCITED_BIBLIOGRAPHY_ENTRY' and 'ghost2024' in h.get('message', '') for h in psl_bib.get('hits', [])),
+                'installed pre-submission-lint failed to report UNCITED_BIBLIOGRAPHY_ENTRY for ghost2024')
     pdf_smoke = 'skipped_no_extra'
     if pdf_ready:
         pdf_file = root / 'synthetic-fixture.pdf'
@@ -265,11 +282,20 @@ def run(command=None, expected_version=None, require_pdf=False):
                 'bandwidth_reported_size_mb': 12.0, 'bandwidth_reported_latency_us': 500.0,
             }))
         if tuple(map(int, expected_version.split('.'))) >= (2, 4, 0):
+            mcp_tex = Path(directory) / 'mcp_smoke.tex'
+            mcp_tex.write_text(
+                '\\documentclass{article}\n\\begin{document}\n\\begin{abstract}\nText.\n\\end{abstract}\n'
+                '\\section{Introduction}\nText.\n\\section{Related Work}\nText.\n'
+                '\\section{Limitations}\nText.\n\\section{Reproducibility Statement}\nText.\n\\end{document}\n',
+                encoding='utf-8',
+            )
             calls.extend([
                 ('academic_table_forensics', {'partition': {'total': 100, 'parts': [60, 40]}}),
                 ('academic_meta_analyze', {'studies': [{'yi': 0.4, 'vi': 0.04}, {'yi': 0.5, 'vi': 0.05}, {'yi': 0.3, 'vi': 0.03}]}),
                 ('academic_verify_source', {'identifier': 'https://doi.org/10.1038/nature14539', 'normalize_only': True}),
                 ('academic_openreview_audit', {'venue_records': [{'forum_id': 'F1', 'title': 'Agent Study', 'decision': 'Accept (Poster)', 'ratings': [8, 6]}]}),
+                ('academic_pre_submission_lint', {'tex_path': str(mcp_tex), 'venue': 'iclr', 'check_academic_style': True}),
+                ('academic_double_blind_sanitize', {'target_path': str(mcp_tex)}),
             ])
         messages = [{'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2024-11-05'}},
                     {'jsonrpc': '2.0', 'method': 'notifications/initialized'},
@@ -301,6 +327,13 @@ def run(command=None, expected_version=None, require_pdf=False):
             require(v230_mcp.get('partition_conservation', {}).get('consistent') is True, 'MCP partition_conservation failed')
             require(v230_mcp.get('ablation_delta_regularity', {}).get('consistent') is True, 'MCP ablation_delta_regularity failed')
             require(v230_mcp.get('storage_bandwidth_bounds', {}).get('consistent') is True, 'MCP storage_bandwidth_bounds failed')
+        if tuple(map(int, expected_version.split('.'))) >= (2, 4, 0):
+            require(data['academic_table_forensics'].get('consistent') is True, 'MCP academic_table_forensics failed')
+            require(data['academic_meta_analyze'].get('study_count') == 3, 'MCP academic_meta_analyze failed')
+            require(data['academic_verify_source'].get('value') == '10.1038/nature14539', 'MCP academic_verify_source failed')
+            require(data['academic_openreview_audit'].get('total_submissions') == 1, 'MCP academic_openreview_audit failed')
+            require(data['academic_pre_submission_lint'].get('passed') is True, 'MCP academic_pre_submission_lint failed')
+            require(data['academic_double_blind_sanitize'].get('status') == 'clean', 'MCP academic_double_blind_sanitize failed')
         require(data['academic_check_percentage']['consistent'] is True, 'percentage positive control failed')
         require(0.05 < data['academic_recompute_statistics']['recomputed_p'] < 0.07, 't recomputation failed')
         require(data['academic_recompute_statistics']['cohens_d'] == 1.0, 'effect size control failed')

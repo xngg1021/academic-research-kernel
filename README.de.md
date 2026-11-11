@@ -15,19 +15,19 @@ Autor: Junfu Shi (SJF, xngg1021). Aktueller Lizenzumfang: [Source Lineage Licens
 
 ### Schnellstart
 
-Version 2.4.0 mit [uv](https://docs.astral.sh/uv/getting-started/installation/) starten:
+Version 2.4.1 mit [uv](https://docs.astral.sh/uv/getting-started/installation/) starten:
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-Das [Release 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) verzeichnet die Distributions-Hashes und den Veröffentlichungsstatus. Das Release-Wheel lässt sich auch lokal mit `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` ausführen. Unterstützt wird Python 3.10/3.12/3.14; `uvx --python 3.12` wählt explizit einen unterstützten Interpreter. Alle 18 deterministischen Werkzeuge einschließlich der Statistikfunktionen sind in der Basisinstallation enthalten.
+Das [Release 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) verzeichnet die Distributions-Hashes und den Veröffentlichungsstatus. Das Release-Wheel lässt sich auch lokal mit `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` ausführen. Unterstützt wird Python 3.10/3.12/3.14; `uvx --python 3.12` wählt explizit einen unterstützten Interpreter. Alle 18 deterministischen Werkzeuge einschließlich der Statistikfunktionen sind in der Basisinstallation enthalten.
 
 ### Installation prüfen
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Die Offline-Diagnose überprüft Abhängigkeiten, Schemata und alle 18 Werkzeugd
 
 ### Paper-Analyse mit einem lokalen Agenten
 
-Installieren Sie `academic-research-kernel[research]==2.4.0` und exportieren Sie den mitgelieferten Workflow:
+Installieren Sie `academic-research-kernel[research]==2.4.1` und exportieren Sie den mitgelieferten Workflow:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Um die fünf deterministischen Fehlerfamilien (fehlende Fehlerbalken/Streuung, F
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Identität und quellenspezifische Zitationszahlen gegenprüfen; Aktualisierungs-/Rücknahmesignale prüfen; OA-Text auffinden und PDF-Identität verifizieren; OpenReview-Gutachten und Code-Repositories forensisch prüfen |
 | `skills/literature-analysis` | 1.3.0 | Zwölf Workflows: Themenähnlichkeit, lokale Textüberschneidung, Gegenbeweise, Autorenprofile, Probegutachten, Fehlschlussprüfung, Review-Matrix, Zeitschriftenkandidaten, BibTeX, zweisprachiges Lesen, Forschungslücken-Screening, Reproduktion |
-| `skills/academic-writing` | 1.3.0 | Lektorat, Zitierrichtlinien (ISO 690, APA, MLA, Chicago, IEEE, AMA sowie regionale Profile), Zeitschriftenhinweise, optionale Prüfdienste, Einreichungsunterlagen und institutionelle Anforderungen, Pre-Submission-Linting, Double-Blind-Sanitisierung, Receipt-zu-LaTeX-Tabellen und Konferenz-Templates |
+| `skills/academic-writing` | 1.3.1 | Lektorat, Zitierrichtlinien (ISO 690, APA, MLA, Chicago, IEEE, AMA sowie regionale Profile), Zeitschriftenhinweise, optionale Prüfdienste, Einreichungsunterlagen und institutionelle Anforderungen, Pre-Submission-Linting, Double-Blind-Sanitisierung, Receipt-zu-LaTeX-Tabellen und Konferenz-Templates |
 | `skills/math-computation` | 1.2.1 | Bestehendes Domänen-/Aufgaben-Routing mit korrigierten numerischen und statistischen Beispielen; vier domänenspezifische Referenzdateien |
 | `skills/quantitative-paper-audit` | 1.2.0 | Berichtete Statistiken neu berechnen (Effektgröße, p-Werte, Konfidenzintervalle, OR/RR, erreichte Power) und numerische Abweichungen erkennen sowie Partitionserhaltung, Ablations-Offsets und physische Speicher-/Bandbreitengrenzen prüfen |
 | `skills/research-reproducibility` | 1.0.1 | Vierzehnstufige Reproduktionsaudit-Pipeline mit strukturierter Checkliste, fünf Faktenstufen und reproduzierbaren Audit-Nachweisen |
@@ -141,12 +141,12 @@ Die vierzehn Skills umfassen 22 Markdown-Referenzdateien, die nur bei Bedarf gel
 ### Paketinstallation
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternativ kann die Installation mit `pipx install academic-research-kernel==2.4.0` oder innerhalb einer unterstützten virtuellen Umgebung über `python -m pip install academic-research-kernel==2.4.0` erfolgen. `[full]` ergänzt Bibliotheken für erweiterte wissenschaftliche Berechnungsbeispiele; `[qa]` installiert Repository-Validierungswerkzeuge einschließlich des PDF-Parsers. `[research]` fügt `pypdf==7.0.0` und `fonttools==4.65.0` für eine konsistente PDF-Schriftdekodierung auf frischen Installationen hinzu (beide unterstützen Python 3.10). Das Lesen von strukturiertem HTML/XML sowie größenbegrenzten DOCX/XLSX-Dateien nutzt die Standardbibliothek. GPU-Backends und kostenpflichtige Dienste bleiben optional.
+Alternativ kann die Installation mit `pipx install academic-research-kernel==2.4.1` oder innerhalb einer unterstützten virtuellen Umgebung über `python -m pip install academic-research-kernel==2.4.1` erfolgen. `[full]` ergänzt Bibliotheken für erweiterte wissenschaftliche Berechnungsbeispiele; `[qa]` installiert Repository-Validierungswerkzeuge einschließlich des PDF-Parsers. `[research]` fügt `pypdf==7.0.0` und `fonttools==4.65.0` für eine konsistente PDF-Schriftdekodierung auf frischen Installationen hinzu (beide unterstützen Python 3.10). Das Lesen von strukturiertem HTML/XML sowie größenbegrenzten DOCX/XLSX-Dateien nutzt die Standardbibliothek. GPU-Backends und kostenpflichtige Dienste bleiben optional.
 
 ### Integration & Portabler Einsatz
 
@@ -200,7 +200,7 @@ Hinweise zur Klassifizierung der Abhängigkeiten, zur Reproduktion, zur Release-
 
 ### Deterministische Erfassung und öffentliche Kernel-Schnittstelle
 
-Version 2.4.0 stellt `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 Adapter (die 14 Skills sowie ein Opaque-Fallback) und 18 zustandslose stdio-MCP-Werkzeuge bereit. Akzeptierte Erfassungsnachweise binden jede gespeicherte semantische Änderung nach Typ, Identität und kanonischem SHA-256: Forschungsobjekte, Verknüpfungen von Aussagen und Belegen, Einträge im Protokoll zu Forschungsentscheidungen und Fehlversuchen, offene Prüfpunkte, physische Prüfnachweise sowie Artefaktregistrierungen. Das Cache-Replay überprüft diese Bindungen unabhängig von den Hashwerten der Transportsnapshots. Leere Protokolle sind gültig; fehlgeschlagene atomare Batches hinterlassen keinen Teilzustand.
+Version 2.4.1 stellt `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 Adapter (die 14 Skills sowie ein Opaque-Fallback) und 18 zustandslose stdio-MCP-Werkzeuge bereit. Akzeptierte Erfassungsnachweise binden jede gespeicherte semantische Änderung nach Typ, Identität und kanonischem SHA-256: Forschungsobjekte, Verknüpfungen von Aussagen und Belegen, Einträge im Protokoll zu Forschungsentscheidungen und Fehlversuchen, offene Prüfpunkte, physische Prüfnachweise sowie Artefaktregistrierungen. Das Cache-Replay überprüft diese Bindungen unabhängig von den Hashwerten der Transportsnapshots. Leere Protokolle sind gültig; fehlgeschlagene atomare Batches hinterlassen keinen Teilzustand.
 
 Die Berechtigung zum Lesen von Provenienzinhalten wird explizit außerhalb des Bandes erteilt. Vertrauenswürdige Python-Aufrufer übergeben `LineageVerificationContext` beim Replay serialisierter Prüfnachweise oder Snapshots; MCP-Aufrufer dürfen nur begrenzte Inhaltsbytes übergeben, niemals ein Dateisystem-Stammverzeichnis des Hosts. Das Standardbudget für Inhalte beträgt 10 MiB; ein vertrauenswürdiger Host kann größere Artefakte unter derselben Erzeuger-/Prüfer-Richtlinie explizit autorisieren. Ohne Inhaltsautorisierung kann eine `fully_verified`-Aussage nicht unabhängig reproduziert werden und liefert ein strukturiertes ungültiges Prüfergebnis. Unstrukturierter Text bleibt opak, abweichende Bewertungen bleiben sichtbar, und Forschende behalten die Kontrolle über Commits, das Beenden oder Wiederaufnehmen von Routen, das Routing sowie fachliche Urteile.
 
@@ -210,7 +210,7 @@ Siehe [die Kernel-Architektur](docs/kernel-architecture.md) für Verträge und K
 
 Zitierstile, Berichtsrichtlinien und Metadatenspezifikationen hängen von der jeweiligen Zeitschrift, Förderorganisation, Disziplin und Rechtsprechung ab. Das Repository etabliert **ISO 690:2021** (Bibliografische Referenzen), **ISO 5127:2017** (Information und Dokumentation – Vokabular) und **W3C PROV** (Provenienz-Datenmodell) als internationale Baselines, ergänzt durch regionale Profile (z. B. DIN ISO 690:2021 in Deutschland, GB/T 7714-2025 in Festlandchina, UNE-ISO 690:2024 in Spanien) sowie Fachstandards (APA 7th, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Die Vorgaben des Zielpublikationsorgans haben stets Vorrang vor Standardprofilen. Details siehe [Scholarly Standards Architecture](docs/standards/README.md) und [Terminologie-Leitfaden](docs/terminology/README.md).
 
-Version 2.4.0 validiert die Konsistenz von DOI- und Ressourcenidentifikatoren, wechselseitig ausschließende quantitative Prüfflags sowie den gemeinsamen Vertrag für offene Prüfpunkte zwischen Kernel und Prüfnachweisen. Die Vollständigkeit des Caches wird unabhängig von den Änderungslisten eines Prüfnachweises aus den gespeicherten Quell-Envelopes und normalisierten Bindungen rekonstruiert; das gleichzeitige Entfernen eines Eintrags und seiner Cache-Deklaration führt daher zu keinem akzeptierten Replay. Siehe den [Abschlussbericht der vier Blocker](docs/kernel-architecture.md).
+Version 2.4.1 validiert die Konsistenz von DOI- und Ressourcenidentifikatoren, wechselseitig ausschließende quantitative Prüfflags sowie den gemeinsamen Vertrag für offene Prüfpunkte zwischen Kernel und Prüfnachweisen. Die Vollständigkeit des Caches wird unabhängig von den Änderungslisten eines Prüfnachweises aus den gespeicherten Quell-Envelopes und normalisierten Bindungen rekonstruiert; das gleichzeitige Entfernen eines Eintrags und seiner Cache-Deklaration führt daher zu keinem akzeptierten Replay. Siehe den [Abschlussbericht der vier Blocker](docs/kernel-architecture.md).
 
 ### Datenquellenzugriff
 
@@ -224,7 +224,7 @@ Siehe [OpenAlex-Authentifizierung](https://help.openalex.org/api/authentication/
 
 ---
 
-## 6. Lokale Validierung, Distributionsprüfung (2.4.0) & Lizenz
+## 6. Lokale Validierung, Distributionsprüfung (2.4.1) & Lizenz
 
 ### Validierung
 
@@ -244,7 +244,7 @@ QA prüft Metadaten, Referenzen, Muster für persönliche Pfade und bekannte Geh
 
 Die gepinnten Hermes-Authoring-Tests werden ohne Änderung ihrer Pro-Skill-Regeln wiederverwendet. Upstream-Prüfungen über die Gesamtverteilung gelten für diesen Tap nicht; unsere Testumgebung prüft vierzehn Skills und löst Referenzen gegen den gepinnten gebündelten/optionalen Katalog auf. Dies ist kein vollständiger Hermes-Installationstest. CI nutzt das Netzwerk nur zur Installation von Abhängigkeiten; reguläre Tests rufen keine Wissenschafts-APIs auf.
 
-CI führt die vollständige QA-Suite auf Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) mit laufender Upstream-Canary-Validierung aus. Die aktuelle Regressionssuite besteht 1348 lokale Tests (gegenüber 1165 im historischen Baseline-Kandidaten); aktuelle Reparaturergebnisse und Abdeckungsgrenzen sind in [der Korrektheitsreparatur](docs/maintenance/correctness-repair-20261008.md) dokumentiert, wobei Remote-Nachweise den getesteten HEAD separat ausweisen. Ein separater Tap-Integrations-Workflow läuft bei Pushes auf main: Er installiert den gepinnten Hermes-Checkout aus tests/upstream/provenance.json und führt tap add, search, install und list gegen dieses Repository aus. Exakte Versionen, Prüfungen und Einschränkungen stehen im [Audit](docs/kernel-architecture.md).
+CI führt die vollständige QA-Suite auf Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest) mit laufender Upstream-Canary-Validierung aus. Die aktuelle Regressionssuite besteht 1364 lokale Tests (gegenüber 1165 im historischen Baseline-Kandidaten); aktuelle Reparaturergebnisse und Abdeckungsgrenzen sind in [der Korrektheitsreparatur](docs/maintenance/correctness-repair-20261008.md) dokumentiert, wobei Remote-Nachweise den getesteten HEAD separat ausweisen. Ein separater Tap-Integrations-Workflow läuft bei Pushes auf main: Er installiert den gepinnten Hermes-Checkout aus tests/upstream/provenance.json und führt tap add, search, install und list gegen dieses Repository aus. Exakte Versionen, Prüfungen und Einschränkungen stehen im [Audit](docs/kernel-architecture.md).
 
 [tools/longtail/](tools/longtail/README.md) enthält den deterministischen Long-Tail-Faktorgenerator: 4096 SHA256-initiierte Kandidaten, 30 ausgewählte Szenarien und einen maschinenberechneten Prüfabdeckungsbericht. Das v3-Modell zählt Fähigkeitsfamilien (E01), die 14 tatsächlichen Repository-Skills (E02) und Aufgabenziele (E03) getrennt. Jedes Szenario besitzt genau einen primären Skill, ein unterstütztes Aufgabenziel und kompatible Fähigkeiten; jeder Skill muss mindestens zweimal unter zwei verschiedenen Zielen erscheinen, einschließlich seines deklarierten Kernziels. Abweichungen im Skill-Verzeichnis führen zum Fehlschlagen der Validierung. Die semantische Erweiterung (Aufgabenketten, Orakel und ausgeführte Ereignisinjektion) bleibt eine separate Stufe; Faktorabdeckung beweist keine Workflow-Ausführungsabdeckung.
 

@@ -208,9 +208,11 @@ def test_workflows_run_canary_and_persist_separate_reports_with_verified_action_
     qa = yaml.load((ROOT / '.github/workflows/qa.yml').read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
     job = qa['jobs']['upstream-canary']
     channels = {item['channel']: item for item in job['strategy']['matrix']['include']}
+    assert set(channels) == {'pinned', 'supported-current', 'latest-upstream'}
     assert channels['latest-upstream']['ref'] == 'main'
-    assert channels['pinned']['ref'] == channels['pinned']['expected-sha']
-    assert re.fullmatch('[0-9a-f]{40}', channels['pinned']['ref'])
+    for pinned_ch in ('pinned', 'supported-current'):
+        assert channels[pinned_ch]['ref'] == channels[pinned_ch]['expected-sha']
+        assert re.fullmatch('[0-9a-f]{40}', channels[pinned_ch]['ref'])
     run = next(step for step in job['steps'] if 'hermes_compatibility_canary.py' in step.get('run', ''))
     assert run['if'] == 'always()' and '--checkout-outcome' in run['run']
     assert '--expected-sha' in run['run'] and '"$code" -eq 2' in run['run']

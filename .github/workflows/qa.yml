@@ -77,8 +77,15 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-          cache-dependency-path: requirements-qa.txt
-      - run: python -m pip install -r requirements-qa.txt
+          cache-dependency-path: |
+            requirements-qa.txt
+            pyproject.toml
+      - run: |
+          python -m pip install -r requirements-qa.txt
+          python -m pip install --no-build-isolation --no-deps .
+      - name: Verify runtime Python version and architecture
+        run: |
+          python -c "import platform, sys; v=f'{sys.version_info.major}.{sys.version_info.minor}'; m=platform.machine().lower(); assert v == '${{ matrix.python }}', (v, '${{ matrix.python }}'); exp_arm = ('${{ matrix.arch }}' == 'arm64'); assert (('arm' in m or 'aarch64' in m) == exp_arm), (m, '${{ matrix.arch }}')"
       - if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         run: python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu || echo "Torch CPU wheel unavailable on this architecture, continuing with NumPy/SciPy reference"
       - name: Check committed patch whitespace
@@ -122,10 +129,11 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
         with:
           python-version: '3.12'
-      - name: Install pinned Hermes
+      - name: Install pinned Hermes and current kernel runtime
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ./.hermes-upstream
+          python -m pip install --no-build-isolation .
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
           version: '0.12.17'
@@ -151,6 +159,9 @@ jobs:
           - channel: pinned
             ref: 245e48008fa814b3251f50755eb656bd9fb86cb1
             expected-sha: 245e48008fa814b3251f50755eb656bd9fb86cb1
+          - channel: supported-current
+            ref: bf0203a794a07aac3ff764972ab9087baa4e4f4e
+            expected-sha: bf0203a794a07aac3ff764972ab9087baa4e4f4e
           - channel: latest-upstream
             ref: main
             expected-sha: ''
@@ -228,26 +239,12 @@ jobs:
           hermes --version
           hermes chat --help | grep -E -- '--query-file'
           hermes chat --help | grep -E -- '--ignore-rules'
-      - run: python scripts/hermes_runtime_smoke.py
-      - name: Validate Agent Plugins v1 live loading under Hermes loader
-        run: |
-          python -c "
-          import sys
-          from pathlib import Path
-          from hermes_cli import agent_plugins
-          root = Path('.').resolve()
-          diag = []
-          manifest, m_diag = agent_plugins._validate_manifest(root)
-          diag.extend(m_diag)
-          assert manifest is not None and not diag, f'Manifest errors: {diag}'
-          mcp = agent_plugins._discover_mcp(root, root / '.data', diag, create_data=False)
-          assert 'academic-skills' in mcp and not diag, f'MCP errors: {diag}'
-          expected_count = len(list((root / 'skills').glob('*/SKILL.md')))
-          assert expected_count >= 12, f'Expected at least 12 skills, found {expected_count}'
-          skills = agent_plugins._discover_skills(root, diag)
-          assert len(skills) == expected_count and not diag, f'Skill errors: {diag}'
-          print(f'Hermes Agent Plugins v1 live validation SUCCESS: {len(skills)} skills, MCP, and manifest clean!')
-          "
+      - run: python scripts/hermes_runtime_smoke.py --output monitoring/hermes-upstream-runtime.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: hermes-upstream-runtime-status
+          path: monitoring/hermes-upstream-runtime.json
 
   distribution-build:
     if: github.event_name != 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
@@ -281,7 +278,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            python: '3.10'
+            source_checks: 'false'
+          - os: ubuntu-latest
+            python: '3.12'
+            source_checks: 'true'
+          - os: ubuntu-latest
+            python: '3.14'
+            source_checks: 'false'
+          - os: macos-latest
+            python: '3.12'
+            source_checks: 'false'
+          - os: windows-latest
+            python: '3.12'
+            source_checks: 'false'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
@@ -290,7 +302,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python }}
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
           version: '0.12.17'
@@ -298,7 +310,12 @@ jobs:
         with:
           name: distribution-candidate
           path: dist/
-      - if: matrix.os == 'ubuntu-latest'
-        run: python scripts/package_acceptance.py --uvx --source-checks
-      - if: matrix.os != 'ubuntu-latest'
-        run: python scripts/package_acceptance.py --uvx
+      - if: matrix.source_checks == 'true'
+        run: python scripts/package_acceptance.py --uvx --source-checks --report "monitoring/acceptance-${{ matrix.os }}-py${{ matrix.python }}.json"
+      - if: matrix.source_checks != 'true'
+        run: python scripts/package_acceptance.py --uvx --report "monitoring/acceptance-${{ matrix.os }}-py${{ matrix.python }}.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: acceptance-${{ matrix.os }}-py${{ matrix.python }}
+          path: monitoring/acceptance-${{ matrix.os }}-py${{ matrix.python }}.json

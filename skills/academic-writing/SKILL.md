@@ -1,7 +1,7 @@
 ---
 name: academic-writing
 description: 学术写作与投稿门禁：版式检查、双盲脱敏、收据转三线表、模板与润色引用.
-version: 1.3.0
+version: 1.3.1
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms:

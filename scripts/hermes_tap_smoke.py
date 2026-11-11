@@ -101,11 +101,16 @@ def select_source_revision(remote, expected_commit, expected_tree):
 
 
 def bundle_files(directory):
-    return {path.relative_to(directory).as_posix(): path.read_bytes()
-            for path in directory.rglob('*') if path.is_file()
-            and not any(part.startswith('.') or part == '__pycache__'
-                        for part in path.relative_to(directory).parts)
-            and path.suffix != '.pyc'}
+    out = {}
+    for path in directory.rglob('*'):
+        rel_parts = path.relative_to(directory).parts
+        if any(part.startswith('.') or part == '__pycache__' for part in rel_parts) or path.suffix == '.pyc':
+            continue
+        if path.is_symlink():
+            raise RuntimeError(f'Symlinked bundle entry is not allowed: {path}')
+        if path.is_file():
+            out[path.relative_to(directory).as_posix()] = path.read_bytes()
+    return out
 
 
 def check_installed(state, home, expected_revision, root=ROOT):
@@ -193,6 +198,16 @@ def main():
             state = json.loads(run([sys.executable, '-c', PROBE], env, directory, show=False))
             report['observed_state'] = state
             report['installed'] = check_installed(state, home, revision)
+            skills_root = (home / 'skills').resolve()
+            exec_env = {k: v for k, v in env.items() if k not in ('PYTHONPATH', 'PYTHONHOME')}
+            for s_name, rel_script, s_args in (
+                ('academic-source-verification', 'scripts/normalize_identifier.py', ['https://doi.org/10.1038/nature14539']),
+                ('quantitative-paper-audit', 'scripts/recompute.py', ['--help']),
+                ('retraction-watch', 'scripts/watch.py', ['--self-test']),
+                ('cross-review-five', 'scripts/orchestrate_v2.py', ['--help']),
+            ):
+                run([sys.executable, str(skills_root / s_name / rel_script), *s_args], exec_env, directory, show=False)
+            report['executed_skills'] = list(SKILLS)
             report['enabled_names'] = sorted(set(SKILLS) & set(state['enabled_names']))
             report['status'] = 'passed'
     except Exception as exc:

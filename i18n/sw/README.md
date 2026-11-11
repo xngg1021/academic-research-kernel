@@ -15,19 +15,19 @@ Mwandishi: Junfu Shi (SJF, xngg1021). Ofa ya leseni ya sasa: [Source Lineage Lic
 
 ### Kuanza haraka
 
-Endesha toleo la 2.4.0 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Endesha toleo la 2.4.1 ukitumia [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-[Toleo la 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. Python 3.10/3.12/3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 18 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
+[Toleo la 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) linarekodi alama zaรหัส (hashes) za usambazaji na hali ya uchapishaji. Kifurushi cha wheel pia kinaweza kuendeshwa kwenye kompyuta yako kwa amri `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. Python 3.10/3.12/3.14 inatumika; chaguo la `uvx --python 3.12` huchagua moja kwa moja mkalimani anayekubalika. Zana zote 18 thabiti pamoja na zana za hesabu za kisayansi na takwimu zimejumuishwa kwenye usakinishaji wa msingi.
 
 ### Thibitisha usakinishaji
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Ukaguzi wa nje ya mtandao (offline) unahakiki programu tegemezi, miundo ya data 
 
 ### Fanya utafiti wa makala ukitumia Agent wa ndani
 
-Sakinisha `academic-research-kernel[research]==2.4.0` na uhamishe mtiririko wa kazi uliofungashwa:
+Sakinisha `academic-research-kernel[research]==2.4.1` na uhamishe mtiririko wa kazi uliofungashwa:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Ili kuonyesha msingi halisi wa familia tano za kasoro bainifu (kukosekana kwa pa
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Uhakiki mtambuka wa utambulisho na idadi ya nukuu kulingana na chanzo; ukaguzi wa ishara za masasisho au kuondolewa kwa chapisho; utafutaji wa maandishi ya ufikiaji wazi (OA) na uhakiki wa faili za PDF; ukaguzi wa tathmini za OpenReview na uchunguzi wa hazina za msimbo |
 | `skills/literature-analysis` | 1.3.0 | Mitiririko kumi na miwili ya kazi: ulinganifu wa mada, mwingiliano wa maandishi, ushahidi kinzani, wasifu wa waandishi, tathmini ya mfano, ukaguzi wa upotoshaji wa kimantiki, jedwali la mapitio, mapendekezo ya majarida, BibTeX, usomaji wa lugha mbili, uchunguzi wa mapengo ya utafiti na urudiaji |
-| `skills/academic-writing` | 1.3.0 | Uhariri wa kitaaluma, mwongozo wa nukuu (ISO 690, APA, MLA, Chicago, IEEE, AMA na wasifu wa kikanda), maelekezo ya majarida, huduma za hiari za ugunduzi, nyaraka za uwasilishaji na mahitaji ya taasisi, ukaguzi wa kabla ya kuwasilisha, usafishaji wa kutotambulika, ubadilishaji wa risiti kuwa majedwali ya LaTeX na violezo vya mikutano |
+| `skills/academic-writing` | 1.3.1 | Uhariri wa kitaaluma, mwongozo wa nukuu (ISO 690, APA, MLA, Chicago, IEEE, AMA na wasifu wa kikanda), maelekezo ya majarida, huduma za hiari za ugunduzi, nyaraka za uwasilishaji na mahitaji ya taasisi, ukaguzi wa kabla ya kuwasilisha, usafishaji wa kutotambulika, ubadilishaji wa risiti kuwa majedwali ya LaTeX na violezo vya mikutano |
 | `skills/math-computation` | 1.2.1 | Uelekezaji wa kazi na nyanja za kihesabu ukiwa na mifano iliyosahihishwa ya namba na takwimu; faili nne za marejeleo ya kina |
 | `skills/quantitative-paper-audit` | 1.2.0 | Ukokotoaji upya wa takwimu zilizoripotiwa (ukubwa wa athari, thamani za p, vipindi vya uaminifu, OR/RR, nguvu ya takwimu iliyofikiwa) na utambuzi wa tofauti za namba pamoja na uhifadhi wa mgawanyo wa sampuli, mabadiliko ya kudumu kwenye ablation na mipaka ya hifadhi na kipimo data |
 | `skills/research-reproducibility` | 1.0.1 | Mfumo wa hatua kumi na nne wa ukaguzi wa uwezo wa kurudia matokeo wenye kikagua sheria za kurudiwa kwa matokeo, ngazi tano za ukweli na rekodi za ukaguzi zinazoweza kurudiwa |
@@ -141,12 +141,12 @@ Kuna faili 22 za marejeleo ya Markdown katika stadi kumi na nne. Marejeleo hupak
 ### Usakinishaji wa kifurushi
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.4.0` au `python -m pip install academic-research-kernel==2.4.0` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==7.0.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
+Vinginevyo, sakinisha kwa kutumia `pipx install academic-research-kernel==2.4.1` au `python -m pip install academic-research-kernel==2.4.1` ndani ya mazingira pepe yanayokubalika. Chaguo la `[full]` huongeza maktaba kwa ajili ya mifano mipana ya kisayansi; `[qa]` huongeza zana za kuhakiki hifadhi ikiwemo kisoma PDF. Chaguo la `[research]` huongeza `pypdf==7.0.0` na `fonttools==4.65.0` ili kuhakikisha usimbuzi thabiti wa fonti za PDF kwenye usakinishaji mpya; zote mbili zinafanya kazi na Python 3.10. Usomaji wa HTML/XML yenye muundo na faili za DOCX/XLSX zenye mipaka ya ukubwa hutumia maktaba ya kawaida ya Python. Viendeshi vya GPU na huduma za kulipia vinabaki kuwa vya hiari.
 
 ### Muunganisho na matumizi yanayohamishika
 
@@ -224,7 +224,7 @@ Angalia [uthibitishaji wa OpenAlex](https://help.openalex.org/api/authentication
 
 ---
 
-## 6. Uthibitishaji wa ndani, ukaguzi wa usambazaji (2.4.0) na leseni
+## 6. Uthibitishaji wa ndani, ukaguzi wa usambazaji (2.4.1) na leseni
 
 ### Uthibitishaji
 
@@ -244,7 +244,7 @@ QA inathibitisha metadata, marejeleo, mifumo ya njia za kibinafsi au siri zinazo
 
 Majaribio yaliyofungwa ya uandishi wa stadi za Hermes yanatumiwa tena bila kubadilisha sheria zake za kila ujuzi. Ukaguzi wa idadi ya vifurushi vya usambazaji mzima wa juu hautumiki kwa tap hii; mfumo wetu wa majaribio unakagua stadi kumi na nne na kutatua marejeleo dhidi ya orodha iliyofungwa ya vifurushi vilivyomo na vya hiari. Hili si jaribio kamili la usakinishaji wa Hermes. CI hutumia mtandao kusakinisha programu tegemezi pekee; majaribio ya kawaida hayapigi simu API za kitaaluma.
 
-CI huendesha kifurushi kamili cha QA kwenye Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), pamoja na uhakiki wa moja kwa moja wa canary dhidi ya tawi kuu la juu. Kifurushi cha sasa cha majaribio kinafaulu majaribio 1348 ya ndani (kikipanua msingi wa awali wa majaribio 1165). Matokeo ya sasa ya marekebisho na mipaka ya upeo vimerekodiwa katika [marekebisho ya usahihi](../../docs/maintenance/correctness-repair-20261008.md); ushahidi wa mbali unatambulisha HEAD iliyojaribiwa tofauti. Mtiririko tofauti wa kuunganisha tap huendeshwa wakati msimbo unaposukumwa kwenye main: unasakinisha toleo la Hermes lililofungwa kwenye `tests/upstream/provenance.json` na kujaribu `tap add`, `search`, `install` na `list` dhidi ya hifadhi hii. Matoleo kamili, ukaguzi na vikwazo viko katika [ripoti ya ukaguzi](../../docs/kernel-architecture.md).
+CI huendesha kifurushi kamili cha QA kwenye Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (ubuntu-24.04-arm), Windows x86_64, Windows ARM64 (windows-11-arm), macOS ARM64 (macos-latest), pamoja na uhakiki wa moja kwa moja wa canary dhidi ya tawi kuu la juu. Kifurushi cha sasa cha majaribio kinafaulu majaribio 1364 ya ndani (kikipanua msingi wa awali wa majaribio 1165). Matokeo ya sasa ya marekebisho na mipaka ya upeo vimerekodiwa katika [marekebisho ya usahihi](../../docs/maintenance/correctness-repair-20261008.md); ushahidi wa mbali unatambulisha HEAD iliyojaribiwa tofauti. Mtiririko tofauti wa kuunganisha tap huendeshwa wakati msimbo unaposukumwa kwenye main: unasakinisha toleo la Hermes lililofungwa kwenye `tests/upstream/provenance.json` na kujaribu `tap add`, `search`, `install` na `list` dhidi ya hifadhi hii. Matoleo kamili, ukaguzi na vikwazo viko katika [ripoti ya ukaguzi](../../docs/kernel-architecture.md).
 
 Saraka ya [tools/longtail/](../../tools/longtail/README.md) inashikilia kizalishaji thabiti cha vipengele vya hali adimu (long-tail): wagombea 4096 waliotokana na mbegu ya SHA256, hali 30 zilizochaguliwa na ripoti ya upeo wa uthibitisho iliyokokotolewa kwa mashine. Muundo wa v3 unahesabu tofauti familia za uwezo (E01), stadi 14 halisi za hifadhi (E02), na malengo ya kazi (E03). Kila hali ina ujuzi mmoja wa msingi, lengo la kazi linaloungwa mkono na uwezo unaooana; kila ujuzi lazima uonekane angalau mara mbili chini ya malengo mawili tofauti, ikiwa ni pamoja na lengo lake kuu lililotangazwa. Mkengeuko wa saraka za ujuzi husababisha uthibitishaji kushindwa. Upanuzi wa kisemantiki (minyoro ya kazi, vigezo vya ukweli na uingizaji wa matukio yanayotekelezwa) unabaki kuwa hatua tofauti; upeo wa vipengele hauthibitishi upeo wa utekelezaji wa mtiririko wa kazi.
 

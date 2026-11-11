@@ -21,7 +21,7 @@ EXCLUDED_TREES = {'.git', '.venv', 'venv', 'env', '.pytest_cache', '.mypy_cache'
                   'node_modules', 'htmlcov', '.cache', '.uv-cache', '.coverage',
                   '.hermes-upstream', '.hermes-latest', '.local-lineage'}
 SOURCE_ROOTS = {'scripts', 'src', 'skills', 'schemas', 'docs', 'tests', 'i18n',
-                'LICENSES', '.github', 'tools'}
+                'LICENSES', '.github', 'tools', 'examples'}
 
 
 def source_files(root=ROOT):
@@ -152,6 +152,33 @@ def reference_issues(path, root=ROOT):
     return errors
 
 
+def dependency_contract_issues(root=ROOT):
+    """Verify requirements-qa.txt matches pyproject.toml dependencies and [research]/[full]/[qa] security floors."""
+    pyproject_path = root / "pyproject.toml"
+    req_qa_path = root / "requirements-qa.txt"
+    if not pyproject_path.is_file():
+        return ["pyproject.toml missing"]
+    if not req_qa_path.is_file():
+        return ["requirements-qa.txt missing"]
+    py_text = pyproject_path.read_text(encoding="utf-8")
+    req_lines = {
+        line.strip()
+        for line in req_qa_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    }
+    expected_specs = set()
+    for block_match in re.finditer(r"^(?:requires|dependencies|research|full|qa)\s*=\s*\[(.*?)\]", py_text, re.M | re.S):
+        for spec in re.findall(r'"([^"]+)"', block_match.group(1)):
+            if spec.startswith("academic-research-kernel") or spec.startswith(("build>", "twine>")):
+                continue
+            expected_specs.add(spec)
+    errors = []
+    for spec in sorted(expected_specs):
+        if spec not in req_lines:
+            errors.append(f"requirements-qa.txt missing or mismatched spec from pyproject.toml: {spec!r}")
+    return errors
+
+
 def static_checks(root=ROOT):
     import yaml
     errors, names = [], set()
@@ -206,7 +233,9 @@ def static_checks(root=ROOT):
     doc_meta_by_path = {}
     manifest_path = root / "docs" / "i18n" / "manifest.json"
     manifest = {}
-    if manifest_path.is_file():
+    if not manifest_path.is_file():
+        errors.append("docs/i18n/manifest.json missing")
+    else:
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             for doc_entry in manifest.get("documents", []):
@@ -251,16 +280,20 @@ def static_checks(root=ROOT):
     zh_hans = root / "README.zh-Hans.md"
     zh_tw = root / "README.zh-TW.md"
     zh_hant = root / "README.zh-Hant.md"
-    if zh_cn.is_file() and zh_hans.is_file():
-        if zh_cn.read_bytes() != zh_hans.read_bytes():
-            errors.append("Legacy alias parity failed: README.zh-CN.md is not byte-identical to README.zh-Hans.md")
-    if zh_tw.is_file() and zh_hant.is_file():
-        if zh_tw.read_bytes() != zh_hant.read_bytes():
-            errors.append("Legacy alias parity failed: README.zh-TW.md is not byte-identical to README.zh-Hant.md")
+    if not (zh_cn.is_file() and zh_hans.is_file()):
+        errors.append("Legacy alias missing: README.zh-CN.md or README.zh-Hans.md")
+    elif zh_cn.read_bytes() != zh_hans.read_bytes():
+        errors.append("Legacy alias parity failed: README.zh-CN.md is not byte-identical to README.zh-Hans.md")
+    if not (zh_tw.is_file() and zh_hant.is_file()):
+        errors.append("Legacy alias missing: README.zh-TW.md or README.zh-Hant.md")
+    elif zh_tw.read_bytes() != zh_hant.read_bytes():
+        errors.append("Legacy alias parity failed: README.zh-TW.md is not byte-identical to README.zh-Hant.md")
 
     # 1. Terminology registry gate
     term_reg_path = root / "docs" / "terminology" / "registry.json"
-    if term_reg_path.is_file():
+    if not term_reg_path.is_file():
+        errors.append("docs/terminology/registry.json missing")
+    else:
         try:
             term_reg = json.loads(term_reg_path.read_text(encoding="utf-8"))
             concepts = term_reg.get("concepts", {})
@@ -296,7 +329,9 @@ def static_checks(root=ROOT):
 
     # 2. Style style contract and per-locale profiles gate
     style_contract_path = root / "docs" / "style" / "style-contract.json"
-    if style_contract_path.is_file():
+    if not style_contract_path.is_file():
+        errors.append("docs/style/style-contract.json missing")
+    else:
         try:
             style_contract = json.loads(style_contract_path.read_text(encoding="utf-8"))
             prohibited_patterns = style_contract.get("prohibited_patterns", {})
@@ -390,9 +425,10 @@ def static_checks(root=ROOT):
     for path in inventory:
         if not path.is_file() or '.git' in path.parts or '__pycache__' in path.parts or '.pytest_cache' in path.parts:
             continue
-        if path.suffix not in {'.md', '.py', '.json', '.yaml', '.yml', '.txt'}:
+        if path.suffix not in {'.md', '.py', '.json', '.yaml', '.yml', '.txt', '.toml', '.tex', '.bib'}:
             continue
         errors.extend(f'{path.relative_to(root)}: personal path or secret detected' for _ in hygiene(path.read_text(encoding='utf-8')))
+    errors.extend(dependency_contract_issues(root))
     return errors
 
 
@@ -427,6 +463,8 @@ def main():
                             errors.append(f'{path.relative_to(ROOT)}:{i}: {result.stderr}')
                     except subprocess.TimeoutExpired:
                         errors.append(f'{path.relative_to(ROOT)}:{i}: timeout')
+        if count < 41:
+            errors.append(f'expected at least 41 executable smoke fences, ran {count}')
     if errors:
         print('\n'.join(errors))
         return 1

@@ -15,19 +15,19 @@ Autore: Junfu Shi (SJF, xngg1021). Offerta di licenza attuale: [Source Lineage L
 
 ### Avvio rapido
 
-Eseguire la versione 2.4.0 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Eseguire la versione 2.4.1 con [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-La [release 2.4.0](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) riporta gli hash di distribuzione e lo stato di pubblicazione. Il pacchetto wheel di rilascio può essere eseguito anche localmente con `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp`. È supportato Python 3.10/3.12/3.14; `uvx --python 3.12` seleziona esplicitamente un interprete compatibile. Tutti i 18 strumenti deterministici, inclusi i moduli statistici, sono compresi nell'installazione di base.
+La [release 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) riporta gli hash di distribuzione e lo stato di pubblicazione. Il pacchetto wheel di rilascio può essere eseguito anche localmente con `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. È supportato Python 3.10/3.12/3.14; `uvx --python 3.12` seleziona esplicitamente un interprete compatibile. Tutti i 18 strumenti deterministici, inclusi i moduli statistici, sono compresi nell'installazione di base.
 
 ### Verifica dell'installazione
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ La diagnostica offline controlla dipendenze, schemi e le definizioni di tutti i 
 
 ### Analizzare un articolo scientifico con un Agente locale
 
-Installare `academic-research-kernel[research]==2.4.0` ed esportare il flusso di lavoro incluso nel pacchetto:
+Installare `academic-research-kernel[research]==2.4.1` ed esportare il flusso di lavoro incluso nel pacchetto:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Per motivare le cinque famiglie di difetti deterministici (assenza di barre d'er
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Verifica incrociata dell'identità bibliografica e dei conteggi delle citazioni per fonte; controllo dei segnali di aggiornamento o ritrattazione; individuazione dei testi Open Access e verifica dell'identità dei PDF; revisione forense di OpenReview e dei repository di codice |
 | `skills/literature-analysis` | 1.3.0 | Dodici flussi di lavoro: similarità tematica, sovrapposizione testuale locale, contro-evidenze, profili degli autori, revisione simulata, controllo delle fallacie, matrice di revisione, riviste candidate, BibTeX, lettura bilingue, analisi delle lacune di ricerca e riproduzione |
-| `skills/academic-writing` | 1.3.0 | Revisione editoriale accademica, guida agli stili di citazione (ISO 690, APA, MLA, Chicago, IEEE, AMA e profili regionali), istruzioni per gli autori, servizi opzionali di rilevamento, materiali di sottomissione e requisiti istituzionali, linting pre-sottomissione, verifica doppio cieco, generazione di tabelle LaTeX e modelli per conferenze |
+| `skills/academic-writing` | 1.3.1 | Revisione editoriale accademica, guida agli stili di citazione (ISO 690, APA, MLA, Chicago, IEEE, AMA e profili regionali), istruzioni per gli autori, servizi opzionali di rilevamento, materiali di sottomissione e requisiti istituzionali, linting pre-sottomissione, verifica doppio cieco, generazione di tabelle LaTeX e modelli per conferenze |
 | `skills/math-computation` | 1.2.1 | Instradamento per dominio e attività matematica con esempi numerici e statistici verificati; quattro file di riferimento specialistici |
 | `skills/quantitative-paper-audit` | 1.2.0 | Ricalcolo delle statistiche riportate (dimensione dell'effetto, valori p, intervalli di confidenza, OR/RR, potenza statistica raggiunta) e rilevamento di discrepanze numeriche, oltre a conservazione delle partizioni, offset costante nelle ablazioni e limiti fisici di memoria e banda |
 | `skills/research-reproducibility` | 1.0.1 | Pipeline di audit della riproducibilità in quattordici fasi con liste di controllo strutturate, cinque livelli di verifica fattuale e registri di audit riproducibili |
@@ -141,12 +141,12 @@ Sono presenti 22 file di riferimento Markdown distribuiti tra le quattordici com
 ### Installazione del pacchetto
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-In alternativa, è possibile installare il pacchetto con `pipx install academic-research-kernel==2.4.0` oppure con `python -m pip install academic-research-kernel==2.4.0` all'interno di un ambiente virtuale supportato. L'opzione `[full]` aggiunge le librerie per gli esempi scientifici estesi; `[qa]` include gli strumenti di validazione del repository, compreso il parser PDF. L'opzione `[research]` aggiunge `pypdf==7.0.0` e `fonttools==4.65.0` per garantire una decodifica uniforme dei font PDF nelle installazioni pulite, entrambi compatibili con Python 3.10. La lettura strutturata di HTML/XML e di file DOCX/XLSX con limiti di dimensione utilizza la libreria standard. I backend GPU e i servizi a pagamento restano facoltativi.
+In alternativa, è possibile installare il pacchetto con `pipx install academic-research-kernel==2.4.1` oppure con `python -m pip install academic-research-kernel==2.4.1` all'interno di un ambiente virtuale supportato. L'opzione `[full]` aggiunge le librerie per gli esempi scientifici estesi; `[qa]` include gli strumenti di validazione del repository, compreso il parser PDF. L'opzione `[research]` aggiunge `pypdf==7.0.0` e `fonttools==4.65.0` per garantire una decodifica uniforme dei font PDF nelle installazioni pulite, entrambi compatibili con Python 3.10. La lettura strutturata di HTML/XML e di file DOCX/XLSX con limiti di dimensione utilizza la libreria standard. I backend GPU e i servizi a pagamento restano facoltativi.
 
 ### Integrazione e Utilizzo Portatile
 
@@ -224,7 +224,7 @@ Si vedano le guide su [autenticazione OpenAlex](https://help.openalex.org/api/au
 
 ---
 
-## 6. Validazione locale, verifica della distribuzione (2.4.0) e licenza
+## 6. Validazione locale, verifica della distribuzione (2.4.1) e licenza
 
 ### Validazione
 
@@ -244,7 +244,7 @@ La procedura di QA controlla metadati, riferimenti interni, pattern relativi a p
 
 I test di authoring fissati di Hermes vengono riutilizzati mantenendo invariate le regole per singola competenza. I controlli globali sull'intera distribuzione upstream non si applicano a questo repository; la suite locale verifica le quattordici competenze e risolve i riferimenti rispetto al catalogo fissato di componenti inclusi e opzionali, senza costituire un test completo dell'installazione di Hermes. La CI utilizza la rete esclusivamente per installare le dipendenze e i normali test di revisione non effettuano chiamate alle API accademiche.
 
-La CI esegue l'intera suite di QA su Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`), con validazione canary dal vivo rispetto al ramo principale upstream. La suite di regressione attuale supera 1348 test locali (estendendo la baseline storica di 1165 test). I risultati attuali delle correzioni e i limiti di copertura sono documentati nel [rapporto sulle correzioni di accuratezza](../../docs/maintenance/correctness-repair-20261008.md), mentre le prove remote identificano separatamente il commit `HEAD` sottoposto a test. Un flusso separato di integrazione tap viene eseguito a ogni push su `main`, installando il checkout fissato di Hermes registrato in `tests/upstream/provenance.json` ed eseguendo `tap add`, `search`, `install` e `list` su questo repository. Versioni esatte, controlli e limitazioni sono riportati nell'[audit del progetto](../../docs/kernel-architecture.md).
+La CI esegue l'intera suite di QA su Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`), con validazione canary dal vivo rispetto al ramo principale upstream. La suite di regressione attuale supera 1364 test locali (estendendo la baseline storica di 1165 test). I risultati attuali delle correzioni e i limiti di copertura sono documentati nel [rapporto sulle correzioni di accuratezza](../../docs/maintenance/correctness-repair-20261008.md), mentre le prove remote identificano separatamente il commit `HEAD` sottoposto a test. Un flusso separato di integrazione tap viene eseguito a ogni push su `main`, installando il checkout fissato di Hermes registrato in `tests/upstream/provenance.json` ed eseguendo `tap add`, `search`, `install` e `list` su questo repository. Versioni esatte, controlli e limitazioni sono riportati nell'[audit del progetto](../../docs/kernel-architecture.md).
 
 La directory [tools/longtail/](../../tools/longtail/README.md) contiene il generatore deterministico di fattori a coda lunga: 4096 candidati generati tramite seme SHA-256, 30 scenari selezionati e un rapporto di copertura della verifica calcolato automaticamente. Il modello v3 conteggia separatamente le famiglie di capacità (E01), le 14 competenze effettive del repository (E02) e gli obiettivi operativi (E03). Ogni scenario associa una competenza primaria, un obiettivo supportato e capacità compatibili; ciascuna competenza deve comparire almeno due volte sotto due obiettivi distinti, incluso il proprio obiettivo principale dichiarato. Qualsiasi disallineamento rispetto alle directory delle competenze determina il fallimento della validazione. L'espansione semantica (catene di compiti, oracoli e iniezione di eventi eseguiti) costituisce una fase distinta; la copertura dei fattori non dimostra di per sé la copertura di esecuzione dei flussi completi.
 

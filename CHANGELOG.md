@@ -4,6 +4,19 @@
 
 ---
 
+## 2.4.1 — 2026-11-11 multi-file TeX bundle discovery, uncited bibliography linting & first-principles CI rebuild
+
+- **Multi-file LaTeX bundle discovery from single entry `.tex` (`src/academic_research_kernel/research/sources.py`)**:
+  - When `research prepare` receives a single `.tex` file (such as `main.tex`), `_discover_tex_bundle_entries()` recursively discovers bounded relative `\input` and `\include` chapter files plus referenced and sibling `.bib`/`.bbl` files inside the manuscript root, strips comments and masks verbatim/macro definition bodies in a single pass, exempts missing TeX Live virtual glyph files (`glyphtounicode`, `glyphtounicode-cmex`, `glyphtounicode-cmr`), and records missing or limit-exceeded bundle files in `manifest.json` `failures`.
+- **Pre-submission ghost-reference detection, package `final` option calibration & single-pass preprocessing (`skills/academic-writing/scripts/pre_submission_linter.py`, `venue_template_manager.py`, `skills/academic-writing/SKILL.md` `1.3.1`)**:
+  - Added advisory `UNCITED_BIBLIOGRAPHY_ENTRY` detection across `.bib` and `\bibitem` entries under `--check-academic-style`, supporting standard LaTeX/natbib/biblatex citation commands, multi-group `\cites`, nested citations inside option notes, and transitive `crossref`/`xref`/`xdata`/`entryset`/`ids` closure while conservatively suppressing warnings when `\nocite{*}` or custom citation macros are present.
+  - Exempted benign functional package `[final]` options (`microtype`, `graphicx`, `hyperref`, `listings`, etc.) from `FORBIDDEN_REVIEW_PATTERN` while retaining `\documentclass[final]` and conference-style `[final]` blockers; deduplicated TeX comment/verbatim preprocessing via `_collect_tex_tree_views()` and binary-search line lookup, and consolidated `venue_template_manager.py` style scanning into a single `os.walk` pass.
+- **First-principles & version-traversal CI architecture rebuild (`.github/workflows/qa.yml`, `.github/workflows/live-contract.yml`, `requirements-qa.txt`, `scripts/qa.py`, `scripts/package_acceptance.py`, `scripts/distribution_smoke.py`, `scripts/release_manifest.py`, `scripts/hermes_*`)**:
+  - Synchronized `requirements-qa.txt` with `pyproject.toml` `SEC-01` security floors (`pypdf==7.0.0`, `pillow>=12.2.0`, `certifi>=2026.10.18`) and enforced automatic `pyproject.toml` <-> `requirements-qa.txt` parity in `scripts/qa.py:dependency_contract_issues()`.
+  - Isolated `raw-sdist` `--source-checks` into a dedicated virtual environment in `package_acceptance.py`, expanded `distribution-install` to cover Linux Python 3.10/3.12/3.14 alongside macOS and Windows with persistent `--report` artifacts, and added the `supported-current` (`bf0203a794a07aac3ff764972ab9087baa4e4f4e`) Hermes compatibility channel and 7th upstream authoring paste-safety rule (`test_shell_snippets_paste_safe`).
+
+---
+
 ## 2.4.0 — 2026-11-09 end-to-end pipeline bridges, 18-tool MCP surface & academic style advisory linter
 
 - **Unified controlled I/O extraction & idempotent BibTeX acronym protection (`src/academic_research_kernel/research/sources.py`, `skills/academic-source-verification/scripts/*`, `skills/literature-analysis/scripts/*`, `skills/literature-watch/scripts/watch.py`, `skills/retraction-watch/scripts/watch.py`, `skills/research-reproducibility/scripts/repro_checklist.py`)**:

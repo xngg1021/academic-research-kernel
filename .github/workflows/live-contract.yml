@@ -16,8 +16,10 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements-qa.txt
-      # The live fences use stdlib HTTP; only the fence reader needs PyYAML.
-      - run: python -m pip install 'PyYAML>=6,<7'
+      # Install PyYAML and the local package so live fences and controlled_urlopen adapters both resolve.
+      - run: |
+          python -m pip install 'PyYAML>=6,<7'
+          python -m pip install --no-build-isolation --no-deps .
       - name: Run external API contract checks
         shell: bash
         env:
@@ -52,5 +54,7 @@ jobs:
         run: python -m pip install pip-audit
       - name: Audit locked dependencies and QA requirements for known vulnerabilities
         run: |
+          uv lock --check
           uv export --frozen --extra qa --no-hashes --no-emit-project -o requirements-locked.txt
           pip-audit -r requirements-locked.txt
+          pip-audit -r requirements-qa.txt

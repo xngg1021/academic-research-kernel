@@ -109,13 +109,19 @@ def inspect_artifact(path, version=None):
             require(len(members) == len(set(members)), 'duplicate archive member')
             require(all((info.external_attr >> 16) & 0o170000 != 0o120000 for info in archive.infolist()),
                     'archive links are not allowed')
+            member_names = list(members)
             files = {name: archive.read(name) for name in members if not name.endswith('/')}
     else:
         with tarfile.open(path) as archive:
             members = archive.getmembers()
             require(all(member.isfile() or member.isdir() for member in members), 'archive links or special files are not allowed')
             require(len(members) == len({member.name for member in members}), 'duplicate archive member')
+            member_names = [member.name for member in members]
             files = {member.name: archive.extractfile(member).read() for member in members if member.isfile()}
+    for m_name in member_names:
+        m_parts = PurePosixPath(m_name).parts
+        require(not PurePosixPath(m_name).is_absolute() and '..' not in m_parts and '\\' not in m_name,
+                'unsafe archive path: ' + m_name)
     for name, data in files.items():
         parts = PurePosixPath(name).parts
         require(not PurePosixPath(name).is_absolute() and '..' not in parts and '\\' not in name,
@@ -139,6 +145,11 @@ def inspect_artifact(path, version=None):
     for field, value in [('Name', PACKAGE), ('Version', version), ('Requires-Python', '<3.15,>=3.10'),
                          ('License-Expression', 'LicenseRef-Source-Lineage-1.0')]:
         require(info.get_all(field) == [value], 'package metadata mismatch: ' + field)
+    requires_dist = info.get_all('Requires-Dist') or []
+    if tuple(map(int, version.split('.'))) >= (2, 3, 1):
+        joined_req = '\n'.join(requires_dist)
+        for sec_floor in ('pypdf==7.0.0', 'fonttools==4.65.0', 'pillow>=12.2.0', 'certifi>=2026.10.18'):
+            require(sec_floor in joined_req, 'package metadata missing security floor: ' + sec_floor)
     require('mcp-name: io.github.xngg1021/academic-research-kernel' in info.get_payload(), 'MCP namespace declaration missing')
     version_name = ('academic_research_kernel/_version.py' if wheel
                     else 'academic_research_kernel-' + version + '/scripts/_version.py')

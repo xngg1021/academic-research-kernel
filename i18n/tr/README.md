@@ -15,19 +15,19 @@ Yazar: Junfu Shi (SJF, xngg1021). Geçerli kapsamlı lisans teklifi: [Source Lin
 
 ### Hızlı başlangıç
 
-2.4.0 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
+2.4.1 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-[2.4.0 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10/3.12/3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 18 deterministik aracın tamamı temel kuruluma dahildir.
+[2.4.1 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10/3.12/3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 18 deterministik aracın tamamı temel kuruluma dahildir.
 
 ### Kurulumu doğrulama
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### Yerel bir Ajan ile makale araştırma
 
-`academic-research-kernel[research]==2.4.0` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
+`academic-research-kernel[research]==2.4.1` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Ampirik ağırlıklar veya öznel puan eşikleri uydurmadan beş deterministik h
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Yayın kimliğini ve kaynağa özgü atıf sayılarını çapraz kontrol etme; güncelleme ve geri çekme (retraction) sinyallerini inceleme; açık erişim tam metinleri bulma ve PDF kimliğini doğrulama; OpenReview hakem değerlendirmelerini ve kod depolarını adli olarak denetleme |
 | `skills/literature-analysis` | 1.3.0 | On iki analiz iş akışı: konu benzerliği, yerel metin örtüşmesi, karşıt kanıtlar, yazar profilleri, deneme hakemliği, mantık hatası kontrolü, inceleme matrisi, aday dergiler, BibTeX, iki dilli okuma, araştırma boşluğu taraması ve yeniden üretim |
-| `skills/academic-writing` | 1.3.0 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler, gönderim öncesi biçim denetimi, çift-kör anonimlik taraması, kanıt çıktılarından LaTeX tablo üretimi ve konferans şablonları |
+| `skills/academic-writing` | 1.3.1 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler, gönderim öncesi biçim denetimi, çift-kör anonimlik taraması, kanıt çıktılarından LaTeX tablo üretimi ve konferans şablonları |
 | `skills/math-computation` | 1.2.1 | Düzeltilmiş sayısal ve istatistiksel örneklerle mevcut alan/görev yönlendirmesi; dört adet alana özgü ileri düzey referans dosyası |
 | `skills/quantitative-paper-audit` | 1.2.0 | Makalelerde bildirilen istatistikleri (etki büyüklüğü, p değerleri, güven aralıkları, OR/RR, ulaşılan istatistiksel güç) yeniden hesaplama ve sayısal uyuşmazlıkları tespit etme ve örneklem bölümleme korunumu, ablasyon sabit kayması ile fiziksel depolama ve bant genişliği alt sınırlarını kontrol etme |
 | `skills/research-reproducibility` | 1.0.1 | Yapılandırılmış doğrulama kontrol listeleri, beş olgu doğrulama katmanı ve yeniden üretilebilir denetim kayıtları içeren on dört aşamalı tekrarlanabilirlik denetim hattı |
@@ -141,12 +141,12 @@ On dört beceri genelinde 22 adet Markdown referans dosyası bulunmaktadır. Ref
 ### Paket kurulumu
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.4.0` veya `python -m pip install academic-research-kernel==2.4.0` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==7.0.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
+Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.4.1` veya `python -m pip install academic-research-kernel==2.4.1` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==7.0.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
 
 ### Entegrasyon ve Taşınabilir Kullanım
 
@@ -224,7 +224,7 @@ Ayrıntılar için [OpenAlex kimlik doğrulaması](https://help.openalex.org/api
 
 ---
 
-## 6. Yerel doğrulama, dağıtım doğrulaması (2.4.0) ve lisans
+## 6. Yerel doğrulama, dağıtım doğrulaması (2.4.1) ve lisans
 
 ### Doğrulama
 
@@ -244,7 +244,7 @@ QA betiği; meta verileri, yerel referansları, kişisel dosya yolu ve bilinen g
 
 Sabitlenmiş Hermes beceri yazım testleri, beceri başına kuralları değiştirilmeden yeniden kullanılır. Üst kaynağın tüm dağıtımı kapsayan genel kontrolleri bu depo için geçerli değildir; test altyapımız on dört beceriyi denetler ve referansları sabitlenmiş yerleşik/isteğe bağlı kataloğa göre çözümler. Bu işlem tam bir Hermes kurulum testi değildir. CI ağı yalnızca bağımlılıkları kurmak için kullanır; olağan değişiklik testleri akademik API'leri çağırmaz.
 
-CI; Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`) üzerinde canlı üst kaynak canary doğrulamasıyla birlikte tam QA paketini çalıştırır. Güncel regresyon paketi 1348 yerel testi geçmektedir (1165 testlik geçmiş temel adaydan genişletilmiştir). Güncel onarım sonuçları ve kapsam sınırları [doğruluk onarımı raporunda](../../docs/maintenance/correctness-repair-20261008.md) kayıtlıdır; uzak test kanıtları test edilen `HEAD` işlemesini ayrıca belirtir. `main` dalına yapılan göndermelerde ayrı bir tap entegrasyon iş akışı çalışır: `tests/upstream/provenance.json` içinde kayıtlı sabitlenmiş Hermes kopyasını kurar ve bu depoya karşı `tap add`, `search`, `install` ve `list` komutlarını sınar. Tam sürümler, kontroller ve sınırlamalar [denetim raporunda](../../docs/kernel-architecture.md) yer almaktadır.
+CI; Linux x86_64 (Python 3.10/3.12/3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), macOS ARM64 (`macos-latest`) üzerinde canlı üst kaynak canary doğrulamasıyla birlikte tam QA paketini çalıştırır. Güncel regresyon paketi 1364 yerel testi geçmektedir (1165 testlik geçmiş temel adaydan genişletilmiştir). Güncel onarım sonuçları ve kapsam sınırları [doğruluk onarımı raporunda](../../docs/maintenance/correctness-repair-20261008.md) kayıtlıdır; uzak test kanıtları test edilen `HEAD` işlemesini ayrıca belirtir. `main` dalına yapılan göndermelerde ayrı bir tap entegrasyon iş akışı çalışır: `tests/upstream/provenance.json` içinde kayıtlı sabitlenmiş Hermes kopyasını kurar ve bu depoya karşı `tap add`, `search`, `install` ve `list` komutlarını sınar. Tam sürümler, kontroller ve sınırlamalar [denetim raporunda](../../docs/kernel-architecture.md) yer almaktadır.
 
 [tools/longtail/](../../tools/longtail/README.md) dizini deterministik uzun kuyruk faktör üretecini barındırır: SHA-256 tohumlu 4096 aday, seçilen 30 senaryo ve makine tarafından hesaplanan bir doğrulama kapsamı raporu. v3 modeli; yetenek ailelerini (E01), depodaki 14 gerçek beceriyi (E02) ve görev hedeflerini (E03) ayrı ayrı sayar. Her senaryonun bir birincil becerisi, desteklenen bir görev hedefi ve uyumlu yetenekleri vardır; her beceri, beyan edilen temel hedefi dahil olmak üzere iki farklı hedef altında en az iki kez yer almalıdır. Beceri dizini kayması doğrulamayı başarısız kılar. Anlamsal genişletme (görev zincirleri, doğrulama ölçütleri ve yürütülen olay enjeksiyonu) ayrı bir aşamadır; faktör kapsamı iş akışı yürütme kapsamını kanıtlamaz.
 

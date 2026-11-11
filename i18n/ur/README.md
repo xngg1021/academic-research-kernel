@@ -15,19 +15,19 @@
 
 ### فوری آغاز
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) کے ساتھ ورژن 2.4.0 چلائیں:
+[uv](https://docs.astral.sh/uv/getting-started/installation/) کے ساتھ ورژن 2.4.1 چلائیں:
 
 ```bash
-uvx academic-research-kernel@2.4.0 mcp
+uvx academic-research-kernel@2.4.1 mcp
 ```
 
-[2.4.0 ریلیز](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.0) ڈسٹری بیوشن ہیشز اور اشاعت کی حیثیت کو ریکارڈ کرتی ہے۔ ریلیز وہیل کو مقامی طور پر `uvx --from ./academic_research_kernel-2.4.0-py3-none-any.whl academic-research-kernel mcp` کے ذریعے بھی چلایا جا سکتا ہے۔ Python 3.10/3.12/3.14 معاونت یافتہ ہے؛ `uvx --python 3.12` واضح طور پر ایک معاون انٹرپریٹر منتخب کرتا ہے۔ سائنسی حساب کتاب اور شماریاتی آلات سمیت تمام 18 قطعی ٹولز بنیادی انسٹالیشن میں شامل ہیں۔
+[2.4.1 ریلیز](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) ڈسٹری بیوشن ہیشز اور اشاعت کی حیثیت کو ریکارڈ کرتی ہے۔ ریلیز وہیل کو مقامی طور پر `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` کے ذریعے بھی چلایا جا سکتا ہے۔ Python 3.10/3.12/3.14 معاونت یافتہ ہے؛ `uvx --python 3.12` واضح طور پر ایک معاون انٹرپریٹر منتخب کرتا ہے۔ سائنسی حساب کتاب اور شماریاتی آلات سمیت تمام 18 قطعی ٹولز بنیادی انسٹالیشن میں شامل ہیں۔
 
 ### تنصیب کی تصدیق
 
 ```bash
-uvx academic-research-kernel@2.4.0 doctor
-uvx academic-research-kernel@2.4.0 --version
+uvx academic-research-kernel@2.4.1 doctor
+uvx academic-research-kernel@2.4.1 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### مقامی Agent کے ذریعے تحقیقی مقالے کا مطالعہ
 
-`academic-research-kernel[research]==2.4.0` انسٹال کریں اور پیکیج شدہ ورک فلو ایکسپورٹ کریں:
+`academic-research-kernel[research]==2.4.1` انسٹال کریں اور پیکیج شدہ ورک فلو ایکسپورٹ کریں:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | شناخت اور ماخذ کے لحاظ سے حوالہ جات کی تعداد کی کراس چیکنگ؛ اپ ڈیٹ اور مضمون کی واپسی (retraction) کے اشاروں کا معائنہ؛ اوپن ایکسیس متن کی تلاش اور پی ڈی ایف شناخت کی تصدیق؛ OpenReview جائزوں اور کوڈ ریپوزٹریز کا فرانزک آڈٹ |
 | `skills/literature-analysis` | 1.3.0 | بارہ ورک فلو: موضوع کی مشابہت، مقامی متن کا اشتراک، جوابی شواہد، مصنفین کے پروفائلز، فرضی جائزہ، منطقی مغالطوں کی جانچ، ریویو میٹرکس، موزوں جرائد کی تجویز، BibTeX، دو لسانی مطالعہ، تحقیقی خلا کی اسکریننگ اور دوبارہ تخلیق |
-| `skills/academic-writing` | 1.3.0 | علمی تدوین، حوالہ جاتی رہنمائی (ISO 690، APA، MLA، Chicago، IEEE، AMA اور علاقائی پروفائلز)، جرائد کی ہدایات، اختیاری تشخیصی خدمات، جمع کرانے کا مواد اور ادارہ جاتی تقاضے، جمع کرانے سے قبل جانچ، ڈبل بلائنڈ رازداری اسکین، رسید سے LaTeX جدول سازی اور کانفرنس ٹیمپلیٹس |
+| `skills/academic-writing` | 1.3.1 | علمی تدوین، حوالہ جاتی رہنمائی (ISO 690، APA، MLA، Chicago، IEEE، AMA اور علاقائی پروفائلز)، جرائد کی ہدایات، اختیاری تشخیصی خدمات، جمع کرانے کا مواد اور ادارہ جاتی تقاضے، جمع کرانے سے قبل جانچ، ڈبل بلائنڈ رازداری اسکین، رسید سے LaTeX جدول سازی اور کانفرنس ٹیمپلیٹس |
 | `skills/math-computation` | 1.2.1 | درست کردہ عددی اور شماریاتی مثالوں کے ساتھ ڈومین اور ٹاسک روٹنگ؛ چار جدید ڈومین حوالہ جاتی فائلیں |
 | `skills/quantitative-paper-audit` | 1.2.0 | رپورٹ کردہ شماریات (اثر کا حجم، p-قدریں، اعتماد کے وقفے، OR/RR، حاصل شدہ شماریاتی طاقت) کا دوبارہ حساب لگانا اور عددی تضادات کا پتہ لگانا، نیز پارٹیشن تحفظ، ایبلیشن مستقل آفسیٹ اور اسٹوریج و بینڈوڈتھ کی طبیعی حدود کی جانچ |
 | `skills/research-reproducibility` | 1.0.1 | منظم اصول تکرار پذیری کی جانچ کی فہرستوں، حقائق کے پانچ درجات اور قابل تکرار آڈٹ ریکارڈز کے ساتھ چودہ مراحل پر مشتمل آڈٹ پائپ لائن |
@@ -141,12 +141,12 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 ### پیکیج کی تنصیب
 
 ```bash
-uv tool install academic-research-kernel==2.4.0
+uv tool install academic-research-kernel==2.4.1
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-متبادل کے طور پر، کسی معاون ورچوئل ماحول کے اندر `pipx install academic-research-kernel==2.4.0` یا `python -m pip install academic-research-kernel==2.4.0` کے ذریعے انسٹال کریں۔ `[full]` توسیعی سائنسی مثالوں کے لیے لائبریریاں شامل کرتا ہے؛ `[qa]` پی ڈی ایف پارسر سمیت ریپوزٹری کی تصدیق کے ٹولز شامل کرتا ہے۔ `[research]` صاف انسٹالیشنز میں یکساں پی ڈی ایف فونٹ ڈی کوڈنگ کے لیے `pypdf==7.0.0` اور `fonttools==4.65.0` شامل کرتا ہے؛ دونوں Python 3.10 کی معاونت کرتے ہیں۔ منظم HTML/XML اور محدود حجم کی DOCX/XLSX فائلوں کو پڑھنے کے لیے معیاری لائبریری استعمال ہوتی ہے۔ GPU بیک اینڈز اور بامعاوضہ خدمات اختیاری رہتی ہیں۔
+متبادل کے طور پر، کسی معاون ورچوئل ماحول کے اندر `pipx install academic-research-kernel==2.4.1` یا `python -m pip install academic-research-kernel==2.4.1` کے ذریعے انسٹال کریں۔ `[full]` توسیعی سائنسی مثالوں کے لیے لائبریریاں شامل کرتا ہے؛ `[qa]` پی ڈی ایف پارسر سمیت ریپوزٹری کی تصدیق کے ٹولز شامل کرتا ہے۔ `[research]` صاف انسٹالیشنز میں یکساں پی ڈی ایف فونٹ ڈی کوڈنگ کے لیے `pypdf==7.0.0` اور `fonttools==4.65.0` شامل کرتا ہے؛ دونوں Python 3.10 کی معاونت کرتے ہیں۔ منظم HTML/XML اور محدود حجم کی DOCX/XLSX فائلوں کو پڑھنے کے لیے معیاری لائبریری استعمال ہوتی ہے۔ GPU بیک اینڈز اور بامعاوضہ خدمات اختیاری رہتی ہیں۔
 
 ### انضمام اور پورٹیبل استعمال
 
@@ -224,7 +224,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. مقامی توثیق، ڈسٹری بیوشن کی تصدیق (2.4.0) اور لائسنس
+## 6. مقامی توثیق، ڈسٹری بیوشن کی تصدیق (2.4.1) اور لائسنس
 
 ### توثیق اور جانچ (Validation)
 
@@ -244,7 +244,7 @@ QA میٹا ڈیٹا، حوالہ جات، ذاتی راستوں یا معلوم
 
 پن کیے گئے Hermes آتھرنگ ٹیسٹوں کو ان کے فی مہارت اصول بدلے بغیر دوبارہ استعمال کیا جاتا ہے۔ اپ اسٹریم کی مکمل ڈسٹری بیوشن آبادی کی جانچ اس ٹیپ پر لاگو نہیں ہوتی؛ ہمارا ٹیسٹ ہارنس چودہ مہارتوں کی جانچ کرتا ہے اور پن کیے گئے بنڈل/اختیاری کیٹلاگ کے مطابق حوالہ جات کو حل کرتا ہے۔ یہ مکمل Hermes انسٹالیشن ٹیسٹ نہیں ہے۔ CI صرف انحصار انسٹال کرنے کے لیے نیٹ ورک استعمال کرتا ہے؛ عام ٹیسٹ علمی APIs کو کال نہیں کرتے۔
 
-CI لائیو اپ اسٹریم کینری توثیق کے ساتھ Linux x86_64 (Python 3.10/3.12/3.14)، Linux ARM64 (ubuntu-24.04-arm)، Windows x86_64، Windows ARM64 (windows-11-arm)، macOS ARM64 (macos-latest) پر مکمل QA سوٹ چلاتا ہے۔ موجودہ ریگریشن سوٹ 1348 مقامی ٹیسٹ پاس کرتا ہے (1165 ٹیسٹوں کے تاریخی بنیادی معیار سے توسیع شدہ)۔ موجودہ مرمت کے نتائج اور کوریج کی حدود [درستگی کی مرمت کی دستاویز](../../docs/maintenance/correctness-repair-20261008.md) میں درج ہیں؛ ریموٹ شواہد ٹیسٹ کیے گئے HEAD کی الگ سے نشاندہی کرتے ہیں۔ `main` پر پش کرنے پر ایک الگ ٹیپ انٹیگریشن ورک فلو چلتا ہے: یہ `tests/upstream/provenance.json` میں درج پن کیے گئے Hermes چیک آؤٹ کو انسٹال کرتا ہے اور اس ریپوزٹری کے خلاف `tap add`، `search`، `install` اور `list` کی مشق کرتا ہے۔ درست ورژنز، چیکس اور حدود [آڈٹ دستاویز](../../docs/kernel-architecture.md) میں درج ہیں۔
+CI لائیو اپ اسٹریم کینری توثیق کے ساتھ Linux x86_64 (Python 3.10/3.12/3.14)، Linux ARM64 (ubuntu-24.04-arm)، Windows x86_64، Windows ARM64 (windows-11-arm)، macOS ARM64 (macos-latest) پر مکمل QA سوٹ چلاتا ہے۔ موجودہ ریگریشن سوٹ 1364 مقامی ٹیسٹ پاس کرتا ہے (1165 ٹیسٹوں کے تاریخی بنیادی معیار سے توسیع شدہ)۔ موجودہ مرمت کے نتائج اور کوریج کی حدود [درستگی کی مرمت کی دستاویز](../../docs/maintenance/correctness-repair-20261008.md) میں درج ہیں؛ ریموٹ شواہد ٹیسٹ کیے گئے HEAD کی الگ سے نشاندہی کرتے ہیں۔ `main` پر پش کرنے پر ایک الگ ٹیپ انٹیگریشن ورک فلو چلتا ہے: یہ `tests/upstream/provenance.json` میں درج پن کیے گئے Hermes چیک آؤٹ کو انسٹال کرتا ہے اور اس ریپوزٹری کے خلاف `tap add`، `search`، `install` اور `list` کی مشق کرتا ہے۔ درست ورژنز، چیکس اور حدود [آڈٹ دستاویز](../../docs/kernel-architecture.md) میں درج ہیں۔
 
 [tools/longtail/](../../tools/longtail/README.md) میں قطعی لانگ ٹیل فیکٹر جنریٹر موجود ہے: 4096 SHA256 سیڈڈ امیدوار، 30 منتخب منظرنامے اور مشین سے محسوب کردہ تصدیقی احاطے کی رپورٹ۔ v3 ماڈل صلاحیت کے خاندانوں (E01)، ریپوزٹری کی 14 حقیقی مہارتوں (E02)، اور ٹاسک کے اہداف (E03) کو الگ الگ شمار کرتا ہے۔ ہر منظرنامے میں ایک بنیادی مہارت، ایک معاون ٹاسک ہدف اور ہم آہنگ صلاحیتیں ہوتی ہیں؛ ہر مہارت کو اپنے اعلان کردہ بنیادی ہدف سمیت دو مختلف اہداف کے تحت کم از کم دو بار ظاہر ہونا چاہیے۔ مہارت کی ڈائریکٹری میں انحراف کی صورت میں تصدیق ناکام ہو جاتی ہے۔ معنوی توسیع (ٹاسک چینز، اوریکلز اور چلائے گئے ایونٹ کا انجیکشن) ایک الگ مرحلہ رہتی ہے؛ عوامل کا احاطہ ورک فلو کے چلنے کے احاطے کو ثابت نہیں کرتا۔
 

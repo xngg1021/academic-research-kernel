@@ -26,8 +26,15 @@ VERSION, TAG = '2.0.1', 'v2.0.1'
 
 
 def metadata(version=VERSION):
+    req_lines = (
+        'Requires-Dist: pypdf==7.0.0; extra == "research"\n'
+        'Requires-Dist: fonttools==4.65.0; extra == "research"\n'
+        'Requires-Dist: pillow>=12.2.0; extra == "full"\n'
+        'Requires-Dist: certifi>=2026.10.18; extra == "qa"\n'
+    ) if tuple(map(int, version.split('.'))) >= (2, 3, 1) else ''
     return (f'Name: academic-research-kernel\nVersion: {version}\n'
-            'Requires-Python: <3.15,>=3.10\nLicense-Expression: LicenseRef-Source-Lineage-1.0\n\n'
+            'Requires-Python: <3.15,>=3.10\nLicense-Expression: LicenseRef-Source-Lineage-1.0\n'
+            + req_lines + '\n'
             'mcp-name: io.github.xngg1021/academic-research-kernel\n').encode()
 
 
