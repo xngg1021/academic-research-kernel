@@ -131,9 +131,9 @@ jobs:
           python-version: '3.12'
       - name: Install pinned Hermes and current kernel runtime
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip 'hatchling==1.29.0'
           python -m pip install -e ./.hermes-upstream
-          python -m pip install --no-build-isolation .
+          python -m pip install --no-build-isolation --no-deps .
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
           version: '0.12.17'

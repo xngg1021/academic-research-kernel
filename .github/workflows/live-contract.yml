@@ -18,7 +18,7 @@ jobs:
           cache-dependency-path: requirements-qa.txt
       # Install PyYAML and the local package so live fences and controlled_urlopen adapters both resolve.
       - run: |
-          python -m pip install 'PyYAML>=6,<7'
+          python -m pip install 'PyYAML>=6,<7' 'hatchling==1.29.0'
           python -m pip install --no-build-isolation --no-deps .
       - name: Run external API contract checks
         shell: bash
