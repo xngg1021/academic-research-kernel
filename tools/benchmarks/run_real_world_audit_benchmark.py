@@ -182,6 +182,12 @@ def _eval_bib_from_snapshot(expected_doi: str, snap: dict) -> tuple[bool, dict]:
     }
 
 
+def _canon_float(value: float | None) -> float | None:
+    if value is None:
+        return None
+    return float(f"{float(value):.12g}")
+
+
 def _eval_stat_case(case: dict) -> tuple[bool, dict]:
     import pre_submission_linter
     import recompute
@@ -191,22 +197,22 @@ def _eval_stat_case(case: dict) -> tuple[bool, dict]:
     if kind == "f_lt":
         rec = recompute.p_from_f(p["f"], p["df1"], p["df2"], reported=p["threshold"])
         consistent = bool(rec["recomputed"] < p["threshold"])
-        return (not consistent), {"recomputed_p": rec["recomputed"], "consistent": consistent}
+        return (not consistent), {"recomputed_p": _canon_float(rec["recomputed"]), "consistent": consistent}
     if kind == "f_eq":
         rec = recompute.p_from_f(p["f"], p["df1"], p["df2"], reported=p["p"])
         m = recompute.check_p_match(p["p"], rec["recomputed"], reported_literal=p["p_literal"])
-        return (not m["consistent"]), {"recomputed_p": rec["recomputed"], "consistent": m["consistent"]}
+        return (not m["consistent"]), {"recomputed_p": _canon_float(rec["recomputed"]), "consistent": m["consistent"]}
     if kind == "t_lt":
         rec = recompute.p_from_t(p["t"], p["df"], reported=p["threshold"])
         consistent = bool(rec["recomputed"] < p["threshold"])
-        return (not consistent), {"recomputed_p": rec["recomputed"], "consistent": consistent}
+        return (not consistent), {"recomputed_p": _canon_float(rec["recomputed"]), "consistent": consistent}
     if kind == "t_eq":
         rec = recompute.p_from_t(p["t"], p["df"], reported=p["p"])
         m = recompute.check_p_match(p["p"], rec["recomputed"], reported_literal=p["p_literal"])
-        return (not m["consistent"]), {"recomputed_p": rec["recomputed"], "consistent": m["consistent"]}
+        return (not m["consistent"]), {"recomputed_p": _canon_float(rec["recomputed"]), "consistent": m["consistent"]}
     if kind == "ci":
         m = recompute.check_ci_consistency(p["estimate"], p["lower"], p["upper"], level=p["level"])
-        return (not m["consistent"]), {"consistent": m["consistent"], "implied_se": m.get("implied_se")}
+        return (not m["consistent"]), {"consistent": m["consistent"], "implied_se": _canon_float(m.get("implied_se"))}
     if kind == "partition":
         m = recompute.check_partition_conservation(p["total"], p["parts"])
         return (not m["consistent"]), {"consistent": m["consistent"], "sum_parts": m.get("sum_parts"), "missing_or_excess": m.get("missing_or_excess")}
