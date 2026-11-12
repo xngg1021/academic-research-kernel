@@ -15,19 +15,19 @@ Autor: Junfu Shi (SJF, xngg1021). Obowiązująca oferta licencyjna: [Source Line
 
 ### Szybki start
 
-Uruchom wersję 2.4.1 za pomocą narzędzia [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Uruchom wersję 2.4.2 za pomocą narzędzia [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-Opis [wydania 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) zawiera sumy kontrolne pakietów dystrybucyjnych i status publikacji. Pakiet wheel wydania można również uruchomić lokalnie poleceniem `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. Obsługiwane są wersje Python 3.10/3.12/3.14; przełącznik `uvx --python 3.12` jawnie wybiera obsługiwany interpreter. Wszystkie 18 deterministycznych narzędzi, w tym moduły statystyczne, wchodzi w skład instalacji podstawowej.
+Opis [wydania 2.4.2](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) zawiera sumy kontrolne pakietów dystrybucyjnych i status publikacji. Pakiet wheel wydania można również uruchomić lokalnie poleceniem `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp`. Obsługiwane są wersje Python 3.10/3.12/3.14; przełącznik `uvx --python 3.12` jawnie wybiera obsługiwany interpreter. Wszystkie 18 deterministycznych narzędzi, w tym moduły statystyczne, wchodzi w skład instalacji podstawowej.
 
 ### Weryfikacja instalacji
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Diagnostyka offline sprawdza zależności, schematy oraz definicje wszystkich 18
 
 ### Badanie artykułu naukowego za pomocą lokalnego Agenta
 
-Zainstaluj pakiet `academic-research-kernel[research]==2.4.1` i wyeksportuj wbudowany przepływ pracy:
+Zainstaluj pakiet `academic-research-kernel[research]==2.4.2` i wyeksportuj wbudowany przepływ pracy:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Aby uzasadnić pięć rodzin deterministycznych defektów (brak słupków błęd
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Krzyżowa weryfikacja tożsamości publikacji i liczby cytowań w poszczególnych bazach; sprawdzanie sygnałów aktualizacji i wycofania artykułów (retrakcji); lokalizowanie pełnych tekstów Open Access oraz weryfikacja plików PDF; audyt recenzji OpenReview oraz analiza śledcza repozytoriów kodu |
 | `skills/literature-analysis` | 1.3.0 | Dwanaście procedur badawczych: podobieństwo tematyczne, lokalne pokrywanie się tekstu, kontrargumenty, profile autorów, symulowana recenzja, wykrywanie błędów logicznych, macierz przeglądu, dobór czasopism, BibTeX, czytanie dwujęzyczne, identyfikacja luk badawczych i odtwarzanie wyników |
-| `skills/academic-writing` | 1.3.1 | Redakcja tekstów naukowych, wytyczne dotyczące cytowania (ISO 690, APA, MLA, Chicago, IEEE, AMA i profile regionalne), instrukcje redakcyjne czasopism, opcjonalne usługi detekcji, materiały zgłoszeniowe oraz wymogi instytucjonalne, linting przed wysyłką, kontrola anonimowości podwójnie ślepej, generowanie tabel LaTeX oraz szablony konferencyjne |
+| `skills/academic-writing` | 1.3.2 | Redakcja tekstów naukowych, wytyczne dotyczące cytowania (ISO 690, APA, MLA, Chicago, IEEE, AMA i profile regionalne), instrukcje redakcyjne czasopism, opcjonalne usługi detekcji, materiały zgłoszeniowe oraz wymogi instytucjonalne, linting przed wysyłką, kontrola anonimowości podwójnie ślepej, generowanie tabel LaTeX oraz szablony konferencyjne |
 | `skills/math-computation` | 1.2.1 | Kierowanie zadań według dziedziny i typu obliczeń ze zweryfikowanymi przykładami numerycznymi i statystycznymi; cztery specjalistyczne pliki referencyjne |
 | `skills/quantitative-paper-audit` | 1.2.0 | Ponowne przeliczanie deklarowanych statystyk (wielkość efektu, wartości p, przedziały ufności, OR/RR, osiągnięta moc testu) oraz wykrywanie rozbieżności liczbowych, a także kontrola zachowania podziału próby, stałego przesunięcia w ablacjach oraz fizycznych granic pamięci i przepustowości |
 | `skills/research-reproducibility` | 1.0.1 | Czternastoetapowy potok audytu powtarzalności z ustrukturyzowanymi listami kontrolnymi, pięcioma poziomami weryfikacji faktów i powtarzalnymi rekordami audytowymi |
@@ -141,12 +141,12 @@ Czternaście umiejętności obejmuje łącznie 22 pliki referencyjne Markdown, k
 ### Instalacja pakietu
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatywnie pakiet można zainstalować poleceniem `pipx install academic-research-kernel==2.4.1` lub `python -m pip install academic-research-kernel==2.4.1` wewnątrz obsługiwanego środowiska wirtualnego. Dodatek `[full]` instaluje biblioteki dla rozszerzonych przykładów obliczeniowych; `[qa]` dodaje narzędzia walidacyjne repozytorium wraz z parserem plików PDF. Dodatek `[research]` instaluje pakiety `pypdf==7.0.0` oraz `fonttools==4.65.0` w celu zapewnienia spójnego dekodowania czcionek PDF w czystych instalacjach (oba pakiety obsługują Python 3.10). Ustrukturyzowany odczyt HTML/XML oraz ograniczony rozmiarowo odczyt plików DOCX/XLSX korzystają ze standardowej biblioteki języka Python. Backendy GPU i płatne usługi zewnętrzne pozostają opcjonalne.
+Alternatywnie pakiet można zainstalować poleceniem `pipx install academic-research-kernel==2.4.2` lub `python -m pip install academic-research-kernel==2.4.2` wewnątrz obsługiwanego środowiska wirtualnego. Dodatek `[full]` instaluje biblioteki dla rozszerzonych przykładów obliczeniowych; `[qa]` dodaje narzędzia walidacyjne repozytorium wraz z parserem plików PDF. Dodatek `[research]` instaluje pakiety `pypdf==7.0.0` oraz `fonttools==4.65.0` w celu zapewnienia spójnego dekodowania czcionek PDF w czystych instalacjach (oba pakiety obsługują Python 3.10). Ustrukturyzowany odczyt HTML/XML oraz ograniczony rozmiarowo odczyt plików DOCX/XLSX korzystają ze standardowej biblioteki języka Python. Backendy GPU i płatne usługi zewnętrzne pozostają opcjonalne.
 
 ### Integracja i Przenośne Użycie
 
@@ -224,7 +224,7 @@ Zobacz dokumentację dotyczącą [uwierzytelniania w OpenAlex](https://help.open
 
 ---
 
-## 6. Walidacja lokalna, weryfikacja dystrybucji (2.4.1) i licencja
+## 6. Walidacja lokalna, weryfikacja dystrybucji (2.4.2) i licencja
 
 ### Walidacja
 

@@ -15,19 +15,19 @@
 
 ### 빠른 시작
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/)를 사용하여 버전 2.4.1을 실행합니다:
+[uv](https://docs.astral.sh/uv/getting-started/installation/)를 사용하여 버전 2.4.2을 실행합니다:
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-[2.4.1 릴리스](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1)에는 배포 패키지 해시와 게시 상태가 기록되어 있습니다. 릴리스 wheel 파일을 내려받아 로컬에서 `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` 명령으로 실행할 수도 있습니다. Python 3.10/3.12/3.14를 지원하며, `uvx --python 3.12`를 통해 지원되는 인터프리터를 명시적으로 선택할 수 있습니다. 통계 계산을 포함한 18개의 모든 결정론적 도구가 기본 설치에 포함되어 있습니다.
+[2.4.2 릴리스](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2)에는 배포 패키지 해시와 게시 상태가 기록되어 있습니다. 릴리스 wheel 파일을 내려받아 로컬에서 `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp` 명령으로 실행할 수도 있습니다. Python 3.10/3.12/3.14를 지원하며, `uvx --python 3.12`를 통해 지원되는 인터프리터를 명시적으로 선택할 수 있습니다. 통계 계산을 포함한 18개의 모든 결정론적 도구가 기본 설치에 포함되어 있습니다.
 
 ### 설치 확인
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### 로컬 Agent로 논문 연구하기
 
-`academic-research-kernel[research]==2.4.1`을 설치하고 패키지에 포함된 워크플로를 내보냅니다:
+`academic-research-kernel[research]==2.4.2`을 설치하고 패키지에 포함된 워크플로를 내보냅니다:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | 신원과 출처별 인용 수 교차 확인, 갱신·철회 신호 점검, OA 원문 위치 파악과 PDF 신원 검증, OpenReview 심사 기록 및 코드 저장소 포렌식 감사 |
 | `skills/literature-analysis` | 1.3.0 | 12개 워크플로: 주제 유사도, 국소 텍스트 중복, 반증, 저자 프로필, 모의 심사, 오류 점검, 리뷰 매트릭스, 저널 후보, BibTeX, 이중언어 독해, 연구 공백 선별, 재현 |
-| `skills/academic-writing` | 1.3.1 | 논문 편집, 인용 규범 안내(ISO 690, APA, MLA, Chicago, IEEE, AMA 및 지역 프로필), 저널 투고 지침, 선택적 탐지 서비스, 투고 자료 및 기관 심사 요건, 투고 전 포맷 린팅, 이중맹검 익명성 검사, 검증 기록 기반 LaTeX 표 생성 및 학회 템플릿 초기화 |
+| `skills/academic-writing` | 1.3.2 | 논문 편집, 인용 규범 안내(ISO 690, APA, MLA, Chicago, IEEE, AMA 및 지역 프로필), 저널 투고 지침, 선택적 탐지 서비스, 투고 자료 및 기관 심사 요건, 투고 전 포맷 린팅, 이중맹검 익명성 검사, 검증 기록 기반 LaTeX 표 생성 및 학회 템플릿 초기화 |
 | `skills/math-computation` | 1.2.1 | 기존 영역·과제 라우팅과 수정된 수치·통계 예제, 분야별 심화 참조 문서 4편 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 논문이 보고한 통계량(효과 크기, p값, 신뢰구간, OR/RR, 달성 검정력) 재계산과 수치 불일치 탐지 및 표본 분할 보존, 절제 실험 상수 오프셋, 비압축 저장소·대역폭 하한 검증 |
 | `skills/research-reproducibility` | 1.0.1 | 구조화된 점검표, 5단계 사실 계층, 재현 가능한 감사 기록을 갖춘 14단계 재현 감사 파이프라인 |
@@ -141,12 +141,12 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 ### 패키지 설치
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-또는 `pipx install academic-research-kernel==2.4.1`을 사용하거나, 지원되는 가상 환경 내에서 `python -m pip install academic-research-kernel==2.4.1`으로 설치할 수 있습니다. `[full]`은 확장 과학 계산 스킬 예제용 라이브러리를 추가하며, `[qa]`는 PDF 파서를 포함한 저장소 검증 도구를 추가합니다. `[research]`는 클린 설치 환경 전반에서 일관된 PDF 폰트 디코딩을 보장하기 위해 `pypdf==7.0.0`과 `fonttools==4.65.0`을 추가하며, 두 패키지 모두 Python 3.10을 지원합니다. 구조화된 HTML/XML 및 크기 제한이 있는 DOCX/XLSX 읽기는 표준 라이브러리를 사용합니다. GPU 백엔드와 유료 서비스는 선택 사항입니다.
+또는 `pipx install academic-research-kernel==2.4.2`을 사용하거나, 지원되는 가상 환경 내에서 `python -m pip install academic-research-kernel==2.4.2`으로 설치할 수 있습니다. `[full]`은 확장 과학 계산 스킬 예제용 라이브러리를 추가하며, `[qa]`는 PDF 파서를 포함한 저장소 검증 도구를 추가합니다. `[research]`는 클린 설치 환경 전반에서 일관된 PDF 폰트 디코딩을 보장하기 위해 `pypdf==7.0.0`과 `fonttools==4.65.0`을 추가하며, 두 패키지 모두 Python 3.10을 지원합니다. 구조화된 HTML/XML 및 크기 제한이 있는 DOCX/XLSX 읽기는 표준 라이브러리를 사용합니다. GPU 백엔드와 유료 서비스는 선택 사항입니다.
 
 ### 통합 및 이식 가능한 사용
 
@@ -200,7 +200,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ### 결정론적 수집 및 공개 커널 인터페이스
 
-버전 2.4.1은 `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15개의 어댑터(14개 스킬과 opaque fallback), 그리고 18개의 무상태 stdio MCP 도구를 제공합니다. 승인된 수집 검증 기록은 보관되는 각 의미론적 변경(연구 객체, 주장과 근거의 연결 레코드, 연구 의사결정 및 실패 시도 기록 레코드, 확인 필요 항목, 물리적 검증 기록 및 산출물 등록)을 종류, 식별자, 정규 SHA-256으로 바인딩합니다. 캐시 재생은 전송 스냅샷 해시와 독립적으로 이러한 약정을 검증합니다. 빈 기록부도 유효하며, 실패한 원자적 배치는 부분 상태를 남기지 않습니다.
+버전 2.4.2은 `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15개의 어댑터(14개 스킬과 opaque fallback), 그리고 18개의 무상태 stdio MCP 도구를 제공합니다. 승인된 수집 검증 기록은 보관되는 각 의미론적 변경(연구 객체, 주장과 근거의 연결 레코드, 연구 의사결정 및 실패 시도 기록 레코드, 확인 필요 항목, 물리적 검증 기록 및 산출물 등록)을 종류, 식별자, 정규 SHA-256으로 바인딩합니다. 캐시 재생은 전송 스냅샷 해시와 독립적으로 이러한 약정을 검증합니다. 빈 기록부도 유효하며, 실패한 원자적 배치는 부분 상태를 남기지 않습니다.
 
 이력 콘텐츠 읽기 권한은 대역 외에서 명시적으로 부여됩니다. 신뢰할 수 있는 Python 호출자는 직렬화된 검증 기록이나 스냅샷을 재생할 때 `LineageVerificationContext`를 전달하며, MCP 호출자는 제한된 크기의 콘텐츠 바이트만 제공할 수 있고 호스트 파일시스템 루트는 지정할 수 없습니다. 기본 콘텐츠 예산은 10 MiB이며, 신뢰할 수 있는 호스트는 생산자와 검증자가 동일한 정책을 따르는 조건에서 더 큰 산출물을 명시적으로 허용할 수 있습니다. 콘텐츠 권한이 없으면 `fully_verified` 주장은 독립적으로 재현될 수 없으며 구조화된 무효 검증 결과를 반환합니다. 비정형 텍스트는 불투명하게 유지되고 이견은 가시적으로 보존되며, 커밋, 경로 중단, 재개, 라우팅 및 사실 판단의 통제권은 연구자에게 있습니다.
 
@@ -210,7 +210,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 인용 양식, 보고 지침, 메타데이터 규약은 대상 학술지, 연구지원기관, 학문 분야, 관할권에 따라 달라집니다. 본 저장소는 **ISO 690:2021**(서지 참조 및 인용 지침), **ISO 5127:2017**(정보 및 문헌 용어), **W3C PROV**(이력 및 출처 데이터 모델)를 국제 기준으로 삼고, 한국 KS X ISO 690 참조, 중국 대륙 GB/T 7714-2025, 스페인 UNE-ISO 690:2024, 독일 DIN ISO 690:2021 등 지역 프로필과 APA 7판, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE 등 학문 분야별 표준을 지원합니다. 투고 대상 기관이나 학술지의 공식 요건이 기본 프로필보다 항상 우선합니다. 자세한 내용은 [학술 표준 아키텍처](docs/standards/README.md) 및 [자연스러운 학술 용어 가이드](docs/terminology/README.md)를 참조하십시오.
 
-버전 2.4.1은 DOI 및 외부 식별자 일관성, 상호 배타적인 정량 판정 플래그, 그리고 커널과 검증 기록이 공유하는 확인 필요 항목 규약을 검증합니다. 캐시 완전성은 보관된 원본 엔벌로프와 정규화된 바인딩으로부터 독립적으로 재구성되므로, 상태 레코드와 캐시 선언을 동시에 삭제하더라도 잘못된 캐시 재생이 승인되지 않습니다. 자세한 내용은 [4대 차단 요소 해결 기록](docs/kernel-architecture.md)을 참조하십시오.
+버전 2.4.2은 DOI 및 외부 식별자 일관성, 상호 배타적인 정량 판정 플래그, 그리고 커널과 검증 기록이 공유하는 확인 필요 항목 규약을 검증합니다. 캐시 완전성은 보관된 원본 엔벌로프와 정규화된 바인딩으로부터 독립적으로 재구성되므로, 상태 레코드와 캐시 선언을 동시에 삭제하더라도 잘못된 캐시 재생이 승인되지 않습니다. 자세한 내용은 [4대 차단 요소 해결 기록](docs/kernel-architecture.md)을 참조하십시오.
 
 ### 데이터 소스 접근
 
@@ -224,7 +224,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. 로컬 검증, 배포 패키지 검증(2.4.1) 및 라이선스
+## 6. 로컬 검증, 배포 패키지 검증(2.4.2) 및 라이선스
 
 ### 검증 및 테스트
 

@@ -15,19 +15,19 @@
 
 ### দ্রুত শুরু
 
-[uv](https://docs.astral.sh/uv/getting-started/installation/) ব্যবহার করে সংস্করণ 2.4.1 চালান:
+[uv](https://docs.astral.sh/uv/getting-started/installation/) ব্যবহার করে সংস্করণ 2.4.2 চালান:
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-[2.4.1 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10/3.12/3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১৮টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
+[2.4.2 রিলিজ](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) ডিস্ট্রিবিউশন হ্যাশ এবং প্রকাশনার অবস্থা সংরক্ষণ করে। রিলিজ হুইলটি স্থানীয়ভাবে `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp` কমান্ড দিয়েও চালানো যায়। Python 3.10/3.12/3.14 সমর্থিত; `uvx --python 3.12` সুনির্দিষ্টভাবে একটি সমর্থিত ইন্টারপ্রেটার নির্বাচন করে। বৈজ্ঞানিক গণনা ও পরিসংখ্যানগত টুলসেট সহ সমস্ত ১৮টি সুনির্দিষ্ট টুল মূল ইনস্টলেশনেই অন্তর্ভুক্ত রয়েছে।
 
 ### ইনস্টলেশন যাচাই
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### স্থানীয় Agent দিয়ে গবেষণাপত্র বিশ্লেষণ
 
-`academic-research-kernel[research]==2.4.1` ইনস্টল করুন এবং প্যাকেজকৃত কর্মপ্রবাহটি এক্সপোর্ট করুন:
+`academic-research-kernel[research]==2.4.2` ইনস্টল করুন এবং প্যাকেজকৃত কর্মপ্রবাহটি এক্সপোর্ট করুন:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | পরিচয় এবং উৎস-ভিত্তিক উদ্ধৃতি সংখ্যার ক্রস-চেক; আপডেট ও প্রত্যাহার (retraction) সংকেত পরীক্ষা; ওপেন অ্যাক্সেস পূর্ণপাঠ অনুসন্ধান এবং পিডিএফ পরিচয় যাচাই; OpenReview রিভিউ নিরীক্ষা এবং কোড রিপোজিটরি ফরেনসিক যাচাই |
 | `skills/literature-analysis` | 1.3.0 | বারোটি কর্মপ্রবাহ: বিষয়ের সাদৃশ্য, স্থানীয় পাঠ্যের পুনরাবৃত্তি, পাল্টা প্রমাণ, লেখকের প্রোফাইল, মক রিভিউ, যুক্তিদোষ পরীক্ষা, রিভিউ ম্যাট্রিক্স, সম্ভাব্য জার্নাল নির্বাচন, BibTeX, দ্বিভাষিক পাঠ, গবেষণা-শূন্যতা বাছাই এবং পুনরুৎপাদন |
-| `skills/academic-writing` | 1.3.1 | একাডেমিক সম্পাদনা, উদ্ধৃতি নির্দেশিকা (ISO 690, APA, MLA, Chicago, IEEE, AMA এবং আঞ্চলিক প্রোফাইল), জার্নালের নিয়মাবলি, ঐচ্ছিক শনাক্তকরণ পরিষেবা, জমার নথিপত্র এবং প্রাতিষ্ঠানিক প্রয়োজনীয়তা, জমা-পূর্ব লিন্টিং, ডাবল-ব্লাইন্ড গোপনীয়তা যাচাই, রসিদ থেকে LaTeX টেবিল তৈরি এবং সম্মেলন টেমপ্লেট |
+| `skills/academic-writing` | 1.3.2 | একাডেমিক সম্পাদনা, উদ্ধৃতি নির্দেশিকা (ISO 690, APA, MLA, Chicago, IEEE, AMA এবং আঞ্চলিক প্রোফাইল), জার্নালের নিয়মাবলি, ঐচ্ছিক শনাক্তকরণ পরিষেবা, জমার নথিপত্র এবং প্রাতিষ্ঠানিক প্রয়োজনীয়তা, জমা-পূর্ব লিন্টিং, ডাবল-ব্লাইন্ড গোপনীয়তা যাচাই, রসিদ থেকে LaTeX টেবিল তৈরি এবং সম্মেলন টেমপ্লেট |
 | `skills/math-computation` | 1.2.1 | সংশোধিত সংখ্যাসূচক ও পরিসংখ্যানগত উদাহরণসহ ডোমেইন ও টাস্ক রাউটিং; চারটি উন্নত ডোমেইন রেফারেন্স ফাইল |
 | `skills/quantitative-paper-audit` | 1.2.0 | প্রকাশিত পরিসংখ্যানের পুনর্গণনা (প্রভাবের আকার, p-মান, কনফিডেন্স ইন্টারভ্যাল, OR/RR, অর্জিত পরিসংখ্যানগত ক্ষমতা) এবং সংখ্যাসূচক অসঙ্গতি শনাক্তকরণ এবং পার্টিশন সংরক্ষণ, অ্যাবলেশন ধ্রুবক অফসেট ও স্টোরেজ-ব্যান্ডউইথ সীমা যাচাই |
 | `skills/research-reproducibility` | 1.0.1 | কাঠামোগত পুনরুৎপাদনযোগ্যতা নিয়ম পরীক্ষক চেকলিস্ট, পাঁচটি তথ্য স্তর এবং যাচাইযোগ্য নিরীক্ষা রেকর্ডসহ চৌদ্দ-পর্যায়ের পুনরুৎপাদনযোগ্যতা নিরীক্ষা পাইপলাইন |
@@ -141,12 +141,12 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 ### প্যাকেজ ইনস্টল
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-বিকল্পভাবে, সমর্থিত ভার্চুয়াল এনভায়রনমেন্টের ভেতরে `pipx install academic-research-kernel==2.4.1` অথবা `python -m pip install academic-research-kernel==2.4.1` দিয়ে ইনস্টল করা যাবে। `[full]` অপশনটি বর্ধিত বৈজ্ঞানিক উদাহরণের জন্য অতিরিক্ত লাইব্রেরি যোগ করে; `[qa]` অপশনটি পিডিএফ পার্সারসহ রিপোজিটরি যাচাইকরণ টুল যোগ করে। `[research]` অপশনটি নতুন ইনস্টলেশনে পিডিএফ ফন্ট ডিকোডিং সুসংগত রাখতে `pypdf==7.0.0` এবং `fonttools==4.65.0` যুক্ত করে; দুটিই Python 3.10 সমর্থন করে। কাঠামোগত HTML/XML এবং নির্ধারিত আকারের DOCX/XLSX পাঠের কাজে স্ট্যান্ডার্ড লাইব্রেরি ব্যবহৃত হয়। GPU ব্যাকএন্ড এবং অর্থপ্রদত্ত পরিষেবাগুলো ঐচ্ছিক থাকে।
+বিকল্পভাবে, সমর্থিত ভার্চুয়াল এনভায়রনমেন্টের ভেতরে `pipx install academic-research-kernel==2.4.2` অথবা `python -m pip install academic-research-kernel==2.4.2` দিয়ে ইনস্টল করা যাবে। `[full]` অপশনটি বর্ধিত বৈজ্ঞানিক উদাহরণের জন্য অতিরিক্ত লাইব্রেরি যোগ করে; `[qa]` অপশনটি পিডিএফ পার্সারসহ রিপোজিটরি যাচাইকরণ টুল যোগ করে। `[research]` অপশনটি নতুন ইনস্টলেশনে পিডিএফ ফন্ট ডিকোডিং সুসংগত রাখতে `pypdf==7.0.0` এবং `fonttools==4.65.0` যুক্ত করে; দুটিই Python 3.10 সমর্থন করে। কাঠামোগত HTML/XML এবং নির্ধারিত আকারের DOCX/XLSX পাঠের কাজে স্ট্যান্ডার্ড লাইব্রেরি ব্যবহৃত হয়। GPU ব্যাকএন্ড এবং অর্থপ্রদত্ত পরিষেবাগুলো ঐচ্ছিক থাকে।
 
 ### ইন্টিগ্রেশন ও পোর্টেবল ব্যবহার
 
@@ -224,7 +224,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. স্থানীয় যাচাইকরণ, ডিস্ট্রিবিউশন যাচাই (2.4.1) ও লাইসেন্স
+## 6. স্থানীয় যাচাইকরণ, ডিস্ট্রিবিউশন যাচাই (2.4.2) ও লাইসেন্স
 
 ### যাচাইকরণ (Validation)
 

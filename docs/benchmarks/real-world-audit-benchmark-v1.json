@@ -1,0 +1,2257 @@
+{
+  "schema": "ark-real-world-audit-benchmark/1.0",
+  "kernel_version": "2.4.2",
+  "snapshot_date_utc": "2026-11-11",
+  "summary": {
+    "bibliographic_track": {
+      "n": 16,
+      "tp": 10,
+      "tn": 6,
+      "fp": 0,
+      "fn": 0,
+      "recall": 1.0,
+      "precision": 1.0,
+      "specificity": 1.0,
+      "accuracy": 1.0
+    },
+    "statistical_and_gate_track": {
+      "n": 14,
+      "tp": 8,
+      "tn": 5,
+      "fp": 1,
+      "fn": 0,
+      "recall": 1.0,
+      "precision": 0.8889,
+      "specificity": 0.8333,
+      "accuracy": 0.9286
+    },
+    "combined": {
+      "n": 30,
+      "tp": 18,
+      "tn": 11,
+      "fp": 1,
+      "fn": 0,
+      "recall": 1.0,
+      "precision": 0.9474,
+      "specificity": 0.9167,
+      "accuracy": 0.9667
+    }
+  },
+  "known_limitations": [
+    "S14 (Bakker & Wicherts 2011, t(15)=2.3, p=.033) is a documented false positive under point-statistic recomputation because recompute.py bounds p-value rounding intervals without varying the rounded input statistic across [2.25, 2.35).",
+    "Track 2 combines 12 published statistical examples/observations (PMC5101263, PMC3174372; S12 and S13 derive from the same APA Manual reporting example) with 2 repository-grounded partition/CEG gate cases (S07, S08).",
+    "Bibliographic offline replay verifies deterministic classification over frozen OpenAlex/Crossref API responses; pass --capture-live to re-query live upstream APIs."
+  ],
+  "bibliographic_results": [
+    {
+      "id": "B01",
+      "doi": "10.1016/s0140-6736(97)11096-0",
+      "category": "retracted_work",
+      "citation": "Wakefield et al. (1998), The Lancet",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 1
+      }
+    },
+    {
+      "id": "B02",
+      "doi": "10.1016/s0140-6736(20)31180-6",
+      "category": "retracted_work",
+      "citation": "Mehra et al. (2020), The Lancet",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 2
+      }
+    },
+    {
+      "id": "B03",
+      "doi": "10.1056/nejmoa2007621",
+      "category": "retracted_work",
+      "citation": "Mehra et al. (2020), NEJM",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 1
+      }
+    },
+    {
+      "id": "B04",
+      "doi": "10.1038/nature12968",
+      "category": "retracted_work",
+      "citation": "Obokata et al. (2014), Nature",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 2
+      }
+    },
+    {
+      "id": "B05",
+      "doi": "10.1038/s41586-020-2801-z",
+      "category": "retracted_work",
+      "citation": "Snider et al. (2020), Nature",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 2
+      }
+    },
+    {
+      "id": "B06",
+      "doi": "10.1126/science.1112286",
+      "category": "retracted_work",
+      "citation": "Hwang et al. (2005), Science",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 1
+      }
+    },
+    {
+      "id": "B07",
+      "doi": "10.1038/s41586-023-05742-0",
+      "category": "retracted_work",
+      "citation": "Dasenbrock-Gammon et al. (2023), Nature",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 2
+      }
+    },
+    {
+      "id": "B08",
+      "doi": "10.1073/pnas.1209746109",
+      "category": "retracted_work",
+      "citation": "Shu et al. (2012), PNAS",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": true,
+        "crossref_retracted": false,
+        "update_retraction_signals": 2
+      }
+    },
+    {
+      "id": "B09",
+      "doi": "10.1038/s41586-2099-99999-z",
+      "category": "hallucinated_doi",
+      "citation": "Synthetic non-existent Nature DOI",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": true,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    },
+    {
+      "id": "B10",
+      "doi": "10.1126/science.1107108",
+      "category": "hallucinated_doi",
+      "citation": "Misremembered non-existent Science DOI suffix",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "not_found": true,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    },
+    {
+      "id": "B11",
+      "doi": "10.1038/nature14539",
+      "category": "intact_control",
+      "citation": "LeCun, Bengio & Hinton (2015), Nature",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    },
+    {
+      "id": "B12",
+      "doi": "10.1126/science.aaa8415",
+      "category": "intact_control",
+      "citation": "Jordan & Mitchell (2015), Science",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    },
+    {
+      "id": "B13",
+      "doi": "10.1038/s41586-021-03819-2",
+      "category": "intact_control",
+      "citation": "Jumper et al. (2021), Nature",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    },
+    {
+      "id": "B14",
+      "doi": "10.1145/3065386",
+      "category": "intact_control",
+      "citation": "Krizhevsky, Sutskever & Hinton (2017), CACM",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    },
+    {
+      "id": "B15",
+      "doi": "10.1038/nature16961",
+      "category": "intact_control",
+      "citation": "Silver et al. (2016), Nature",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    },
+    {
+      "id": "B16",
+      "doi": "10.3758/s13428-015-0664-2",
+      "category": "intact_control",
+      "citation": "Nuijten et al. (2016), Behavior Research Methods",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "not_found": false,
+        "openalex_retracted": false,
+        "crossref_retracted": false,
+        "update_retraction_signals": 0
+      }
+    }
+  ],
+  "statistical_and_gate_results": [
+    {
+      "id": "S01",
+      "kind": "f_lt",
+      "provenance_type": "published_example",
+      "source_doi": "10.3758/s13428-015-0664-2",
+      "source_pmcid": "PMC5101263",
+      "reported_expression": "F(2,56) = 1.203, p < .001",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 0.3079326652167314,
+        "consistent": false
+      }
+    },
+    {
+      "id": "S02",
+      "kind": "f_eq",
+      "provenance_type": "published_example",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "F(3, 58) = 2.78, p = .04",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 0.04903400070747182,
+        "consistent": false
+      }
+    },
+    {
+      "id": "S03",
+      "kind": "f_eq",
+      "provenance_type": "published_example",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "F(2, 20) = 15.2, p = .001",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 9.682657993838095e-05,
+        "consistent": false
+      }
+    },
+    {
+      "id": "S04",
+      "kind": "f_eq",
+      "provenance_type": "published_observation",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "F(1, 39) = 6.646, p = .015",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 0.01383024708051503,
+        "consistent": false
+      }
+    },
+    {
+      "id": "S05",
+      "kind": "f_eq",
+      "provenance_type": "published_observation",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "F(1, 26) = 1.175, p = .020",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 0.28832618891804285,
+        "consistent": false
+      }
+    },
+    {
+      "id": "S06",
+      "kind": "f_eq",
+      "provenance_type": "published_observation",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "F(1,26) = 4.175, p = .020",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 0.05128192783823118,
+        "consistent": false
+      }
+    },
+    {
+      "id": "S07",
+      "kind": "partition",
+      "provenance_type": "repository_receipt_gate",
+      "source_doi": "docs/benchmarks/iclr2026-openreview-incidence-receipt.json",
+      "source_pmcid": null,
+      "reported_expression": "ALL_SCORED=19473 vs omitting Desk Reject (682) -> 224+5134+8453+4980=18791",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "consistent": false,
+        "sum_parts": 18791,
+        "missing_or_excess": 682
+      }
+    },
+    {
+      "id": "S08",
+      "kind": "ceg_dangling_lint",
+      "provenance_type": "constructed_gate_regression",
+      "source_doi": "skills/academic-writing/scripts/pre_submission_linter.py",
+      "source_pmcid": null,
+      "reported_expression": "support_status='supported' pointing to missing evidence_id='MISSING' with evidence=[]",
+      "expected_defect": true,
+      "detected_defect": true,
+      "correct": true,
+      "detail": {
+        "flagged_ungrounded": true
+      }
+    },
+    {
+      "id": "S09",
+      "kind": "f_lt",
+      "provenance_type": "published_example",
+      "source_doi": "10.3758/s13428-015-0664-2",
+      "source_pmcid": "PMC5101263",
+      "reported_expression": "F(2,56) = 12.03, p < .001",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 4.504310853895018e-05,
+        "consistent": true
+      }
+    },
+    {
+      "id": "S10",
+      "kind": "f_lt",
+      "provenance_type": "published_observation",
+      "source_doi": "10.3758/s13428-015-0664-2",
+      "source_pmcid": "PMC5101263",
+      "reported_expression": "F[1, 95] = 18.11, p < .001",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 4.890146906813459e-05,
+        "consistent": true
+      }
+    },
+    {
+      "id": "S11",
+      "kind": "f_lt",
+      "provenance_type": "published_observation",
+      "source_doi": "10.3758/s13428-015-0664-2",
+      "source_pmcid": "PMC5101263",
+      "reported_expression": "F(1, 47) = 45.98, p < .01",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 1.757882251639732e-08,
+        "consistent": true
+      }
+    },
+    {
+      "id": "S12",
+      "kind": "t_lt",
+      "provenance_type": "published_apa_manual_example",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "t(177) = 3.51, p < .001",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "recomputed_p": 0.0005683649971751463,
+        "consistent": true
+      }
+    },
+    {
+      "id": "S13",
+      "kind": "ci",
+      "provenance_type": "published_apa_manual_example",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "d = 0.65, 95% CI [0.35, 0.95]",
+      "expected_defect": false,
+      "detected_defect": false,
+      "correct": true,
+      "detail": {
+        "consistent": true,
+        "implied_se": 0.1530640370773962
+      }
+    },
+    {
+      "id": "S14",
+      "kind": "t_eq",
+      "provenance_type": "published_example",
+      "source_doi": "10.3758/s13428-011-0089-5",
+      "source_pmcid": "PMC3174372",
+      "reported_expression": "t(15) = 2.3, p = .033",
+      "expected_defect": false,
+      "detected_defect": true,
+      "correct": false,
+      "detail": {
+        "recomputed_p": 0.03622429738265155,
+        "consistent": false
+      },
+      "boundary_note": "True t in [2.25, 2.35) yields p in [0.0329, 0.0399]; point-statistic evaluation at t=2.3000 yields p=0.03622 and flags a false positive when input statistic rounding is not intervalized."
+    }
+  ],
+  "frozen_live_bibliographic_snapshots": {
+    "B01": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1016/s0140-6736(97)11096-0",
+          "type": "doi",
+          "value": "10.1016/s0140-6736(97)11096-0",
+          "canonical": "https://doi.org/10.1016/s0140-6736(97)11096-0"
+        },
+        "target_doi": "10.1016/s0140-6736(97)11096-0",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1016/s0140-6736(97)11096-0",
+              "title": "RETRACTED: Ileal-lymphoid-nodular hyperplasia, non-specific colitis, and pervasive developmental disorder in children",
+              "year": 1998,
+              "venue": "The Lancet",
+              "authors": [
+                "Andrew J. Wakefield",
+                "SIMON H MURCH",
+                "Andrew Anthony",
+                "John C. Linnell",
+                "David H. Casson",
+                "Mohammad Malik",
+                "Mark Berelowitz",
+                "Amar Paul Dhillon",
+                "MA Thomson",
+                "P Harvey",
+                "Alan R. Valentine",
+                "Susan E. Davies",
+                "JA Walker‐Smith"
+              ],
+              "cited_by_count": 3104,
+              "is_retracted": true,
+              "oa_status": "closed"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1016/s0140-6736(97)11096-0",
+              "title": "RETRACTED: Ileal-lymphoid-nodular hyperplasia, non-specific colitis, and pervasive developmental disorder in children",
+              "year": 1998,
+              "venue": "The Lancet",
+              "authors": [
+                "AJ Wakefield",
+                "SH Murch",
+                "A Anthony",
+                "J Linnell",
+                "DM Casson",
+                "M Malik",
+                "M Berelowitz",
+                "AP Dhillon",
+                "MA Thomson",
+                "P Harvey",
+                "A Valentine",
+                "SE Davies",
+                "JA Walker-Smith"
+              ],
+              "cited_by_count": 2048
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1016/s0140-6736(97)11096-0",
+                "crossref": "10.1016/s0140-6736(97)11096-0"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "retracted ileal lymphoid nodular hyperplasia non specific colitis and pervasive developmental disorder in children",
+                "crossref": "retracted ileal lymphoid nodular hyperplasia non specific colitis and pervasive developmental disorder in children"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 1998,
+                "crossref": 1998
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 3104,
+            "crossref": 2048
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1016/s0140-6736(97)11096-0",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 2,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "correction",
+            "source": "retraction-watch",
+            "record_doi": "10.1016/s0140-6736(04)15715-2",
+            "target_doi": "10.1016/s0140-6736(97)11096-0"
+          },
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1016/s0140-6736(10)60175-4",
+            "target_doi": "10.1016/s0140-6736(97)11096-0"
+          }
+        ],
+        "signal_counts": {
+          "correction": 1,
+          "retraction": 1
+        }
+      }
+    },
+    "B02": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1016/s0140-6736(20)31180-6",
+          "type": "doi",
+          "value": "10.1016/s0140-6736(20)31180-6",
+          "canonical": "https://doi.org/10.1016/s0140-6736(20)31180-6"
+        },
+        "target_doi": "10.1016/s0140-6736(20)31180-6",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1016/s0140-6736(20)31180-6",
+              "title": "RETRACTED: Hydroxychloroquine or chloroquine with or without a macrolide for treatment of COVID-19: a multinational registry analysis",
+              "year": 2020,
+              "venue": "The Lancet",
+              "authors": [
+                "Mandeep R. Mehra",
+                "Sapan S. Desai",
+                "Frank Thomas Ruschitzka",
+                "Amit N. Patel"
+              ],
+              "cited_by_count": 1262,
+              "is_retracted": true,
+              "oa_status": "bronze"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1016/s0140-6736(20)31180-6",
+              "title": "RETRACTED: Hydroxychloroquine or chloroquine with or without a macrolide for treatment of COVID-19: a multinational registry analysis",
+              "year": 2020,
+              "venue": "The Lancet",
+              "authors": [
+                "Mandeep R Mehra",
+                "Sapan S Desai",
+                "Frank Ruschitzka",
+                "Amit N Patel"
+              ],
+              "cited_by_count": 427
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1016/s0140-6736(20)31180-6",
+                "crossref": "10.1016/s0140-6736(20)31180-6"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "retracted hydroxychloroquine or chloroquine with or without a macrolide for treatment of covid 19 a multinational registry analysis",
+                "crossref": "retracted hydroxychloroquine or chloroquine with or without a macrolide for treatment of covid 19 a multinational registry analysis"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2020,
+                "crossref": 2020
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 1262,
+            "crossref": 427
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1016/s0140-6736(20)31180-6",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 5,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "retraction",
+            "source": "publisher",
+            "record_doi": "10.1016/s0140-6736(20)31174-0",
+            "target_doi": "10.1016/s0140-6736(20)31180-6"
+          },
+          {
+            "type": "correction",
+            "source": "retraction-watch",
+            "record_doi": "10.1016/s0140-6736(20)31249-6",
+            "target_doi": "10.1016/s0140-6736(20)31180-6"
+          },
+          {
+            "type": "erratum",
+            "source": "publisher",
+            "record_doi": "10.1016/s0140-6736(20)31249-6",
+            "target_doi": "10.1016/s0140-6736(20)31180-6"
+          },
+          {
+            "type": "expression_of_concern",
+            "source": "retraction-watch",
+            "record_doi": "10.1016/s0140-6736(20)31290-3",
+            "target_doi": "10.1016/s0140-6736(20)31180-6"
+          },
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1016/s0140-6736(20)31324-6",
+            "target_doi": "10.1016/s0140-6736(20)31180-6"
+          },
+          {
+            "type": "erratum",
+            "source": "publisher",
+            "record_doi": "10.1016/s0140-6736(20)31324-6",
+            "target_doi": "10.1016/s0140-6736(20)31180-6"
+          },
+          {
+            "type": "erratum",
+            "source": "publisher",
+            "record_doi": "10.1016/s0140-6736(20)31528-2",
+            "target_doi": "10.1016/s0140-6736(20)31180-6"
+          }
+        ],
+        "signal_counts": {
+          "retraction": 2,
+          "correction": 1,
+          "erratum": 3,
+          "expression_of_concern": 1
+        }
+      }
+    },
+    "B03": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1056/nejmoa2007621",
+          "type": "doi",
+          "value": "10.1056/nejmoa2007621",
+          "canonical": "https://doi.org/10.1056/nejmoa2007621"
+        },
+        "target_doi": "10.1056/nejmoa2007621",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1056/nejmoa2007621",
+              "title": "RETRACTED: Cardiovascular Disease, Drug Therapy, and Mortality in Covid-19",
+              "year": 2020,
+              "venue": "New England Journal of Medicine",
+              "authors": [
+                "Mandeep R. Mehra",
+                "Sapan S. Desai",
+                "SreyRam Kuy",
+                "Timothy D. Henry",
+                "Amit N. Patel"
+              ],
+              "cited_by_count": 1479,
+              "is_retracted": true,
+              "oa_status": "green"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1056/nejmoa2007621",
+              "title": "RETRACTED: Cardiovascular Disease, Drug Therapy, and Mortality in Covid-19",
+              "year": 2020,
+              "venue": "New England Journal of Medicine",
+              "authors": [
+                "Mandeep R. Mehra",
+                "Sapan S. Desai",
+                "SreyRam Kuy",
+                "Timothy D. Henry",
+                "Amit N. Patel"
+              ],
+              "cited_by_count": 670
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1056/nejmoa2007621",
+                "crossref": "10.1056/nejmoa2007621"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "retracted cardiovascular disease drug therapy and mortality in covid 19",
+                "crossref": "retracted cardiovascular disease drug therapy and mortality in covid 19"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2020,
+                "crossref": 2020
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 1479,
+            "crossref": 670
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1056/nejmoa2007621",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 2,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "expression_of_concern",
+            "source": "retraction-watch",
+            "record_doi": "10.1056/nejme2020822",
+            "target_doi": "10.1056/nejmoa2007621"
+          },
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1056/nejmc2021225",
+            "target_doi": "10.1056/nejmoa2007621"
+          }
+        ],
+        "signal_counts": {
+          "expression_of_concern": 1,
+          "retraction": 1
+        }
+      }
+    },
+    "B04": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1038/nature12968",
+          "type": "doi",
+          "value": "10.1038/nature12968",
+          "canonical": "https://doi.org/10.1038/nature12968"
+        },
+        "target_doi": "10.1038/nature12968",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1038/nature12968",
+              "title": "RETRACTED ARTICLE: Stimulus-triggered fate conversion of somatic cells into pluripotency",
+              "year": 2014,
+              "venue": "Nature",
+              "authors": [
+                "Haruko Obokata",
+                "Teruhiko Wakayama",
+                "Yoshiki Sasai",
+                "Koji Kojima",
+                "Martin P. Vacanti",
+                "Hitoshi Niwa",
+                "Masayuki Yamato",
+                "Charles A. Vacanti"
+              ],
+              "cited_by_count": 268,
+              "is_retracted": true,
+              "oa_status": "closed"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1038/nature12968",
+              "title": "RETRACTED ARTICLE: Stimulus-triggered fate conversion of somatic cells into pluripotency",
+              "year": 2014,
+              "venue": "Nature",
+              "authors": [
+                "Haruko Obokata",
+                "Teruhiko Wakayama",
+                "Yoshiki Sasai",
+                "Koji Kojima",
+                "Martin P. Vacanti",
+                "Hitoshi Niwa",
+                "Masayuki Yamato",
+                "Charles A. Vacanti"
+              ],
+              "cited_by_count": 210
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1038/nature12968",
+                "crossref": "10.1038/nature12968"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "retracted article stimulus triggered fate conversion of somatic cells into pluripotency",
+                "crossref": "retracted article stimulus triggered fate conversion of somatic cells into pluripotency"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2014,
+                "crossref": 2014
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 268,
+            "crossref": 210
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1038/nature12968",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 1,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/nature13598",
+            "target_doi": "10.1038/nature12968"
+          },
+          {
+            "type": "retraction",
+            "source": "publisher",
+            "record_doi": "10.1038/nature13598",
+            "target_doi": "10.1038/nature12968"
+          }
+        ],
+        "signal_counts": {
+          "retraction": 2
+        }
+      }
+    },
+    "B05": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1038/s41586-020-2801-z",
+          "type": "doi",
+          "value": "10.1038/s41586-020-2801-z",
+          "canonical": "https://doi.org/10.1038/s41586-020-2801-z"
+        },
+        "target_doi": "10.1038/s41586-020-2801-z",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1038/s41586-020-2801-z",
+              "title": "RETRACTED ARTICLE: Room-temperature superconductivity in a carbonaceous sulfur hydride",
+              "year": 2020,
+              "venue": "Nature",
+              "authors": [
+                "Elliot Snider",
+                "Nathan Dasenbrock‐Gammon",
+                "Raymond McBride",
+                "Mathew Debessai",
+                "Hiranya Vindana",
+                "Kevin Vencatasamy",
+                "Keith V. Lawler",
+                "Ashkan Salamat",
+                "Ranga P. Dias"
+              ],
+              "cited_by_count": 578,
+              "is_retracted": true,
+              "oa_status": "closed"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1038/s41586-020-2801-z",
+              "title": "RETRACTED ARTICLE: Room-temperature superconductivity in a carbonaceous sulfur hydride",
+              "year": 2020,
+              "venue": "Nature",
+              "authors": [
+                "Elliot Snider",
+                "Nathan Dasenbrock-Gammon",
+                "Raymond McBride",
+                "Mathew Debessai",
+                "Hiranya Vindana",
+                "Kevin Vencatasamy",
+                "Keith V. Lawler",
+                "Ashkan Salamat",
+                "Ranga P. Dias"
+              ],
+              "cited_by_count": 541
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1038/s41586-020-2801-z",
+                "crossref": "10.1038/s41586-020-2801-z"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "retracted article room temperature superconductivity in a carbonaceous sulfur hydride",
+                "crossref": "retracted article room temperature superconductivity in a carbonaceous sulfur hydride"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2020,
+                "crossref": 2020
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 578,
+            "crossref": 541
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1038/s41586-020-2801-z",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 3,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "expression_of_concern",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/s41586-020-2801-z",
+            "target_doi": "10.1038/s41586-020-2801-z"
+          },
+          {
+            "type": "expression_of_concern",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/s41586-020-2801-z",
+            "target_doi": "10.1038/s41586-020-2801-z"
+          },
+          {
+            "type": "correction",
+            "source": "publisher",
+            "record_doi": "10.1038/s41586-020-2955-8",
+            "target_doi": "10.1038/s41586-020-2801-z"
+          },
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/s41586-022-05294-9",
+            "target_doi": "10.1038/s41586-020-2801-z"
+          },
+          {
+            "type": "correction",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/s41586-022-05294-9",
+            "target_doi": "10.1038/s41586-020-2801-z"
+          },
+          {
+            "type": "retraction",
+            "source": "publisher",
+            "record_doi": "10.1038/s41586-022-05294-9",
+            "target_doi": "10.1038/s41586-020-2801-z"
+          }
+        ],
+        "signal_counts": {
+          "expression_of_concern": 2,
+          "correction": 2,
+          "retraction": 2
+        }
+      }
+    },
+    "B06": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1126/science.1112286",
+          "type": "doi",
+          "value": "10.1126/science.1112286",
+          "canonical": "https://doi.org/10.1126/science.1112286"
+        },
+        "target_doi": "10.1126/science.1112286",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1126/science.1112286",
+              "title": "Patient-Specific Embryonic Stem Cells Derived from Human SCNT Blastocysts",
+              "year": 2005,
+              "venue": "Science",
+              "authors": [
+                "Woo Suk Hwang",
+                "Sung Il Roh",
+                "Byeong Chun Lee",
+                "Sung Keun Kang",
+                "Dae Kee Kwon",
+                "Sue Kim",
+                "Sun Jong Kim",
+                "Sun Woo Park",
+                "Hee Sun Kwon",
+                "Chang Kyu Lee",
+                "Jung Bok Lee",
+                "Jin Mee Kim",
+                "Curie Ahn",
+                "Sun Ha Paek",
+                "Sang Sik Chang",
+                "Jung Jin Koo",
+                "Hyun Soo Yoon",
+                "Jung Hye Hwang",
+                "Youn Young Hwang",
+                "Ye Soo Park",
+                "Sun Kyung Oh",
+                "Hee Sun Kim",
+                "Jong Hyuk Park",
+                "Shin Yong Moon",
+                "Gerald P. Schatten"
+              ],
+              "cited_by_count": 489,
+              "is_retracted": true,
+              "oa_status": "closed"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1126/science.1112286",
+              "title": "Patient-Specific Embryonic Stem Cells Derived from Human SCNT Blastocysts",
+              "year": 2005,
+              "venue": "Science",
+              "authors": [
+                "Woo Suk Hwang",
+                "Sung Il Roh",
+                "Byeong Chun Lee",
+                "Sung Keun Kang",
+                "Dae Kee Kwon",
+                "Sue Kim",
+                "Sun Jong Kim",
+                "Sun Woo Park",
+                "Hee Sun Kwon",
+                "Chang Kyu Lee",
+                "Jung Bok Lee",
+                "Jin Mee Kim",
+                "Curie Ahn",
+                "Sun Ha Paek",
+                "Sang Sik Chang",
+                "Jung Jin Koo",
+                "Hyun Soo Yoon",
+                "Jung Hye Hwang",
+                "Youn Young Hwang",
+                "Ye Soo Park",
+                "Sun Kyung Oh",
+                "Hee Sun Kim",
+                "Jong Hyuk Park",
+                "Shin Yong Moon",
+                "Gerald Schatten"
+              ],
+              "cited_by_count": 348
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1126/science.1112286",
+                "crossref": "10.1126/science.1112286"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "patient specific embryonic stem cells derived from human scnt blastocysts",
+                "crossref": "patient specific embryonic stem cells derived from human scnt blastocysts"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2005,
+                "crossref": 2005
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 489,
+            "crossref": 348
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1126/science.1112286",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 2,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "expression_of_concern",
+            "source": "retraction-watch",
+            "record_doi": "10.1126/science.1124185",
+            "target_doi": "10.1126/science.1112286"
+          },
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1126/science.1124926",
+            "target_doi": "10.1126/science.1112286"
+          }
+        ],
+        "signal_counts": {
+          "expression_of_concern": 1,
+          "retraction": 1
+        }
+      }
+    },
+    "B07": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1038/s41586-023-05742-0",
+          "type": "doi",
+          "value": "10.1038/s41586-023-05742-0",
+          "canonical": "https://doi.org/10.1038/s41586-023-05742-0"
+        },
+        "target_doi": "10.1038/s41586-023-05742-0",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1038/s41586-023-05742-0",
+              "title": "RETRACTED ARTICLE: Evidence of near-ambient superconductivity in a N-doped lutetium hydride",
+              "year": 2023,
+              "venue": "Nature",
+              "authors": [
+                "Nathan Dasenbrock‐Gammon",
+                "Elliot Snider",
+                "Raymond McBride",
+                "Hiranya Pasan",
+                "Dylan Durkee",
+                "Nugzari Khalvashi-Sutter",
+                "Sasanka Munasinghe",
+                "Sachith Dissanayake",
+                "Keith V. Lawler",
+                "Ashkan Salamat",
+                "Ranga P. Dias"
+              ],
+              "cited_by_count": 161,
+              "is_retracted": true,
+              "oa_status": "closed"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1038/s41586-023-05742-0",
+              "title": "RETRACTED ARTICLE: Evidence of near-ambient superconductivity in a N-doped lutetium hydride",
+              "year": 2023,
+              "venue": "Nature",
+              "authors": [
+                "Nathan Dasenbrock-Gammon",
+                "Elliot Snider",
+                "Raymond McBride",
+                "Hiranya Pasan",
+                "Dylan Durkee",
+                "Nugzari Khalvashi-Sutter",
+                "Sasanka Munasinghe",
+                "Sachith E. Dissanayake",
+                "Keith V. Lawler",
+                "Ashkan Salamat",
+                "Ranga P. Dias"
+              ],
+              "cited_by_count": 159
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1038/s41586-023-05742-0",
+                "crossref": "10.1038/s41586-023-05742-0"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "retracted article evidence of near ambient superconductivity in a n doped lutetium hydride",
+                "crossref": "retracted article evidence of near ambient superconductivity in a n doped lutetium hydride"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2023,
+                "crossref": 2023
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 161,
+            "crossref": 159
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1038/s41586-023-05742-0",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 2,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "expression_of_concern",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/s41586-023-05742-0",
+            "target_doi": "10.1038/s41586-023-05742-0"
+          },
+          {
+            "type": "correction",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/s41586-023-05742-0",
+            "target_doi": "10.1038/s41586-023-05742-0"
+          },
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1038/s41586-023-06774-2",
+            "target_doi": "10.1038/s41586-023-05742-0"
+          },
+          {
+            "type": "retraction",
+            "source": "publisher",
+            "record_doi": "10.1038/s41586-023-06774-2",
+            "target_doi": "10.1038/s41586-023-05742-0"
+          }
+        ],
+        "signal_counts": {
+          "expression_of_concern": 1,
+          "correction": 1,
+          "retraction": 2
+        }
+      }
+    },
+    "B08": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1073/pnas.1209746109",
+          "type": "doi",
+          "value": "10.1073/pnas.1209746109",
+          "canonical": "https://doi.org/10.1073/pnas.1209746109"
+        },
+        "target_doi": "10.1073/pnas.1209746109",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1073/pnas.1209746109",
+              "title": "RETRACTED: Signing at the beginning makes ethics salient and decreases dishonest self-reports in comparison to signing at the end",
+              "year": 2012,
+              "venue": "Proceedings of the National Academy of Sciences",
+              "authors": [
+                "Lisa L. Shu",
+                "Nina Mažar",
+                "Francesca Gino",
+                "Dan Ariely C",
+                "Max H. Bazerman"
+              ],
+              "cited_by_count": 354,
+              "is_retracted": true,
+              "oa_status": "green"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1073/pnas.1209746109",
+              "title": "RETRACTED: Signing at the beginning makes ethics salient and decreases dishonest                    self-reports in comparison to signing at the end",
+              "year": 2012,
+              "venue": "Proceedings of the National Academy of Sciences",
+              "authors": [
+                "Lisa L. Shu",
+                "Nina Mazar",
+                "Francesca Gino",
+                "Dan Ariely",
+                "Max H. Bazerman"
+              ],
+              "cited_by_count": 287
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1073/pnas.1209746109",
+                "crossref": "10.1073/pnas.1209746109"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "retracted signing at the beginning makes ethics salient and decreases dishonest self reports in comparison to signing at the end",
+                "crossref": "retracted signing at the beginning makes ethics salient and decreases dishonest self reports in comparison to signing at the end"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2012,
+                "crossref": 2012
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 354,
+            "crossref": 287
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1073/pnas.1209746109",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 1,
+        "truncated": false,
+        "signals": [
+          {
+            "type": "retraction",
+            "source": "retraction-watch",
+            "record_doi": "10.1073/pnas.2115397118",
+            "target_doi": "10.1073/pnas.1209746109"
+          },
+          {
+            "type": "retraction",
+            "source": "publisher",
+            "record_doi": "10.1073/pnas.2115397118",
+            "target_doi": "10.1073/pnas.1209746109"
+          }
+        ],
+        "signal_counts": {
+          "retraction": 2
+        }
+      }
+    },
+    "B09": {
+      "verify_rc": 1,
+      "verify": {
+        "normalized": {
+          "input": "10.1038/s41586-2099-99999-z",
+          "type": "doi",
+          "value": "10.1038/s41586-2099-99999-z",
+          "canonical": "https://doi.org/10.1038/s41586-2099-99999-z"
+        },
+        "target_doi": "10.1038/s41586-2099-99999-z",
+        "sources": {
+          "openalex": {
+            "status": "failed",
+            "error": "HTTPError: HTTP Error 404: Not Found"
+          },
+          "crossref": {
+            "status": "failed",
+            "error": "HTTPError: HTTP Error 404: Not Found"
+          }
+        },
+        "comparison": null
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1038/s41586-2099-99999-z",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    },
+    "B10": {
+      "verify_rc": 1,
+      "verify": {
+        "normalized": {
+          "input": "10.1126/science.1107108",
+          "type": "doi",
+          "value": "10.1126/science.1107108",
+          "canonical": "https://doi.org/10.1126/science.1107108"
+        },
+        "target_doi": "10.1126/science.1107108",
+        "sources": {
+          "openalex": {
+            "status": "failed",
+            "error": "HTTPError: HTTP Error 404: Not Found"
+          },
+          "crossref": {
+            "status": "failed",
+            "error": "HTTPError: HTTP Error 404: Not Found"
+          }
+        },
+        "comparison": null
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1126/science.1107108",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    },
+    "B11": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1038/nature14539",
+          "type": "doi",
+          "value": "10.1038/nature14539",
+          "canonical": "https://doi.org/10.1038/nature14539"
+        },
+        "target_doi": "10.1038/nature14539",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1038/nature14539",
+              "title": "Deep learning",
+              "year": 2015,
+              "venue": "Nature",
+              "authors": [
+                "Yann LeCun",
+                "Yoshua Bengio",
+                "Geoffrey E. Hinton"
+              ],
+              "cited_by_count": 89913,
+              "is_retracted": false,
+              "oa_status": "green"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1038/nature14539",
+              "title": "Deep learning",
+              "year": 2015,
+              "venue": "Nature",
+              "authors": [
+                "Yann LeCun",
+                "Yoshua Bengio",
+                "Geoffrey Hinton"
+              ],
+              "cited_by_count": 79276
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1038/nature14539",
+                "crossref": "10.1038/nature14539"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "deep learning",
+                "crossref": "deep learning"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2015,
+                "crossref": 2015
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 89913,
+            "crossref": 79276
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1038/nature14539",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    },
+    "B12": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1126/science.aaa8415",
+          "type": "doi",
+          "value": "10.1126/science.aaa8415",
+          "canonical": "https://doi.org/10.1126/science.aaa8415"
+        },
+        "target_doi": "10.1126/science.aaa8415",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1126/science.aaa8415",
+              "title": "Machine learning: Trends, perspectives, and prospects",
+              "year": 2015,
+              "venue": "Science",
+              "authors": [
+                "Michael I. Jordan",
+                "Tom M. Mitchell"
+              ],
+              "cited_by_count": 10865,
+              "is_retracted": false,
+              "oa_status": "closed"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1126/science.aaa8415",
+              "title": "Machine learning: Trends, perspectives, and prospects",
+              "year": 2015,
+              "venue": "Science",
+              "authors": [
+                "M. I. Jordan",
+                "T. M. Mitchell"
+              ],
+              "cited_by_count": 9026
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1126/science.aaa8415",
+                "crossref": "10.1126/science.aaa8415"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "machine learning trends perspectives and prospects",
+                "crossref": "machine learning trends perspectives and prospects"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2015,
+                "crossref": 2015
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 10865,
+            "crossref": 9026
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1126/science.aaa8415",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    },
+    "B13": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1038/s41586-021-03819-2",
+          "type": "doi",
+          "value": "10.1038/s41586-021-03819-2",
+          "canonical": "https://doi.org/10.1038/s41586-021-03819-2"
+        },
+        "target_doi": "10.1038/s41586-021-03819-2",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1038/s41586-021-03819-2",
+              "title": "Highly accurate protein structure prediction with AlphaFold",
+              "year": 2021,
+              "venue": "Nature",
+              "authors": [
+                "John Jumper",
+                "Richard Evans",
+                "Alexander Pritzel",
+                "Tim Green",
+                "Michael Figurnov",
+                "Olaf Ronneberger",
+                "Kathryn Tunyasuvunakool",
+                "Russ Bates",
+                "Augustin Žídek",
+                "Anna Potapenko",
+                "Alex Bridgland",
+                "Clemens Meyer",
+                "Simon Köhl",
+                "Andrew J. Ballard",
+                "Andrew Cowie",
+                "Bernardino Romera‐Paredes",
+                "Stanislav Nikolov",
+                "Rishub Jain",
+                "Jonas Adler",
+                "Trevor Back",
+                "Stig Petersen",
+                "David Reiman",
+                "Ellen Clancy",
+                "Michał Zieliński",
+                "Martin Steinegger",
+                "Michalina Pacholska",
+                "Tamas Berghammer",
+                "Sebastian W. Bodenstein",
+                "David Silver",
+                "Oriol Vinyals",
+                "Andrew Senior",
+                "Koray Kavukcuoglu",
+                "Pushmeet Kohli",
+                "Demis Hassabis"
+              ],
+              "cited_by_count": 45602,
+              "is_retracted": false,
+              "oa_status": "hybrid"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1038/s41586-021-03819-2",
+              "title": "Highly accurate protein structure prediction with AlphaFold",
+              "year": 2021,
+              "venue": "Nature",
+              "authors": [
+                "John Jumper",
+                "Richard Evans",
+                "Alexander Pritzel",
+                "Tim Green",
+                "Michael Figurnov",
+                "Olaf Ronneberger",
+                "Kathryn Tunyasuvunakool",
+                "Russ Bates",
+                "Augustin Žídek",
+                "Anna Potapenko",
+                "Alex Bridgland",
+                "Clemens Meyer",
+                "Simon A. A. Kohl",
+                "Andrew J. Ballard",
+                "Andrew Cowie",
+                "Bernardino Romera-Paredes",
+                "Stanislav Nikolov",
+                "Rishub Jain",
+                "Jonas Adler",
+                "Trevor Back",
+                "Stig Petersen",
+                "David Reiman",
+                "Ellen Clancy",
+                "Michal Zielinski",
+                "Martin Steinegger",
+                "Michalina Pacholska",
+                "Tamas Berghammer",
+                "Sebastian Bodenstein",
+                "David Silver",
+                "Oriol Vinyals",
+                "Andrew W. Senior",
+                "Koray Kavukcuoglu",
+                "Pushmeet Kohli",
+                "Demis Hassabis"
+              ],
+              "cited_by_count": 47214
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1038/s41586-021-03819-2",
+                "crossref": "10.1038/s41586-021-03819-2"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "highly accurate protein structure prediction with alphafold",
+                "crossref": "highly accurate protein structure prediction with alphafold"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2021,
+                "crossref": 2021
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 45602,
+            "crossref": 47214
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1038/s41586-021-03819-2",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    },
+    "B14": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1145/3065386",
+          "type": "doi",
+          "value": "10.1145/3065386",
+          "canonical": "https://doi.org/10.1145/3065386"
+        },
+        "target_doi": "10.1145/3065386",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1145/3065386",
+              "title": "ImageNet classification with deep convolutional neural networks",
+              "year": 2017,
+              "venue": "Communications of the ACM",
+              "authors": [
+                "Alex Krizhevsky",
+                "Ilya Sutskever",
+                "Geoffrey E. Hinton"
+              ],
+              "cited_by_count": 114678,
+              "is_retracted": false,
+              "oa_status": "bronze"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1145/3065386",
+              "title": "ImageNet classification with deep convolutional neural networks",
+              "year": 2017,
+              "venue": "Communications of the ACM",
+              "authors": [
+                "Alex Krizhevsky",
+                "Ilya Sutskever",
+                "Geoffrey E. Hinton"
+              ],
+              "cited_by_count": 33248
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1145/3065386",
+                "crossref": "10.1145/3065386"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "imagenet classification with deep convolutional neural networks",
+                "crossref": "imagenet classification with deep convolutional neural networks"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2017,
+                "crossref": 2017
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 114678,
+            "crossref": 33248
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1145/3065386",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    },
+    "B15": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.1038/nature16961",
+          "type": "doi",
+          "value": "10.1038/nature16961",
+          "canonical": "https://doi.org/10.1038/nature16961"
+        },
+        "target_doi": "10.1038/nature16961",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.1038/nature16961",
+              "title": "Mastering the game of Go with deep neural networks and tree search",
+              "year": 2016,
+              "venue": "Nature",
+              "authors": [
+                "David Silver",
+                "Aja Huang",
+                "Chris J. Maddison",
+                "Arthur Guez",
+                "Laurent Sifre",
+                "George van den Driessche",
+                "Julian Schrittwieser",
+                "Ioannis Antonoglou",
+                "Vedavyas Panneershelvam",
+                "Marc Lanctot",
+                "Sander Dieleman",
+                "Dominik Grewe",
+                "John Nham",
+                "Nal Kalchbrenner",
+                "Ilya Sutskever",
+                "Timothy Lillicrap",
+                "Madeleine Leach",
+                "Koray Kavukcuoglu",
+                "Thore Graepel",
+                "Demis Hassabis"
+              ],
+              "cited_by_count": 16697,
+              "is_retracted": false,
+              "oa_status": "closed"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.1038/nature16961",
+              "title": "Mastering the game of Go with deep neural networks and tree search",
+              "year": 2016,
+              "venue": "Nature",
+              "authors": [
+                "David Silver",
+                "Aja Huang",
+                "Chris J. Maddison",
+                "Arthur Guez",
+                "Laurent Sifre",
+                "George van den Driessche",
+                "Julian Schrittwieser",
+                "Ioannis Antonoglou",
+                "Veda Panneershelvam",
+                "Marc Lanctot",
+                "Sander Dieleman",
+                "Dominik Grewe",
+                "John Nham",
+                "Nal Kalchbrenner",
+                "Ilya Sutskever",
+                "Timothy Lillicrap",
+                "Madeleine Leach",
+                "Koray Kavukcuoglu",
+                "Thore Graepel",
+                "Demis Hassabis"
+              ],
+              "cited_by_count": 12022
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.1038/nature16961",
+                "crossref": "10.1038/nature16961"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "mastering the game of go with deep neural networks and tree search",
+                "crossref": "mastering the game of go with deep neural networks and tree search"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2016,
+                "crossref": 2016
+              },
+              "match": true
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 16697,
+            "crossref": 12022
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.1038/nature16961",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    },
+    "B16": {
+      "verify_rc": 0,
+      "verify": {
+        "normalized": {
+          "input": "10.3758/s13428-015-0664-2",
+          "type": "doi",
+          "value": "10.3758/s13428-015-0664-2",
+          "canonical": "https://doi.org/10.3758/s13428-015-0664-2"
+        },
+        "target_doi": "10.3758/s13428-015-0664-2",
+        "sources": {
+          "openalex": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "openalex",
+              "doi": "10.3758/s13428-015-0664-2",
+              "title": "The prevalence of statistical reporting errors in psychology (1985–2013)",
+              "year": 2015,
+              "venue": "Behavior Research Methods",
+              "authors": [
+                "Michèle B. Nuijten",
+                "Chris Hubertus Joseph Hartgerink",
+                "Marcel A. L. M. van Assen",
+                "Sacha Epskamp",
+                "Jelte M. Wicherts"
+              ],
+              "cited_by_count": 547,
+              "is_retracted": false,
+              "oa_status": "hybrid"
+            }
+          },
+          "crossref": {
+            "status": "ok",
+            "mode": "live",
+            "work": {
+              "source": "crossref",
+              "doi": "10.3758/s13428-015-0664-2",
+              "title": "The prevalence of statistical reporting errors in psychology (1985–2013)",
+              "year": 2016,
+              "venue": "Behavior Research Methods",
+              "authors": [
+                "Michèle B. Nuijten",
+                "Chris H. J. Hartgerink",
+                "Marcel A. L. M. van Assen",
+                "Sacha Epskamp",
+                "Jelte M. Wicherts"
+              ],
+              "cited_by_count": 359
+            }
+          }
+        },
+        "comparison": {
+          "fields": {
+            "doi": {
+              "values": {
+                "openalex": "10.3758/s13428-015-0664-2",
+                "crossref": "10.3758/s13428-015-0664-2"
+              },
+              "match": true
+            },
+            "title": {
+              "values": {
+                "openalex": "the prevalence of statistical reporting errors in psychology 1985 2013",
+                "crossref": "the prevalence of statistical reporting errors in psychology 1985 2013"
+              },
+              "match": true
+            },
+            "year": {
+              "values": {
+                "openalex": 2015,
+                "crossref": 2016
+              },
+              "match": false
+            }
+          },
+          "identity_binding_mismatch": [],
+          "citation_counts": {
+            "openalex": 547,
+            "crossref": 359
+          },
+          "note": "被引数存在来源口径差异（收录范围不同），仅记录并标注来源，不用于判定文献身份。identity_binding_mismatch 非空表示来源记录与请求 DOI 不一致, 字段比对结果不可作为身份证据。"
+        }
+      },
+      "updates_rc": 0,
+      "updates": {
+        "target_doi": "10.3758/s13428-015-0664-2",
+        "status": "ok",
+        "mode": "live",
+        "records_examined": 0,
+        "truncated": false,
+        "signals": [],
+        "signal_counts": {},
+        "note": "在已检查的数据源中未发现撤稿或撤回记录；请注明数据来源、查询时间与未查项目。"
+      }
+    }
+  },
+  "content_sha256": "3873df780bb91ec99b6f69a7f5db79d72e4bdf998c81d42b454e4f0c6449be30"
+}

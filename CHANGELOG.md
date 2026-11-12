@@ -4,6 +4,15 @@
 
 ---
 
+## 2.4.2 — 2026-11-11 unified CEG anchor validation in pre-submission linter & 30-item real-world audit benchmark
+
+- **Unified CEG endpoint & dangling-edge validation in pre-submission linter (`skills/academic-writing/scripts/pre_submission_linter.py`, `venue_template_manager.py`, `skills/academic-writing/SKILL.md` `1.3.2`)**:
+  - Delegated `pre_submission_linter._load_ceg_claim_map()` directly to `venue_template_manager.export_ceg_anchors()`, closing the gap where a `support_status="supported"` edge pointing to a missing or nonexistent `evidence_id` could suppress `UNGROUNDED_QUANTITATIVE_CLAIM` warnings while `export-ceg-anchors` reported `eligible_count=0`, and normalized whitespace-padded `evidence_anchors` identifiers across both dict and list payloads.
+- **30-item real-world scholarly verification & statistical audit benchmark (`tools/benchmarks/run_real_world_audit_benchmark.py`, `docs/benchmarks/real-world-audit-benchmark-v1.json`)**:
+  - Added a zero-wheel-bloat reproducible evaluation suite across 16 live-captured bibliographic items (8 real retracted landmark works, 2 hallucinated DOIs, and 6 intact controls: `TP=10, TN=6, FP=0, FN=0`) plus 12 published statistical cases from Nuijten et al. (2016, `PMC5101263`) and Bakker & Wicherts (2011, `PMC3174372`) alongside 2 repository-grounded partition/CEG gate cases (`TP=8, TN=5, FP=1, FN=0`, documenting the point-vs-interval test-statistic rounding boundary on `t(15)=2.3, p=.033`).
+
+---
+
 ## 2.4.1 — 2026-11-11 multi-file TeX bundle discovery, uncited bibliography linting & first-principles CI rebuild
 
 - **Multi-file LaTeX bundle discovery from single entry `.tex` (`src/academic_research_kernel/research/sources.py`)**:

@@ -15,19 +15,19 @@ Yazar: Junfu Shi (SJF, xngg1021). Geçerli kapsamlı lisans teklifi: [Source Lin
 
 ### Hızlı başlangıç
 
-2.4.1 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
+2.4.2 sürümünü [uv](https://docs.astral.sh/uv/getting-started/installation/) ile çalıştırın:
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-[2.4.1 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10/3.12/3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 18 deterministik aracın tamamı temel kuruluma dahildir.
+[2.4.2 sürüm notları](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2), dağıtım özetlerini (hash) ve yayın durumunu içerir. Yayınlanan wheel paketi `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp` komutuyla yerel olarak da çalıştırılabilir. Python 3.10/3.12/3.14 desteklenmektedir; `uvx --python 3.12` seçeneği desteklenen bir yorumlayıcıyı açıkça seçer. İstatistiksel hesaplama modülleri dahil olmak üzere 18 deterministik aracın tamamı temel kuruluma dahildir.
 
 ### Kurulumu doğrulama
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### Yerel bir Ajan ile makale araştırma
 
-`academic-research-kernel[research]==2.4.1` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
+`academic-research-kernel[research]==2.4.2` paketini kurun ve paketlenmiş iş akışını dışa aktarın:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Ampirik ağırlıklar veya öznel puan eşikleri uydurmadan beş deterministik h
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Yayın kimliğini ve kaynağa özgü atıf sayılarını çapraz kontrol etme; güncelleme ve geri çekme (retraction) sinyallerini inceleme; açık erişim tam metinleri bulma ve PDF kimliğini doğrulama; OpenReview hakem değerlendirmelerini ve kod depolarını adli olarak denetleme |
 | `skills/literature-analysis` | 1.3.0 | On iki analiz iş akışı: konu benzerliği, yerel metin örtüşmesi, karşıt kanıtlar, yazar profilleri, deneme hakemliği, mantık hatası kontrolü, inceleme matrisi, aday dergiler, BibTeX, iki dilli okuma, araştırma boşluğu taraması ve yeniden üretim |
-| `skills/academic-writing` | 1.3.1 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler, gönderim öncesi biçim denetimi, çift-kör anonimlik taraması, kanıt çıktılarından LaTeX tablo üretimi ve konferans şablonları |
+| `skills/academic-writing` | 1.3.2 | Akademik metin düzenleme, atıf kılavuzu (ISO 690, APA, MLA, Chicago, IEEE, AMA ve bölgesel profiller), dergi yazım kuralları, isteğe bağlı tespit hizmetleri, başvuru belgeleri ve kurumsal gereksinimler, gönderim öncesi biçim denetimi, çift-kör anonimlik taraması, kanıt çıktılarından LaTeX tablo üretimi ve konferans şablonları |
 | `skills/math-computation` | 1.2.1 | Düzeltilmiş sayısal ve istatistiksel örneklerle mevcut alan/görev yönlendirmesi; dört adet alana özgü ileri düzey referans dosyası |
 | `skills/quantitative-paper-audit` | 1.2.0 | Makalelerde bildirilen istatistikleri (etki büyüklüğü, p değerleri, güven aralıkları, OR/RR, ulaşılan istatistiksel güç) yeniden hesaplama ve sayısal uyuşmazlıkları tespit etme ve örneklem bölümleme korunumu, ablasyon sabit kayması ile fiziksel depolama ve bant genişliği alt sınırlarını kontrol etme |
 | `skills/research-reproducibility` | 1.0.1 | Yapılandırılmış doğrulama kontrol listeleri, beş olgu doğrulama katmanı ve yeniden üretilebilir denetim kayıtları içeren on dört aşamalı tekrarlanabilirlik denetim hattı |
@@ -141,12 +141,12 @@ On dört beceri genelinde 22 adet Markdown referans dosyası bulunmaktadır. Ref
 ### Paket kurulumu
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.4.1` veya `python -m pip install academic-research-kernel==2.4.1` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==7.0.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
+Alternatif olarak, desteklenen bir sanal ortam içinde `pipx install academic-research-kernel==2.4.2` veya `python -m pip install academic-research-kernel==2.4.2` komutlarıyla kurulum yapabilirsiniz. `[full]` seçeneği kapsamlı bilimsel hesaplama örnekleri için gerekli kütüphaneleri ekler; `[qa]` seçeneği PDF ayrıştırıcısı dahil depo doğrulama araçlarını kurar. `[research]` seçeneği, temiz kurulumlarda tutarlı PDF yazı tipi çözümlemesi için her ikisi de Python 3.10 ile uyumlu olan `pypdf==7.0.0` ve `fonttools==4.65.0` paketlerini ekler. Yapılandırılmış HTML/XML ve boyutu sınırlandırılmış DOCX/XLSX okuma işlemleri standart kütüphaneyi kullanır. GPU arka uçları ve ücretli hizmetler isteğe bağlıdır.
 
 ### Entegrasyon ve Taşınabilir Kullanım
 
@@ -224,7 +224,7 @@ Ayrıntılar için [OpenAlex kimlik doğrulaması](https://help.openalex.org/api
 
 ---
 
-## 6. Yerel doğrulama, dağıtım doğrulaması (2.4.1) ve lisans
+## 6. Yerel doğrulama, dağıtım doğrulaması (2.4.2) ve lisans
 
 ### Doğrulama
 

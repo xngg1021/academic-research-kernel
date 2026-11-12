@@ -15,19 +15,19 @@ Penulis: Junfu Shi (SJF, xngg1021). Penawaran lisensi saat ini: [Source Lineage 
 
 ### Mulai cepat
 
-Jalankan versi 2.4.1 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
+Jalankan versi 2.4.2 menggunakan [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-Catatan [rilis 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. Python 3.10/3.12/3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 18 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
+Catatan [rilis 2.4.2](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) memuat hash distribusi dan status publikasi. Paket wheel rilis juga dapat dijalankan secara lokal dengan `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp`. Python 3.10/3.12/3.14 didukung penuh; opsi `uvx --python 3.12` secara eksplisit memilih interpreter yang kompatibel. Seluruh 18 alat deterministik, termasuk modul perhitungan statistik, sudah tercakup dalam instalasi dasar.
 
 ### Verifikasi instalasi
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Diagnostik luring memeriksa dependensi, skema data, serta definisi ke-18 alat. L
 
 ### Meneliti makalah dengan Agen lokal
 
-Instal `academic-research-kernel[research]==2.4.1` dan ekspor alur kerja terpaket:
+Instal `academic-research-kernel[research]==2.4.2` dan ekspor alur kerja terpaket:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Untuk mendasari lima kelompok cacat deterministik (ketiadaan bilah galat/dispers
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Memeriksa silang identitas publikasi dan jumlah sitasi spesifik per sumber; memeriksa sinyal pembaruan atau penarikan artikel; menemukan naskah Open Access dan memverifikasi keaslian PDF; mengaudit ulasan OpenReview dan forensik repositori kode |
 | `skills/literature-analysis` | 1.3.0 | Dua belas alur kerja analisis: kemiripan topik, tumpang tindih teks lokal, bukti tandingan, profil penulis, simulasi telaah sejawat, pemeriksaan sesat pikir, matriks tinjauan, kandidat jurnal, BibTeX, pembacaan dwibahasa, pemetaan celah riset, dan reproduksi |
-| `skills/academic-writing` | 1.3.1 | Penyuntingan naskah ilmiah, panduan gaya sitasi (ISO 690, APA, MLA, Chicago, IEEE, AMA, dan profil regional), petunjuk penulis jurnal, layanan deteksi opsional, berkas pengajuan naskah, dan persyaratan institusional, linting pra-pengajuan, pembersihan anonimitas buta ganda, konversi bukti ke tabel LaTeX, dan templat konferensi |
+| `skills/academic-writing` | 1.3.2 | Penyuntingan naskah ilmiah, panduan gaya sitasi (ISO 690, APA, MLA, Chicago, IEEE, AMA, dan profil regional), petunjuk penulis jurnal, layanan deteksi opsional, berkas pengajuan naskah, dan persyaratan institusional, linting pra-pengajuan, pembersihan anonimitas buta ganda, konversi bukti ke tabel LaTeX, dan templat konferensi |
 | `skills/math-computation` | 1.2.1 | Perutean domain dan tugas komputasi dengan contoh numerik serta statistik yang telah dikoreksi; empat berkas referensi lanjutan per bidang |
 | `skills/quantitative-paper-audit` | 1.2.0 | Menghitung ulang statistik yang dilaporkan dalam makalah (ukuran efek, nilai p, interval kepercayaan, OR/RR, daya statistik tercapai) dan mendeteksi ketidaksesuaian angka, serta pemeriksaan konservasi partisi, pergeseran konstan ablasi, dan batas fisik penyimpanan serta bandwidth |
 | `skills/research-reproducibility` | 1.0.1 | Alur audit reproduktibilitas empat belas tahap dengan daftar periksa terstruktur, lima tingkatan verifikasi fakta, dan catatan audit yang dapat direproduksi |
@@ -141,12 +141,12 @@ Terdapat 22 berkas referensi Markdown yang tersebar di keempat belas keahlian te
 ### Instalasi paket
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.4.1` atau `python -m pip install academic-research-kernel==2.4.1` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==7.0.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
+Sebagai alternatif, instal menggunakan `pipx install academic-research-kernel==2.4.2` atau `python -m pip install academic-research-kernel==2.4.2` di dalam lingkungan virtual yang didukung. Ekstra `[full]` menambahkan pustaka untuk contoh komputasi ilmiah lanjutan; `[qa]` menyertakan perangkat validasi repositori termasuk pengurai PDF. Ekstra `[research]` menambahkan `pypdf==7.0.0` dan `fonttools==4.65.0` agar pengodean font PDF konsisten pada instalasi bersih, keduanya kompatibel dengan Python 3.10. Pembacaan HTML/XML terstruktur serta pembacaan DOCX/XLSX berbatas ukuran menggunakan pustaka standar Python. Backend GPU dan layanan berbayar tetap bersifat opsional.
 
 ### Integrasi dan Penggunaan Portabel
 
@@ -224,7 +224,7 @@ Lihat panduan [autentikasi OpenAlex](https://help.openalex.org/api/authenticatio
 
 ---
 
-## 6. Validasi lokal, verifikasi distribusi (2.4.1), dan lisensi
+## 6. Validasi lokal, verifikasi distribusi (2.4.2), dan lisensi
 
 ### Validasi
 

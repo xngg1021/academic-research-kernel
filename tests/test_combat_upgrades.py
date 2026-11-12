@@ -974,6 +974,7 @@ def test_audit_lin01_to_lin03_ceg_binding_macro_perf_and_comment_masking(tmp_pat
             {"id": "C_VALID", "text": "Our method improves accuracy by 12.4\\% on DatasetA."},
             {"id": "C_UNSUP", "text": "Latency is reduced by 30\\% on GPU."},
         ],
+        "evidence_anchors": [{"id": "E1"}],
         "support_edges": [
             {"claim_id": "C_VALID", "evidence_id": "E1", "support_status": "supported"},
         ],
@@ -997,6 +998,129 @@ def test_audit_lin01_to_lin03_ceg_binding_macro_perf_and_comment_masking(tmp_pat
     codes_lin01 = [h["code"] for h in rep_lin01["hits"]]
     assert codes_lin01.count("UNGROUNDED_QUANTITATIVE_CLAIM") == 2
     assert any("no verified ClaimEvidenceGraph support edge" in h["message"] for h in rep_lin01["hits"])
+
+    # Valid CEG anchor with matching text and real evidence_id='E1' passes without UNGROUNDED_QUANTITATIVE_CLAIM,
+    # whereas dangling evidence_id='MISSING' with evidence=[] is rejected consistently by both export_ceg_anchors and lint_manuscript
+    tex_ok = tmp_path / "lin01_ok.tex"
+    tex_ok.write_text(
+        "\\documentclass{article}\n\\begin{document}\n\\begin{abstract}\n"
+        "% ark:claim=C_VALID\n"
+        "Our method improves accuracy by 12.4\\% on DatasetA.\n"
+        "\\end{abstract}\n\\section{Introduction}\nText.\n\\section{Limitations}\nLimits.\n\\end{document}\n",
+        encoding="utf-8",
+    )
+    rep_ok = pre_linter.lint_manuscript(tex_ok, venue="iclr", ceg_path=ceg_path, require_ceg_binding=True)
+    assert "UNGROUNDED_QUANTITATIVE_CLAIM" not in [h["code"] for h in rep_ok["hits"]]
+
+    dangling_ceg = tmp_path / "dangling_ceg.json"
+    dangling_ceg.write_text(json.dumps({
+        "claims": [{"id": "C_VALID", "text": "Our method improves accuracy by 12.4\\% on DatasetA."}],
+        "evidence": [],
+        "support_edges": [{"claim_id": "C_VALID", "evidence_id": "MISSING", "support_status": "supported"}],
+    }), encoding="utf-8")
+    assert venue_mgr.export_ceg_anchors(dangling_ceg)["eligible_count"] == 0
+    rep_dang = pre_linter.lint_manuscript(tex_ok, venue="iclr", ceg_path=dangling_ceg, require_ceg_binding=True)
+    assert "UNGROUNDED_QUANTITATIVE_CLAIM" in [h["code"] for h in rep_dang["hits"]]
+
+    # Verify offline deterministic replay of the 30-item real-world audit benchmark
+    bench_mod = _load_script("tools/benchmarks/run_real_world_audit_benchmark.py", "ark_real_world_bench")
+    bench_rec_path = ROOT / "docs" / "benchmarks" / "real-world-audit-benchmark-v1.json"
+    assert bench_rec_path.is_file()
+    bench_recorded = json.loads(bench_rec_path.read_text(encoding="utf-8"))
+    bench_replayed = bench_mod.run_benchmark(capture_live=False, receipt_path=bench_rec_path)
+    assert bench_replayed["summary"] == bench_recorded["summary"]
+    assert bench_replayed["content_sha256"] == bench_recorded["content_sha256"]
+    assert bench_replayed["summary"]["combined"] == {
+        "n": 30, "tp": 18, "tn": 11, "fp": 1, "fn": 0,
+        "recall": 1.0, "precision": 0.9474, "specificity": 0.9167, "accuracy": 0.9667,
+    }
+
+    # Directory passed as ceg_path raises ValueError (classified as Invalid tool input by MCP)
+    with pytest.raises(ValueError, match="regular file"):
+        pre_linter.lint_manuscript(tex_ok, venue="iclr", ceg_path=tmp_path, require_ceg_binding=True)
+    mcp_mod_dir = _load_script("scripts/mcp_server.py", "mcp_lin01_dir")
+    mcp_dir_resp = mcp_mod_dir.process_message({
+        "jsonrpc": "2.0", "id": 9101, "method": "tools/call",
+        "params": {"name": "academic_pre_submission_lint", "arguments": {"tex_path": str(tex_ok), "venue": "iclr", "ceg_path": str(tmp_path)}},
+    })
+    assert mcp_dir_resp["result"]["isError"] is True
+    assert "Invalid tool input" in mcp_dir_resp["result"]["content"][0]["text"]
+
+    # Tampered benchmark receipt SHA-256, swapped DOI snapshot, or non-404 network error must fail closed
+    tampered_rec = tmp_path / "tampered_bench.json"
+    tampered_data = json.loads(bench_rec_path.read_text(encoding="utf-8"))
+    tampered_data["content_sha256"] = "0" * 64
+    tampered_rec.write_text(json.dumps(tampered_data), encoding="utf-8")
+    with pytest.raises(ValueError, match="content_sha256 mismatch"):
+        bench_mod.main(["--offline", "--receipt", str(tampered_rec)])
+    with pytest.raises(ValueError, match="target_doi"):
+        bench_mod._eval_bib_from_snapshot("10.1038/nature14539", tampered_data["frozen_live_bibliographic_snapshots"]["B12"])
+    with pytest.raises(RuntimeError, match="Inconclusive bibliographic snapshot"):
+        bench_mod._eval_bib_from_snapshot("10.1038/nature14539", {
+            "verify_rc": 1,
+            "verify": {"target_doi": "10.1038/nature14539", "sources": {"openalex": {"status": "failed", "error": "HTTP Error 429"}, "crossref": {"status": "failed", "error": "Timeout"}}},
+            "updates_rc": 0,
+            "updates": {"target_doi": "10.1038/nature14539", "status": "ok", "signal_counts": {}},
+        })
+    # Port :4040 in proxy URLError must NOT be misclassified as HTTP 404, and single-source 429 must also raise RuntimeError
+    with pytest.raises(RuntimeError, match="Inconclusive bibliographic snapshot"):
+        bench_mod._eval_bib_from_snapshot("10.1038/s41586-2099-99999-z", {
+            "verify_rc": 1,
+            "verify": {"target_doi": "10.1038/s41586-2099-99999-z", "sources": {
+                "openalex": {"status": "failed", "error": "URLError: <urlopen error proxy.example:4040>"},
+                "crossref": {"status": "failed", "error": "URLError: <urlopen error proxy.example:4040>"},
+            }},
+            "updates_rc": 0,
+            "updates": {"target_doi": "10.1038/s41586-2099-99999-z", "status": "ok", "signal_counts": {}},
+        })
+    with pytest.raises(RuntimeError, match="Inconclusive bibliographic snapshot"):
+        bench_mod._eval_bib_from_snapshot("10.1038/nature14539", {
+            "verify_rc": 0,
+            "verify": {"target_doi": "10.1038/nature14539", "sources": {
+                "openalex": {"status": "ok", "work": {"is_retracted": False}},
+                "crossref": {"status": "failed", "error": "HTTPError: HTTP Error 429: Too Many Requests"},
+            }},
+            "updates_rc": 0,
+            "updates": {"target_doi": "10.1038/nature14539", "status": "ok", "signal_counts": {}},
+        })
+    # Shell status='ok' missing work payload or updates missing signal_counts must also fail closed as inconclusive
+    with pytest.raises(RuntimeError, match="missing work payload"):
+        bench_mod._eval_bib_from_snapshot("10.1038/nature14539", {
+            "verify_rc": 0,
+            "verify": {"target_doi": "10.1038/nature14539", "sources": {
+                "openalex": {"status": "ok"},
+                "crossref": {"status": "ok", "work": {"doi": "10.1038/nature14539"}},
+            }, "comparison": {}},
+            "updates_rc": 0,
+            "updates": {"target_doi": "10.1038/nature14539", "status": "ok", "signal_counts": {}},
+        })
+    with pytest.raises(RuntimeError, match="Inconclusive update-lookup snapshot"):
+        bench_mod._eval_bib_from_snapshot("10.1038/nature14539", {
+            "verify_rc": 0,
+            "verify": {"target_doi": "10.1038/nature14539", "sources": {
+                "openalex": {"status": "ok", "work": {"is_retracted": False}},
+                "crossref": {"status": "ok", "work": {"doi": "10.1038/nature14539"}},
+            }, "comparison": {}},
+            "updates_rc": 0,
+            "updates": {"target_doi": "10.1038/nature14539", "status": "ok"},
+        })
+
+    # Source-executed pre_submission_linter must load co-located venue_template_manager even if a stale installed module is in sys.modules
+    import sys
+    import types
+    stale_vtm = types.ModuleType("academic_research_kernel.venue_template_manager")
+    stale_vtm.export_ceg_anchors = lambda _p: {"eligible_count": 0, "claims": []}
+    ws_ceg = tmp_path / "ws_padded_ceg.json"
+    from unittest.mock import patch as _mock_patch
+    ws_ceg.write_text(json.dumps({
+        "claims": [{"id": "C_VALID", "text": r"Our method improves accuracy by 12.4\% on DatasetA."}],
+        "evidence": [{"id": "  E1  "}],
+        "support_edges": [{"claim_id": "C_VALID", "evidence_id": "E1", "support_status": "supported"}],
+    }), encoding="utf-8")
+    with _mock_patch.dict(sys.modules, {"academic_research_kernel.venue_template_manager": stale_vtm}):
+        assert venue_mgr.export_ceg_anchors(ws_ceg)["eligible_count"] == 1
+        rep_ws = pre_linter.lint_manuscript(tex_ok, venue="iclr", ceg_path=ws_ceg, require_ceg_binding=True)
+        assert "UNGROUNDED_QUANTITATIVE_CLAIM" not in [h["code"] for h in rep_ws["hits"]]
 
     # LIN-02: 12K nested \def macro file completes in < 0.1s
     macro_body = "\\def\\a{" + ("x" * 60) + "}\n"
@@ -1196,7 +1320,7 @@ def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Pa
     for rm in all_readmes:
         rm_txt = rm.read_text(encoding="utf-8")
         rm_lines = rm_txt.splitlines()
-        assert "2.4.1" in rm_txt
+        assert "2.4.2" in rm_txt
         assert "iclr2026-openreview-incidence-receipt.json" in rm_txt
         dr_lines = [ln for ln in rm_lines if "Desk Reject" in ln and ln.strip().startswith("|")]
         assert len(dr_lines) == 1, f"Missing or duplicate Desk Reject table row in {rm}"
@@ -1237,7 +1361,7 @@ def test_audit_sec02_to_sec07_security_boundaries_and_rel_contracts(tmp_path: Pa
         tf_lines = [ln for ln in rm_lines if "table-forensics --input spec.json" in ln]
         if tf_lines:
             tf_checked += 1
-            assert all("2.3.0" in ln and "2.4.1" not in ln for ln in tf_lines)
+            assert all("2.3.0" in ln and "2.4.2" not in ln for ln in tf_lines)
     assert tf_checked == 5
 
 

@@ -15,19 +15,19 @@ Auteur : Junfu Shi (SJF, xngg1021). Offre actuelle : [Source Lineage License 1.0
 
 ### Démarrage rapide
 
-Exécutez la version 2.4.1 avec [uv](https://docs.astral.sh/uv/getting-started/installation/) :
+Exécutez la version 2.4.2 avec [uv](https://docs.astral.sh/uv/getting-started/installation/) :
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-La [version 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) consigne les empreintes de distribution et l'état de publication. Le fichier wheel de la version peut également être exécuté localement via `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. Python 3.10 à 3.14 est pris en charge ; `uvx --python 3.12` sélectionne explicitement un interpréteur compatible. Les 18 outils déterministes, y compris les calculs statistiques, sont inclus dans l'installation de base.
+La [version 2.4.2](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) consigne les empreintes de distribution et l'état de publication. Le fichier wheel de la version peut également être exécuté localement via `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp`. Python 3.10 à 3.14 est pris en charge ; `uvx --python 3.12` sélectionne explicitement un interpréteur compatible. Les 18 outils déterministes, y compris les calculs statistiques, sont inclus dans l'installation de base.
 
 ### Vérifier l'installation
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ Le diagnostic hors ligne vérifie les dépendances, les schémas et les 18 défi
 
 ### Étudier un article avec un Agent local
 
-Installez `academic-research-kernel[research]==2.4.1` et exportez le flux de travail fourni avec le paquet :
+Installez `academic-research-kernel[research]==2.4.2` et exportez le flux de travail fourni avec le paquet :
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ Pour motiver les cinq familles de défauts déterministes (absence de barres d'e
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | Vérifier l'identité et les comptes de citations par source ; examiner les signaux de mise à jour et de rétractation ; localiser le texte en accès libre et vérifier l'identité des PDF ; auditer les évaluations OpenReview et les dépôts de code |
 | `skills/literature-analysis` | 1.3.0 | Douze flux : similarité thématique, chevauchement local, contre-preuves, profils d'auteurs, revue simulée, vérification des sophismes, matrice de revue, revues candidates, BibTeX, lecture bilingue, dépistage des lacunes, reproduction |
-| `skills/academic-writing` | 1.3.1 | Révision éditoriale, normes de citation (ISO 690, APA, MLA, Chicago, IEEE, AMA et profils régionaux), consignes aux auteurs, services facultatifs de détection, dossiers de soumission et exigences institutionnelles, contrôle avant soumission, anonymisation en double aveugle, génération de tableaux LaTeX et modèles de conférences |
+| `skills/academic-writing` | 1.3.2 | Révision éditoriale, normes de citation (ISO 690, APA, MLA, Chicago, IEEE, AMA et profils régionaux), consignes aux auteurs, services facultatifs de détection, dossiers de soumission et exigences institutionnelles, contrôle avant soumission, anonymisation en double aveugle, génération de tableaux LaTeX et modèles de conférences |
 | `skills/math-computation` | 1.2.1 | Routage domaine/tâche existant avec exemples numériques et statistiques corrigés ; quatre fichiers de référence par domaine |
 | `skills/quantitative-paper-audit` | 1.2.0 | Recalculer les statistiques rapportées (taille d'effet, valeurs p, intervalles de confiance, OR/RR, puissance atteinte) et détecter les incohérences numériques, ainsi que la conservation des partitions, les décalages constants d'ablation et les bornes physiques de stockage et de bande passante |
 | `skills/research-reproducibility` | 1.0.1 | Pipeline d'audit de reproduction en quatorze étapes avec listes de contrôle structurées, cinq niveaux de faits et enregistrements d'audit vérifiables |
@@ -141,12 +141,12 @@ Les quatorze compétences comprennent 22 fichiers de référence Markdown, charg
 ### Installation du paquet
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-Vous pouvez également installer le paquet avec `pipx install academic-research-kernel==2.4.1` ou `python -m pip install academic-research-kernel==2.4.1` dans un environnement virtuel pris en charge. `[full]` ajoute les bibliothèques nécessaires aux exemples étendus de calcul scientifique ; `[qa]` ajoute les outils de validation du dépôt, y compris l'analyseur PDF. `[research]` ajoute `pypdf==7.0.0` et `fonttools==4.65.0` afin d'assurer un décodage cohérent des polices PDF sur les installations neuves (tous deux compatibles avec Python 3.10). La lecture de fichiers HTML/XML structurés et de documents DOCX/XLSX bornés repose sur la bibliothèque standard. Les backends GPU et les services payants restent facultatifs.
+Vous pouvez également installer le paquet avec `pipx install academic-research-kernel==2.4.2` ou `python -m pip install academic-research-kernel==2.4.2` dans un environnement virtuel pris en charge. `[full]` ajoute les bibliothèques nécessaires aux exemples étendus de calcul scientifique ; `[qa]` ajoute les outils de validation du dépôt, y compris l'analyseur PDF. `[research]` ajoute `pypdf==7.0.0` et `fonttools==4.65.0` afin d'assurer un décodage cohérent des polices PDF sur les installations neuves (tous deux compatibles avec Python 3.10). La lecture de fichiers HTML/XML structurés et de documents DOCX/XLSX bornés repose sur la bibliothèque standard. Les backends GPU et les services payants restent facultatifs.
 
 ### Intégration et utilisation portable
 
@@ -200,7 +200,7 @@ Consultez le guide de [distribution et publication](docs/distribution-release.md
 
 ### Intégration déterministe et interface publique du noyau
 
-La version 2.4.1 fournit `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptateurs (les 14 compétences plus un repli opaque) et 18 outils MCP stdio sans état. Les traces d'intégration acceptées lient chaque mutation sémantique conservée par type, identité et empreinte SHA-256 canonique : objets de recherche, enregistrements de liens entre affirmations et éléments de preuve, entrées du journal des décisions de recherche et essais infructueux, points à vérifier, traces de vérification physiques et enregistrements d'artefacts. La relecture du cache vérifie ces engagements indépendamment des empreintes d'instantanés de transport. Les journaux vides sont valides ; les lots atomiques en échec ne laissent aucun état partiel.
+La version 2.4.2 fournit `ResearchArtifactEnvelope v1`, `ArtifactIngestionReceipt v1`, 15 adaptateurs (les 14 compétences plus un repli opaque) et 18 outils MCP stdio sans état. Les traces d'intégration acceptées lient chaque mutation sémantique conservée par type, identité et empreinte SHA-256 canonique : objets de recherche, enregistrements de liens entre affirmations et éléments de preuve, entrées du journal des décisions de recherche et essais infructueux, points à vérifier, traces de vérification physiques et enregistrements d'artefacts. La relecture du cache vérifie ces engagements indépendamment des empreintes d'instantanés de transport. Les journaux vides sont valides ; les lots atomiques en échec ne laissent aucun état partiel.
 
 L'autorisation de lecture du contenu de provenance est explicite et hors bande. Les appelants Python de confiance transmettent `LineageVerificationContext` lors de la relecture de traces ou d'instantanés sérialisés ; les appelants MCP peuvent fournir un flux d'octets borné, mais jamais une racine du système de fichiers hôte. Le budget de contenu par défaut est de 10 Mio ; un hôte de confiance peut autoriser explicitement des artefacts plus volumineux selon la même politique entre producteur et vérificateur. Sans autorisation d'accès au contenu, une affirmation `fully_verified` ne peut pas être reproduite de manière indépendante et renvoie un résultat de vérification invalide structuré. Le texte non structuré reste opaque, les divergences d'analyse demeurent visibles et les chercheurs conservent la maîtrise des validations, de l'abandon ou de la réouverture de pistes, du routage et des jugements scientifiques.
 
@@ -210,7 +210,7 @@ Consultez [l'architecture du noyau](docs/kernel-architecture.md) pour les contra
 
 Les styles de citation, les critères de rapport et les contrats de métadonnées dépendent de la revue cible, de l'organisme de financement, de la discipline et de la juridiction. Le dépôt établit **ISO 690:2021** (références bibliographiques), **ISO 5127:2017** (vocabulaire de l'information et de la documentation) et **W3C PROV** (modèle de données de provenance) comme bases internationales, complétées par des profils régionaux (par ex. NF ISO 690 en France, GB/T 7714-2025 en Chine continentale, UNE-ISO 690:2024 en Espagne, DIN ISO 690:2021 en Allemagne) et des normes disciplinaires (APA 7e, IEEE, ACM, Vancouver, Chicago, PRISMA 2020, ICMJE). Les exigences de l'organe de publication cible prévalent toujours sur les profils par défaut. Voir [Architecture des normes académiques](docs/standards/README.md) et [Guide de terminologie naturelle](docs/terminology/README.md).
 
-La version 2.4.1 valide la cohérence des DOI et identifiants externes, l'exclusivité mutuelle des indicateurs de verdict quantitatif ainsi que le contrat de points à vérifier partagé entre le noyau et les traces de vérification. L'intégrité du cache est reconstruite à partir des enveloppes sources conservées et des liaisons normalisées, indépendamment des listes de mutations de la trace ; la suppression simultanée d'un enregistrement et de sa déclaration de cache ne peut produire aucune relecture acceptée. Voir [la clôture des quatre points bloquants](docs/kernel-architecture.md).
+La version 2.4.2 valide la cohérence des DOI et identifiants externes, l'exclusivité mutuelle des indicateurs de verdict quantitatif ainsi que le contrat de points à vérifier partagé entre le noyau et les traces de vérification. L'intégrité du cache est reconstruite à partir des enveloppes sources conservées et des liaisons normalisées, indépendamment des listes de mutations de la trace ; la suppression simultanée d'un enregistrement et de sa déclaration de cache ne peut produire aucune relecture acceptée. Voir [la clôture des quatre points bloquants](docs/kernel-architecture.md).
 
 ### Accès aux sources de données
 
@@ -224,7 +224,7 @@ Voir [l'authentification OpenAlex](https://help.openalex.org/api/authentication/
 
 ---
 
-## 6. Validation locale, vérification de distribution (2.4.1) et licence
+## 6. Validation locale, vérification de distribution (2.4.2) et licence
 
 ### Validation
 

@@ -912,45 +912,41 @@ def _normalize_claim_text(text: str) -> str:
     return " ".join(str(text or "").split()).rstrip(".").strip()
 
 
+def _import_export_ceg_anchors():
+    if __package__:
+        from .venue_template_manager import export_ceg_anchors
+        return export_ceg_anchors
+    sibling_file = Path(__file__).resolve().with_name("venue_template_manager.py")
+    if sibling_file.is_file():
+        import importlib.util
+        mod_key = f"_ark_colocated_vtm_{hash(str(sibling_file))}"
+        mod = sys.modules.get(mod_key)
+        if mod is None or getattr(mod, "__file__", None) != str(sibling_file):
+            spec = importlib.util.spec_from_file_location(mod_key, sibling_file)
+            if spec is None or spec.loader is None:
+                raise ImportError(f"Cannot load co-located {sibling_file}")
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[mod_key] = mod
+            spec.loader.exec_module(mod)
+        return mod.export_ceg_anchors
+    from academic_research_kernel.venue_template_manager import export_ceg_anchors
+    return export_ceg_anchors
+
+
 def _load_ceg_claim_map(ceg_path: Path | None) -> tuple[dict[str, str], set[str]]:
-    """Return (verified_id_to_text, verified_texts) for claims with positive support and zero contradiction."""
-    if ceg_path is None or not ceg_path.is_file():
+    """Return (verified_id_to_text, verified_texts) for claims whose CEG anchor_status == 'eligible'."""
+    if ceg_path is None:
         return {}, set()
-    data = json.loads(ceg_path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
+    p = Path(ceg_path)
+    if not p.exists() and not p.is_symlink():
         return {}, set()
-    claims = data.get("claims") or data.get("ceg", {}).get("claims") or []
-    edges = data.get("support_edges") or data.get("edges") or data.get("ceg", {}).get("support_edges") or []
-
-    supported_ids: set[str] = set()
-    contradicted_ids: set[str] = set()
-    for e in edges:
-        if not isinstance(e, dict):
-            continue
-        cid = str(e.get("claim_id") or e.get("target_claim_id") or e.get("target") or "")
-        if not cid:
-            continue
-        status = str(
-            e.get("support_status")
-            if e.get("support_status") is not None
-            else (e.get("status") or e.get("relation") or e.get("polarity") or "")
-        ).strip().lower()
-        if status in ("supported", "supports", "support", "verified_by"):
-            supported_ids.add(cid)
-        elif status in ("contradicted", "contradicts", "refuted", "refutes", "unverifiable", "out_of_scope"):
-            contradicted_ids.add(cid)
-
+    exported = _import_export_ceg_anchors()(p)
     id_to_text: dict[str, str] = {}
     verified_texts: set[str] = set()
-    for c in claims:
-        if not isinstance(c, dict):
-            continue
-        cid = str(c.get("id") or c.get("claim_id") or "")
-        txt = str(c.get("text") or c.get("statement") or "").strip()
-        c_status = str(c.get("support_status") or c.get("status") or "").strip().lower()
-        if not cid or not txt or cid in contradicted_ids or c_status in ("contradicted", "unverifiable", "out_of_scope"):
-            continue
-        if cid in supported_ids:
+    for anc in exported.get("anchors", ()):
+        if anc.get("anchor_status") == "eligible":
+            cid = str(anc["claim_id"])
+            txt = str(anc["normalized_text"])
             id_to_text[cid] = txt
             verified_texts.add(txt)
     return id_to_text, verified_texts

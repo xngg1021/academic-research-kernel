@@ -15,19 +15,19 @@
 
 ### البدء السريع
 
-شغّل الإصدار 2.4.1 باستخدام أداة [uv](https://docs.astral.sh/uv/getting-started/installation/):
+شغّل الإصدار 2.4.2 باستخدام أداة [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-يوثق [إصدار 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) بصمات التوزيع (hashes) وحالة النشر. يمكن أيضًا تشغيل حزمة wheel محليًا عبر الأمر `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp`. يدعم النظام إصدارات Python من 3.10 إلى 3.14؛ ويتيح الخيار `uvx --python 3.12` تحديد مفسر مدعوم بشكل صريح. تتضمن الحزمة الأساسية جميع الأدوات الحتمية الثماني عشرة، بما فيها مجموعة أدوات الحساب العلمي والإحصاء.
+يوثق [إصدار 2.4.2](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) بصمات التوزيع (hashes) وحالة النشر. يمكن أيضًا تشغيل حزمة wheel محليًا عبر الأمر `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp`. يدعم النظام إصدارات Python من 3.10 إلى 3.14؛ ويتيح الخيار `uvx --python 3.12` تحديد مفسر مدعوم بشكل صريح. تتضمن الحزمة الأساسية جميع الأدوات الحتمية الثماني عشرة، بما فيها مجموعة أدوات الحساب العلمي والإحصاء.
 
 ### التحقق من التثبيت
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### دراسة ورقة بحثية باستخدام وكيل محلي (Agent)
 
-ثبّت الحزمة `academic-research-kernel[research]==2.4.1` وصدّر مسار العمل المدمج:
+ثبّت الحزمة `academic-research-kernel[research]==2.4.2` وصدّر مسار العمل المدمج:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | المطابقة المتقاطعة للهوية وعدد الاستشهادات حسب المصدر؛ وفحص إشارات التحديث أو سحب الأبحاث؛ وتحديد النصوص الكاملة ذات الوصول المفتوح (OA) والتحقق من ملفات PDF؛ وتدقيق مراجعات OpenReview والفحص الجنائي للمستودعات البرمجية |
 | `skills/literature-analysis` | 1.3.0 | اثنا عشر مسار عمل: تشابه الموضوعات، والتداخل النصي المحلي، والأدلة المضادة، وملفات المؤلفين، والتحكيم التجريبي، وفحص المغالطات، ومصفوفة المراجعة، وترشيح المجلات، وBibTeX، والقراءة ثنائية اللغة، وفحص الفجوات البحثية، وإعادة الإنتاج |
-| `skills/academic-writing` | 1.3.1 | التحرير الأكاديمي، وإرشادات التوثيق (ISO 690 وAPA وMLA وChicago وIEEE وAMA والملفات الإقليمية)، وتعليمات المجلات، وخدمات الفحص الاختيارية، ومواد التقديم، ومتطلبات التحكيم المؤسسية، والتدقيق قبل التقديم، وفحص التعمية المزدوجة، وتحويل الإيصالات إلى جداول LaTeX، وقوالب المؤتمرات |
+| `skills/academic-writing` | 1.3.2 | التحرير الأكاديمي، وإرشادات التوثيق (ISO 690 وAPA وMLA وChicago وIEEE وAMA والملفات الإقليمية)، وتعليمات المجلات، وخدمات الفحص الاختيارية، ومواد التقديم، ومتطلبات التحكيم المؤسسية، والتدقيق قبل التقديم، وفحص التعمية المزدوجة، وتحويل الإيصالات إلى جداول LaTeX، وقوالب المؤتمرات |
 | `skills/math-computation` | 1.2.1 | توجيه المسائل حسب المجال والمهمة مع أمثلة عددية وإحصائية مصححة؛ وأربعة ملفات مرجعية متقدمة |
 | `skills/quantitative-paper-audit` | 1.2.0 | إعادة حساب الإحصاءات المنشورة في الأبحاث (حجم الأثر، وقيم p، وفترات الثقة، وOR/RR، والقوة الإحصائية المحققة) وكشف التضارب الرقمي، بالإضافة إلى فحص حفظ التقسيم، والإزاحة الثابتة في دراسات الاستبعاد، والحدود الفيزيائية للتخزين وعرض النطاق |
 | `skills/research-reproducibility` | 1.0.1 | مسار تدقيق قابلية التكرار المكون من 14 مرحلة مع مدقق قواعد قابلية التكرار وقوائم فحص مهيكلة، وخمس مستويات للحقائق، وسجلات تدقيق قابلة للتكرار |
@@ -141,12 +141,12 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 ### تثبيت الحزمة
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-بدلاً من ذلك، يمكنك التثبيت عبر `pipx install academic-research-kernel==2.4.1` أو `python -m pip install academic-research-kernel==2.4.1` داخل بيئة افتراضية مدعومة. تضيف المجموعة الاختيارية `[full]` مكتبات للأمثلة العلمية الموسعة؛ وتضيف `[qa]` أدوات التحقق من المستودع بما فيها محلل ملفات PDF. أما `[research]` فتضيف `pypdf==7.0.0` و`fonttools==4.65.0` لضمان فك ترميز خطوط PDF باتساق عبر التثبيتات النظيفة، وكلاهما يدعم Python 3.10. تعتمد قراءة HTML/XML المهيكلة وملفات DOCX/XLSX محدودة الحجم على المكتبة القياسية. تظل واجهات GPU والخدمات المدفوعة اختيارية.
+بدلاً من ذلك، يمكنك التثبيت عبر `pipx install academic-research-kernel==2.4.2` أو `python -m pip install academic-research-kernel==2.4.2` داخل بيئة افتراضية مدعومة. تضيف المجموعة الاختيارية `[full]` مكتبات للأمثلة العلمية الموسعة؛ وتضيف `[qa]` أدوات التحقق من المستودع بما فيها محلل ملفات PDF. أما `[research]` فتضيف `pypdf==7.0.0` و`fonttools==4.65.0` لضمان فك ترميز خطوط PDF باتساق عبر التثبيتات النظيفة، وكلاهما يدعم Python 3.10. تعتمد قراءة HTML/XML المهيكلة وملفات DOCX/XLSX محدودة الحجم على المكتبة القياسية. تظل واجهات GPU والخدمات المدفوعة اختيارية.
 
 ### التكامل والاستخدام المحمول
 
@@ -224,7 +224,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. التحقق المحلي، وفحص التوزيع (2.4.1)، والترخيص
+## 6. التحقق المحلي، وفحص التوزيع (2.4.2)، والترخيص
 
 ### التحقق والاختبار (Validation)
 

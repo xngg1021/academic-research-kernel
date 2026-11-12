@@ -15,19 +15,19 @@
 
 ### شروع سریع
 
-نسخه 2.4.1 را با استفاده از [uv](https://docs.astral.sh/uv/getting-started/installation/) اجرا کنید:
+نسخه 2.4.2 را با استفاده از [uv](https://docs.astral.sh/uv/getting-started/installation/) اجرا کنید:
 
 ```bash
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
-[انتشار نسخه 2.4.1](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) هش‌های بسته‌های توزیع و وضعیت انتشار را ثبت می‌کند. بسته wheel منتشرشده را می‌توان به صورت محلی نیز با دستور `uvx --from ./academic_research_kernel-2.4.1-py3-none-any.whl academic-research-kernel mcp` اجرا کرد. نسخه‌های Python 3.10 تا 3.14 پشتیبانی می‌شوند؛ گزینه `uvx --python 3.12` به طور صریح یک مفسر پشتیبانی‌شده را انتخاب می‌کند. هر ۱۸ ابزار قطعی، از جمله ابزارهای محاسبات علمی و تحلیل آماری، در نصب پایه گنجانده شده‌اند.
+[انتشار نسخه 2.4.2](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) هش‌های بسته‌های توزیع و وضعیت انتشار را ثبت می‌کند. بسته wheel منتشرشده را می‌توان به صورت محلی نیز با دستور `uvx --from ./academic_research_kernel-2.4.2-py3-none-any.whl academic-research-kernel mcp` اجرا کرد. نسخه‌های Python 3.10 تا 3.14 پشتیبانی می‌شوند؛ گزینه `uvx --python 3.12` به طور صریح یک مفسر پشتیبانی‌شده را انتخاب می‌کند. هر ۱۸ ابزار قطعی، از جمله ابزارهای محاسبات علمی و تحلیل آماری، در نصب پایه گنجانده شده‌اند.
 
 ### بررسی نصب
 
 ```bash
-uvx academic-research-kernel@2.4.1 doctor
-uvx academic-research-kernel@2.4.1 --version
+uvx academic-research-kernel@2.4.2 doctor
+uvx academic-research-kernel@2.4.2 --version
 academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --normalize-only
 academic-research-kernel locate-oa 10.1038/nature14539
 academic-research-kernel venue-template --action list-venues
@@ -42,7 +42,7 @@ academic-research-kernel pre-submission-lint --tex ./workspace/my-paper/main.tex
 
 ### پژوهش روی مقاله با استفاده از Agent محلی
 
-بسته `academic-research-kernel[research]==2.4.1` را نصب کرده و جریان کاری بسته‌بندی‌شده را استخراج کنید:
+بسته `academic-research-kernel[research]==2.4.2` را نصب کرده و جریان کاری بسته‌بندی‌شده را استخراج کنید:
 
 ```sh
 academic-research-kernel research skill --output ./agent-skills/paper-research
@@ -123,7 +123,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | --- | --- | --- |
 | `skills/academic-source-verification` | 1.3.0 | تطبیق متقابل هویت و شمارش استنادها به تفکیک منبع؛ بررسی سیگنال‌های به‌روزرسانی یا سلب اعتبار مقاله؛ یافتن متن کامل دسترسی آزاد (OA) و تایید هویت فایل PDF؛ ممیزی داوری‌های OpenReview و کاوش جنایی مخازن کد |
 | `skills/literature-analysis` | 1.3.0 | دوازده جریان کاری: شباهت موضوعی، همپوشانی متنی محلی، شواهد نقض‌کننده، نمایه نویسندگان، داوری آزمایشی، بررسی مغالطات، ماتریس مرور، پیشنهاد مجله، BibTeX، مطالعه دوزبانه، غربالگری شکاف پژوهشی و بازتولید |
-| `skills/academic-writing` | 1.3.1 | ویرایش علمی، راهنمای استناددهی (ISO 690، APA، MLA، Chicago، IEEE، AMA و الگوهای منطقه‌ای)، دستورالعمل مجلات، سرویس‌های تشخیص اختیاری، مدارک ارسال مقاله و الزامات داوری نهادها، بررسی پیش از ارسال، پاک‌سازی دوسوکور، تبدیل رسید به جدول LaTeX و قالب‌های کنفرانس |
+| `skills/academic-writing` | 1.3.2 | ویرایش علمی، راهنمای استناددهی (ISO 690، APA، MLA، Chicago، IEEE، AMA و الگوهای منطقه‌ای)، دستورالعمل مجلات، سرویس‌های تشخیص اختیاری، مدارک ارسال مقاله و الزامات داوری نهادها، بررسی پیش از ارسال، پاک‌سازی دوسوکور، تبدیل رسید به جدول LaTeX و قالب‌های کنفرانس |
 | `skills/math-computation` | 1.2.1 | مسیریابی دامنه و وظیفه محاسباتی همراه با مثال‌های اصلاح‌شده عددی و آماری؛ چهار فایل مرجع تخصصی و پیشرفته |
 | `skills/quantitative-paper-audit` | 1.2.0 | محاسبه مجدد آماره‌های گزارش‌شده در مقاله (اندازه اثر، مقادیر p، فواصل اطمینان، OR/RR، توان آماری محقق‌شده) و تشخیص ناسازگاری‌های عددی و بررسی پایستگی افراز، جابه‌جایی ثابت در مطالعات حذفی و کران‌های فیزیکی حافظه و پهنای باند |
 | `skills/research-reproducibility` | 1.0.1 | خط لوله ممیزی بازتولیدپذیری ۱۴ مرحله‌ای شامل وارسی‌کننده قواعد بازتولیدپذیری، چک‌لیست‌های ساختاریافته، پنج سطح واقعیت و سوابق ممیزی قابل تکرار |
@@ -141,12 +141,12 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 ### نصب بسته نرم‌افزاری
 
 ```bash
-uv tool install academic-research-kernel==2.4.1
+uv tool install academic-research-kernel==2.4.2
 academic-research-kernel doctor
 academic-research-kernel mcp
 ```
 
-همچنین می‌توانید بسته را با دستور `pipx install academic-research-kernel==2.4.1` یا `python -m pip install academic-research-kernel==2.4.1` در داخل یک محیط مجازی پشتیبانی‌شده نصب کنید. گزینه `[full]` کتابخانه‌های لازم برای مثال‌های علمی گسترده‌تر را اضافه می‌کند؛ گزینه `[qa]` ابزارهای اعتبارسنجی مخزن از جمله تجزیه‌گر PDF را می‌افزاید. گزینه `[research]` بسته‌های `pypdf==7.0.0` و `fonttools==4.65.0` را برای رمزگشایی یکنواخت فونت‌های PDF در محیط‌های نصب تمیز اضافه می‌کند که هر دو از Python 3.10 پشتیبانی می‌کنند. خواندن فایل‌های ساختاریافته HTML/XML و فایل‌های DOCX/XLSX با حجم محدود از کتابخانه استاندارد پایتون بهره می‌برد. بک‌اندهای GPU و سرویس‌های تجاری همچنان اختیاری هستند.
+همچنین می‌توانید بسته را با دستور `pipx install academic-research-kernel==2.4.2` یا `python -m pip install academic-research-kernel==2.4.2` در داخل یک محیط مجازی پشتیبانی‌شده نصب کنید. گزینه `[full]` کتابخانه‌های لازم برای مثال‌های علمی گسترده‌تر را اضافه می‌کند؛ گزینه `[qa]` ابزارهای اعتبارسنجی مخزن از جمله تجزیه‌گر PDF را می‌افزاید. گزینه `[research]` بسته‌های `pypdf==7.0.0` و `fonttools==4.65.0` را برای رمزگشایی یکنواخت فونت‌های PDF در محیط‌های نصب تمیز اضافه می‌کند که هر دو از Python 3.10 پشتیبانی می‌کنند. خواندن فایل‌های ساختاریافته HTML/XML و فایل‌های DOCX/XLSX با حجم محدود از کتابخانه استاندارد پایتون بهره می‌برد. بک‌اندهای GPU و سرویس‌های تجاری همچنان اختیاری هستند.
 
 ### یکپارچه‌سازی و استفاده قابل حمل
 
@@ -224,7 +224,7 @@ uv run --frozen --no-dev --no-editable python scripts/mcp_server.py
 
 ---
 
-## 6. اعتبارسنجی محلی، راستی‌آزمایی توزیع (2.4.1) و مجوز
+## 6. اعتبارسنجی محلی، راستی‌آزمایی توزیع (2.4.2) و مجوز
 
 ### اعتبارسنجی (Validation)
 

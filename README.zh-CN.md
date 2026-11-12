@@ -14,11 +14,11 @@
 
 ## 一、两分钟快速上手
 
-先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任选一条命令安装 `2.4.1` 版本：
+先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任选一条命令安装 `2.4.2` 版本：
 
 ```bash
 # 方式一：安装带 PDF 解析支持的完整命令行工具，并导出论文精读技能给本地智能体
-uv tool install "academic-research-kernel[research]==2.4.1"
+uv tool install "academic-research-kernel[research]==2.4.2"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作为标准 stdio MCP 服务启动，供 Claude Code / Cursor / Codex 等客户端调用
@@ -33,7 +33,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-`doctor` 命令默认离线运行，负责检查运行环境依赖、26 套 JSON 数据格式与全部 18 个 MCP 工具接口；即使没有配置可选的外部数据库密钥，自检也不会报错。直接在终端运行 `mcp` 子命令会让程序进入标准输入输出监听状态，等待 MCP 客户端发来请求。[2.4.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) 页面记录了构建产物的 SHA-256 哈希值。本工具支持 Python 3.10 至 3.14，基础安装包已内置全部工具，科学计算库只在调用分布检验或功效重算时按需加载。
+`doctor` 命令默认离线运行，负责检查运行环境依赖、26 套 JSON 数据格式与全部 18 个 MCP 工具接口；即使没有配置可选的外部数据库密钥，自检也不会报错。直接在终端运行 `mcp` 子命令会让程序进入标准输入输出监听状态，等待 MCP 客户端发来请求。[2.4.2 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) 页面记录了构建产物的 SHA-256 哈希值。本工具支持 Python 3.10 至 3.14，基础安装包已内置全部工具，科学计算库只在调用分布检验或功效重算时按需加载。
 
 ---
 
@@ -154,7 +154,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | `skills/literature-analysis` | 1.3.0 | 按雪球法拓展相关文献，对比多篇论文的方法与分歧，梳理作者学术履历，按评审清单审读稿件并支持 BibTeX、RIS 与 CSL-JSON 互转 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 根据论文报告的统计量独立重算 $p$ 值与效应量及置信区间、优势比与统计功效，并核查样本分区守恒与消融恒定偏移及物理带宽下界 |
 | `skills/math-computation` | 1.2.1 | 调用 SymPy 与 NumPy 及 SciPy、statsmodels 与 PyTorch 完成符号推导与微积分求解，涵盖线性代数与微分方程及运筹优化和蒙特卡洛模拟 |
-| `skills/academic-writing` | 1.3.1 | 辅助润色论文结构与语言，按各国规范排版参考文献，并提供投稿前版式门禁与双盲匿名清洗，以及实验收据转 LaTeX 三线表和会刊模板生成 |
+| `skills/academic-writing` | 1.3.2 | 辅助润色论文结构与语言，按各国规范排版参考文献，并提供投稿前版式门禁与双盲匿名清洗，以及实验收据转 LaTeX 三线表和会刊模板生成 |
 | `skills/research-reproducibility` | 1.0.1 | 核查论文配套代码的提交哈希与依赖锁文件，以及随机数种子和容差设置，把重跑实验的结果整理成可复查的核验记录 |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | 记录 PRISMA 文献检索与筛选流程，转换效应量，检验异质性，执行固定或随机效应模型合并以及留一法敏感性与发表偏倚分析 |
 | `skills/literature-watch` | 1.1.0 | 按主题、作者或引文 DOI 每周巡检 OpenAlex 与 Crossref，自动跨源去重并只汇报上次检查之后新发表的论文 |
@@ -171,9 +171,9 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 
 1. **Python 软件包与可选依赖安装**
    ```bash
-   uv tool install academic-research-kernel==2.4.1
+   uv tool install academic-research-kernel==2.4.2
    ```
-   您也可以使用 `pipx install academic-research-kernel==2.4.1` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.4.1`。加上 `[research]` 会固定安装 `pypdf==7.0.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
+   您也可以使用 `pipx install academic-research-kernel==2.4.2` 或在虚拟环境内运行 `python -m pip install academic-research-kernel==2.4.2`。加上 `[research]` 会固定安装 `pypdf==7.0.0` 与 `fonttools==4.65.0`，保证不同机器解析数字 PDF 字体时结果一致；加上 `[full]` 会一并安装扩展科学计算示例所需的库；加上 `[qa]` 会安装仓库自检与测试所需的解析依赖。
 
 2. **通用 Agent Plugins v1 与跨智能体 MCP 一键挂载**
    本仓库遵循 **Agent Plugins v1** 规范并提供 `plugin.json`，通过标准输入输出协议运行 `mcp.json` 与 `scripts/mcp_server.py` 定义的 **MCP 服务器**，对外暴露全部 18 个核查与统计工具，支持 `2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25` 与 `2026-07-28` 协议版本协商及 `resources/list`、`prompts/list` 探测响应，可挂载至 Claude Code、OpenAI Codex、Cursor 与 Gemini CLI：
@@ -261,7 +261,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1364 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.4.1 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
+GitHub Actions 持续集成覆盖 Linux x86_64 的 Python 3.10、3.12 与 3.14 环境，同时覆盖 Linux ARM64 的 `ubuntu-24.04-arm` 镜像与 Windows x86_64、Windows ARM64 的 `windows-11-arm` 镜像以及 macOS ARM64 的 `macos-latest` 镜像，并附带针对上游 Hermes 的实时兼容性检验。本地完整回归测试套件共通过 1364 项测试，在[正确性修复记录](docs/maintenance/correctness-repair-20261008.md)与早期的[收尾记录](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基线上持续扩充。[tools/longtail/](tools/longtail/README.md) 目录存放确定性长尾测试场景生成器，`scripts/scfabric/` 目录提供科学计算基准测试工具，首轮实测说明见 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 个语种共 23 份 README 文件均已同步至 2.4.2 版本，状态记录于[多语言清单](docs/i18n/manifest.json)。
 
 ### 2. 许可证
 

@@ -322,6 +322,8 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
         if cur.parent == cur:
             break
         cur = cur.parent
+    if p.exists() and not p.is_file():
+        raise ValueError(f"CEG path must be a regular file: {p}")
     if not p.is_file():
         raise FileNotFoundError(f"CEG file not found: {p}")
     raw_bytes = p.read_bytes()
@@ -385,12 +387,12 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
     # Normalize evidence IDs if an evidence collection is present
     known_evidence_ids: set[str] | None = None
     if isinstance(raw_evidence, dict):
-        known_evidence_ids = {str(k) for k in raw_evidence.keys()}
+        known_evidence_ids = {str(k).strip() for k in raw_evidence.keys() if str(k).strip()}
     elif isinstance(raw_evidence, list):
         known_evidence_ids = {
-            str(e.get("id") or e.get("evidence_id"))
+            str(e.get("id") or e.get("evidence_id")).strip()
             for e in raw_evidence
-            if isinstance(e, dict) and (e.get("id") or e.get("evidence_id"))
+            if isinstance(e, dict) and str(e.get("id") or e.get("evidence_id") or "").strip()
         }
 
     pos_by_claim: dict[str, list[dict[str, Any]]] = {cid: [] for cid in claims_by_id}

@@ -14,15 +14,15 @@
 
 ## 一、兩分鐘快速上手
 
-先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任選一條命令安裝 `2.4.1` 版本：
+先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)，再按您的使用方式任選一條命令安裝 `2.4.2` 版本：
 
 ```bash
 # 方式一：安裝帶 PDF 解析支援的完整命令列工具，並匯出論文精讀技能給本機智慧體
-uv tool install "academic-research-kernel[research]==2.4.1"
+uv tool install "academic-research-kernel[research]==2.4.2"
 academic-research-kernel research skill --output ./paper-research
 
 # 方式二：作為標準 stdio MCP 服務啟動，供 Claude Code / Cursor / Codex 等用戶端呼叫
-uvx academic-research-kernel@2.4.1 mcp
+uvx academic-research-kernel@2.4.2 mcp
 ```
 
 安裝完成後，可以先跑一次離線環境自檢，並直接試試文獻查核與會刊規則查詢：
@@ -33,7 +33,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-`doctor` 命令預設離線執行，負責檢查執行環境依賴、26 套 JSON 資料格式與全部 18 個 MCP 工具介面；即使沒有設定可選的外部資料庫金鑰，自檢也不會報錯。直接在終端機執行 `mcp` 子命令會讓程式進入標準輸入輸出監聽狀態，等待 MCP 用戶端發來請求。[2.4.1 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) 頁面記錄了建置產物的 SHA-256 雜湊值。本工具支援 Python 3.10 至 3.14，基礎安裝套件已內建全部工具，科學計算套件只在呼叫分佈檢定或檢定力重算時按需載入。
+`doctor` 命令預設離線執行，負責檢查執行環境依賴、26 套 JSON 資料格式與全部 18 個 MCP 工具介面；即使沒有設定可選的外部資料庫金鑰，自檢也不會報錯。直接在終端機執行 `mcp` 子命令會讓程式進入標準輸入輸出監聽狀態，等待 MCP 用戶端發來請求。[2.4.2 Release](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) 頁面記錄了建置產物的 SHA-256 雜湊值。本工具支援 Python 3.10 至 3.14，基礎安裝套件已內建全部工具，科學計算套件只在呼叫分佈檢定或檢定力重算時按需載入。
 
 ---
 
@@ -154,7 +154,7 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 | `skills/literature-analysis` | 1.3.0 | 按雪球法拓展相關文獻，對比多篇論文的方法與分歧，梳理作者學術履歷，按評審清單審讀稿件並支援 BibTeX、RIS 與 CSL-JSON 互轉 |
 | `skills/quantitative-paper-audit` | 1.2.0 | 根據論文報告的統計量獨立重算 $p$ 值與效應量及信賴區間、勝算比與統計檢定力，並查核樣本分區守恆與消融恆定偏移及物理頻寬下界 |
 | `skills/math-computation` | 1.2.1 | 呼叫 SymPy 與 NumPy 及 SciPy、statsmodels 與 PyTorch 完成符號推導與微積分求解，涵蓋線性代數與微分方程及作業研究最佳化和蒙地卡羅模擬 |
-| `skills/academic-writing` | 1.3.1 | 輔助潤色論文結構與語言，按各國規範排版參考文獻，並提供投稿前版式門禁與雙盲匿名清洗，以及實驗收據轉 LaTeX 三線表和會刊範本生成 |
+| `skills/academic-writing` | 1.3.2 | 輔助潤色論文結構與語言，按各國規範排版參考文獻，並提供投稿前版式門禁與雙盲匿名清洗，以及實驗收據轉 LaTeX 三線表和會刊範本生成 |
 | `skills/research-reproducibility` | 1.0.1 | 查核論文配套程式碼的提交雜湊與依賴鎖定檔，以及亂數種子與容差設定，把重跑實驗的結果整理成可複查的核驗紀錄 |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | 記錄 PRISMA 文獻檢索與篩選流程，轉換效應量，檢定異質性，執行固定或隨機效應模型合併以及留一法敏感度與發表偏倚分析 |
 | `skills/literature-watch` | 1.1.0 | 按主題、作者或引文 DOI 每週巡檢 OpenAlex 與 Crossref，自動跨源去重並只回報上次檢查之後新發表的論文 |
@@ -171,9 +171,9 @@ academic-research-kernel bibliography --action deduplicate --input works.json --
 
 1. **Python 軟體套件與可選依賴安裝**
    ```bash
-   uv tool install academic-research-kernel==2.4.1
+   uv tool install academic-research-kernel==2.4.2
    ```
-   您也可以使用 `pipx install academic-research-kernel==2.4.1` 或在虛擬環境內執行 `python -m pip install academic-research-kernel==2.4.1`。加上 `[research]` 會固定安裝 `pypdf==7.0.0` 與 `fonttools==4.65.0`，保證不同機器解析數位 PDF 字型時結果一致；加上 `[full]` 會一併安裝擴展科學計算範例所需的函式庫；加上 `[qa]` 會安裝倉庫自檢與測試所需的解析依賴。
+   您也可以使用 `pipx install academic-research-kernel==2.4.2` 或在虛擬環境內執行 `python -m pip install academic-research-kernel==2.4.2`。加上 `[research]` 會固定安裝 `pypdf==7.0.0` 與 `fonttools==4.65.0`，保證不同機器解析數位 PDF 字型時結果一致；加上 `[full]` 會一併安裝擴展科學計算範例所需的函式庫；加上 `[qa]` 會安裝倉庫自檢與測試所需的解析依賴。
 
 2. **通用 Agent Plugins v1 與 MCP 用戶端掛載**
    本倉庫遵循 **Agent Plugins v1** 規範並提供 `plugin.json`，透過標準輸入輸出協定執行 `mcp.json` 與 `scripts/mcp_server.py` 定義的 **MCP 伺服器**，對外暴露全部 18 個查核與統計工具。雖然倉庫名為 `academic-research-kernel`，但外掛名稱 `name: "academic-skills"` 與原有的 MCP 設定別名保持不變，舊設定無需修改即可繼續使用。
@@ -254,7 +254,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1364 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.4.1 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
+GitHub Actions 持續整合覆蓋 Linux x86_64 的 Python 3.10、3.12 與 3.14 環境，同時覆蓋 Linux ARM64 的 `ubuntu-24.04-arm` 映像檔與 Windows x86_64、Windows ARM64 的 `windows-11-arm` 映像檔以及 macOS ARM64 的 `macos-latest` 映像檔，並附帶針對上游 Hermes 的即時相容性檢驗。本機完整迴歸測試套件共通過 1364 項測試，在[正確性修復紀錄](docs/maintenance/correctness-repair-20261008.md)與早期的[收尾紀錄](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)基線上持續擴充。[tools/longtail/](tools/longtail/README.md) 目錄存放確定性長尾測試場景產生器，`scripts/scfabric/` 目錄提供科學計算基準測試工具，首輪實測說明見 [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md)。全部 21 個語種共 23 份 README 檔案均已同步至 2.4.2 版本，狀態記錄於[多語言清單](docs/i18n/manifest.json)。
 
 ### 2. 授權條款
 

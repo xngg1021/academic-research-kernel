@@ -16,11 +16,11 @@ Author: Junfu Shi (SJF, xngg1021). License: [Source Lineage License 1.0](LICENSE
 
 ## 1. Two-Minute Quick Start
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then choose either the local CLI + agent skill path or the stdio MCP server path for version `2.4.1`:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then choose either the local CLI + agent skill path or the stdio MCP server path for version `2.4.2`:
 
 ```bash
 # Option 1: Install the full CLI with digital PDF support and export the paper-research skill
-uv tool install "academic-research-kernel[research]==2.4.1"
+uv tool install "academic-research-kernel[research]==2.4.2"
 academic-research-kernel research skill --output ./paper-research
 
 # Option 2: Start the stdio MCP server for Claude Code, Cursor, Codex, or Gemini CLI
@@ -35,7 +35,7 @@ academic-research-kernel verify-source https://doi.org/10.1038/nature14539 --nor
 academic-research-kernel venue-template --action list-venues
 ```
 
-The `doctor` command runs offline and checks runtime dependencies, all 26 JSON schemas, and all 18 MCP tool definitions; leaving optional external API keys unconfigured will not fail the check. Running `mcp` in a terminal waits silently on standard input/output for JSON-RPC requests from an MCP client. The [2.4.1 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.1) lists package SHA-256 hashes. Python 3.10–3.14 is supported, and statistical libraries load on demand only when distribution or power calculations are invoked.
+The `doctor` command runs offline and checks runtime dependencies, all 26 JSON schemas, and all 18 MCP tool definitions; leaving optional external API keys unconfigured will not fail the check. Running `mcp` in a terminal waits silently on standard input/output for JSON-RPC requests from an MCP client. The [2.4.2 release page](https://github.com/xngg1021/academic-research-kernel/releases/tag/v2.4.2) lists package SHA-256 hashes. Python 3.10–3.14 is supported, and statistical libraries load on demand only when distribution or power calculations are invoked.
 
 ---
 
@@ -156,7 +156,7 @@ To motivate the kernel's five deterministic verification families (missing dispe
 | `skills/literature-analysis` | 1.3.0 | Expand related works via snowballing, compare methods and contradictions across papers, build author profiles, review manuscripts, and convert BibTeX, RIS, and CSL-JSON |
 | `skills/quantitative-paper-audit` | 1.2.0 | Recompute $p$-values, effect sizes, confidence intervals, odds ratios, and statistical power from reported statistics, plus partition conservation, ablation offset, and physical bound checks |
 | `skills/math-computation` | 1.2.1 | Run symbolic algebra, calculus, linear algebra, differential equations, optimization, and Monte Carlo simulations with SymPy, NumPy, SciPy, statsmodels, and PyTorch |
-| `skills/academic-writing` | 1.3.1 | Edit academic prose and structure, format citations across international profiles, and run pre-submission linting, double-blind sanitization, receipt-to-LaTeX table generation, and venue templating |
+| `skills/academic-writing` | 1.3.2 | Edit academic prose and structure, format citations across international profiles, and run pre-submission linting, double-blind sanitization, receipt-to-LaTeX table generation, and venue templating |
 | `skills/research-reproducibility` | 1.0.1 | Audit companion code commits, lockfiles, random seeds, and numerical tolerances, recording reproduction runs in verifiable receipts |
 | `skills/systematic-review-meta-analysis` | 1.0.1 | Record PRISMA search and screening logs, convert effect sizes, test heterogeneity, pool fixed or random effects, and run leave-one-out sensitivity and publication-bias checks |
 | `skills/literature-watch` | 1.1.0 | Monitor OpenAlex and Crossref weekly for new papers by topic, author, or cited DOI, deduplicating results so only newly published works are reported |
@@ -173,9 +173,9 @@ Across the 14 skills, 22 Markdown reference guides and 1 machine-readable venue 
 
 1. **Python Package & Optional Extras**
    ```bash
-   uv tool install academic-research-kernel==2.4.1
+   uv tool install academic-research-kernel==2.4.2
    ```
-   You can also run `pipx install academic-research-kernel==2.4.1` or `python -m pip install academic-research-kernel==2.4.1` inside a virtual environment. Adding `[research]` pins `pypdf==7.0.0` and `fonttools==4.65.0` for deterministic digital PDF font decoding across Python 3.10–3.14; `[full]` installs extended scientific computing libraries; `[qa]` installs repository test and lint dependencies.
+   You can also run `pipx install academic-research-kernel==2.4.2` or `python -m pip install academic-research-kernel==2.4.2` inside a virtual environment. Adding `[research]` pins `pypdf==7.0.0` and `fonttools==4.65.0` for deterministic digital PDF font decoding across Python 3.10–3.14; `[full]` installs extended scientific computing libraries; `[qa]` installs repository test and lint dependencies.
 
 2. **Universal Agent Plugins v1 & Multi-Agent MCP Registration (Claude Code, Codex, Cursor, Gemini CLI)**
    This repository follows the vendor-neutral **Agent Plugins v1** format (`plugin.json`) and exposes its 18 verification and statistical tools through a standard stdio **MCP server** (`mcp.json` / `scripts/mcp_server.py`, supporting MCP protocol versions `2024-11-05`, `2025-03-26`, `2025-06-18`, `2025-11-25`, and `2026-07-28`):
@@ -266,7 +266,7 @@ python scripts/release_manifest.py --dist dist --output dist/release-manifest.js
 python scripts/package_acceptance.py --dist dist --uvx --source-checks --report package-acceptance.json
 ```
 
-GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1364 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.4.1 baseline in [the i18n manifest](docs/i18n/manifest.json).
+GitHub Actions runs the orthogonal test matrix across Linux x86_64 (Python 3.10, 3.12, and 3.14), Linux ARM64 (`ubuntu-24.04-arm`), Windows x86_64, Windows ARM64 (`windows-11-arm`), and macOS ARM64 (`macos-latest`), alongside live compatibility checks against upstream Hermes. The local regression suite passes 1364 tests (extending the baseline in [the correctness repair report](docs/maintenance/correctness-repair-20261008.md) and the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5754741342)). [tools/longtail/](tools/longtail/README.md) contains the deterministic scenario generator, and `scripts/scfabric/` contains the scientific computing benchmark tools documented in [docs/scientific-compute-fabric.md](docs/scientific-compute-fabric.md). All 21 locales (23 README files including Chinese regional aliases) are synchronized with the 2.4.2 baseline in [the i18n manifest](docs/i18n/manifest.json).
 
 ### 2. License
 
