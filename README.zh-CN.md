@@ -8,7 +8,7 @@
 
 大语言模型擅长顺畅概括论文大意，但在需要精确算术和外部事实核对的环节极易出错：读外部论文时，模型经常顺着原文复述算错的 $p$ 值与凑出来的消融表格，或者引用已撤稿文献与虚构 DOI；写自有稿件时，单靠自然语言提示词也拦不住双盲 PDF 元数据里的作者实名残留、LaTeX 手抄表格误差与正文超页。
 
-`academic-research-kernel` 在 `3.0.0` 版本将语义阅读与确定性核查解耦：自然语言阅读与提炼交给研究人员或大模型，统计重算与 Crossref、OpenAlex 双源核验，以及 OpenReview 离线审稿透视、荟萃分析合并和多文件 LaTeX 投稿门禁，全部收拢进单一标准库优先包 `src/academic_research_kernel/`，底层状态由 `SQLite STRICT + WAL` 事务引擎统一管理。
+`academic-research-kernel` 在 `3.0.0` 版本将语义阅读与确定性核查拆开：自然语言阅读与提炼交给研究人员或大模型，统计重算与 Crossref、OpenAlex 双源核验，以及 OpenReview 离线审稿透视、荟萃分析合并和多文件 LaTeX 投稿门禁，全部收拢进单一标准库优先包 `src/academic_research_kernel/`，持久状态由 `SQLite STRICT + WAL` 事务库统一管理。
 
 作者为 Junfu Shi，笔名 SJF，GitHub 账号 `xngg1021`。许可证适用 [Source Lineage License 1.0](LICENSE)，架构说明见 [docs/kernel-architecture.md](docs/kernel-architecture.md)。
 
@@ -47,7 +47,7 @@ academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
 
 ### 方式二：标准 stdio MCP 服务，适合 Claude Code 与 Codex，以及 Cursor 与 Gemini CLI
 
-对外暴露 **22 个确定性 MCP 工具**，支持 `2024-11-05` 至 `2026-07-28` 协议版本协商：
+对外暴露 **24 个确定性 MCP 工具**，支持 `2024-11-05` 至 `2026-07-28` 协议版本协商：
 
 ```bash
 # 在 Claude Code CLI 中一键注册
@@ -60,7 +60,7 @@ codex mcp add academic-research-kernel -- uvx --from "academic-research-kernel[r
 ### 方式三：智能体技能包，适合 Hermes Agent 或支持 `SKILL.md` 的客户端
 
 ```bash
-# 在 Hermes Agent 中安装完整插件
+# 在 Hermes Agent 中安装完整七技能插件
 hermes plugins install xngg1021/academic-research-kernel --no-enable
 hermes plugins enable academic-skills
 
@@ -70,17 +70,19 @@ academic-research-kernel research skill --output ./audit-paper
 
 ---
 
-## 三、第一性原理重塑后的五大核心技能
+## 三、完整整合原版十四项能力的七大核心技能
 
-`3.0.0` 版本清理了旧版按内部模块拆分的十一项冗杂目录，按科研工作真实动作重塑为五个直观的“动词加宾语”技能，方便科研人员与智能体第一眼识别用途：
+`3.0.0` 版本把旧版按内部脚本拆分的十四项技能目录完整归并为七个直观的“动词加宾语”技能，方便科研人员与智能体第一眼识别用途：
 
 | 技能目录 | 一句话用途说明 | 关联核心子命令与工具 |
 | --- | --- | --- |
-| [`skills/audit-paper`](skills/audit-paper/SKILL.md) | 审读单篇论文：核对统计量与表格守恒，验证原文证据与复现清单 | `research`、`table-forensics`、`repro-checklist`、`academic_recompute_statistics` |
-| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | 核查引文真伪：双源验证 DOI 与撤稿状态，追踪新文献并定位开放获取全文 | `verify-work`、`retraction-watch`、`literature-watch`、`locate-oa` |
-| [`skills/audit-peer-review`](skills/audit-peer-review/SKILL.md) | 透视顶会审稿：离线统计 OpenReview 评分分布与异常体征，取证配套代码仓 | `openreview-audit`、`repo-forensics`、`academic_openreview_audit` |
-| [`skills/meta-analysis`](skills/meta-analysis/SKILL.md) | 文献综述合并：固定与随机效应合并，检验异质性与发表偏倚并生成综述矩阵 | `meta-analyze`、`bibliography --action review-matrix`、`academic_meta_analyze` |
-| [`skills/check-submission`](skills/check-submission/SKILL.md) | 投稿前安检门：多文件 LaTeX 检查与双盲 PDF 扫描，生成收据绑定三线表 | `lint-submission`、`sanitize-submission`、`generate-table`、`check-venue` |
+| [`skills/audit-paper`](skills/audit-paper/SKILL.md) | 审读单篇或双篇论文：重算统计量与表格守恒，裁决复现清单并管理证据图与决策台账 | `research`、`table-forensics` 与 `repro-checklist`、`ledger` |
+| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | 核查引文真伪：双源验证 DOI 与更正记录，追踪撤稿与新文献，合并多路语料并定位五源开放全文 | `verify-work`、`retraction-watch` 与 `collect-corpus`、`locate-oa` |
+| [`skills/audit-peer-review`](skills/audit-peer-review/SKILL.md) | 透视顶会审稿：离线统计 OpenReview 评分分布与异常体征，取证本地或远端配套代码仓 | `openreview-audit`、`repo-forensics` 与 `academic_openreview_audit` |
+| [`skills/meta-analysis`](skills/meta-analysis/SKILL.md) | 文献综述合并：固定与随机效应合并，执行亚组分解与元回归，生成引文图与综述对照表 | `meta-analyze`、`bibliography` 与 `academic_meta_analyze` |
+| [`skills/check-submission`](skills/check-submission/SKILL.md) | 投稿前安检门：建立会刊工程，转换收据与双篇对比三线表，扫描多文件 LaTeX 与双盲 PDF | `lint-submission`、`sanitize-submission` 与 `generate-table`、`check-venue` |
+| [`skills/cross-review`](skills/cross-review/SKILL.md) | 多模型稀疏审议：独立盲审与断言聚类，生成匿名质询包并保护附定位证据的少数派发现 | `cross-review`、`academic_cross_review` |
+| [`skills/compute-math`](skills/compute-math/SKILL.md) | 科学计算与探针：探测处理器与科学计算库版本，生成实测计算回执并路由多学科数理计算 | `compute-probe`、`academic_scfabric_hardware_probe` |
 
 ---
 
@@ -120,7 +122,7 @@ academic-research-kernel generate-table ./results-receipt.json --caption "Main R
 # 3. 在受控隔离子进程中扫描源码目录与编译后 PDF 的 /Info 字典及 XMP 流，拦截实名泄露
 academic-research-kernel sanitize-submission ./submission-dir --forbidden-token "Author Name"
 
-# 4. 运行投稿前全量检查：嵌套 \input 解析、声明书目核对、正文共享页精确计页与 CEG 论断绑定核验
+# 4. 运行投稿前全量检查：解析嵌套 \input 与声明书目，并核对正文共享页计页与 CEG 论断绑定
 academic-research-kernel lint-submission ./submission-dir/main.tex \
   --venue iclr --phase submission --pdf ./submission-dir/main.pdf \
   --ceg ./ceg.json --require-ceg-binding --check-academic-style
@@ -155,4 +157,4 @@ PYTHONPATH=src python -m academic_research_kernel.release_gate --package-accepta
 
 ### 许可证
 
-本仓库受保护的项目材料在 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 界定范围内适用 **Source Lineage License 1.0**，标识符为 `LicenseRef-Source-Lineage-1.0`；来源谱系与保留上游 MIT 文件的 SHA-256 清单见 [SLL-APPLICATION.json](SLL-APPLICATION.json) 与 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md)，以及 [LICENSE-HISTORY.md](LICENSE-HISTORY.md) 与 [REPOSITORY-IDENTITY.md](REPOSITORY-IDENTITY.md)。SLL 1.0 允许学术与商业自由使用、修改、重分发及闭源扩展，前提是保留规定的许可与来源声明；单纯通过网络提供服务而不分发软件副本不会触发署名义务，[tests/upstream/LICENSE](tests/upstream/LICENSE) 等第三方测试文件继续适用各自原有许可证。
+本仓库受保护的项目材料在 [LICENSE-APPLICATION.md](LICENSE-APPLICATION.md) 界定范围内适用 **Source Lineage License 1.0**，标识符为 `LicenseRef-Source-Lineage-1.0`；来源谱系与保留上游 MIT 文件的 SHA-256 清单见 [SLL-APPLICATION.json](SLL-APPLICATION.json) 与 [SOURCE-LINEAGE.md](SOURCE-LINEAGE.md)，以及 [LICENSE-HISTORY.md](LICENSE-HISTORY.md) 与 [REPOSITORY-IDENTITY.md](REPOSITORY-IDENTITY.md)。SLL 1.0 允许学术与商业自由使用与修改，也允许重分发及闭源扩展，前提是保留规定的许可与来源声明；单纯通过网络提供服务而不分发软件副本不会触发署名义务，[tests/upstream/LICENSE](tests/upstream/LICENSE) 等第三方测试文件继续适用各自原有许可证。

@@ -411,10 +411,24 @@ def test_p1_11_legacy_watch_migration_stdin_repro_and_five_skills(tmp_path: Path
     )
     assert cli.main(["repro-checklist"]) == 0
 
-    # Verify the 5 first-principles skills and cleaned READMEs
-    expected_skills = {"audit-paper", "verify-citations", "audit-peer-review", "meta-analysis", "check-submission"}
+    # Verify the 7 first-principles skills, metadata hygiene, and cleaned READMEs
+    expected_skills = {
+        "audit-paper",
+        "verify-citations",
+        "audit-peer-review",
+        "meta-analysis",
+        "check-submission",
+        "cross-review",
+        "compute-math",
+    }
     actual_skills = {p.parent.name for p in (ROOT / "skills").glob("*/SKILL.md")}
     assert actual_skills == expected_skills
+    for sp in list((ROOT / "skills").glob("*/SKILL.md")) + [ROOT / "src/academic_research_kernel/portable_skills/audit-paper/SKILL.md"]:
+        stxt = sp.read_text(encoding="utf-8")
+        assert "\t" not in stxt, f"Tab character found in {sp}"
+        assert "author: Junfu Shi (SJF, xngg1021)" in stxt
+        assert "Hermes Agent" not in stxt.splitlines()[:10]
+        assert "license: LicenseRef-Source-Lineage-1.0" in stxt
     assert not (ROOT / "i18n").exists()
     for rname in ("README.md", "README.zh-CN.md"):
         rtxt = (ROOT / rname).read_text(encoding="utf-8")
@@ -610,3 +624,349 @@ Accuracy is 12.5\%.
     bench = json.loads((ROOT / "docs" / "benchmarks" / "peer-review-forensics-2025-2027-v1.json").read_text(encoding="utf-8"))
     assert sum(v["paper_count"] for v in bench["venues"]) == bench["aggregate_totals"]["total_public_records"] == 74933
     assert sum(v["total_reviews"] for v in bench["venues"]) == bench["aggregate_totals"]["total_reviews"] == 234128
+
+
+def test_restored_14_to_7_skill_capabilities_and_schemas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    import sys
+    from jsonschema import Draft7Validator, Draft202012Validator
+    from academic_research_kernel import collect_corpus, compute_probe, cross_review, github_repo_forensics
+
+    schema_dir = ROOT / "src" / "academic_research_kernel" / "schemas"
+
+    # 1. cross-review inline MCP + CLI 4-stage sparse deliberation + schema validation
+    real_ev_file = tmp_path / "target_mod.py"
+    real_ev_file.write_text("x = 1\n", encoding="utf-8")
+    inline_findings = {
+        "seat-a": [
+            # Duplicate target+key from same model MUST stay singleton (C01)
+            {"id": "A1", "target": "target_mod.py", "issue_key": "null-guard", "polarity": "present", "severity": "P0", "claim": "Null guard missing", "evidence": [f"{real_ev_file}:1"]},
+            {"id": "A2", "target": "target_mod.py", "issue_key": "null-guard", "polarity": "present", "severity": "P1", "claim": "Null guard still missing", "evidence": [f"{real_ev_file}:1"]},
+            {"id": "A3", "target": "src/api.py", "issue_key": "timeout", "polarity": "present", "severity": "P1", "claim": "Timeout present", "evidence": ["src/api.py:10"]},
+        ],
+        "seat-b": [
+            # Opposing polarity on src/api.py -> contradiction (C02)
+            {"id": "B1", "target": "src/api.py", "issue_key": "timeout", "polarity": "absent", "severity": "P1", "claim": "Timeout absent", "evidence": ["src/api.py:10"]},
+            {"id": "B2", "target": "src/shared.py", "issue_key": "race", "polarity": "present", "severity": "P1", "claim": "Race condition", "evidence": ["src/shared.py:5"]},
+        ],
+        "seat-c": [
+            {"id": "C1", "target": "src/shared.py", "issue_key": "race", "polarity": "present", "severity": "P0", "claim": "Race condition confirmed", "evidence": ["src/shared.py:5"]},
+            # Ghost absolute evidence -> discarded during synthesis (C07)
+            {"id": "C2", "target": "ghost.py", "issue_key": "ghost-bug", "severity": "P0", "claim": "Ghost claim", "evidence": [str(tmp_path / "nonexistent_ghost.py") + ":9"]},
+        ],
+    }
+    monkeypatch.setenv("ARK_WORKSPACE_ROOT", str(tmp_path))
+    mcp_cr = mcp_server.handle_tool_call("academic_cross_review", {"findings_by_model": inline_findings, "mode": "audit"})
+    Draft202012Validator(json.loads((schema_dir / "cross-review-artifact.schema.json").read_text("utf-8"))).validate(mcp_cr["registry"])
+    assert mcp_cr["registry"]["stats"]["consensus_count"] == 1  # src/shared.py
+    assert mcp_cr["registry"]["stats"]["contradiction_count"] == 1  # src/api.py
+    assert mcp_cr["registry"]["stats"]["singleton_count"] == 2  # target_mod.py + ghost.py
+    # Challenger for src/api.py contradiction MUST exclude seat-a and seat-b -> must be seat-c (C06)
+    c_contradict = [c for c in mcp_cr["challenge_plan"] if c["type"] == "contradiction"][0]
+    assert c_contradict["reviewer"] == "seat-c"
+    assert all(d["reviewer"] != d["target"] for d in mcp_cr["derangement_pairings"])
+
+    # Synthesis with replies: C01 conceded, singleton target_mod.py unrefuted -> preserved in unresolved_ledger; ghost discarded
+    replies = {c["challenge_id"]: "【CONCEDE】 Proposal-1 verified on line 10." for c in mcp_cr["challenge_plan"]}
+    mcp_syn = mcp_server.handle_tool_call(
+        "academic_cross_review",
+        {"findings_by_model": inline_findings, "mode": "standard", "challenge_replies": replies},
+    )["synthesis"]
+    Draft7Validator(json.loads((schema_dir / "review-run-receipt.schema.json").read_text("utf-8"))).validate(mcp_syn["receipt"])
+    assert any(u.get("target") == "target_mod.py" for u in mcp_syn["unresolved_ledger"])
+    assert len(mcp_syn["ghost_discarded"]) == 1
+
+    # End-to-end CLI cross-review stage=all in a directory with spaces in path
+    spaced_dir = tmp_path / "stream with spaces"
+    task_md = tmp_path / "task.md"
+    task_md.write_text("Audit sample module.\n", encoding="utf-8")
+    worker_script = tmp_path / "mock_worker.py"
+    worker_script.write_text(
+        "import json, pathlib, sys\n"
+        "out_p = pathlib.Path(sys.argv[1])\n"
+        "out_p.write_text('# Review\\n\\n【CONCEDE】 Proposal-1 ok.\\n', encoding='utf-8')\n"
+        "if len(sys.argv) > 2 and sys.argv[2] != 'NONE':\n"
+        "    pathlib.Path(sys.argv[2]).write_text(json.dumps({'findings': [{'id': 'F1', 'target': 'a.py', 'issue_key': 'k1', 'severity': 'P1', 'claim': 'Bug', 'evidence': ['a.py:1']}]}), encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+    py_exe = sys.executable.replace("\\", "/")
+    w_str = str(worker_script).replace("\\", "/")
+    panel_json = tmp_path / "panel.json"
+    panel_json.write_text(
+        json.dumps([
+            {"id": "alpha", "executor": "command", "cmd": f'"{py_exe}" "{w_str}" "{{out_path}}" "{{findings_path}}"'},
+            {"id": "beta", "executor": "command", "cmd": f'"{py_exe}" "{w_str}" "{{out_path}}" "{{findings_path}}"'},
+        ]),
+        encoding="utf-8",
+    )
+    assert cli.main(["cross-review", str(spaced_dir), "--models-file", str(panel_json), "--task", str(task_md), "--stage", "all"]) == 0
+    assert (spaced_dir / "consensus-report.md").is_file()
+    assert (spaced_dir / "review-run-receipt.json").is_file()
+
+    # 2. compute-probe & ComputeReceipt schema validation
+    cp_rep = mcp_server.handle_tool_call("academic_compute_probe", {"emit_receipt": True, "scale": "small"})
+    Draft7Validator(json.loads((schema_dir / "compute-receipt.schema.json").read_text("utf-8"))).validate(cp_rep)
+    cp_out = tmp_path / "comp.json"
+    assert cli.main(["compute-probe", "--receipt", "--output", str(cp_out)]) == 0
+    assert cp_out.is_file()
+
+    # 3. collect-corpus Union-Find merge & DOI conflict preservation
+    layers_file = tmp_path / "layers.json"
+    layers_file.write_text(
+        json.dumps({
+            "text-search": [
+                {"id": "https://openalex.org/W100", "doi": "10.1000/same", "title": "Paper Same", "relevance_score": 12.5},
+                {"id": "https://openalex.org/W999", "doi": "10.1000/conflict-a", "title": "Conflict A"},
+            ],
+            "algorithmic-related": [
+                {"id": "W100", "cited_by_count": 42},
+                {"id": "W999", "doi": "10.1000/conflict-b", "title": "Conflict B"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+    assert cli.main(["collect-corpus", "--input", str(layers_file)]) == 0
+    cc_res = json.loads(capsys.readouterr().out)
+    assert cc_res["count"] == 3  # W100 merged into 1, conflicting W999 DOIs kept separate!
+    w100 = [c for c in cc_res["candidates"] if c["doi"] == "10.1000/same"][0]
+    assert set(w100["source_layers"]) == {"text-search", "algorithmic-related"}
+    assert w100["cited_by_count"] == 42
+
+    # 4. locate-oa --fallback-all cascading to Semantic Scholar & Europe PMC
+    monkeypatch.setattr(locate_oa, "live_openalex_oa", lambda d: {"doi": d, "open_access": {"is_oa": False}})
+    monkeypatch.setattr(locate_oa, "live_semantic_scholar_oa", lambda _d: None)
+    monkeypatch.setattr(
+        locate_oa,
+        "live_europe_pmc_oa",
+        lambda _d: {"url_for_pdf": "https://europepmc.org/articles/PMC1/pdf/main.pdf", "url": "https://europepmc.org/articles/PMC1", "source": "Europe PMC"},
+    )
+    rc_all, rep_all = locate_oa.resolve_oa({"type": "doi", "value": "10.1000/epmc"}, email=None, fallback_all=True)
+    assert rc_all == 0 and rep_all["mode"] == "europe-pmc-fallback"
+    assert rep_all["oa_url"] == "https://europepmc.org/articles/PMC1/pdf/main.pdf"
+
+    # 5. repo-forensics --github-repo & generate-table --rows / --cols
+    monkeypatch.setattr(
+        github_repo_forensics,
+        "fetch_github_tree",
+        lambda slug: ([{"path": "src/pkg/core.py", "size": 380}, {"path": "tests/test_core.py", "size": 190}], False, "abc1234", "github-rest"),
+    )
+    capsys.readouterr()
+    assert cli.main(["repo-forensics", "--github-repo", "owner/repo"]) == 0
+    rf_out = json.loads(capsys.readouterr().out)
+    assert rf_out["mode"] == "github-rest" and rf_out["first_party_core"]["file_count"] == 1
+
+    nested_tbl = tmp_path / "nested_table.json"
+    nested_tbl.write_text(json.dumps({"exp": {"rows": [["Ours", 95.2], ["Base", 90.1]]}}), encoding="utf-8")
+    capsys.readouterr()
+    assert cli.main(["generate-table", str(nested_tbl), "--rows", "exp.rows", "--cols", "Method,Acc"]) == 0
+    tex_tbl = capsys.readouterr().out
+    assert "Method & Acc" in tex_tbl and "95.20" in tex_tbl
+
+    # 6. Subgroup analysis + WLS meta-regression + ledger CLI
+    meta_res = mcp_server.handle_tool_call(
+        "academic_meta_analyze",
+        {
+            "studies": [
+                {"yi": 0.2, "vi": 0.04, "subgroup": "low_dose", "moderator": 10.0},
+                {"yi": 0.25, "vi": 0.05, "subgroup": "low_dose", "moderator": 15.0},
+                {"yi": 0.8, "vi": 0.04, "subgroup": "high_dose", "moderator": 40.0},
+                {"yi": 0.9, "vi": 0.05, "subgroup": "high_dose", "moderator": 50.0},
+            ]
+        },
+    )
+    assert meta_res["subgroup_analysis"]["q_between"] > 5.0
+    assert meta_res["meta_regression"]["slope"] > 0.01
+
+    st_db = tmp_path / "ledger.sqlite3"
+    ceg_out = tmp_path / "exported_ceg.json"
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "add-claim", "--claim-id", "c1", "--text", "Gain is 5.1%.", "--artifact-id", "art1", "--locator", "Table 1"]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "export-ceg", "--output", str(ceg_out)]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "validate-ceg"]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "record-decision", "--decision-id", "d0", "--title", "Explore heuristic", "--rationale", "Initial run"]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "record-decision", "--decision-id", "d1", "--basis-decision-id", "d0", "--title", "Drop heuristic", "--rationale", "Failed ablation", "--is-negative-result", "--artifact-id", "art1"]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "transition-decision", "--decision-id", "d0", "--status", "pruned", "--reason", "contradicted"]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "correct-decision", "--decision-id", "d0", "--verdict", "negative", "--rationale", "Post-hoc check", "--artifact-id", "art1"]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "export-decisions", "--output", str(tmp_path / "decisions.json")]) == 0
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "validate-decisions"]) == 0
+
+
+def test_sol_astra_r2_regression_suite(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sqlite3
+    import sys
+    from academic_research_kernel import collect_corpus, compute_probe, cross_review, github_repo_forensics, meta_core
+
+    monkeypatch.setenv("ARK_WORKSPACE_ROOT", str(tmp_path))
+
+    # 1. Sol-1 & Sol-2 & Sol-5: Shuffled Proposal-k mapping, empty contradiction reply, and word-boundary opposition
+    real_f = tmp_path / "m.py"
+    real_f.write_text("y = 2\n", encoding="utf-8")
+    findings = {
+        "s1": {
+            "findings": [
+                {"target": "m.py", "issue_key": "multi", "severity": "P0", "claim": "First true claim", "evidence": [f"{real_f}:1"]},
+                {"target": "m.py", "issue_key": "multi", "severity": "P0", "claim": "Second false claim", "evidence": [f"{real_f}:1"]},
+                {"target": "v.py", "issue_key": "chk", "severity": "P1", "claim": "Schema is valid", "evidence": ["v.py:3"]},
+            ]
+        },
+        "s2": {
+            "findings": [
+                {"target": "v.py", "issue_key": "chk", "severity": "P1", "claim": "Schema is invalid", "evidence": ["v.py:3"]},
+            ]
+        },
+        "s3": {"findings": []},
+    }
+    reg, chals, _ = cross_review.plan_challenges(["s1", "s2", "s3"], findings, mode="standard", run_id="seed-shuffle-check")
+    assert len(reg["contradictions"]) == 1  # "valid" vs "invalid" word-boundary opposition!
+    c_contra = next(c for c in chals if c["type"] == "contradiction")
+    c_sing = next(c for c in chals if c["type"] == "singleton_audit")
+
+    # Empty reply on contradiction MUST NOT yield CONVERGED
+    syn_empty = cross_review.synthesize_deliberation(
+        reg,
+        chals,
+        {c_contra["challenge_id"]: "No tags here at all", c_sing["challenge_id"]: "【CONCEDE】 Verified."},
+        base_dirs=[tmp_path],
+    )
+    assert syn_empty["convergence_status"] == "PARTIAL_PROGRESS"
+    assert len(syn_empty["uncontested_contradictions"]) == 1
+
+    # Refuting whichever Proposal-k corresponds to original claim 2 MUST preserve original claim 1!
+    inv_map = {orig_idx: pkey for pkey, orig_idx in c_sing["proposal_map"].items()}
+    prop_for_claim2 = inv_map[2].replace("proposal", "Proposal-")
+    syn_ref2 = cross_review.synthesize_deliberation(
+        reg,
+        chals,
+        {
+            c_contra["challenge_id"]: "【CONCEDE】 Confirmed invalid.",
+            c_sing["challenge_id"]: f"【REFUTED】 {prop_for_claim2} is wrong.",
+        },
+        base_dirs=[tmp_path],
+    )
+    kept = [u for u in syn_ref2["unresolved_ledger"] if u.get("issue_id") == c_sing["issue_id"]]
+    assert len(kept) == 1
+    assert [cl["claim"] for cl in kept[0]["claims"]] == ["First true claim"]
+
+    # 2. Sol-4 & Sol-6 & Astra-5: Command argv array + stdin piping + --stage all exit code propagation
+    echo_script = tmp_path / "stdin_echo.py"
+    echo_script.write_text(
+        "import pathlib, sys\n"
+        "data = sys.stdin.read()\n"
+        "out = pathlib.Path(sys.argv[1])\n"
+        "out.write_text('STDIN_LEN=' + str(len(data)) + '\\n【CONCEDE】 ok\\n', encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+    panel_ok = tmp_path / "panel_ok.json"
+    panel_ok.write_text(
+        json.dumps([
+            {"id": "p1", "executor": "command", "cmd": [sys.executable, str(echo_script), "{out_path}", "-"]},
+            {"id": "p2", "executor": "command", "cmd": f'"{sys.executable}" "{echo_script}" "{{out_path}}" < "{{prompt_path}}"'},
+        ]),
+        encoding="utf-8",
+    )
+    task_md = tmp_path / "t.md"
+    task_md.write_text("Review task body.\n", encoding="utf-8")
+    s_ok = tmp_path / "stream_ok"
+    assert cli.main(["cross-review", str(s_ok), "--models-file", str(panel_ok), "--task", str(task_md), "--stage", "all"]) == 0
+    assert "STDIN_LEN=" in (s_ok / "review-p1.md").read_text(encoding="utf-8")
+    assert "STDIN_LEN=" in (s_ok / "review-p2.md").read_text(encoding="utf-8")
+
+    panel_fail = tmp_path / "panel_fail.json"
+    panel_fail.write_text(
+        json.dumps([
+            {"id": "f1", "executor": "command", "cmd": [sys.executable, "-c", "import sys; sys.exit(2)"]},
+            {"id": "f2", "executor": "command", "cmd": [sys.executable, "-c", "import sys; sys.exit(2)"]},
+        ]),
+        encoding="utf-8",
+    )
+    assert cli.main(["cross-review", str(tmp_path / "stream_fail"), "--models-file", str(panel_fail), "--task", str(task_md), "--stage", "all"]) == 1
+
+    # 3. Sol-7 & Sol-9: compute_probe operation validation + sub-cgroup quota
+    svd_rec = compute_probe.build_compute_receipt(operation="svd_f64", scale="small")
+    assert svd_rec["operation"] == "svd_f64"
+    with pytest.raises(ValueError, match="Unsupported operation"):
+        compute_probe.build_compute_receipt(operation="nonexistent_kernel")
+
+    fake_proc = tmp_path / "proc_cgroup"
+    fake_cg = tmp_path / "cgroup"
+    (fake_cg / "user.slice" / "job.scope").mkdir(parents=True)
+    (fake_cg / "cpu.max").write_text("max 100000\n", encoding="utf-8")
+    (fake_cg / "user.slice" / "job.scope" / "cpu.max").write_text("250000 100000\n", encoding="utf-8")
+    fake_proc.write_text("0::/user.slice/job.scope\n", encoding="utf-8")
+    assert compute_probe._cgroup_cpu_quota(fake_proc, fake_cg) == pytest.approx(2.5)
+
+    # 4. Sol-10 & Sol-11: collect_corpus order independence & authorships normalization
+    l_a = [{"id": "https://openalex.org/W9", "doi": "10.1000/x", "title": "Short", "cited_by_count": 5}]
+    l_b = [{"id": "https://openalex.org/W9", "title": "Full Canonical Paper Title", "cited_by_count": 12, "authorships": [{"name": "A. Researcher"}]}]
+    m1 = collect_corpus.merge_candidates({"text-search": l_a, "citation-pool": l_b})
+    m2 = collect_corpus.merge_candidates({"citation-pool": l_b, "text-search": l_a})
+    assert m1 == m2
+    assert m1["candidates"][0]["authors"] == [{"name": "A. Researcher"}]
+    assert m1["candidates"][0]["cited_by_count"] == 12
+
+    # 5. Sol-12 & Sol-13: URL-encoded '#' branch in fetch_github_tree + extreme 1e-320 variance in meta_regression
+    seen_urls: list[str] = []
+
+    class _FakeResp:
+        def __init__(self, obj: dict) -> None:
+            self._b = json.dumps(obj).encode("utf-8")
+
+        def read(self, *_a: object) -> bytes:
+            b, self._b = self._b, b""
+            return b
+
+        def __enter__(self) -> "_FakeResp":
+            return self
+
+        def __exit__(self, *_a: object) -> None:
+            return None
+
+    def _fake_urlopen(req: object, **_kw: object) -> _FakeResp:
+        url = getattr(req, "full_url", str(req))
+        seen_urls.append(url)
+        if url.endswith("/repos/org/repo"):
+            return _FakeResp({"default_branch": "release#1"})
+        return _FakeResp({"sha": "deadbeef", "truncated": False, "tree": [{"path": "src/a.py", "type": "blob", "size": 10}]})
+
+    monkeypatch.setattr("shutil.which", lambda _x: None)
+    monkeypatch.setattr("academic_research_kernel.research.sources.controlled_urlopen", _fake_urlopen)
+    entries, _, _, via = github_repo_forensics.fetch_github_tree("org/repo")
+    assert via == "github-rest" and len(entries) == 1
+    assert any("release%231?recursive=1" in u for u in seen_urls)
+
+    tiny_reg = meta_core.meta_regression([0.1, 0.2, 0.4], [1e-320, 1e-320, 1e-320], [1.0, 2.0, 4.0], model="fixed")
+    assert tiny_reg["slope"] == pytest.approx(0.1)
+    assert tiny_reg["se_slope"] > 0.0
+
+    # 6. Sol-3 & Astra-2, 6, 7: Bidirectional CEG contradicts + SQLite hash-verified lineage + decision tamper detection
+    db_p = tmp_path / "tamper.sqlite3"
+    with ResearchStateDB(db_p) as db:
+        db.register_artifact("root_a", "data_snapshot", {"v": 1})
+        db.batch_ingest([{"artifact_id": "child_b", "kind": "computed_evidence", "payload": {"v": 2}, "parents": ["root_a"]}])
+        db.add_claim("c_left", "Metric improves.", evidence=[("child_b", "supports", "T1")])
+        db.add_claim("c_right", "Metric degrades.", evidence=[("child_b", "supports", "T2")])
+        db.add_claim_relation("c_left", "c_right", "contradicts")
+        db.add_claim_relation("c_right", "c_left", "contradicts")
+        ceg = db.export_ceg_dict()
+        assert len(ceg["claim_relations"]) == 2
+        assert any(u["kind"] == "unresolved_contradiction" for u in ceg["uncertainties"])
+        assert mcp_server.handle_tool_call("claim_evidence_validate", {"ceg": ceg})["valid"] is True
+
+        lin_ok = mcp_server.handle_tool_call("research_lineage_trace", {"db_path": str(db_p), "artifact_id": "child_b"})
+        assert lin_ok["verification_status"] == "intact" and lin_ok["root_ancestors"] == ["root_a"] and lin_ok["chain_length"] == 1
+        lin_miss = mcp_server.handle_tool_call("research_lineage_trace", {"db_path": str(db_p), "artifact_id": "unknown_x"})
+        assert lin_miss["verification_status"] == "missing_input"
+
+        db.record_decision("d_base", "Initial plan")
+
+    # Tamper payload_sha256 & inject illegal active->active event directly in SQLite to verify validators catch both!
+    raw = sqlite3.connect(str(db_p))
+    raw.execute("DROP TRIGGER trg_artifacts_immutable_upd")
+    raw.execute("UPDATE artifacts SET payload_sha256 = ? WHERE artifact_id = 'root_a'", ("0" * 64,))
+    raw.execute("INSERT INTO decision_events (decision_id, new_state, reason) VALUES ('d_base', 'active', 'other')")
+    raw.commit()
+    raw.close()
+
+    lin_bad = mcp_server.handle_tool_call("research_lineage_trace", {"db_path": str(db_p), "artifact_id": "child_b"})
+    assert lin_bad["verification_status"] == "corrupted"
+    assert cli.main(["ledger", "--db", str(db_p), "--action", "validate-decisions"]) == 1
+    assert mcp_server.handle_tool_call("decision_ledger_validate", {"db_path": str(db_p)})["valid"] is False

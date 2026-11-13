@@ -451,10 +451,10 @@ def run_command_smoke(cmd_prefix: list[str], expected_version: str) -> dict[str,
         lines = [json.loads(ln) for ln in mcp_proc.stdout.splitlines() if ln.strip()]
         require(len(lines) == 3, f"expected 3 JSON-RPC responses, got {len(lines)}")
         tools = lines[1]["result"]["tools"]
-        require(len(tools) == 22, f"expected 22 MCP tools, got {len(tools)}")
+        require(len(tools) == 24, f"expected 24 MCP tools, got {len(tools)}")
         call_res = json.loads(lines[2]["result"]["content"][0]["text"])
         require(call_res.get("consistent") is True, f"MCP tool call check failed: {call_res}")
-    return {"status": "ok", "version": expected_version, "mcp_tools": 22}
+    return {"status": "ok", "version": expected_version, "mcp_tools": 24}
 
 
 def run_package_acceptance(dist_dir: Path) -> dict[str, object]:

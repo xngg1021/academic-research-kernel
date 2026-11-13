@@ -375,7 +375,13 @@ TOOLS: list[dict[str, Any]] = [
                     "items": {
                         "type": "object",
                         "required": ["yi", "vi"],
-                        "properties": {"yi": {"type": "number"}, "vi": {"type": "number"}, "study_id": {"type": "string"}},
+                        "properties": {
+                            "yi": {"type": "number"},
+                            "vi": {"type": "number"},
+                            "study_id": {"type": "string"},
+                            "subgroup": {"type": "string"},
+                            "moderator": {"type": "number"},
+                        },
                     },
                 }
             },
@@ -461,6 +467,35 @@ TOOLS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "name": "academic_scfabric_hardware_probe",
+        "description": "Probe local CPU/GPU accelerators, numerical library versions, and optional ComputeReceipt benchmark.",
+        "inputSchema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "emit_receipt": {"type": "boolean"},
+                "operation": {"type": "string"},
+                "scale": {"type": "string", "enum": ["small", "medium", "large"]},
+                "dtype": {"type": "string", "enum": ["float32", "float64"]},
+            },
+        },
+    },
+    {
+        "name": "academic_cross_review",
+        "description": "Run deterministic multi-model sparse deliberation clustering, anonymous challenge planning, and minority-protected synthesis.",
+        "inputSchema": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["findings_by_model"],
+            "properties": {
+                "findings_by_model": {"type": "object"},
+                "mode": {"type": "string", "enum": ["economy", "standard", "audit"]},
+                "challenge_replies": {"type": "object"},
+                "base_dir": {"type": "string"},
+            },
+        },
+    },
 ]
 
 _TOOL_MAP: dict[str, dict[str, Any]] = {t["name"]: t for t in TOOLS}
@@ -494,6 +529,8 @@ TOOL_ALIASES: Mapping[str, str] = {
     "academic_resolve_work_identity": "research_object_resolve",
     "resolve_work_identity": "research_object_resolve",
     "research_claim_register": "claim_evidence_add",
+    "academic_compute_probe": "academic_scfabric_hardware_probe",
+    "cross_review_deliberate": "academic_cross_review",
 }
 
 
@@ -774,23 +811,33 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             raise ValueError("research_lineage_trace requires artifact_id (or lineage_graph + target_entity_id)")
         return _with_db(
             a,
-            lambda db: {"artifact_id": str(aid), "ancestors": db.trace_lineage(str(aid))},
+            lambda db: db.trace_lineage_verified(str(aid)),
             readonly=bool(a.get("db_path") and str(a.get("db_path")) != ":memory:"),
         )
 
     if name == "claim_evidence_add":
         ev = [tuple(x) for x in a.get("evidence", ())]
-        return _with_db(
-            a,
-            lambda db: db.add_claim(
+        rels = list(a.get("relations") or ())
+
+        def _add_ceg(db: ResearchStateDB) -> Mapping[str, Any]:
+            res_c = db.add_claim(
                 a["claim_id"],
                 a["claim_text"],
                 a.get("status"),
                 ev,
                 a.get("depends_on", ()),
                 metadata=a.get("metadata"),
-            ),
-        )
+            )
+            for rel_item in rels:
+                if isinstance(rel_item, Mapping):
+                    db.add_claim_relation(
+                        a["claim_id"],
+                        str(rel_item["target_claim_id"]),
+                        str(rel_item.get("relation") or rel_item.get("relation_type") or "depends_on"),
+                    )
+            return res_c
+
+        return _with_db(a, _add_ceg)
 
     if name == "claim_evidence_validate":
         ceg_doc = a.get("ceg") if a.get("ceg") is not None else a.get("graph")
@@ -849,8 +896,13 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         )
 
     if name == "decision_ledger_validate":
-        errs = validate_schema(a["ledger"], "decision-ledger-receipt.schema.json")
-        return {"valid": len(errs) == 0, "errors": errs}
+        from .state_db import validate_decision_ledger_semantics
+
+        if "ledger" in a and a["ledger"] is not None:
+            errs = validate_decision_ledger_semantics(a["ledger"])
+            return {"valid": len(errs) == 0, "errors": errs}
+        is_ro = bool(a.get("db_path") and str(a.get("db_path")) != ":memory:")
+        return _with_db(a, lambda db: db.validate_decisions(), readonly=is_ro)
 
     if name == "decision_trace":
         is_ro = bool(a.get("db_path") and str(a.get("db_path")) != ":memory:")
@@ -1090,13 +1142,22 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             except (ValueError, ZeroDivisionError) as exc:
                 tf_out = {"status": "not_estimable", "reason": str(exc)}
             bias = {"egger": egger_out, "trim_and_fill": tf_out}
-        return {
+        out_meta: dict[str, Any] = {
             "study_count": len(yi),
             "fixed_effect": asdict(mc.pool_fixed(yi, vi)),
             "random_effects_dl": asdict(mc.pool_random(yi, vi)),
             "leave_one_out": loo,
             "publication_bias": bias,
         }
+        if all(isinstance(s.get("subgroup"), str) and s["subgroup"].strip() for s in studies):
+            groups = [s["subgroup"].strip() for s in studies]
+            if len(set(groups)) >= 2:
+                out_meta["subgroup_analysis"] = mc.subgroup_analysis(yi, vi, groups)
+        if len(yi) >= 3 and all(isinstance(s.get("moderator"), (int, float)) and not isinstance(s.get("moderator"), bool) for s in studies):
+            mods = [float(s["moderator"]) for s in studies]
+            if len(set(mods)) >= 2:
+                out_meta["meta_regression"] = mc.meta_regression(yi, vi, mods)
+        return out_meta
 
     if name == "academic_verify_source":
         vw = _mod("verify_work")
@@ -1196,6 +1257,27 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                 root=authorized_workspace_root(),
             )
         return rep
+
+    if name == "academic_scfabric_hardware_probe":
+        cp = _mod("compute_probe")
+        if a.get("emit_receipt"):
+            return cp.build_compute_receipt(
+                operation=str(a.get("operation") or "matmul_f64"),
+                scale=str(a.get("scale") or "small"),
+                dtype=str(a.get("dtype") or "float64"),
+            )
+        return cp.probe()
+
+    if name == "academic_cross_review":
+        cr = _mod("cross_review")
+        bdir_raw = a.get("base_dir")
+        bdir = safe_path(bdir_raw, root=authorized_workspace_root(), must_exist=True) if bdir_raw else authorized_workspace_root()
+        return cr.deliberate_inline(
+            a["findings_by_model"],
+            mode=str(a.get("mode") or "standard"),
+            challenge_replies=a.get("challenge_replies"),
+            base_dir=bdir,
+        )
 
     raise ValueError(f"Unknown MCP tool: {name!r}")
 

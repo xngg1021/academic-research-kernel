@@ -269,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
         p_ltx.add_argument("--from-research", choices=["extraction", "results", "comparison"])
         p_ltx.add_argument("--left-extraction")
         p_ltx.add_argument("--right-extraction")
+        p_ltx.add_argument("--rows")
+        p_ltx.add_argument("--cols")
         p_ltx.add_argument("--output")
         p_ltx.add_argument("--caption")
         p_ltx.add_argument("--label")
@@ -310,23 +312,31 @@ def main(argv: list[str] | None = None) -> int:
     p_lw.add_argument("--days", type=int, default=7)
     p_lw.add_argument("--self-test", action="store_true")
 
-    p_bib = sub.add_parser("bibliography", help="Convert formats, export BibTeX, deduplicate, build citation graph, or render matrix")
-    p_bib.add_argument("--action", choices=["convert", "export-bibtex", "deduplicate", "citation-graph", "review-matrix"], default="convert")
+    p_bib = sub.add_parser("bibliography", help="Convert formats, export BibTeX, deduplicate, merge layers, build citation graph, or render matrix")
+    p_bib.add_argument("--action", choices=["convert", "export-bibtex", "deduplicate", "collect-corpus", "citation-graph", "review-matrix"], default="convert")
     p_bib.add_argument("--from", dest="src_fmt", choices=["bibtex", "ris", "csl", "crossref", "openalex"])
     p_bib.add_argument("--to", dest="dst_fmt", choices=["bibtex", "ris", "csl", "canonical"])
     p_bib.add_argument("--input")
     p_bib.add_argument("--source", choices=["crossref", "openalex"], default="crossref")
     p_bib.add_argument("--doi")
+    p_bib.add_argument("--related-of")
     p_bib.add_argument("--wid")
     p_bib.add_argument("--per-page", type=int, default=25)
     p_bib.add_argument("--pages", type=int, default=4)
     p_bib.add_argument("--query")
     p_bib.add_argument("--date")
 
+    p_cc = sub.add_parser("collect-corpus", help="Merge multi-layer candidate search exports or query OpenAlex concepts/related works")
+    p_cc.add_argument("--input")
+    p_cc.add_argument("--query")
+    p_cc.add_argument("--per-page", type=int, default=10)
+    p_cc.add_argument("--related-of")
+
     p_rf = sub.add_parser("repo-forensics", help="Classify repository Python composition (core vs vendored vs tests)")
     p_rf.add_argument("repo_dir", nargs="?")
     p_rf.add_argument("--local-repo", "--repo-dir", dest="local_repo")
     p_rf.add_argument("--tree-json")
+    p_rf.add_argument("--github-repo")
 
     p_or = sub.add_parser("openreview-audit", help="Audit OpenReview notes JSON, mirror list, or live forum")
     p_or.add_argument("--forum-id", "--forum", dest="forum_id")
@@ -335,12 +345,68 @@ def main(argv: list[str] | None = None) -> int:
     p_or.add_argument("--venue-stats", "--venue-summary", dest="venue_stats")
     p_or.add_argument("--topic-regex")
 
-    p_oa = sub.add_parser("locate-oa", help="Locate open-access full text")
+    p_oa = sub.add_parser("locate-oa", help="Locate open-access full text across arXiv, Unpaywall, OpenAlex, Semantic Scholar, and Europe PMC")
     p_oa.add_argument("identifier", nargs="?")
     p_oa.add_argument("--doi")
     p_oa.add_argument("--arxiv")
     p_oa.add_argument("--email", default=None)
     p_oa.add_argument("--fallback-openalex", action="store_true")
+    p_oa.add_argument("--fallback-all", action="store_true")
+
+    for cr_alias in ("cross-review", "review-panel"):
+        p_cr = sub.add_parser(cr_alias, help="Multi-model sparse deliberation: blind plan, issue clustering, anonymous challenge, and minority-protected synthesis")
+        p_cr.add_argument("stream_dir", nargs="?")
+        p_cr.add_argument("--stream", dest="stream_opt")
+        p_cr.add_argument("--stage", choices=["plan", "merge", "challenge", "synthesize", "all", "status", "pairings"], default="status")
+        p_cr.add_argument("--mode", choices=["economy", "standard", "audit"], default="standard")
+        p_cr.add_argument("--task")
+        p_cr.add_argument("--models")
+        p_cr.add_argument("--models-file")
+        p_cr.add_argument("--timeout", type=int, default=900)
+
+    p_cp = sub.add_parser("compute-probe", help="Probe CPU/GPU hardware, thread environment, numerical libraries, and optional ComputeReceipt")
+    p_cp.add_argument("--receipt", action="store_true")
+    p_cp.add_argument("--operation", default="matmul_f64")
+    p_cp.add_argument("--scale", choices=["small", "medium", "large"], default="small")
+    p_cp.add_argument("--dtype", choices=["float32", "float64"], default="float64")
+    p_cp.add_argument("--output")
+
+    p_lg = sub.add_parser("ledger", help="Manage SQLite-backed Claim-Evidence Graph (CEG) and Research Decision Ledger")
+    p_lg.add_argument("--db", "--state-db", dest="db", required=True)
+    p_lg.add_argument(
+        "--action",
+        choices=[
+            "add-claim",
+            "export-ceg",
+            "validate-ceg",
+            "trace-claim",
+            "link-claims",
+            "record-decision",
+            "transition-decision",
+            "correct-decision",
+            "export-decisions",
+            "trace-decision",
+            "validate-decisions",
+        ],
+        required=True,
+    )
+    p_lg.add_argument("--claim-id")
+    p_lg.add_argument("--target-claim-id")
+    p_lg.add_argument("--relation", choices=["depends_on", "refines", "contradicts", "corroborates", "cites"], default="depends_on")
+    p_lg.add_argument("--text")
+    p_lg.add_argument("--claim-type", default="empirical_finding")
+    p_lg.add_argument("--artifact-id")
+    p_lg.add_argument("--locator", default="")
+    p_lg.add_argument("--stance", choices=["supports", "contradicts", "qualifies", "contextualizes"], default="supports")
+    p_lg.add_argument("--decision-id")
+    p_lg.add_argument("--basis-decision-id")
+    p_lg.add_argument("--title")
+    p_lg.add_argument("--rationale", "--reason", dest="rationale")
+    p_lg.add_argument("--status", default="active")
+    p_lg.add_argument("--verdict", choices=["positive", "negative", "inconclusive", "unverifiable"], default="inconclusive")
+    p_lg.add_argument("--is-negative-result", action="store_true")
+    p_lg.add_argument("--superseded-by")
+    p_lg.add_argument("--output")
 
     p_res = sub.add_parser("research", help="Prepare/finish/replay/compare/skill paper research workflow")
     rsub = p_res.add_subparsers(dest="step", required=True)
@@ -507,11 +573,25 @@ def main(argv: list[str] | None = None) -> int:
                     right_extraction=right_ex,
                 )
             else:
-                spec = data
-                if args.caption:
-                    spec["caption"] = args.caption
-                if args.label:
-                    spec["label"] = args.label
+                spec = dict(data) if isinstance(data, dict) else data
+                if isinstance(spec, dict):
+                    if args.rows and "rows" not in spec:
+                        cur_val: Any = spec
+                        for part in args.rows.split("."):
+                            cur_val = cur_val.get(part) if isinstance(cur_val, dict) else None
+                        if isinstance(cur_val, list):
+                            spec["rows"] = cur_val
+                    if args.cols:
+                        if args.cols in spec and isinstance(spec[args.cols], list):
+                            spec["columns"] = spec[args.cols]
+                        else:
+                            col_list = [c.strip() for c in args.cols.split(",") if c.strip()]
+                            if col_list:
+                                spec["columns"] = col_list
+                    if args.caption:
+                        spec["caption"] = args.caption
+                    if args.label:
+                        spec["label"] = args.label
             tex_str = rlt.render_booktabs_table(spec, source_sha256=sha)
             if args.output:
                 out_p = safe_path(args.output)
@@ -630,6 +710,27 @@ def main(argv: list[str] | None = None) -> int:
             _emit_json(wmod.run_literature_watch(wl, db_path=args.db, live=args.live, days=args.days))
             return 0
 
+        if cmd == "collect-corpus" or (cmd == "bibliography" and args.action == "collect-corpus"):
+            cc = _mod("collect_corpus")
+            layers: dict[str, Any] = {}
+            if args.input:
+                loaded_layers = json.loads(safe_path(args.input, must_exist=True).read_text("utf-8"))
+                if not isinstance(loaded_layers, dict):
+                    raise ValueError("collect-corpus --input must map layer names to work lists")
+                layers.update(loaded_layers)
+            if getattr(args, "query", None):
+                layers["text-search"] = cc.live_search(args.query, per_page=args.per_page)
+            if getattr(args, "related_of", None):
+                w_main = cc.live_work(normalize_doi(args.related_of))
+                layers["algorithmic-related"] = [{"id": rid} for rid in (w_main.get("related_works") or [])]
+                layers.setdefault("target-work", [w_main])
+            if not layers:
+                raise ValueError("collect-corpus requires --input, --query, or --related-of")
+            merged = cc.merge_candidates(layers)
+            merged["status"] = "ok"
+            _emit_json(merged)
+            return 0
+
         if cmd == "bibliography":
             act = args.action
             if act == "export-bibtex":
@@ -714,12 +815,24 @@ def main(argv: list[str] | None = None) -> int:
                 tj = json.loads(safe_path(args.tree_json).read_text("utf-8"))
                 entries = tj["tree"] if isinstance(tj, dict) and "tree" in tj else tj
                 trunc = bool(tj.get("truncated")) if isinstance(tj, dict) else False
-                _emit_json(rf.analyze_entries(entries, truncated=trunc))
+                rep_rf = rf.analyze_entries(entries, truncated=trunc)
+                rep_rf["mode"] = "tree-json"
+                _emit_json(rep_rf)
+                return 0
+            if args.github_repo:
+                entries, trunc, tree_sha, mode_rf = rf.fetch_github_tree(args.github_repo)
+                rep_rf = rf.analyze_entries(entries, truncated=trunc)
+                rep_rf["mode"] = mode_rf
+                if tree_sha:
+                    rep_rf["tree_sha"] = tree_sha
+                _emit_json(rep_rf)
                 return 0
             if not local_dir:
-                raise ValueError("repo-forensics requires a local repository directory or --tree-json")
+                raise ValueError("repo-forensics requires a local repository directory, --tree-json, or --github-repo")
             entries = rf.scan_local_repo(safe_path(local_dir))
-            _emit_json(rf.analyze_entries(entries, truncated=False))
+            rep_rf = rf.analyze_entries(entries, truncated=False)
+            rep_rf["mode"] = "local-repo"
+            _emit_json(rep_rf)
             return 0
 
         if cmd == "openreview-audit":
@@ -745,9 +858,180 @@ def main(argv: list[str] | None = None) -> int:
             if not raw_target:
                 raise ValueError("locate-oa requires an identifier, --doi, or --arxiv")
             norm = normalize_identifier(raw_target if not args.arxiv else f"arxiv:{args.arxiv}")
-            rc_oa, rep_oa = loa.resolve_oa(norm, email=args.email, fallback_openalex=bool(args.fallback_openalex))
+            rc_oa, rep_oa = loa.resolve_oa(
+                norm,
+                email=args.email,
+                fallback_openalex=bool(args.fallback_openalex),
+                fallback_all=bool(args.fallback_all),
+            )
             _emit_json(rep_oa)
             return 0 if rc_oa in (0, 2) else rc_oa
+
+        if cmd in ("cross-review", "review-panel"):
+            cr = _mod("cross_review")
+            if args.stage == "pairings":
+                parts = cr.parse_participants(args.models, args.models_file)
+                _emit_json({"pairings": [{"reviewer": r, "target": t} for r, t in cr.pairings([p.id for p in parts])]})
+                return 0
+            raw_stream = args.stream_opt or args.stream_dir
+            if not raw_stream:
+                raise ValueError(f"{cmd} requires a stream directory positional argument or --stream")
+            sdir = safe_path(raw_stream)
+            if args.stage == "status":
+                _emit_json(cr.stage_status(sdir))
+                return 0
+            parts = cr.parse_participants(args.models, args.models_file) or cr.discover_stream_participants(sdir)
+            plan_failed = False
+            chal_failed = False
+            if args.stage in ("plan", "all"):
+                if not args.task:
+                    raise ValueError(f"{cmd} --stage {args.stage} requires --task")
+                plan_res = cr.stage_plan(sdir, safe_path(args.task, must_exist=True), parts, timeout_s=args.timeout)
+                plan_failed = bool(not plan_res.get("succeeded") or plan_res.get("missing_models"))
+                if args.stage == "plan":
+                    _emit_json(plan_res)
+                    return 0 if plan_res.get("succeeded") and not plan_res.get("missing_models") else 1
+                if not plan_res.get("succeeded"):
+                    _emit_json(plan_res)
+                    return 1
+            if args.stage in ("merge", "all"):
+                merge_res = cr.stage_merge(sdir, parts, mode=args.mode)
+                if args.stage == "merge":
+                    _emit_json(merge_res)
+                    return 0
+            if args.stage in ("challenge", "all"):
+                task_ref = safe_path(args.task, must_exist=True) if args.task else (sdir / "run-manifest.json")
+                chal_res = cr.stage_challenge(sdir, task_ref, parts, timeout_s=args.timeout)
+                chal_failed = bool(chal_res.get("replied", 0) < chal_res.get("total", 0))
+                if args.stage == "challenge":
+                    _emit_json(chal_res)
+                    return 0 if not chal_failed else 1
+            syn_res = cr.stage_synthesize(sdir)
+            _emit_json(syn_res)
+            return 1 if (plan_failed or chal_failed) else 0
+
+        if cmd == "compute-probe":
+            cp = _mod("compute_probe")
+            out_cp = cp.build_compute_receipt(operation=args.operation, scale=args.scale, dtype=args.dtype) if args.receipt else cp.probe()
+            if args.output:
+                out_p = safe_path(args.output)
+                out_p.parent.mkdir(parents=True, exist_ok=True)
+                out_p.write_text(json.dumps(out_cp, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            _emit_json(out_cp)
+            return 0
+
+        if cmd == "ledger":
+            from .state_db import ResearchStateDB
+
+            mcp_m = _mod("mcp_server")
+            act_l = args.action
+            if act_l == "add-claim":
+                if not args.claim_id or not args.text:
+                    raise ValueError("ledger --action add-claim requires --claim-id and --text")
+                st_norm = "qualifies" if args.stance == "contextualizes" else args.stance
+                with ResearchStateDB(args.db) as db:
+                    ev_tuples: list[tuple[str, str, str]] = []
+                    if args.artifact_id:
+                        with db._read_snapshot() as conn:
+                            has_art = conn.execute("SELECT 1 FROM artifacts WHERE artifact_id = ?", (args.artifact_id,)).fetchone()
+                        if has_art is None:
+                            db.register_artifact(args.artifact_id, "computed_evidence", {"source": args.artifact_id, "locator": args.locator})
+                        ev_tuples.append((args.artifact_id, st_norm, args.locator or ""))
+                    res_c = thaw(db.add_claim(args.claim_id, args.text, evidence=ev_tuples, metadata={"claim_type": args.claim_type}))
+                _emit_json(res_c)
+                return 0
+            if act_l == "link-claims":
+                if not args.claim_id or not args.target_claim_id:
+                    raise ValueError("ledger --action link-claims requires --claim-id and --target-claim-id")
+                with ResearchStateDB(args.db) as db:
+                    res_lc = thaw(db.add_claim_relation(args.claim_id, args.target_claim_id, args.relation))
+                _emit_json(res_lc)
+                return 0
+            if act_l == "export-ceg":
+                with ResearchStateDB(args.db) as db:
+                    exported = thaw(db.export_ceg_dict())
+                if args.output:
+                    out_p = safe_path(args.output)
+                    out_p.parent.mkdir(parents=True, exist_ok=True)
+                    out_p.write_text(json.dumps(exported, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                _emit_json(exported)
+                return 0
+            if act_l == "validate-ceg":
+                with ResearchStateDB(args.db) as db:
+                    exported = thaw(db.export_ceg_dict())
+                res_v = mcp_m.handle_tool_call("claim_evidence_validate", {"ceg": exported})
+                _emit_json(res_v)
+                return 0 if res_v.get("valid") else 1
+            if act_l == "trace-claim":
+                if not args.claim_id:
+                    raise ValueError("ledger --action trace-claim requires --claim-id")
+                _emit_json(mcp_m.handle_tool_call("claim_evidence_trace", {"db_path": args.db, "claim_id": args.claim_id}))
+                return 0
+            if act_l == "record-decision":
+                if not args.decision_id or not args.title:
+                    raise ValueError("ledger --action record-decision requires --decision-id and --title")
+                st_init = "pruned" if args.status in ("abandoned", "rejected") else args.status
+                with ResearchStateDB(args.db) as db:
+                    if args.artifact_id:
+                        with db._read_snapshot() as conn:
+                            has_art = conn.execute("SELECT 1 FROM artifacts WHERE artifact_id = ?", (args.artifact_id,)).fetchone()
+                        if has_art is None:
+                            db.register_artifact(args.artifact_id, "computed_evidence", {"source": args.artifact_id})
+                    ek = "negative_result" if args.is_negative_result else "decision"
+                    act_kind = "negative_result" if args.is_negative_result else "explore"
+                    res_d = thaw(
+                        db.record_decision(
+                            args.decision_id,
+                            args.title,
+                            entry_kind=ek,
+                            action=act_kind,
+                            verdict=args.verdict,
+                            basis_decision_id=args.basis_decision_id,
+                            artifact_id=args.artifact_id,
+                            initial_state=st_init,
+                            metadata={"rationale": args.rationale} if args.rationale else {},
+                        )
+                    )
+                _emit_json(res_d)
+                return 0
+            if act_l == "transition-decision":
+                if not args.decision_id or not args.rationale:
+                    raise ValueError("ledger --action transition-decision requires --decision-id, --status, and --rationale")
+                st_target = "pruned" if args.status in ("abandoned", "rejected") else args.status
+                with ResearchStateDB(args.db) as db:
+                    res_td = thaw(db.transition_decision(args.decision_id, st_target, args.rationale, args.superseded_by))
+                _emit_json(res_td)
+                return 0
+            if act_l == "correct-decision":
+                if not args.decision_id or not args.rationale:
+                    raise ValueError("ledger --action correct-decision requires --decision-id, --verdict, and --rationale")
+                with ResearchStateDB(args.db) as db:
+                    if args.artifact_id:
+                        with db._read_snapshot() as conn:
+                            has_art = conn.execute("SELECT 1 FROM artifacts WHERE artifact_id = ?", (args.artifact_id,)).fetchone()
+                        if has_art is None:
+                            db.register_artifact(args.artifact_id, "computed_evidence", {"source": args.artifact_id})
+                    res_cd = thaw(db.correct_decision_outcome(args.decision_id, args.verdict, args.rationale, args.artifact_id))
+                _emit_json(res_cd)
+                return 0
+            if act_l == "export-decisions":
+                with ResearchStateDB(args.db) as db:
+                    exp_dl = thaw(db.export_decision_ledger_dict())
+                if args.output:
+                    out_p = safe_path(args.output)
+                    out_p.parent.mkdir(parents=True, exist_ok=True)
+                    out_p.write_text(json.dumps(exp_dl, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                _emit_json(exp_dl)
+                return 0
+            if act_l == "trace-decision":
+                if not args.decision_id:
+                    raise ValueError("ledger --action trace-decision requires --decision-id")
+                _emit_json(mcp_m.handle_tool_call("decision_trace", {"db_path": args.db, "decision_id": args.decision_id}))
+                return 0
+            with ResearchStateDB(args.db) as db:
+                res_vd = thaw(db.validate_decisions())
+            _emit_json(res_vd)
+            return 0 if res_vd.get("valid") else 1
 
         if cmd == "research":
             from .research import analysis, sources

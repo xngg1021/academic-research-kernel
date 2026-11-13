@@ -5,7 +5,7 @@
 `academic-research-kernel` (`3.0.0`) ships as a single pure-Python wheel and reproducible source distribution (`sdist`) supporting Python `3.10`–`3.14`:
 
 ```bash
-# Core CLI + 22-tool stdio MCP server + statistical & meta-analysis engines
+# Core CLI + 24-tool stdio MCP server + statistical & meta-analysis engines
 uv tool install "academic-research-kernel==3.0.0"
 
 # Recommended: include deterministic digital PDF parsing (pypdf==7.0.0, fonttools==4.65.0)
@@ -40,5 +40,5 @@ PYTHONPATH=src python -m academic_research_kernel.release_gate --package-accepta
 For tagged GitHub Releases (`vX.Y.Z` on `main`), `.github/workflows/publish-pypi.yml` executes four deterministic gates through `academic_research_kernel.release_gate`:
 1. **`--validate-target`**: Confirms `vX.Y.Z` is an annotated Git tag whose commit is an ancestor of `origin/main`, matches `src/academic_research_kernel/_version.py`, and preserves every SHA-256 digest listed in `SLL-APPLICATION.json`.
 2. **Release bundle & PyPI idempotency planning**: Verifies `release-manifest.json`, `SHA256SUMS`, `server.json`, wheel (`26` schemas + portable skill), and sdist (`uv.lock`, `requirements-qa.txt`, `CHANGELOG.md`, `SLL-APPLICATION.json`). Queries PyPI's JSON API so already-published same-hash files are skipped cleanly while byte conflicts abort immediately.
-3. **`twine check --strict` + `--package-acceptance`**: Validates built distributions and exercises an out-of-tree wheel installation over real stdio JSON-RPC (`22` tools) before Trusted Publishing (`OIDC`).
+3. **`twine check --strict` + `--package-acceptance`**: Validates built distributions and exercises an out-of-tree wheel installation over real stdio JSON-RPC (`24` tools) before Trusted Publishing (`OIDC`).
 4. **`--distribution-smoke`**: Verifies the live PyPI package via `uvx --no-cache` in a scrubbed temporary directory.

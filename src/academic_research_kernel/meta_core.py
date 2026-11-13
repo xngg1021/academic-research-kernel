@@ -339,3 +339,94 @@ def egger_test(yi, vi) -> tuple[float, float, float]:
     t = intercept / se_intercept
     p = 2.0 * float(stats.t.sf(abs(t), df))
     return float(intercept), float(t), p
+
+
+def subgroup_analysis(yi, vi, groups) -> dict:
+    """Fixed-effect Cochran Q between/within subgroup decomposition plus random-effects per-subgroup pools."""
+    from dataclasses import asdict
+
+    y, v = _arrays(yi, vi)
+    g_list = [str(g).strip() for g in groups]
+    if len(g_list) != y.size:
+        raise ValueError("subgroup labels length must match yi/vi length")
+    unique_groups = list(dict.fromkeys(g_list))
+    if len(unique_groups) < 2:
+        raise ValueError("subgroup_analysis requires at least 2 distinct subgroups")
+
+    overall_fe = pool_fixed(y, v)
+    q_within = 0.0
+    by_group: dict[str, dict] = {}
+    for g_name in unique_groups:
+        mask = np.array([g == g_name for g in g_list], dtype=bool)
+        yg, vg = y[mask], v[mask]
+        fe_g = pool_fixed(yg, vg)
+        re_g = pool_random(yg, vg)
+        q_within += fe_g.q
+        by_group[g_name] = {
+            "k": int(yg.size),
+            "fixed_effect": asdict(fe_g),
+            "random_effects_dl": asdict(re_g),
+        }
+    q_between = max(0.0, float(overall_fe.q - q_within))
+    df_between = len(unique_groups) - 1
+    p_between = float(stats.chi2.sf(q_between, df_between))
+    return {
+        "group_count": len(unique_groups),
+        "q_total": float(overall_fe.q),
+        "q_within": float(q_within),
+        "q_between": q_between,
+        "df_between": df_between,
+        "p_between": p_between,
+        "subgroups": by_group,
+    }
+
+
+def meta_regression(yi, vi, moderators, model: str = "random") -> dict:
+    """Univariate weighted least squares (WLS) meta-regression over a continuous study-level moderator."""
+    y, v = _arrays(yi, vi)
+    x = np.asarray(moderators, dtype=float)
+    if x.ndim != 1 or x.size != y.size:
+        raise ValueError("moderators must be a 1-D array matching yi/vi length")
+    if not np.all(np.isfinite(x)):
+        raise ValueError("moderators must be finite numbers")
+    if y.size < 3:
+        raise ValueError("meta_regression requires at least 3 studies")
+    if float(np.sum((x - x.mean()) ** 2)) == 0.0:
+        raise ValueError("meta_regression requires non-constant moderator values")
+
+    tau2 = heterogeneity(y, v)[3] if model == "random" else 0.0
+    eff_v = v + tau2
+    w_rel, v_min = _scaled_inverse_weights(eff_v)
+    w_rel_sum = float(np.sum(w_rel))
+    norm_w = w_rel / w_rel_sum
+    # Exact WLS parameter estimates (scale-invariant) and asymptotic inverse-variance SEs
+    x_bar = float(np.dot(norm_w, x))
+    y_bar = float(np.dot(norm_w, y))
+    dx = x - x_bar
+    s_xx_norm = float(np.dot(norm_w, dx * dx))
+    slope = float(np.dot(norm_w, dx * (y - y_bar)) / s_xx_norm)
+    intercept = float(y_bar - slope * x_bar)
+
+    s_r = math.sqrt(v_min)
+    denom = math.sqrt(s_xx_norm * w_rel_sum)
+    se_slope = s_r / denom
+    se_intercept = s_r * math.sqrt((1.0 / w_rel_sum) + (x_bar * x_bar) / (s_xx_norm * w_rel_sum))
+    z_slope = slope / se_slope
+    p_slope = 2.0 * float(stats.norm.sf(abs(z_slope)))
+    resid = y - (intercept + slope * x)
+    q_resid = float(np.sum(((resid / s_r) ** 2) * w_rel))
+    df_resid = int(y.size - 2)
+    return {
+        "model": model,
+        "k": int(y.size),
+        "tau2": float(tau2),
+        "intercept": intercept,
+        "se_intercept": se_intercept,
+        "slope": slope,
+        "se_slope": se_slope,
+        "z_slope": z_slope,
+        "p_slope": p_slope,
+        "q_residual": q_resid,
+        "df_residual": df_resid,
+        "p_residual": float(stats.chi2.sf(q_resid, df_resid)),
+    }

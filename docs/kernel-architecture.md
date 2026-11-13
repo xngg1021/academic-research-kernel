@@ -4,16 +4,16 @@
 
 `academic-research-kernel` (`v3.0.0`) is an offline-first, deterministic scholarly verification and manuscript engineering runtime built on Python's standard library, `SQLite` (`STRICT` tables + `WAL` journaling + `application_id = 0x41524B33`, `user_version = 3`), and on-demand scientific libraries (`numpy`, `scipy`, `statsmodels`, `jsonschema`).
 
-Rather than scattering dozens of duplicated helper scripts across skill directories, `v3.0.0` consolidates the entire runtime inside a single installable package (`src/academic_research_kernel/`), exposing **22 stdio MCP tools**, **26 Draft 2020-12 JSON Schemas**, **17 CLI command groups** (with clean human-readable `3.0.0` verb-object aliases), and **5 First-Principles Agent Skills**:
+Rather than scattering dozens of duplicated helper scripts across skill directories, `v3.0.0` consolidates the entire runtime inside a single installable package (`src/academic_research_kernel/`), exposing **24 stdio MCP tools**, **26 Draft 2020-12 JSON Schemas**, **20 CLI command groups** (with clean human-readable `3.0.0` verb-object aliases), and **7 First-Principles Agent Skills**:
 
 ```mermaid
 flowchart TD
-    A["5 Agent Skills & CLI / MCP Callers"] --> B["Single Package: academic_research_kernel"]
+    A["7 Agent Skills & CLI / MCP Callers"] --> B["Single Package: academic_research_kernel"]
     B --> C["SQLite STRICT + WAL State (ResearchStateDB)"]
     B --> D["Controlled HTTP & Isolated PDF Subprocess I/O"]
-    B --> E["Statistical & Meta-Analytic Recompute Engine"]
-    B --> F["LaTeX / BibTeX / Double-Blind / CEG Gatekeeper"]
-    C --> G["22 Deterministic stdio MCP Tools"]
+    B --> E["Statistical, Meta-Analytic & Compute Probe Engine"]
+    B --> F["LaTeX / BibTeX / Double-Blind / Sparse Deliberation"]
+    C --> G["24 Deterministic stdio MCP Tools"]
 ```
 
 ---
@@ -49,7 +49,7 @@ flowchart TD
 
 ---
 
-## All 22 MCP Tools (`academic_research_kernel.mcp_server`)
+## All 24 MCP Tools (`academic_research_kernel.mcp_server`)
 
 1. `research_state_ingest` — Atomic batch ingestion of research objects, claims, decisions, and lineage edges into SQLite `STRICT` state.
 2. `research_artifact_ingest` — Single-envelope ingestion returning tamper-evident mutation digests.
@@ -67,9 +67,11 @@ flowchart TD
 14. `academic_recompute_statistics` — 15 deterministic statistical and physical-bound checks.
 15. `academic_check_percentage` — Integer numerator / denominator compatibility verification.
 16. `academic_table_forensics` — Partition conservation, ablation offset, and uncompressed bandwidth bound checks.
-17. `academic_meta_analyze` — Fixed/DL random-effects pooling, $Q/I^2/\tau^2$, LOO, Egger test, and trim-and-fill.
+17. `academic_meta_analyze` — Fixed/DL random-effects pooling, $Q/I^2/\tau^2$, subgroup $Q_{\text{between}}$, WLS meta-regression, LOO, Egger test, and trim-and-fill.
 18. `academic_verify_source` — Identifier normalization and Crossref/OpenAlex bibliographic & update verification.
 19. `academic_openreview_audit` — Offline mirror & forum score/forensics audit across ICLR, ICML, NeurIPS, and COLM.
 20. `academic_double_blind_sanitize` — Redacted (`matched="[REDACTED]"`) double-blind leak scan across TeX, BibTeX, and PDF `/Info` + XMP streams.
 21. `academic_pre_submission_lint` — Venue formatting, page-limit, BibTeX scope, CEG claim-binding, and academic-style gate.
 22. `academic_retraction_watch` — Dual-source DOI retraction delta check backed by SQLite state.
+23. `academic_scfabric_hardware_probe` (alias `academic_compute_probe`) — Degradation-tolerant CPU/GPU/library probe and optional `compute-receipt-1.0` benchmark.
+24. `academic_cross_review` (alias `cross_review_deliberate`) — Multi-model sparse deliberation clustering, $O(N^3)$ derangement, anonymous challenge planning, and minority-protected synthesis.

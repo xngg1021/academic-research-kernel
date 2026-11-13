@@ -17,9 +17,13 @@ from urllib.request import Request
 
 from .research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
 
-USER_AGENT = 'academic-research-kernel/3.0'
-FALLBACK_ORDER = ['OpenAlex open_access.oa_url', 'Semantic Scholar openAccessPdf.url',
-                  'archive.org（公版书/专著）']
+USER_AGENT = 'academic-research-kernel/3.0.0'
+FALLBACK_ORDER = [
+    'OpenAlex open_access.oa_url',
+    'Semantic Scholar openAccessPdf.url',
+    'Europe PMC fullTextUrlList',
+    'archive.org（公版书/专著）',
+]
 
 
 def _normalize_doi(raw: str) -> str:
@@ -196,8 +200,113 @@ def _build_openalex_report(doi: str, oa_work: dict, mode: str) -> tuple[int, dic
     return 0, report
 
 
-def resolve_oa(identifier_norm: dict, email: str | None = None, *, fallback_openalex: bool = False) -> tuple[int, dict]:
-    """Normalized OA locator respecting explicit --email > UNPAYWALL_EMAIL env > OpenAlex fallback."""
+def live_semantic_scholar_oa(doi: str) -> dict | None:
+    """LIVE: Query Semantic Scholar Graph API for openAccessPdf URL."""
+    clean_doi = _normalize_doi(doi)
+    headers = {'User-Agent': USER_AGENT, 'Accept': 'application/json'}
+    api_key = os.environ.get('S2_API_KEY', '').strip()
+    if api_key:
+        headers['x-api-key'] = api_key
+    url = (
+        'https://api.semanticscholar.org/graph/v1/paper/DOI:'
+        + quote(clean_doi, safe='')
+        + '?fields=isOpenAccess,openAccessPdf,url'
+    )
+    with urlopen(Request(url, headers=headers), timeout=20) as response:
+        data = json.load(response)
+    if not isinstance(data, dict):
+        return None
+    oa_pdf = data.get('openAccessPdf') if isinstance(data.get('openAccessPdf'), dict) else {}
+    pdf_u = _valid_http_url(oa_pdf.get('url'))
+    if not pdf_u:
+        return None
+    return {
+        'url_for_pdf': pdf_u,
+        'url': _valid_http_url(data.get('url')) or pdf_u,
+        'version': oa_pdf.get('status'),
+        'host_type': 'repository',
+        'license': oa_pdf.get('license'),
+        'source': 'Semantic Scholar',
+    }
+
+
+def live_europe_pmc_oa(doi: str) -> dict | None:
+    """LIVE: Query Europe PMC REST API for open-access fullTextUrlList."""
+    clean_doi = _normalize_doi(doi)
+    headers = {'User-Agent': USER_AGENT, 'Accept': 'application/json'}
+    q = f'DOI:"{clean_doi}"'
+    url = (
+        'https://www.ebi.ac.uk/europepmc/webservices/rest/search?'
+        + urlencode({'query': q, 'format': 'json', 'resultType': 'core'})
+    )
+    with urlopen(Request(url, headers=headers), timeout=20) as response:
+        data = json.load(response)
+    results = ((data.get('resultList') or {}).get('result') or []) if isinstance(data, dict) else []
+    for item in results:
+        if not isinstance(item, dict) or str(item.get('isOpenAccess') or '').upper() != 'Y':
+            continue
+        ft_list = ((item.get('fullTextUrlList') or {}).get('fullTextUrl') or [])
+        pdf_u = None
+        land_u = None
+        for ft in ft_list:
+            if not isinstance(ft, dict):
+                continue
+            avail = str(ft.get('availabilityCode') or '').upper()
+            if avail not in ('OA', 'F', ''):
+                continue
+            style = str(ft.get('documentStyle') or '').lower()
+            u = _valid_http_url(ft.get('url'))
+            if not u:
+                continue
+            if style == 'pdf' and not pdf_u:
+                pdf_u = u
+            elif not land_u:
+                land_u = u
+        if pdf_u or land_u:
+            return {
+                'url_for_pdf': pdf_u,
+                'url': land_u or pdf_u,
+                'version': 'publishedVersion',
+                'host_type': 'repository',
+                'license': item.get('license'),
+                'source': 'Europe PMC',
+            }
+    return None
+
+
+def _try_extra_oa_sources(doi: str, identifier_norm: dict) -> tuple[int, dict] | None:
+    for mode_name, fn in (
+        ('semantic-scholar-fallback', live_semantic_scholar_oa),
+        ('europe-pmc-fallback', live_europe_pmc_oa),
+    ):
+        try:
+            loc = fn(doi)
+        except Exception:
+            loc = None
+        if isinstance(loc, dict):
+            return 0, {
+                'doi': doi,
+                'identifier': identifier_norm,
+                'status': 'ok',
+                'mode': mode_name,
+                'is_oa': True,
+                'oa_url': loc.get('url_for_pdf') or loc.get('url'),
+                'location': loc,
+                'fallback_order': FALLBACK_ORDER,
+            }
+    return None
+
+
+def resolve_oa(
+    identifier_norm: dict,
+    email: str | None = None,
+    *,
+    fallback_openalex: bool = False,
+    fallback_all: bool = False,
+) -> tuple[int, dict]:
+    """Normalized OA locator respecting explicit --email > UNPAYWALL_EMAIL env > OpenAlex / S2 / Europe PMC fallbacks."""
+    if fallback_all:
+        fallback_openalex = True
     id_type = identifier_norm.get('type')
     val = str(identifier_norm.get('value') or identifier_norm.get('normalized') or '')
     if id_type == 'arxiv':
@@ -241,9 +350,20 @@ def resolve_oa(identifier_norm: dict, email: str | None = None, *, fallback_open
             loc = pick_oa_location(rec)
             is_oa = bool(rec.get('is_oa') and loc is not None)
             if not is_oa and fallback_openalex:
-                rc_fb, rep_fb = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-fallback')
-                rep_fb['identifier'] = identifier_norm
-                return rc_fb, rep_fb
+                try:
+                    rc_fb, rep_fb = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-fallback')
+                except Exception:
+                    rc_fb, rep_fb = 1, {'is_oa': False}
+                if rc_fb == 0 and rep_fb.get('is_oa') and rep_fb.get('oa_url'):
+                    rep_fb['identifier'] = identifier_norm
+                    return rc_fb, rep_fb
+                if fallback_all:
+                    extra_hit = _try_extra_oa_sources(clean_doi, identifier_norm)
+                    if extra_hit is not None:
+                        return extra_hit
+                if rc_fb == 0:
+                    rep_fb['identifier'] = identifier_norm
+                    return rc_fb, rep_fb
             return 0, {
                 'doi': clean_doi,
                 'identifier': identifier_norm,
@@ -255,7 +375,21 @@ def resolve_oa(identifier_norm: dict, email: str | None = None, *, fallback_open
                 'oa_status': rec.get('oa_status'),
             }
         if fallback_openalex:
-            rc_fb, rep_fb = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-fallback')
+            try:
+                rc_fb, rep_fb = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-fallback')
+            except Exception as oa_exc:
+                rc_fb, rep_fb = 1, {'doi': clean_doi, 'status': 'failed', 'error': f'{type(oa_exc).__name__}: {oa_exc}'}
+            if rc_fb == 0 and rep_fb.get('is_oa') and rep_fb.get('oa_url'):
+                rep_fb['identifier'] = identifier_norm
+                if unpaywall_err:
+                    rep_fb['unpaywall_error'] = unpaywall_err
+                return rc_fb, rep_fb
+            if fallback_all:
+                extra_hit = _try_extra_oa_sources(clean_doi, identifier_norm)
+                if extra_hit is not None:
+                    if unpaywall_err:
+                        extra_hit[1]['unpaywall_error'] = unpaywall_err
+                    return extra_hit
             rep_fb['identifier'] = identifier_norm
             if unpaywall_err:
                 rep_fb['unpaywall_error'] = unpaywall_err
@@ -271,7 +405,17 @@ def resolve_oa(identifier_norm: dict, email: str | None = None, *, fallback_open
             'error': unpaywall_err or 'Unpaywall response was not a JSON object',
         }
     if fallback_openalex:
-        rc_oa, rep_oa = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-live')
+        try:
+            rc_oa, rep_oa = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-live')
+        except Exception as oa_exc:
+            rc_oa, rep_oa = 1, {'doi': clean_doi, 'status': 'failed', 'error': f'{type(oa_exc).__name__}: {oa_exc}'}
+        if rc_oa == 0 and rep_oa.get('is_oa') and rep_oa.get('oa_url'):
+            rep_oa['identifier'] = identifier_norm
+            return rc_oa, rep_oa
+        if fallback_all:
+            extra_hit = _try_extra_oa_sources(clean_doi, identifier_norm)
+            if extra_hit is not None:
+                return extra_hit
         rep_oa['identifier'] = identifier_norm
         return rc_oa, rep_oa
     return 2, {
@@ -282,6 +426,6 @@ def resolve_oa(identifier_norm: dict, email: str | None = None, *, fallback_open
         'is_oa': None,
         'oa_url': None,
         'location': None,
-        'reason': 'UNPAYWALL_EMAIL is not configured and --email / --fallback-openalex was not provided',
+        'reason': 'UNPAYWALL_EMAIL is not configured and --email / --fallback-openalex / --fallback-all was not provided',
         'fallback_order': FALLBACK_ORDER,
     }

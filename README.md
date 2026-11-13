@@ -46,7 +46,7 @@ academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
 
 ### Mode B: Universal stdio MCP Server (Claude Code, Codex, Cursor, Gemini CLI)
 
-Exposes **22 deterministic MCP tools** over bounded-frame stdio JSON-RPC 2.0 (`2024-11-05` through `2026-07-28`):
+Exposes **24 deterministic MCP tools** over bounded-frame stdio JSON-RPC 2.0 (`2024-11-05` through `2026-07-28`):
 
 ```bash
 # Claude Code CLI
@@ -59,7 +59,7 @@ codex mcp add academic-research-kernel -- uvx --from "academic-research-kernel[r
 ### Mode C: Agent Skills (Hermes Agent or Any `SKILL.md`-Compatible Harness)
 
 ```bash
-# Install the 5-skill plugin in Hermes Agent
+# Install the 7-skill plugin in Hermes Agent
 hermes plugins install xngg1021/academic-research-kernel --no-enable
 hermes plugins enable academic-skills
 
@@ -69,17 +69,19 @@ academic-research-kernel research skill --output ./audit-paper
 
 ---
 
-## 3. Five First-Principles Skills (Replacing Legacy Skill Sprawl)
+## 3. Seven First-Principles Skills (Consolidating All 14 Legacy `v2.x` Skills)
 
-In `v3.0.0`, overlapping legacy skill folders were consolidated from first principles into **five verb-object skills** so both human researchers and agents know immediately which workflow to load:
+In `v3.0.0`, all `14` legacy `v2.4.2` skill directories were consolidated from first principles into **seven verb-object skills** so both human researchers and agents know immediately which workflow to load without losing any capability:
 
 | Skill Directory | Plain-English Purpose | Key CLI Commands & MCP Tools |
 | --- | --- | --- |
-| [`skills/audit-paper`](skills/audit-paper/SKILL.md) | Audit a single paper's statistics, tables, claims, and reproducibility | `research`, `table-forensics`, `repro-checklist`, `academic_recompute_statistics` |
-| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | Verify DOIs, monitor retractions & new papers, locate Open Access PDFs | `verify-work`, `retraction-watch`, `literature-watch`, `locate-oa`, `bibliography` |
-| [`skills/audit-peer-review`](skills/audit-peer-review/SKILL.md) | Audit OpenReview venue mirrors, forum scores, and companion code repos | `openreview-audit`, `repo-forensics`, `academic_openreview_audit` |
-| [`skills/meta-analysis`](skills/meta-analysis/SKILL.md) | Pool fixed/random effects, test heterogeneity & Egger bias, build review matrices | `meta-analyze`, `bibliography --action review-matrix`, `academic_meta_analyze` |
-| [`skills/check-submission`](skills/check-submission/SKILL.md) | Gate LaTeX/PDF submissions for anonymity, page limits, BibTeX & CEG claims | `lint-submission`, `sanitize-submission`, `generate-table`, `check-venue` |
+| [`skills/audit-paper`](skills/audit-paper/SKILL.md) | Audit single/paired papers, recompute stats/tables, adjudicate reproducibility, and manage CEG & decision ledgers | `research`, `table-forensics`, `repro-checklist`, `ledger`, `academic_recompute_statistics` |
+| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | Verify DOIs/updates, monitor retractions & new papers, merge corpora, and locate 5-source OA PDFs | `verify-work`, `retraction-watch`, `literature-watch`, `collect-corpus`, `locate-oa` |
+| [`skills/audit-peer-review`](skills/audit-peer-review/SKILL.md) | Audit OpenReview venue mirrors, forum scores, and local/remote companion code repos | `openreview-audit`, `repo-forensics --github-repo`, `academic_openreview_audit` |
+| [`skills/meta-analysis`](skills/meta-analysis/SKILL.md) | Pool fixed/random effects, run subgroup $Q_{\text{between}}$ & WLS meta-regression, build citation graphs & matrices | `meta-analyze`, `bibliography`, `academic_meta_analyze` |
+| [`skills/check-submission`](skills/check-submission/SKILL.md) | Scaffold venue workspaces, render receipt/comparison tables, and gate TeX/PDF double-blind submissions | `lint-submission`, `sanitize-submission`, `generate-table`, `check-venue` |
+| [`skills/cross-review`](skills/cross-review/SKILL.md) | Run multi-model blind review, deterministic graph clustering, anonymous challenge, and minority-evidence protection | `cross-review`, `academic_cross_review` |
+| [`skills/compute-math`](skills/compute-math/SKILL.md) | Probe CPU/GPU & BLAS/thread environments, emit `ComputeReceipt`, and route multi-domain math tasks | `compute-probe`, `academic_scfabric_hardware_probe` |
 
 ---
 

@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "academic-skills",
   "version": "3.0.0",
-  "description": "Stdlib-first SQLite STRICT academic research state, citation verification, and statistical recompute skills.",
+  "description": "Stdlib-first SQLite STRICT academic research audit, citation verification, peer-review forensics, and multi-model deliberation skills.",
   "author": {
     "name": "Junfu Shi (SJF, xngg1021)",
     "url": "https://github.com/xngg1021"
@@ -16,7 +16,8 @@
     "academic",
     "research",
     "citations",
-    "statistics",
+    "cross-review",
+    "meta-analysis",
     "reproducibility"
   ]
 }

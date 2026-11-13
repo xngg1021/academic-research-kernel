@@ -192,3 +192,59 @@ def scan_local_repo(root: Path) -> list[dict]:
             rel_posix = (rel_dir / fn).as_posix() if rel_dir.parts else fn
             entries.append({"path": rel_posix, "size": full_p.stat().st_size})
     return entries
+
+
+def fetch_github_tree(repo_slug: str) -> tuple[list[dict], bool, str | None, str]:
+    """Fetch remote GitHub repository blob tree via `gh api` or GitHub REST fallback."""
+    slug = str(repo_slug or "").strip()
+    if not REPO_SLUG_RE.fullmatch(slug):
+        raise ValueError(f"Invalid GitHub repository slug: {repo_slug!r} (expected 'owner/repo')")
+
+    import shutil
+    from urllib.parse import quote
+    from urllib.request import Request
+    from .research.sources import controlled_urlopen
+
+    if shutil.which("gh"):
+        try:
+            r_meta = subprocess.run(
+                ["gh", "api", f"repos/{slug}"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=20,
+                check=True,
+            )
+            branch = json.loads(r_meta.stdout).get("default_branch", "main")
+            enc_branch = quote(str(branch), safe="")
+            r_tree = subprocess.run(
+                ["gh", "api", f"repos/{slug}/git/trees/{enc_branch}?recursive=1"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=30,
+                check=True,
+            )
+            raw_tree = json.loads(r_tree.stdout)
+            entries = [t for t in (raw_tree.get("tree") or []) if isinstance(t, dict) and t.get("type") == "blob"]
+            return entries, bool(raw_tree.get("truncated")), raw_tree.get("sha"), "gh-api"
+        except Exception:
+            pass
+
+    headers = {"User-Agent": "academic-research-kernel/3.0.0", "Accept": "application/vnd.github+json"}
+    token = os.environ.get("GITHUB_TOKEN", "").strip() or os.environ.get("GH_TOKEN", "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    with controlled_urlopen(Request(f"https://api.github.com/repos/{slug}", headers=headers), timeout=20) as resp_m:
+        meta = json.load(resp_m)
+    branch = meta.get("default_branch", "main") if isinstance(meta, dict) else "main"
+    enc_branch = quote(str(branch), safe="")
+    with controlled_urlopen(
+        Request(f"https://api.github.com/repos/{slug}/git/trees/{enc_branch}?recursive=1", headers=headers),
+        timeout=30,
+    ) as resp_t:
+        raw_tree = json.load(resp_t)
+    if not isinstance(raw_tree, dict) or not isinstance(raw_tree.get("tree"), list):
+        raise ValueError("GitHub git/trees response missing 'tree' list")
+    entries = [t for t in raw_tree["tree"] if isinstance(t, dict) and t.get("type") == "blob"]
+    return entries, bool(raw_tree.get("truncated")), raw_tree.get("sha"), "github-rest"

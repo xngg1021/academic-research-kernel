@@ -11,6 +11,7 @@ import collections.abc
 from contextlib import contextmanager
 import json
 from pathlib import Path
+import re
 import sqlite3
 import threading
 from typing import Any, Iterable, Iterator, Mapping, Optional
@@ -208,7 +209,7 @@ END;
 CREATE TABLE IF NOT EXISTS claim_edges (
     src_claim_id TEXT NOT NULL,
     dst_claim_id TEXT NOT NULL,
-    relation TEXT NOT NULL CHECK (relation IN ('depends_on', 'refines', 'contradicts')),
+    relation TEXT NOT NULL CHECK (relation IN ('depends_on', 'refines', 'contradicts', 'corroborates', 'cites')),
     CHECK (src_claim_id != dst_claim_id),
     PRIMARY KEY (src_claim_id, dst_claim_id, relation),
     FOREIGN KEY (src_claim_id) REFERENCES claims(claim_id),
@@ -217,12 +218,15 @@ CREATE TABLE IF NOT EXISTS claim_edges (
 
 CREATE TRIGGER IF NOT EXISTS trg_claim_edges_no_cycle
 BEFORE INSERT ON claim_edges
+WHEN NEW.relation IN ('depends_on', 'refines')
 BEGIN
     SELECT CASE WHEN EXISTS (
         WITH RECURSIVE reach(node) AS (
             SELECT NEW.dst_claim_id
             UNION
-            SELECT e.dst_claim_id FROM claim_edges e JOIN reach r ON e.src_claim_id = r.node
+            SELECT e.dst_claim_id FROM claim_edges e
+            JOIN reach r ON e.src_claim_id = r.node
+            WHERE e.relation IN ('depends_on', 'refines')
         )
         SELECT 1 FROM reach WHERE node = NEW.src_claim_id
     ) THEN RAISE(ABORT, 'Cycle detected in claim_edges') END;
@@ -305,6 +309,28 @@ CREATE TRIGGER IF NOT EXISTS trg_decision_events_immutable_del
 BEFORE DELETE ON decision_events
 BEGIN
     SELECT RAISE(ABORT, 'decision_events log is append-only');
+END;
+
+CREATE TABLE IF NOT EXISTS decision_corrections (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    decision_id TEXT NOT NULL,
+    verdict TEXT NOT NULL CHECK (verdict IN ('positive', 'negative', 'inconclusive', 'unverifiable')),
+    rationale TEXT NOT NULL CHECK (length(trim(rationale)) > 0 AND length(rationale) <= 4096),
+    artifact_id TEXT,
+    FOREIGN KEY (decision_id) REFERENCES decisions(decision_id),
+    FOREIGN KEY (artifact_id) REFERENCES artifacts(artifact_id)
+) STRICT;
+
+CREATE TRIGGER IF NOT EXISTS trg_decision_corrections_immutable_upd
+BEFORE UPDATE ON decision_corrections
+BEGIN
+    SELECT RAISE(ABORT, 'decision_corrections log is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_decision_corrections_immutable_del
+BEFORE DELETE ON decision_corrections
+BEGIN
+    SELECT RAISE(ABORT, 'decision_corrections log is append-only');
 END;
 
 CREATE TABLE IF NOT EXISTS doi_watch_state (
@@ -730,6 +756,80 @@ class ResearchStateDB:
                 conn.set_progress_handler(None, 0)
             return tuple(str(r["id"]) for r in rows)
 
+    def trace_lineage_verified(self, artifact_id: str, *, max_vm_steps: int = 500_000) -> dict[str, Any]:
+        """Trace ancestor DAG and verify stored payload SHA-256 integrity across target and all ancestors."""
+        aid = _require_str_id(artifact_id, "artifact_id")
+        ancestors = self.trace_lineage(aid, max_vm_steps=max_vm_steps)
+        all_nodes = (aid, *ancestors)
+        with self._read_snapshot() as conn:
+            art_rows = {
+                str(r["artifact_id"]): (str(r["payload_json"]), str(r["payload_sha256"]))
+                for r in conn.execute(
+                    f"SELECT artifact_id, payload_json, payload_sha256 FROM artifacts WHERE artifact_id IN ({','.join('?' for _ in all_nodes)})",
+                    all_nodes,
+                ).fetchall()
+            }
+            if aid not in art_rows:
+                return {
+                    "artifact_id": aid,
+                    "ancestors": list(ancestors),
+                    "root_ancestors": [],
+                    "chain_length": 0,
+                    "verification_status": "missing_input",
+                }
+            edge_rows = conn.execute(
+                f"SELECT child_id, parent_id FROM lineage_edges WHERE child_id IN ({','.join('?' for _ in all_nodes)})",
+                all_nodes,
+            ).fetchall()
+
+        parents_map: dict[str, list[str]] = {n: [] for n in all_nodes}
+        for er in edge_rows:
+            c_id, p_id = str(er["child_id"]), str(er["parent_id"])
+            if c_id in parents_map:
+                parents_map[c_id].append(p_id)
+
+        missing_any = any(n not in art_rows for n in all_nodes)
+        corrupted_any = False
+        for n in all_nodes:
+            if n in art_rows:
+                p_json, p_sha = art_rows[n]
+                if sha256_hex(p_json) != p_sha.lower():
+                    corrupted_any = True
+                    break
+
+        if corrupted_any:
+            v_status = "corrupted"
+        elif missing_any:
+            v_status = "missing_input"
+        else:
+            v_status = "intact"
+
+        roots = sorted(n for n in ancestors if not parents_map.get(n))
+        memo_depth: dict[str, int] = {}
+
+        def _depth(node: str, visiting: set[str]) -> int:
+            if node in memo_depth:
+                return memo_depth[node]
+            ps = parents_map.get(node) or []
+            if not ps:
+                memo_depth[node] = 0
+                return 0
+            best = 0
+            for p in ps:
+                if p not in visiting:
+                    best = max(best, 1 + _depth(p, visiting | {p}))
+            memo_depth[node] = best
+            return best
+
+        chain_len = _depth(aid, {aid})
+        return {
+            "artifact_id": aid,
+            "ancestors": list(ancestors),
+            "root_ancestors": roots,
+            "chain_length": chain_len,
+            "verification_status": v_status,
+        }
+
     def add_claim(
         self,
         claim_id: str,
@@ -850,6 +950,50 @@ class ResearchStateDB:
             if row is None:
                 raise ValueError(f"Unknown target claim_id {cid!r}")
             return self.add_claim(cid, str(row["claim_text"]), status=None, evidence=[(artifact_id, stance, locator)])
+
+    def add_claim_relation(self, src_claim_id: str, dst_claim_id: str, relation: str = "depends_on") -> Mapping[str, Any]:
+        """Link two existing claims via depends_on, refines, contradicts, corroborates, or cites."""
+        src = _require_str_id(src_claim_id, "src_claim_id")
+        dst = _require_str_id(dst_claim_id, "dst_claim_id")
+        rel = _require_str_id(relation, "relation")
+        if rel not in ("depends_on", "refines", "contradicts", "corroborates", "cites"):
+            raise ValueError(f"Invalid claim relation {rel!r}")
+        if src == dst:
+            raise ValueError("Claim cannot link to itself")
+        with self.transaction() as conn:
+            for cid in (src, dst):
+                if conn.execute("SELECT 1 FROM claims WHERE claim_id = ?", (cid,)).fetchone() is None:
+                    raise ValueError(f"Unknown claim_id {cid!r}")
+            if rel in ("depends_on", "refines"):
+                row = conn.execute(
+                    """
+                    WITH RECURSIVE reach(node) AS (
+                        SELECT ?
+                        UNION
+                        SELECT e.dst_claim_id FROM claim_edges e
+                        JOIN reach r ON e.src_claim_id = r.node
+                        WHERE e.relation IN ('depends_on', 'refines')
+                    )
+                    SELECT 1 FROM reach WHERE node = ? LIMIT 1
+                    """,
+                    (dst, src),
+                ).fetchone()
+                if row is not None:
+                    raise ValueError(f"Cycle detected in claim_edges: adding {src!r} -> {dst!r} ({rel}) creates a loop")
+            conn.execute(
+                """
+                INSERT INTO claim_edges (src_claim_id, dst_claim_id, relation)
+                VALUES (?, ?, ?)
+                ON CONFLICT(src_claim_id, dst_claim_id, relation) DO NOTHING
+                """,
+                (src, dst, rel),
+            )
+            if rel == "contradicts":
+                conn.execute(
+                    "UPDATE claims SET status = 'contested' WHERE claim_id IN (?, ?) AND status = 'supported'",
+                    (src, dst),
+                )
+        return freeze({"source_claim_id": src, "target_claim_id": dst, "relation_type": rel})
 
     def record_decision(
         self,
@@ -1238,7 +1382,7 @@ class ResearchStateDB:
 
         evidence_by_id: dict[str, dict[str, Any]] = {}
         support_edges = []
-        stance_to_support = {"supports": "supported", "contradicts": "contradicted", "qualifies": "partially_supported"}
+        stance_to_support = {"supports": "supported", "contradicts": "contradicted", "qualifies": "unverifiable"}
         for r in ev_rows:
             art_s = str(r["artifact_id"])
             loc_s = str(r["locator"])
@@ -1260,10 +1404,11 @@ class ResearchStateDB:
 
         rel_map = {
             "depends_on": "depends_on",
-            "supports": "entails",
+            "supports": "corroborates",
+            "corroborates": "corroborates",
+            "cites": "cites",
             "refines": "refines",
             "contradicts": "contradicts",
-            "supersedes": "equivalent",
         }
         claim_relations = [
             {
@@ -1273,13 +1418,41 @@ class ResearchStateDB:
             }
             for r in ce_rows
         ]
+        contra_claims = {
+            cr["source_claim_id"] for cr in claim_relations if cr["relation_type"] == "contradicts"
+        } | {
+            cr["target_claim_id"] for cr in claim_relations if cr["relation_type"] == "contradicts"
+        }
+        uncertainties: list[dict[str, Any]] = []
+        for r in c_rows:
+            cid_s = str(r["claim_id"])
+            st_s = str(r["status"])
+            if st_s == "contested" or cid_s in contra_claims:
+                uhash = sha256_hex(canonical_json(["unresolved_contradiction", cid_s]))[:16]
+                uncertainties.append({
+                    "item_id": f"unc-{uhash}",
+                    "subject_id": cid_s,
+                    "kind": "unresolved_contradiction",
+                    "reason": "Claim has conflicting evidence or unresolved contradiction edges",
+                    "needs_human": True,
+                })
+            elif st_s == "unresolved":
+                uhash = sha256_hex(canonical_json(["unverifiable_claim", cid_s]))[:16]
+                uncertainties.append({
+                    "item_id": f"unc-{uhash}",
+                    "subject_id": cid_s,
+                    "kind": "unverifiable_claim",
+                    "reason": "Claim has no supporting or contradicting empirical evidence attached",
+                    "needs_human": True,
+                })
+
         body_for_digest = {
             "protocol": "claim-evidence-graph-1.0",
             "claims": claims,
             "evidence_anchors": evidence_anchors,
             "support_edges": support_edges,
             "claim_relations": claim_relations,
-            "uncertainties": [],
+            "uncertainties": uncertainties,
         }
         g_digest = sha256_hex(canonical_json(body_for_digest))
         return {
@@ -1290,7 +1463,266 @@ class ResearchStateDB:
             "evidence_anchors": evidence_anchors,
             "support_edges": support_edges,
             "claim_relations": claim_relations,
-            "uncertainties": [],
+            "uncertainties": uncertainties,
+        }
+
+    def correct_decision_outcome(
+        self,
+        decision_id: str,
+        verdict: str,
+        rationale: str,
+        artifact_id: Optional[str] = None,
+    ) -> Mapping[str, Any]:
+        """Append an independent outcome correction without mutating lifecycle state."""
+        did = _require_str_id(decision_id, "decision_id")
+        verd = _require_str_id(verdict, "verdict")
+        if verd not in ("positive", "negative", "inconclusive", "unverifiable"):
+            raise ValueError(f"Invalid verdict {verd!r}")
+        if type(rationale) is not str or not nfc_compact(rationale):
+            raise ValueError("rationale must be a non-empty string")
+        clean_rat = nfc_compact(rationale)
+        art_id = _require_str_id(artifact_id, "artifact_id") if artifact_id is not None else None
+        with self.transaction() as conn:
+            if conn.execute("SELECT 1 FROM decisions WHERE decision_id = ?", (did,)).fetchone() is None:
+                raise ValueError(f"Unknown decision_id {did!r}")
+            cur = conn.execute(
+                "INSERT INTO decision_corrections (decision_id, verdict, rationale, artifact_id) VALUES (?, ?, ?, ?)",
+                (did, verd, clean_rat, art_id),
+            )
+            seq = int(cur.lastrowid or 1)
+        return freeze({"decision_id": did, "verdict": verd, "rationale": clean_rat, "sequence": seq})
+
+    def export_decision_ledger_dict(self) -> dict[str, Any]:
+        """Export schema-compliant decision-ledger-1.0 receipt from SQLite STRICT tables."""
+        with self._read_snapshot() as conn:
+            d_rows = conn.execute("SELECT * FROM decisions ORDER BY decision_id ASC").fetchall()
+            e_rows = conn.execute("SELECT * FROM decision_events ORDER BY seq ASC").fetchall()
+            c_rows = conn.execute("SELECT * FROM decision_corrections ORDER BY seq ASC").fetchall()
+            art_shas = {
+                str(r["artifact_id"]): str(r["payload_sha256"])
+                for r in conn.execute("SELECT artifact_id, payload_sha256 FROM artifacts").fetchall()
+            }
+
+        decisions_out: list[dict[str, Any]] = []
+        bases_out: list[dict[str, Any]] = []
+        uncertainties_out: list[dict[str, Any]] = []
+        v_manifest: dict[str, str] = {}
+
+        for r in d_rows:
+            did = str(r["decision_id"])
+            ek = str(r["entry_kind"])
+            act = str(r["action"])
+            title = str(r["title"])
+            ntitle = nfc_compact(title)
+            art_id = str(r["artifact_id"]) if r["artifact_id"] is not None else None
+            basis_id = str(r["basis_decision_id"]) if r["basis_decision_id"] is not None else None
+            raw_meta = json.loads(str(r["metadata_json"]))
+            meta_d = dict(raw_meta) if isinstance(raw_meta, dict) else {"value": raw_meta}
+            meta_d["verdict"] = str(r["verdict"])
+            if art_id:
+                meta_d["artifact_id"] = art_id
+                if art_id in art_shas:
+                    v_manifest[art_id] = art_shas[art_id]
+
+            d_digest = sha256_hex(canonical_json({"id": did, "entry_kind": ek, "action": act, "title": ntitle}))
+            d_obj: dict[str, Any] = {
+                "id": did,
+                "title": title,
+                "normalized_title": ntitle,
+                "decision_type": "negative_result" if ek == "negative_result" else act,
+                "entry_kind": ek,
+                "decision_action": None if ek == "negative_result" else act,
+                "decision_digest": d_digest,
+                "metadata": meta_d,
+            }
+            decisions_out.append(d_obj)
+
+            if basis_id:
+                b_edge: dict[str, Any] = {
+                    "decision_id": did,
+                    "basis_kind": "decision",
+                    "basis_id": basis_id,
+                }
+                if art_id and art_id in art_shas:
+                    b_edge["receipt_ref"] = {
+                        "kind": "lineage",
+                        "schema_version": "lineage-receipt-1.0",
+                        "receipt_id": art_id,
+                        "receipt_digest": art_shas[art_id],
+                    }
+                bases_out.append(b_edge)
+
+            if ek == "negative_result" and not art_id:
+                uh = sha256_hex(canonical_json(["unsupported_negative_result", did]))[:16]
+                uncertainties_out.append({
+                    "item_id": f"unc-{uh}",
+                    "subject_id": did,
+                    "kind": "unsupported_negative_result",
+                    "reason": "Negative result recorded without empirical artifact_id receipt",
+                    "needs_human": True,
+                })
+            elif ek == "decision" and act in ("commit", "abandon", "revise") and not basis_id and not art_id:
+                uh = sha256_hex(canonical_json(["decision_without_basis", did]))[:16]
+                uncertainties_out.append({
+                    "item_id": f"unc-{uh}",
+                    "subject_id": did,
+                    "kind": "decision_without_basis",
+                    "reason": f"Decision action {act!r} recorded without basis_decision_id or artifact_id",
+                    "needs_human": True,
+                })
+
+        prev_state_by_dec: dict[str, str] = {}
+        events_out: list[dict[str, Any]] = []
+        for er in e_rows:
+            seq = int(er["seq"])
+            did = str(er["decision_id"])
+            to_st = str(er["new_state"])
+            rsn = str(er["reason"])
+            sup_id = str(er["superseded_by_id"]) if er["superseded_by_id"] is not None else None
+            from_st = prev_state_by_dec.get(did)
+            prev_state_by_dec[did] = to_st
+
+            ev_hash = sha256_hex(canonical_json([seq, did, from_st, to_st, rsn, sup_id]))[:32]
+            ev_obj: dict[str, Any] = {
+                "event_id": f"evt-{ev_hash}",
+                "decision_id": did,
+                "to_state": to_st,
+                "sequence": seq,
+            }
+            if from_st is not None:
+                ev_obj["from_state"] = from_st
+            if to_st in ("pruned", "reopened") and rsn != "genesis":
+                ev_obj["reason"] = rsn
+            elif to_st == "pruned" and rsn == "genesis":
+                ev_obj["reason"] = "other"
+            if sup_id is not None and to_st == "pruned":
+                ev_obj["alternative_ref"] = sup_id
+            events_out.append(ev_obj)
+
+        corrections_out: list[dict[str, Any]] = []
+        for cr in c_rows:
+            c_seq = int(cr["seq"])
+            did = str(cr["decision_id"])
+            verd = str(cr["verdict"])
+            rat = str(cr["rationale"])
+            c_art = str(cr["artifact_id"]) if cr["artifact_id"] is not None else None
+            o_dig = sha256_hex(canonical_json([did, verd, rat, c_art]))
+            c_hash = sha256_hex(canonical_json([c_seq, did, o_dig]))[:32]
+            c_obj: dict[str, Any] = {
+                "correction_id": f"corr-{c_hash}",
+                "decision_id": did,
+                "verdict": verd,
+                "rationale": rat,
+                "outcome_digest": o_dig,
+                "sequence": c_seq,
+            }
+            if c_art and c_art in art_shas:
+                c_obj["receipt_ref"] = {
+                    "kind": "lineage",
+                    "schema_version": "lineage-receipt-1.0",
+                    "receipt_id": c_art,
+                    "receipt_digest": art_shas[c_art],
+                }
+            corrections_out.append(c_obj)
+
+        v_digest = sha256_hex(canonical_json(v_manifest))
+        body = {
+            "protocol": "decision-ledger-1.0",
+            "verification_digest": v_digest,
+            "verification_manifest": v_manifest,
+            "decisions": decisions_out,
+            "bases": bases_out,
+            "forks": [],
+            "state_events": events_out,
+            "corrections": corrections_out,
+            "uncertainties": uncertainties_out,
+        }
+        l_digest = sha256_hex(canonical_json(body))
+        return {
+            "protocol": "decision-ledger-1.0",
+            "ledger_id": f"dl-{l_digest[:16]}",
+            "ledger_digest": l_digest,
+            **body,
+        }
+
+    def validate_decisions(self) -> dict[str, Any]:
+        """Validate raw SQLite decision tables, event transitions, referential integrity, and exported schema."""
+        errors: list[str] = []
+        with self._read_snapshot() as conn:
+            d_rows = conn.execute("SELECT * FROM decisions ORDER BY decision_id ASC").fetchall()
+            e_rows = conn.execute("SELECT * FROM decision_events ORDER BY seq ASC").fetchall()
+            c_rows = conn.execute("SELECT * FROM decision_corrections ORDER BY seq ASC").fetchall()
+
+        dec_by_id = {str(r["decision_id"]): dict(r) for r in d_rows}
+        for did, d in dec_by_id.items():
+            if not re.fullmatch(r"^[a-z0-9][a-z0-9._-]{0,63}$", did):
+                errors.append(f"Invalid decision_id format {did!r} (must match ^[a-z0-9][a-z0-9._-]{{0,63}}$)")
+            b_id = d.get("basis_decision_id")
+            if d["entry_kind"] == "negative_result":
+                if not b_id or str(b_id) not in dec_by_id:
+                    errors.append(f"negative_result {did!r} missing valid basis_decision_id")
+                elif dec_by_id[str(b_id)]["entry_kind"] != "decision":
+                    errors.append(f"negative_result {did!r} basis {b_id!r} must be entry_kind='decision'")
+            elif b_id is not None and str(b_id) not in dec_by_id:
+                errors.append(f"decision {did!r} references unknown basis_decision_id {b_id!r}")
+
+        seen_seqs: set[int] = set()
+        last_seq = 0
+        state_by_dec: dict[str, str] = {}
+        sup_adj: dict[str, set[str]] = {}
+        for er in e_rows:
+            seq = int(er["seq"])
+            if seq <= last_seq or seq in seen_seqs:
+                errors.append(f"Non-monotonic or duplicate event sequence {seq}")
+            seen_seqs.add(seq)
+            last_seq = max(last_seq, seq)
+            did = str(er["decision_id"])
+            if did not in dec_by_id:
+                errors.append(f"Event seq={seq} references unknown decision_id {did!r}")
+                continue
+            nst = str(er["new_state"])
+            rsn = str(er["reason"])
+            sup_id = str(er["superseded_by_id"]) if er["superseded_by_id"] is not None else None
+            prev_st = state_by_dec.get(did)
+            if prev_st is None:
+                if rsn != "genesis":
+                    errors.append(f"Initial event for {did!r} must have reason='genesis', got {rsn!r}")
+                if nst not in _VALID_TRANSITIONS[None]:
+                    errors.append(f"Invalid genesis state {nst!r} for {did!r}")
+            else:
+                if rsn == "genesis":
+                    errors.append(f"Non-initial event seq={seq} for {did!r} cannot use reason='genesis'")
+                if nst not in _VALID_TRANSITIONS.get(prev_st, frozenset()):
+                    errors.append(f"Illegal state transition {prev_st!r} -> {nst!r} on {did!r} at seq={seq}")
+                if nst == "pruned" and rsn not in PRUNE_REASONS:
+                    errors.append(f"Invalid prune reason {rsn!r} on {did!r} at seq={seq}")
+                if nst == "reopened" and rsn not in REOPEN_REASONS:
+                    errors.append(f"Invalid reopen reason {rsn!r} on {did!r} at seq={seq}")
+            if rsn == "superseded":
+                if not sup_id or sup_id not in dec_by_id or sup_id == did:
+                    errors.append(f"Invalid superseded_by_id {sup_id!r} on {did!r} at seq={seq}")
+                else:
+                    sup_adj.setdefault(did, set()).add(sup_id)
+            state_by_dec[did] = nst
+
+        for did in dec_by_id:
+            if did not in state_by_dec:
+                errors.append(f"Decision {did!r} has no genesis event in decision_events")
+
+        for cr in c_rows:
+            if str(cr["decision_id"]) not in dec_by_id:
+                errors.append(f"Correction seq={cr['seq']} references unknown decision_id {cr['decision_id']!r}")
+
+        if not errors:
+            exported = self.export_decision_ledger_dict()
+            errors.extend(validate_decision_ledger_semantics(exported))
+
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "decision_count": len(d_rows),
+            "event_count": len(e_rows),
+            "correction_count": len(c_rows),
         }
 
     def snapshot_digest(self) -> str:
@@ -1304,6 +1736,7 @@ class ResearchStateDB:
             "claim_edges",
             "decisions",
             "decision_events",
+            "decision_corrections",
             "doi_watch_state",
             "doi_watch_commits",
         )
@@ -1313,3 +1746,144 @@ class ResearchStateDB:
                 rows = conn.execute(f"SELECT * FROM {tbl}").fetchall()
                 dump[tbl] = sorted((dict(r) for r in rows), key=canonical_json)
             return sha256_hex(canonical_json(dump))
+
+
+def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
+    """Validate schema AND referential/lifecycle invariants on a decision-ledger-1.0 JSON document."""
+    errs = list(validate_schema(doc, "decision-ledger-receipt.schema.json"))
+    if not isinstance(doc, Mapping):
+        return errs or ["Ledger must be a JSON object"]
+
+    decs = doc.get("decisions")
+    bases = doc.get("bases")
+    forks = doc.get("forks")
+    events = doc.get("state_events")
+    corrs = doc.get("corrections")
+
+    dec_by_id: dict[str, Mapping[str, Any]] = {}
+    if isinstance(decs, list):
+        for idx, d in enumerate(decs):
+            if not isinstance(d, Mapping):
+                continue
+            did = str(d.get("id") or "")
+            if did in dec_by_id:
+                errs.append(f"Duplicate decision id {did!r} at decisions[{idx}]")
+            elif did:
+                dec_by_id[did] = d
+
+    neg_with_basis: set[str] = set()
+    if isinstance(bases, list):
+        for idx, b in enumerate(bases):
+            if not isinstance(b, Mapping):
+                continue
+            did = str(b.get("decision_id") or "")
+            bid = str(b.get("basis_id") or "")
+            if did not in dec_by_id:
+                errs.append(f"bases[{idx}] references unknown decision_id {did!r}")
+            if bid not in dec_by_id:
+                errs.append(f"bases[{idx}] references unknown basis_id {bid!r}")
+            if did and did == bid:
+                errs.append(f"bases[{idx}] self-basis on {did!r}")
+            if did in dec_by_id and bid in dec_by_id:
+                if dec_by_id[did].get("entry_kind") == "negative_result":
+                    if dec_by_id[bid].get("entry_kind") != "decision":
+                        errs.append(f"negative_result {did!r} basis {bid!r} must be entry_kind='decision'")
+                    else:
+                        neg_with_basis.add(did)
+
+    for did, d in dec_by_id.items():
+        if d.get("entry_kind") == "negative_result" and did not in neg_with_basis:
+            errs.append(f"negative_result {did!r} has no valid basisEdge to a prior decision")
+
+    if isinstance(forks, list):
+        for idx, fk in enumerate(forks):
+            if not isinstance(fk, Mapping):
+                continue
+            did = str(fk.get("decision_id") or "")
+            aid = str(fk.get("alternative_id") or "")
+            if did not in dec_by_id:
+                errs.append(f"forks[{idx}] references unknown decision_id {did!r}")
+            if aid not in dec_by_id:
+                errs.append(f"forks[{idx}] references unknown alternative_id {aid!r}")
+            if did and did == aid:
+                errs.append(f"forks[{idx}] self-fork on {did!r}")
+
+    if isinstance(events, list):
+        seen_seq: set[int] = set()
+        prev_seq = 0
+        cur_state: dict[str, str] = {}
+        sup_adj: dict[str, set[str]] = {}
+        for idx, ev in enumerate(events):
+            if not isinstance(ev, Mapping):
+                continue
+            seq = ev.get("sequence")
+            if isinstance(seq, int) and not isinstance(seq, bool):
+                if seq in seen_seq or seq <= prev_seq:
+                    errs.append(f"state_events[{idx}] has non-monotonic or duplicate sequence {seq}")
+                seen_seq.add(seq)
+                prev_seq = max(prev_seq, seq)
+            did = str(ev.get("decision_id") or "")
+            if did not in dec_by_id:
+                errs.append(f"state_events[{idx}] references unknown decision_id {did!r}")
+                continue
+            from_st = ev.get("from_state")
+            to_st = str(ev.get("to_state") or "")
+            prior = cur_state.get(did)
+            if prior is None:
+                if from_st is not None:
+                    errs.append(f"Initial event for {did!r} must omit from_state, got {from_st!r}")
+                if to_st not in _VALID_TRANSITIONS[None]:
+                    errs.append(f"Illegal initial state {to_st!r} for {did!r}")
+            else:
+                if from_st != prior:
+                    errs.append(f"Event state mismatch on {did!r}: expected from_state={prior!r}, got {from_st!r}")
+                if to_st not in _VALID_TRANSITIONS.get(prior, frozenset()):
+                    errs.append(f"Illegal transition {prior!r} -> {to_st!r} on {did!r}")
+            if ev.get("reason") == "superseded":
+                alt = str(ev.get("alternative_ref") or "")
+                if not alt or alt not in dec_by_id or alt == did:
+                    errs.append(f"Event {ev.get('event_id')!r} with reason='superseded' requires valid distinct alternative_ref")
+                else:
+                    sup_adj.setdefault(did, set()).add(alt)
+            if ev.get("caused_by") is not None and str(ev.get("caused_by")) not in dec_by_id:
+                errs.append(f"state_events[{idx}] caused_by references unknown decision {ev.get('caused_by')!r}")
+            cur_state[did] = to_st
+
+        # Check supersession cycles
+        color: dict[str, int] = {}
+        for start in sorted(sup_adj):
+            if color.get(start, 0) != 0:
+                continue
+            stack = [(start, sorted(sup_adj.get(start, ())), 0)]
+            color[start] = 1
+            while stack:
+                node, nbrs, pos = stack[-1]
+                if pos >= len(nbrs):
+                    color[node] = 2
+                    stack.pop()
+                    continue
+                nxt = nbrs[pos]
+                stack[-1] = (node, nbrs, pos + 1)
+                st_c = color.get(nxt, 0)
+                if st_c == 1:
+                    errs.append(f"Cycle detected in supersession chain involving {nxt!r}")
+                    break
+                if st_c == 0:
+                    color[nxt] = 1
+                    stack.append((nxt, sorted(sup_adj.get(nxt, ())), 0))
+
+    if isinstance(corrs, list):
+        seen_cseq: set[int] = set()
+        for idx, c in enumerate(corrs):
+            if not isinstance(c, Mapping):
+                continue
+            did = str(c.get("decision_id") or "")
+            if did not in dec_by_id:
+                errs.append(f"corrections[{idx}] references unknown decision_id {did!r}")
+            cseq = c.get("sequence")
+            if isinstance(cseq, int) and not isinstance(cseq, bool):
+                if cseq in seen_cseq:
+                    errs.append(f"Duplicate correction sequence {cseq}")
+                seen_cseq.add(cseq)
+
+    return errs
