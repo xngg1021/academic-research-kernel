@@ -11,16 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / 'schemas' / 'research-object.schema.json'
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module  # dataclass 延迟注解要求模块已注册
-    spec.loader.exec_module(module)
-    return module
-
-
-identity = _load('identity', ROOT / 'skills' / 'research-object-identity' / 'scripts' / 'identity.py')
-interop = _load('interop', ROOT / 'skills' / 'literature-analysis' / 'scripts' / 'interop.py')
+from academic_research_kernel import identity, interop
 
 EVIDENCE = {'source': 'OpenAlex', 'queried_at': '2026-09-17T00:00:00Z',
             'match_fields': ['doi'], 'conflict_fields': [], 'human_confirmed': False}

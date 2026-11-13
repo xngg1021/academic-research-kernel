@@ -33,13 +33,7 @@ from urllib.error import HTTPError
 import xml.etree.ElementTree as ET
 import zipfile
 
-try:
-    from ..identity import normalize
-except ImportError:
-    _id_dir = Path(__file__).resolve().parents[3] / "skills" / "research-object-identity" / "scripts"
-    if _id_dir.is_dir() and str(_id_dir) not in sys.path:
-        sys.path.insert(0, str(_id_dir))
-    from identity import normalize
+from ..identity import normalize
 
 PARSER_VERSION = '1.0.1'
 MAX_FILE = 32 * 1024 * 1024
@@ -1498,7 +1492,7 @@ def prepare(value, project):
         raise ValueError('project already belongs to a different input')
     manifest = input_files(value, project)
     docs = parse_manifest(project, manifest)
-    from ..ingestion.contracts import validate_schema
+    from .._stdlib import validate_schema
     errors = validate_schema(docs, 'research-documents.schema.json')
     if errors:
         raise ValueError('Located documents schema: ' + '; '.join(errors))

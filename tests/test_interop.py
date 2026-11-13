@@ -6,11 +6,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location(
-    'interop', ROOT / 'skills' / 'literature-analysis' / 'scripts' / 'interop.py')
-interop = importlib.util.module_from_spec(spec)
-sys.modules['interop'] = interop  # dataclass 解析延迟注解要求模块已注册
-spec.loader.exec_module(interop)
+from academic_research_kernel import interop
 
 CanonicalWork = interop.CanonicalWork
 
@@ -190,7 +186,7 @@ def test_no_third_party_imports():
     """interop.py 必须纯标准库：解析其 import 并逐个核对。"""
     import ast
     import sys
-    tree = ast.parse((ROOT / 'skills' / 'literature-analysis' / 'scripts' / 'interop.py')
+    tree = ast.parse((ROOT / 'src' / 'academic_research_kernel' / 'interop.py')
                      .read_text(encoding='utf-8'))
     names = set()
     for node in ast.walk(tree):

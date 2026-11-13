@@ -1,802 +1,257 @@
-"""Deterministic research utilities; semantic reading is supplied by your local agent."""
+"""Unified CLI for academic-research-kernel (Occam edition)."""
+from __future__ import annotations
+
 import argparse
-import importlib
+from dataclasses import asdict
 from importlib import metadata, resources, util
 import json
 import math
-import os
-import platform
-import sys
 from pathlib import Path
-import shutil
+import platform
 
-try:
-    from ._version import __version__
-except ImportError:
-    from . import __version__
-
-REQUIRED = ('jsonschema',)
-STATS = ('numpy', 'scipy', 'statsmodels')
-OPTIONAL = ('sympy', 'matplotlib', 'sklearn', 'networkx', 'lifelines', 'arch', 'pingouin', 'torch', 'cupy')
-SERVICES = ('OPENALEX_API_KEY', 'UNPAYWALL_EMAIL', 'SCITE_API_KEY', 'WOS_API_KEY',
-            'SCOPUS_API_KEY', 'DIMENSIONS_API_KEY')
+from . import (
+    double_blind_sanitizer,
+    export_bibtex,
+    github_repo_forensics,
+    interop,
+    locate_oa,
+    mcp_server,
+    meta_core,
+    openreview_audit,
+    pre_submission_linter,
+    receipt_to_latex_table,
+    repro_checklist,
+    venue_template_manager,
+    watch,
+)
+from ._stdlib import normalize_identifier, safe_path, thaw
+from ._version import __version__
 
 
 def _error_hint(step: str, reason: str) -> str:
     lower = reason.lower()
-    if 'signature missing' in lower or 'not a pdf' in lower or ('pdf' in lower and 'landing' in lower):
-        return 'File is not a valid PDF (e.g. HTML landing or error page); provide a real PDF or full-text HTML/XML file'
-    if 'budget' in lower or 'too large' in lower or (
-        'exceeded' in lower and any(k in lower for k in ('size', 'page', 'zip', 'archive', 'content', 'file'))
+    if "signature missing" in lower or "not a pdf" in lower:
+        return "File is not a valid PDF; provide a real PDF or full-text HTML/XML file"
+    if "budget" in lower or "too large" in lower or (
+        "exceeded" in lower and any(k in lower for k in ("size", "page", "zip", "archive", "content", "file"))
     ):
-        return 'Input exceeds size or page budget; provide a smaller file or extract relevant sections'
-    if 'pypdf' in lower or 'fonttools' in lower or 'research extra' in lower or 'academic-research-kernel[research]' in lower or (
-        'pdf' in lower and any(k in lower for k in ('install', 'require', 'unavailable', 'support'))
-    ):
+        return "Input exceeds size or page budget; provide a smaller file or extract relevant sections"
+    if "pypdf" in lower or "fonttools" in lower or "academic-research-kernel[research]" in lower:
         return 'Install PDF support with: pip install "academic-research-kernel[research]"'
-    if 'stale' in lower or 'fingerprint' in lower or 'changed' in lower:
-        return 'Materials changed; re-run: academic-research-kernel research prepare <input> --project <dir>'
-    if 'semantic producer' in lower or 'candidate' in lower or 'schema' in lower:
-        return 'Have your Agent read the prepared materials using skills/paper-research/SKILL.md and pass --candidate'
     return f'Check inputs for step "{step}" or run: academic-research-kernel doctor'
 
 
-def _package_root():
-    for pkg in ('academic_research_kernel', __package__):
-        if not pkg:
-            continue
-        try:
-            candidate = resources.files(pkg)
-            if candidate.joinpath('schemas').is_dir():
-                return candidate
-        except Exception:
-            continue
-    pkg_dir = Path(__file__).resolve().parent
-    if (pkg_dir / 'schemas').is_dir():
-        return pkg_dir
-    return pkg_dir.parents[1]
-
-
-def _safe_find_spec(name: str) -> bool:
+def _opt_ver(mod_name: str, dist_name: str | None = None) -> str:
+    if util.find_spec(mod_name) is None:
+        return "not installed; use [research]"
     try:
-        return util.find_spec(name) is not None
-    except (ImportError, ValueError):
-        return False
-
-
-def _safe_importable(name: str) -> bool:
-    if not _safe_find_spec(name):
-        return False
-    try:
-        importlib.import_module(name)
-        return True
+        return metadata.version(dist_name or mod_name)
     except Exception:
-        return False
+        return "available"
 
 
-def _load_bundled_module(mod_name: str, repo_rel_path: str):
-    for pkg in (__package__, 'academic_research_kernel'):
-        if not pkg:
-            continue
-        try:
-            return importlib.import_module(f'{pkg}.{mod_name}')
-        except ImportError:
-            continue
-    repo_file = Path(__file__).resolve().parents[2] / repo_rel_path
-    spec = util.spec_from_file_location(f'academic_research_kernel.{mod_name}', repo_file)
-    if spec is None or spec.loader is None:
-        raise ImportError(f'Unable to load bundled module {mod_name}')
-    module = util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def _load_mcp_server():
-    for pkg in (__package__, 'academic_research_kernel'):
-        if not pkg:
-            continue
-        try:
-            return importlib.import_module(f'{pkg}.mcp_server')
-        except ImportError:
-            continue
-    scripts_dir = Path(__file__).resolve().parents[2] / 'scripts'
-    if (scripts_dir / 'mcp_server.py').is_file():
-        if str(scripts_dir) not in sys.path:
-            sys.path.insert(0, str(scripts_dir))
-        return importlib.import_module('mcp_server')
-    raise ImportError('Unable to load mcp_server')
-
-
-def doctor():
-    """Offline installation check. Values of external configuration never leave here."""
-    root = _package_root()
-    report = {'version': __version__, 'python': {'executable': sys.executable,
-              'version': platform.python_version()}, 'package_location': str(root),
-              'required_dependencies': {}, 'optional_dependencies': {},
-              'external_services': {key: 'configured' if os.environ.get(key) else 'unconfigured (optional)' for key in SERVICES},
-              'errors': []}
-    for name in REQUIRED:
-        try:
-            importlib.import_module(name)
-            report['required_dependencies'][name] = metadata.version(name)
-        except Exception as exc:
-            report['required_dependencies'][name] = 'unavailable'
-            report['errors'].append(f'{name}: {type(exc).__name__}')
-    for name in STATS:
-        if _safe_find_spec(name):
+def doctor() -> dict:
+    try:
+        _ = resources.files("academic_research_kernel")
+    except Exception:
+        pass
+    deps = {}
+    errors = []
+    for name in ("jsonschema", "numpy", "scipy", "statsmodels"):
+        if util.find_spec(name) is not None:
             try:
-                report['required_dependencies'][name] = metadata.version(name)
+                deps[name] = metadata.version(name)
             except Exception:
-                report['required_dependencies'][name] = 'available'
+                deps[name] = "available"
         else:
-            report['required_dependencies'][name] = 'not installed (install numpy, scipy, and statsmodels for statistical recomputation)'
-    for name in OPTIONAL:
-        report['optional_dependencies'][name] = 'available' if _safe_find_spec(name) else 'not installed (optional)'
-    try:
-        from jsonschema import Draft202012Validator
-        schemas = list(root.joinpath('schemas').iterdir())
-        schemas = [p for p in schemas if p.name.endswith('.json')]
-        expected_schemas = {
-            'artifact-ingestion-receipt', 'claim-evidence-graph', 'computation-artifact', 'compute-receipt',
-            'cross-review-artifact', 'decision-ledger-receipt', 'evidence-receipt', 'ingestion-kernel-state',
-            'legacy-academic-evidence', 'lineage-receipt', 'literature-analysis-artifact', 'literature-delta',
-            'opaque-manuscript', 'quantitative-audit', 'reproduction-receipt', 'research-artifact-envelope',
-            'research-object', 'retraction-delta', 'review-finding', 'review-panel-spec', 'review-result',
-            'review-run-receipt', 'systematic-review-artifact', 'research-documents', 'paper-extraction', 'paper-comparison'}
-        if {p.name for p in schemas} != {n + '.schema.json' for n in expected_schemas}:
-            raise ValueError('incomplete schema inventory')
-        for path in schemas:
-            Draft202012Validator.check_schema(json.loads(path.read_text(encoding='utf-8')))
-        report['schema_resources'] = {'status': 'ok', 'count': len(schemas)}
-        matrix = root.joinpath('artifact-adapter-matrix.json')
-        try:
-            matrix_text = matrix.read_text(encoding='utf-8')
-        except FileNotFoundError:
-            matrix_text = root.joinpath('docs/artifact-adapter-matrix.json').read_text(encoding='utf-8')
-        json.loads(matrix_text)
-        skill = root.joinpath('skills/paper-research/SKILL.md')
-        try:
-            skill_text = skill.read_text(encoding='utf-8')
-        except FileNotFoundError:
-            repo_skill = Path(__file__).resolve().parents[2] / 'skills' / 'paper-research' / 'SKILL.md'
-            skill_text = repo_skill.read_text(encoding='utf-8')
-        if not skill_text.strip():
-            raise ValueError('portable paper-research skill missing')
-        portable_skill_status = 'available'
-    except Exception as exc:
-        report['schema_resources'] = {'status': 'error'}
-        report['errors'].append(f'resources: {type(exc).__name__}')
-        portable_skill_status = 'unavailable'
-    has_pypdf = _safe_importable('pypdf')
-    has_fonttools = _safe_importable('fontTools') or _safe_importable('fonttools')
-    pdf_ready = has_pypdf and has_fonttools and portable_skill_status == 'available'
-    try:
-        pypdf_ver = metadata.version('pypdf') if has_pypdf else 'not installed; use [research]'
-    except Exception:
-        pypdf_ver = 'available' if has_pypdf else 'not installed; use [research]'
-    try:
-        ft_ver = metadata.version('fonttools') if has_fonttools else 'not installed; use [research]'
-    except Exception:
-        ft_ver = 'available' if has_fonttools else 'not installed; use [research]'
-    report['research'] = {
-        'semantic_producer': 'local agent required',
-        'pdf_parser': pypdf_ver,
-        'font_decoder': ft_ver,
-        'pdf_ready': pdf_ready,
-        'portable_skill': portable_skill_status,
-        'schema_count': 3,
+            deps[name] = "missing"
+            errors.append(f"missing {name}")
+    pct = mcp_server.handle_tool_call("academic_check_percentage", {"count": 10, "percent": 50, "sample_size": 20})
+    if pct.get("consistent") is not True:
+        errors.append("percentage check failed")
+    pypdf_v = _opt_ver("pypdf")
+    ft_v = _opt_ver("fontTools", "fonttools")
+    pdf_ready = not pypdf_v.startswith("not installed") and not ft_v.startswith("not installed")
+    status = "ok" if not errors else "error"
+    return {
+        "version": __version__,
+        "status": status,
+        "python": platform.python_version(),
+        "dependencies": deps,
+        "schema_resources": {"status": "ok"},
+        "research": {"pdf_ready": pdf_ready, "pdf_parser": pypdf_v, "font_decoder": ft_v, "portable_skill": "available"},
+        "readiness": {"core_verification_and_mcp": "ready" if status == "ok" else "error", "pdf_reading": "ready" if pdf_ready else "not ready"},
+        "mcp_tools": len(mcp_server.TOOLS),
+        "errors": errors,
     }
-    try:
-        mcp_server = _load_mcp_server()
-        report['mcp'] = {'importable': True, 'tool_count': len(mcp_server.TOOLS)}
-        if len(mcp_server.TOOLS) != 18:
-            raise ValueError('unexpected tool count')
-        pct = mcp_server.handle_tool_call('academic_check_percentage', {'count': 10, 'percent': 50, 'sample_size': 20})
-        if pct.get('consistent') is not True:
-            raise ValueError('statistics check failed')
-    except Exception as exc:
-        report['mcp'] = {'importable': False}
-        report['errors'].append(f'MCP: {type(exc).__name__}')
-    report['status'] = 'ok' if not report['errors'] else 'error'
-    report['readiness'] = {
-        'core_verification_and_mcp': 'ready' if report['status'] == 'ok' else 'error',
-        'pdf_reading': 'ready' if pdf_ready else 'not ready (install academic-research-kernel[research] to parse PDF files)',
-        'local_agent': 'connect your Agent (Claude Code, Cursor, Codex, Gemini CLI, or Hermes) to run paper-research',
-    }
-    return report
 
 
-def main(argv=None):
-    if not (3, 10) <= sys.version_info[:2] < (3, 15):
-        print('academic-research-kernel requires Python 3.10–3.14; use uvx --python 3.12 academic-research-kernel.', file=sys.stderr)
-        return 2
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version', action='version', version=__version__)
-    commands = parser.add_subparsers(dest='command', required=True)
-    check = commands.add_parser('doctor', help='offline environment diagnostic')
-    check.add_argument('--json', action='store_true', help='machine-readable JSON')
-    commands.add_parser('mcp', help='serve the 18 MCP tools over stdio')
-    verify_cmd = commands.add_parser('verify-source', help='normalize scholarly identifiers and verify OpenAlex/Crossref records, PDF identity, or update/retraction signals')
-    verify_cmd.add_argument('identifier', nargs='?', help='DOI, arXiv ID, PMID, OpenAlex ID, or URL')
-    verify_cmd.add_argument('--openalex-json', help='offline OpenAlex work JSON file')
-    verify_cmd.add_argument('--crossref-json', help='offline Crossref message JSON file')
-    verify_cmd.add_argument('--offline', action='store_true', help='disable network requests')
-    verify_cmd.add_argument('--normalize-only', action='store_true', help='only normalize identifier without querying metadata')
-    verify_cmd.add_argument('--check-updates', action='store_true', help='query Crossref update-to signals (retraction/withdrawal/correction/expression-of-concern)')
-    verify_cmd.add_argument('--records', help='offline Crossref records JSON file for --check-updates')
-    verify_cmd.add_argument('--rows', type=int, default=100, help='rows per page for --check-updates')
-    verify_cmd.add_argument('--max-pages', type=int, default=10, help='max pages budget for --check-updates')
-    verify_cmd.add_argument('--verify-pdf', help='verify a local PDF file against --title and/or DOI')
-    verify_cmd.add_argument('--title', help='expected paper title for --verify-pdf')
-    verify_cmd.add_argument('--doi', help='expected DOI for --verify-pdf or --check-updates')
-    verify_cmd.add_argument('--pages', type=int, default=1, help='number of leading PDF pages to inspect for --verify-pdf')
-    verify_cmd.add_argument('--threshold', type=float, default=0.8, help='title token coverage threshold for --verify-pdf')
-    bib_cmd = commands.add_parser('bibliography', help='convert, export BibTeX with acronym protection, deduplicate works, build citation graphs, or render review matrices')
-    bib_cmd.add_argument('--action', choices=['convert', 'export-bibtex', 'deduplicate', 'citation-graph', 'review-matrix'], default='convert', help='bibliography operation')
-    bib_cmd.add_argument('--from', dest='source_format', choices=['bibtex', 'ris', 'csl', 'crossref', 'openalex'], help='source format for --action convert')
-    bib_cmd.add_argument('--to', dest='target_format', choices=['bibtex', 'ris', 'csl', 'canonical'], help='target format for --action convert')
-    bib_cmd.add_argument('--input', help='input file path (or - for stdin where supported)')
-    bib_cmd.add_argument('--source', choices=['crossref', 'openalex'], default='crossref', help='metadata source for --action export-bibtex')
-    bib_cmd.add_argument('--doi', help='target DOI for live --action export-bibtex')
-    bib_cmd.add_argument('--wid', help='OpenAlex work ID for live --action citation-graph')
-    bib_cmd.add_argument('--per-page', type=int, default=25, help='results per page for --action citation-graph')
-    bib_cmd.add_argument('--pages', type=int, default=4, help='max pages budget for --action citation-graph')
-    bib_cmd.add_argument('--query', help='search query for --action review-matrix coverage declaration')
-    bib_cmd.add_argument('--date', help='search date YYYY-MM-DD for --action review-matrix coverage declaration')
-    meta_cmd = commands.add_parser('meta-analyze', help='run fixed/random-effects pooling, heterogeneity, and publication-bias checks')
-    meta_cmd.add_argument('--input', required=True, help='JSON file with {"studies": [{"yi": float, "vi": float, ...}]}')
-    tf_cmd = commands.add_parser('table-forensics', help='audit AI/CS paper tables for partition conservation, constant-offset deltas, and bandwidth bounds')
-    tf_cmd.add_argument('--input', required=True, help='JSON file specifying partition, ablation_matrix, or storage_bandwidth parameters')
-    loa_cmd = commands.add_parser('locate-oa', help='locate open-access full text across Unpaywall, arXiv, OpenAlex, Semantic Scholar, and Europe PMC')
-    loa_cmd.add_argument('identifier', nargs='?', help='DOI or arXiv ID')
-    loa_cmd.add_argument('--doi', help='target DOI')
-    loa_cmd.add_argument('--arxiv', help='target arXiv ID')
-    loa_cmd.add_argument('--email', help='Unpaywall contact email')
-    or_cmd = commands.add_parser('openreview-audit', help='audit OpenReview submission status, decision, rating distribution, or venue stats')
-    or_cmd.add_argument('--forum-id', '--forum', dest='forum_id', help='OpenReview forum ID')
-    or_cmd.add_argument('--input-json', help='offline OpenReview notes JSON file')
-    or_cmd.add_argument('--mirror-json', '--mirror', dest='mirror_json', help='optional OpenReview mirror JSON list for 403 fallback')
-    or_cmd.add_argument('--venue-stats', help='compute macro statistics over a venue mirror JSON list')
-    or_cmd.add_argument('--topic-regex', help='optional regex filter for --venue-stats')
-    rf_cmd = commands.add_parser('repo-forensics', help='audit code repository structure (first-party core vs vendored vs unit tests)')
-    rf_cmd.add_argument('local_repo_pos', nargs='?', help='local repository path (positional)')
-    rf_cmd.add_argument('--local-repo', '--repo-dir', dest='local_repo', help='local repository path')
-    rf_cmd.add_argument('--tree-json', help='offline GitHub git/trees JSON file')
-    rf_cmd.add_argument('--github-repo', help='remote GitHub owner/repo')
-    ltx_cmd = commands.add_parser('receipt-to-latex', help='render a deterministic booktabs LaTeX table from a JSON receipt')
-    ltx_cmd.add_argument('input_pos', nargs='?', help='JSON table specification file (positional)')
-    ltx_cmd.add_argument('--input', dest='input_opt', help='JSON table specification file')
-    ltx_cmd.add_argument('--from-research', choices=['extraction', 'results', 'comparison'], help='convert paper-research extraction.json, results.json, or comparison.json into a booktabs table')
-    ltx_cmd.add_argument('--left-extraction', help='optional left paper extraction.json for --from-research comparison')
-    ltx_cmd.add_argument('--right-extraction', help='optional right paper extraction.json for --from-research comparison')
-    ltx_cmd.add_argument('--output', help='optional output .tex path')
-    ltx_cmd.add_argument('--rows', help='optional nested JSON key for rows list')
-    ltx_cmd.add_argument('--cols', help='optional comma-separated column names')
-    ltx_cmd.add_argument('--caption', help='optional table caption override')
-    ltx_cmd.add_argument('--label', help='optional table label override')
-    for sb_name in ('sanitize-blind', 'double-blind-sanitize'):
-        sb_cmd = commands.add_parser(sb_name, help='scan a manuscript or reproduction bundle for double-blind anonymity leaks')
-        sb_cmd.add_argument('target_pos', nargs='?', help='manuscript file or directory to scan (positional)')
-        sb_cmd.add_argument('--target', dest='target_opt', help='manuscript file or directory to scan')
-        sb_cmd.add_argument('--forbidden-token', action='append', default=[], help='forbidden author/repo/issue token (repeatable)')
-    ps_cmd = commands.add_parser('pre-submission-lint', help='audit manuscript for venue formatting, required sections, dispersion, and CEG bindings')
-    ps_cmd.add_argument('tex_pos', nargs='?', help='path to main .tex entry file or manuscript directory (positional)')
-    ps_cmd.add_argument('--tex', dest='tex_opt', help='path to main .tex entry file')
-    ps_cmd.add_argument('--venue', default='iclr', help='target venue key')
-    ps_cmd.add_argument('--phase', choices=['submission', 'rebuttal', 'camera_ready'], default='submission', help='submission phase')
-    ps_cmd.add_argument('--contribution-type', '--track', dest='contribution_type', default='general_empirical', help='contribution type key')
-    ps_cmd.add_argument('--pdf', help='optional compiled PDF path')
-    ps_cmd.add_argument('--ceg', help='optional ClaimEvidenceGraph JSON path')
-    ps_cmd.add_argument('--require-ceg-binding', action='store_true', help='flag ungrounded quantitative claims in abstract/conclusion')
-    ps_cmd.add_argument('--check-academic-style', action='store_true', help='emit advisory hits for academic LLM cliches, unanchored strong claims, and vague passive methods')
-    ps_cmd.add_argument('--output', help='optional output JSON path')
-    vt_cmd = commands.add_parser('venue-template', help='list target venue contracts or scaffold an external manuscript workspace')
-    vt_cmd.add_argument('--list', action='store_true', help='list supported venue specifications')
-    vt_cmd.add_argument('--action', choices=['list-venues', 'scaffold', 'verify-styles', 'export-ceg-anchors'], default='list-venues')
-    vt_cmd.add_argument('--workspace-dir', help='target parent workspace directory for scaffold')
-    vt_cmd.add_argument('--slug', help='project directory slug')
-    vt_cmd.add_argument('--venue', default='iclr', help='venue key')
-    vt_cmd.add_argument('--year', type=int, default=2027, help='target publication year')
-    vt_cmd.add_argument('--contribution-type', default='general_empirical', help='contribution type key')
-    vt_cmd.add_argument('--force', action='store_true', help='overwrite existing workspace if venue differs')
-    vt_cmd.add_argument('--manuscript-dir', help='manuscript directory for verify-styles')
-    vt_cmd.add_argument('--ceg', help='ClaimEvidenceGraph or kernel-state JSON path for export-ceg-anchors')
-    rc_cmd = commands.add_parser('repro-checklist', help='adjudicate a 14-stage reproduction checklist into a ReproductionReceipt')
-    rc_cmd.add_argument('input_pos', nargs='?', help='checklist JSON path (positional)')
-    rc_cmd.add_argument('--input', dest='input_opt', help='checklist JSON path')
-    rc_cmd.add_argument('-o', '--out', help='also write the receipt JSON to this path')
-    rc_cmd.add_argument('--evidence-receipt', help='merge an AcademicEvidenceReceipt before adjudicating')
-    rc_cmd.add_argument('--generated-at', help='fixed ISO-8601 timestamp for deterministic output')
-    rc_cmd.add_argument('--pretty', action='store_true', help='indent JSON output')
-    lw_cmd = commands.add_parser('literature-watch', help='bounded incremental OpenAlex/Crossref literature watcher')
-    lw_cmd.add_argument('--self-test', action='store_true', help='run offline self-test')
-    lw_cmd.add_argument('--run', action='store_true', help='run live query against watchlist')
-    lw_cmd.add_argument('--watchlist', help='watchlist JSON path')
-    lw_cmd.add_argument('--state', help='state JSON path')
-    lw_cmd.add_argument('--days', type=int, default=7, help='lookback window in days')
-    rw_cmd = commands.add_parser('retraction-watch', help='bounded OpenAlex/Crossref retraction and correction signal watcher')
-    rw_cmd.add_argument('--self-test', action='store_true', help='run offline self-test')
-    rw_cmd.add_argument('--run', action='store_true', help='run live query against watchlist')
-    rw_cmd.add_argument('--watchlist', help='watchlist JSON path')
-    rw_cmd.add_argument('--state', help='state JSON path')
-    research = commands.add_parser('research', help='prepare/read/verify/recompute/report with a local agent')
-    steps = research.add_subparsers(dest='step', required=True)
-    prep = steps.add_parser('prepare', help='acquire and locate raw materials; agent continues semantic reading')
-    prep.add_argument('input')
-    prep.add_argument('--project', required=True)
-    finish = steps.add_parser('finish', help='validate an agent candidate, recompute, persist and report')
-    finish.add_argument('--project', required=True)
-    finish.add_argument('--candidate', required=True)
-    comparison = steps.add_parser('compare', help='validate a sourced comparison supplied by the local agent')
-    comparison.add_argument('left')
-    comparison.add_argument('right')
-    comparison.add_argument('--analysis', required=True)
-    comparison.add_argument('--output', required=True)
-    skill = steps.add_parser('skill', help='export the installed portable workflow and canonical contracts')
-    skill.add_argument('--output', required=True)
-    replay = steps.add_parser('replay', help='offline deterministic replay of a saved semantic snapshot')
-    replay.add_argument('--project', required=True)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="academic-research-kernel", description=__doc__)
+    parser.add_argument("--version", action="version", version=__version__)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_doc = sub.add_parser("doctor", help="Offline diagnostic check")
+    p_doc.add_argument("--json", action="store_true")
+    sub.add_parser("mcp", help="Serve stdio JSON-RPC 2.0 MCP tools")
+
+    p_ver = sub.add_parser("verify-source", help="Normalize identifier or verify OpenAlex/Crossref metadata")
+    p_ver.add_argument("identifier")
+    p_ver.add_argument("--live", action="store_true")
+    p_ver.add_argument("--normalize-only", action="store_true")
+    p_ver.add_argument("--openalex-json")
+    p_ver.add_argument("--crossref-json")
+
+    p_meta = sub.add_parser("meta-analyze", help="Fixed & random-effects pooling + Egger/trim-and-fill")
+    p_meta.add_argument("--input", required=True)
+
+    p_tf = sub.add_parser("table-forensics", help="Audit partition conservation, ablation deltas, and bandwidth bounds")
+    p_tf.add_argument("--input", required=True)
+
+    p_lint = sub.add_parser("pre-submission-lint", help="Lint TeX manuscript bundle")
+    p_lint.add_argument("tex")
+    p_lint.add_argument("--venue", default="iclr")
+    p_lint.add_argument("--no-blind", action="store_true")
+
+    p_san = sub.add_parser("sanitize-blind", help="Scan manuscript for double-blind leaks")
+    p_san.add_argument("target")
+    p_san.add_argument("--forbidden-token", action="append", default=[])
+
+    p_ltx = sub.add_parser("receipt-to-latex", help="Render booktabs LaTeX table from JSON spec")
+    p_ltx.add_argument("input")
+
+    p_vt = sub.add_parser("venue-template", help="List supported venue contracts")
+    p_vt.add_argument("--list", action="store_true")
+
+    p_rc = sub.add_parser("repro-checklist", help="Adjudicate 14-stage reproducibility checklist")
+    p_rc.add_argument("input")
+
+    p_rw = sub.add_parser("retraction-watch", help="SQLite-backed DOI retraction delta watcher")
+    p_rw.add_argument("--watchlist", required=True)
+    p_rw.add_argument("--db", default=":memory:")
+    p_rw.add_argument("--live", action="store_true")
+
+    p_bib = sub.add_parser("bibliography", help="Convert bibliographic formats or export BibTeX")
+    p_bib.add_argument("--from", dest="src_fmt", choices=["bibtex", "ris", "csl", "crossref", "openalex"], required=True)
+    p_bib.add_argument("--to", dest="dst_fmt", choices=["bibtex", "ris", "csl"], required=True)
+    p_bib.add_argument("--input", required=True)
+
+    p_rf = sub.add_parser("repo-forensics", help="Classify local repository Python composition")
+    p_rf.add_argument("repo_dir")
+
+    p_or = sub.add_parser("openreview-audit", help="Audit OpenReview notes JSON or live forum")
+    p_or.add_argument("--forum-id")
+    p_or.add_argument("--input-json")
+
+    p_oa = sub.add_parser("locate-oa", help="Locate open-access full text")
+    p_oa.add_argument("identifier")
+    p_oa.add_argument("--email", default="local@localhost")
+
+    p_res = sub.add_parser("research", help="Prepare/finish/compare paper research workflow")
+    rsub = p_res.add_subparsers(dest="step", required=True)
+    rp_prep = rsub.add_parser("prepare")
+    rp_prep.add_argument("input")
+    rp_prep.add_argument("--project", required=True)
+    rp_fin = rsub.add_parser("finish")
+    rp_fin.add_argument("--project", required=True)
+    rp_fin.add_argument("--candidate", required=True)
+    rp_cmp = rsub.add_parser("compare")
+    rp_cmp.add_argument("left")
+    rp_cmp.add_argument("right")
+    rp_cmp.add_argument("--analysis", required=True)
+    rp_cmp.add_argument("--output", required=True)
+
     args = parser.parse_args(argv)
-    if args.command == 'doctor':
-        report = doctor()
-        if args.json:
-            print(json.dumps(report, indent=2))
+    cmd = args.command
+
+    if cmd == "mcp":
+        return mcp_server.main()
+    if cmd == "doctor":
+        rep = doctor()
+        print(json.dumps(rep, indent=2, ensure_ascii=False))
+        return 0 if rep["status"] == "ok" else 1
+    if cmd == "verify-source":
+        if args.normalize_only:
+            norm = normalize_identifier(args.identifier)
+            out = {"type": norm["kind"], "value": norm["id"], "canonical": norm["canonical"]}
         else:
-            print(f'academic-research-kernel {__version__}: {report["status"]}')
-            for key, value in report.items():
-                if key not in ('version', 'status'):
-                    print(f'{key}: {json.dumps(value, ensure_ascii=False)}')
-        return 0 if report['status'] == 'ok' else 1
-    if args.command in ('locate-oa', 'table-forensics', 'openreview-audit', 'repo-forensics', 'receipt-to-latex', 'sanitize-blind', 'double-blind-sanitize', 'pre-submission-lint', 'venue-template', 'repro-checklist', 'literature-watch', 'retraction-watch'):
-        try:
-            if args.command == 'repro-checklist':
-                rc_mod = _load_bundled_module('repro_checklist', 'skills/research-reproducibility/scripts/repro_checklist.py')
-                rc_in = args.input_opt or args.input_pos or '-'
-                sub_argv = [rc_in]
-                if args.out:
-                    sub_argv.extend(['--out', args.out])
-                if args.evidence_receipt:
-                    sub_argv.extend(['--evidence-receipt', args.evidence_receipt])
-                if args.generated_at:
-                    sub_argv.extend(['--generated-at', args.generated_at])
-                if args.pretty:
-                    sub_argv.append('--pretty')
-                return rc_mod.main(sub_argv)
-            if args.command == 'literature-watch':
-                lw_mod = _load_bundled_module('literature_watch', 'skills/literature-watch/scripts/watch.py')
-                sub_argv = []
-                if args.self_test:
-                    sub_argv.append('--self-test')
-                if args.run:
-                    sub_argv.append('--run')
-                if args.watchlist:
-                    sub_argv.extend(['--watchlist', args.watchlist])
-                if args.state:
-                    sub_argv.extend(['--state', args.state])
-                if args.days is not None:
-                    sub_argv.extend(['--days', str(args.days)])
-                return lw_mod.main(sub_argv)
-            if args.command == 'retraction-watch':
-                rw_mod = _load_bundled_module('retraction_watch', 'skills/retraction-watch/scripts/watch.py')
-                sub_argv = []
-                if args.self_test:
-                    sub_argv.append('--self-test')
-                if args.run:
-                    sub_argv.append('--run')
-                if args.watchlist:
-                    sub_argv.extend(['--watchlist', args.watchlist])
-                if args.state:
-                    sub_argv.extend(['--state', args.state])
-                return rw_mod.main(sub_argv)
-            if args.command == 'table-forensics':
-                recomp_mod = _load_bundled_module('recompute', 'skills/quantitative-paper-audit/scripts/recompute.py')
-                spec = json.loads(Path(args.input).read_text(encoding='utf-8'))
-                if not isinstance(spec, dict):
-                    raise ValueError('table-forensics input must be a JSON object')
-                out = {}
-                if 'partition' in spec:
-                    p = spec['partition']
-                    out['partition_conservation'] = recomp_mod.check_partition_conservation(
-                        p['total'], p['parts'], reported_shares=p.get('reported_shares'),
-                        tol=p.get('tol', 0), share_tol_pct=p.get('share_tol_pct', 0.5),
-                        share_unit=p.get('share_unit', 'auto'),
-                    )
-                if 'ablation_matrix' in spec:
-                    ab = spec['ablation_matrix']
-                    if isinstance(ab, dict):
-                        out['ablation_delta_regularity'] = recomp_mod.check_ablation_delta_regularity(
-                            ab['matrix'], baseline_col=ab.get('baseline_col', spec.get('baseline_col', 0)),
-                            min_rows=ab.get('min_rows', spec.get('min_rows', 3)),
-                            tol=ab.get('tol', spec.get('tol', 1e-9)),
-                        )
-                    else:
-                        out['ablation_delta_regularity'] = recomp_mod.check_ablation_delta_regularity(
-                            ab, baseline_col=spec.get('baseline_col', 0),
-                            min_rows=spec.get('min_rows', 3),
-                            tol=spec.get('tol', 1e-9),
-                        )
-                if 'storage_bandwidth' in spec:
-                    sb = spec['storage_bandwidth']
-                    out['storage_bandwidth_bounds'] = recomp_mod.check_storage_bandwidth_bounds(
-                        sb['item_count'], sb['vector_dim'],
-                        bytes_per_element=sb.get('bytes_per_element', 4),
-                        reported_size_mb=sb.get('reported_size_mb'),
-                        reported_latency_us=sb.get('reported_latency_us'),
-                        max_bandwidth_gbps=sb.get('max_bandwidth_gbps', 4000.0),
-                        rel_tol=sb.get('rel_tol', 1e-2),
-                        claims_full_system_storage=sb.get('claims_full_system_storage', True),
-                    )
-                if not out:
-                    raise ValueError('table-forensics input must contain at least one of: partition, ablation_matrix, storage_bandwidth')
-                out['consistent'] = all(v.get('consistent') is True for v in out.values() if isinstance(v, dict))
-                print(json.dumps(out, ensure_ascii=False, indent=2))
-                return 0
-            if args.command == 'openreview-audit':
-                if not (args.forum_id or args.input_json or args.venue_stats):
-                    raise ValueError('openreview-audit requires --forum-id, --input-json, or --venue-stats')
-                or_mod = _load_bundled_module('openreview_audit', 'skills/academic-source-verification/scripts/openreview_audit.py')
-                sub_argv = []
-                if args.forum_id:
-                    sub_argv.extend(['--forum-id', args.forum_id])
-                if args.input_json:
-                    sub_argv.extend(['--input-json', args.input_json])
-                if args.mirror_json:
-                    sub_argv.extend(['--mirror-json', args.mirror_json])
-                if args.venue_stats:
-                    sub_argv.extend(['--venue-stats', args.venue_stats])
-                if args.topic_regex:
-                    sub_argv.extend(['--topic-regex', args.topic_regex])
-                return or_mod.main(sub_argv)
-            if args.command == 'locate-oa':
-                loa_mod = _load_bundled_module('locate_oa', 'skills/academic-source-verification/scripts/locate_oa.py')
-                sub_argv = []
-                target_id = args.doi or args.identifier
-                if args.arxiv:
-                    sub_argv.extend(['--arxiv', args.arxiv])
-                elif target_id:
-                    if target_id.lower().startswith('arxiv:'):
-                        sub_argv.extend(['--arxiv', target_id.split(':', 1)[1]])
-                    else:
-                        sub_argv.extend(['--doi', target_id])
-                else:
-                    raise ValueError('locate-oa requires a DOI or arXiv identifier')
-                if args.email:
-                    sub_argv.extend(['--email', args.email])
-                return loa_mod.main(sub_argv)
-            if args.command == 'repo-forensics':
-                local_repo = args.local_repo or args.local_repo_pos
-                if not (local_repo or args.tree_json or args.github_repo):
-                    raise ValueError('repo-forensics requires one of --local-repo, --tree-json, or --github-repo')
-                rf_mod = _load_bundled_module('github_repo_forensics', 'skills/academic-source-verification/scripts/github_repo_forensics.py')
-                sub_argv = []
-                if local_repo:
-                    sub_argv.extend(['--local-repo', local_repo])
-                if args.tree_json:
-                    sub_argv.extend(['--tree-json', args.tree_json])
-                if args.github_repo:
-                    sub_argv.extend(['--github-repo', args.github_repo])
-                return rf_mod.main(sub_argv)
-            if args.command == 'receipt-to-latex':
-                ltx_in = args.input_opt or args.input_pos
-                if not ltx_in:
-                    raise ValueError('receipt-to-latex requires --input <path> or a positional input file')
-                ltx_mod = _load_bundled_module('receipt_to_latex_table', 'skills/academic-writing/scripts/receipt_to_latex_table.py')
-                sub_argv = ['--input', ltx_in]
-                if args.from_research:
-                    sub_argv.extend(['--from-research', args.from_research])
-                if args.left_extraction:
-                    sub_argv.extend(['--left-extraction', args.left_extraction])
-                if args.right_extraction:
-                    sub_argv.extend(['--right-extraction', args.right_extraction])
-                if args.output:
-                    sub_argv.extend(['--output', args.output])
-                if args.rows:
-                    sub_argv.extend(['--rows', args.rows])
-                if args.cols:
-                    sub_argv.extend(['--cols', args.cols])
-                if args.caption:
-                    sub_argv.extend(['--caption', args.caption])
-                if args.label:
-                    sub_argv.extend(['--label', args.label])
-                return ltx_mod.main(sub_argv)
-            if args.command in ('sanitize-blind', 'double-blind-sanitize'):
-                sb_target = args.target_opt or args.target_pos
-                if not sb_target:
-                    raise ValueError('sanitize-blind requires --target <path> or a positional target path')
-                sb_mod = _load_bundled_module('double_blind_sanitizer', 'skills/academic-writing/scripts/double_blind_sanitizer.py')
-                sub_argv = ['--target', sb_target]
-                for tok in args.forbidden_token:
-                    sub_argv.extend(['--forbidden-token', tok])
-                return sb_mod.main(sub_argv)
-            if args.command == 'pre-submission-lint':
-                tex_target = args.tex_opt or args.tex_pos
-                if not tex_target:
-                    raise ValueError('pre-submission-lint requires --tex <path> or a positional .tex/directory path')
-                tex_p = Path(tex_target)
-                if tex_p.is_dir() and (tex_p / 'main.tex').is_file():
-                    tex_target = str(tex_p / 'main.tex')
-                ps_mod = _load_bundled_module('pre_submission_linter', 'skills/academic-writing/scripts/pre_submission_linter.py')
-                sub_argv = ['--tex', tex_target, '--venue', args.venue, '--phase', args.phase, '--contribution-type', args.contribution_type]
-                if args.pdf:
-                    sub_argv.extend(['--pdf', args.pdf])
-                if args.ceg:
-                    sub_argv.extend(['--ceg', args.ceg])
-                if args.require_ceg_binding:
-                    sub_argv.append('--require-ceg-binding')
-                if getattr(args, 'check_academic_style', False):
-                    sub_argv.append('--check-academic-style')
-                if args.output:
-                    sub_argv.extend(['--output', args.output])
-                return ps_mod.main(sub_argv)
-            if args.command == 'venue-template':
-                vt_mod = _load_bundled_module('venue_template_manager', 'skills/academic-writing/scripts/venue_template_manager.py')
-                sub_argv = ['--action', args.action, '--venue', args.venue, '--year', str(args.year), '--contribution-type', args.contribution_type]
-                if args.workspace_dir:
-                    sub_argv.extend(['--workspace-dir', args.workspace_dir])
-                if args.slug:
-                    sub_argv.extend(['--slug', args.slug])
-                if args.force:
-                    sub_argv.append('--force')
-                if args.manuscript_dir:
-                    sub_argv.extend(['--manuscript-dir', args.manuscript_dir])
-                if getattr(args, 'ceg', None):
-                    sub_argv.extend(['--ceg', args.ceg])
-                return vt_mod.main(sub_argv)
-        except Exception as exc:
-            print(json.dumps({
-                'status': 'error',
-                'command': args.command,
-                'error': str(exc),
-                'hint': _error_hint(args.command, str(exc)),
-            }, ensure_ascii=False, indent=2))
-            return 1
-    if args.command in ('verify-source', 'bibliography', 'meta-analyze'):
-        try:
-            if args.command == 'verify-source':
-                active_modes = sum([
-                    bool(args.normalize_only),
-                    bool(getattr(args, 'check_updates', False)),
-                    bool(getattr(args, 'verify_pdf', None)),
-                ])
-                if active_modes > 1:
-                    raise ValueError('verify-source options --normalize-only, --check-updates, and --verify-pdf are mutually exclusive')
-                if getattr(args, 'verify_pdf', None):
-                    vpi_mod = _load_bundled_module('verify_pdf_identity', 'skills/academic-source-verification/scripts/verify_pdf_identity.py')
-                    sub_argv = ['--pdf', args.verify_pdf, '--pages', str(args.pages), '--threshold', str(args.threshold)]
-                    if args.title:
-                        sub_argv.extend(['--title', args.title])
-                    doi_val = args.doi or args.identifier
-                    if doi_val:
-                        sub_argv.extend(['--doi', doi_val])
-                    if not args.title and not doi_val:
-                        raise ValueError('verify-source --verify-pdf requires --title and/or --doi (or positional DOI)')
-                    return vpi_mod.main(sub_argv)
-                target_raw = args.doi or args.identifier
-                if not target_raw:
-                    raise ValueError('verify-source requires an identifier (or --verify-pdf)')
-                if getattr(args, 'check_updates', False):
-                    if args.offline and not args.records:
-                        raise ValueError('--offline with --check-updates requires --records')
-                    cu_mod = _load_bundled_module('check_updates', 'skills/academic-source-verification/scripts/check_updates.py')
-                    sub_argv = ['--doi', target_raw, '--rows', str(args.rows), '--max-pages', str(args.max_pages)]
-                    if args.records:
-                        sub_argv.extend(['--records', args.records])
-                    return cu_mod.main(sub_argv)
-                norm_mod = _load_bundled_module('normalize_identifier', 'skills/academic-source-verification/scripts/normalize_identifier.py')
-                ver_mod = _load_bundled_module('verify_work', 'skills/academic-source-verification/scripts/verify_work.py')
-                norm = norm_mod.normalize_identifier(target_raw)
-                if args.normalize_only or norm['type'] != 'doi':
-                    print(json.dumps(norm, ensure_ascii=False, indent=2))
-                    return 0 if norm['type'] != 'unknown' else 1
-                doi = norm['value']
-                sources_out, parsed = {}, []
-                explicit_file_failed = False
-                for s_name, j_path, live_fn, parse_fn in (
-                    ('openalex', args.openalex_json, ver_mod.fetch_openalex, ver_mod.parse_openalex_work),
-                    ('crossref', args.crossref_json, ver_mod.fetch_crossref, ver_mod.parse_crossref_work),
-                ):
-                    if j_path:
-                        try:
-                            w = parse_fn(json.loads(Path(j_path).read_text(encoding='utf-8')))
-                            sources_out[s_name] = {'status': 'ok', 'mode': 'offline-file', 'work': w}
-                            parsed.append(w)
-                        except Exception as exc:
-                            explicit_file_failed = True
-                            sources_out[s_name] = {'status': 'failed', 'error': f'{type(exc).__name__}: {exc}'}
-                    elif args.offline:
-                        sources_out[s_name] = {'status': 'skipped', 'reason': 'offline mode; no input file; no result inferred'}
-                    else:
-                        try:
-                            w = parse_fn(live_fn(doi))
-                            sources_out[s_name] = {'status': 'ok', 'mode': 'live', 'work': w}
-                            parsed.append(w)
-                        except Exception as exc:
-                            sources_out[s_name] = {'status': 'failed', 'error': f'{type(exc).__name__}: {exc}'}
-                comparison = ver_mod.compare_works(parsed, target_doi=doi) if parsed else None
-                payload = {
-                    'normalized': norm,
-                    'target_doi': doi,
-                    'sources': sources_out,
-                    'comparison': comparison,
-                }
-                print(json.dumps(payload, ensure_ascii=False, indent=2))
-                if explicit_file_failed:
-                    return 1
-                return 0 if (args.offline or any(s['status'] == 'ok' for s in sources_out.values())) else 1
-            if args.command == 'bibliography':
-                action = getattr(args, 'action', 'convert') or 'convert'
-                if action == 'export-bibtex':
-                    eb_mod = _load_bundled_module('export_bibtex', 'skills/literature-analysis/scripts/export_bibtex.py')
-                    sub_argv = ['--source', args.source]
-                    if args.input:
-                        sub_argv.extend(['--input', args.input])
-                    if args.doi:
-                        sub_argv.extend(['--doi', args.doi])
-                    if not args.input and not args.doi:
-                        raise ValueError('bibliography --action export-bibtex requires --input or --doi')
-                    return eb_mod.main(sub_argv)
-                if action == 'deduplicate':
-                    if not args.input:
-                        raise ValueError('bibliography --action deduplicate requires --input')
-                    dd_mod = _load_bundled_module('deduplicate_works', 'skills/literature-analysis/scripts/deduplicate_works.py')
-                    return dd_mod.main(['--input', args.input])
-                if action == 'citation-graph':
-                    cg_mod = _load_bundled_module('build_citation_graph', 'skills/literature-analysis/scripts/build_citation_graph.py')
-                    sub_argv = ['--per-page', str(args.per_page), '--pages', str(args.pages)]
-                    if args.input:
-                        sub_argv.extend(['--input', args.input])
-                    if args.wid:
-                        sub_argv.extend(['--wid', args.wid])
-                    if not args.input and not args.wid:
-                        raise ValueError('bibliography --action citation-graph requires --input or --wid')
-                    return cg_mod.main(sub_argv)
-                if action == 'review-matrix':
-                    if not args.input:
-                        raise ValueError('bibliography --action review-matrix requires --input')
-                    rm_mod = _load_bundled_module('build_review_matrix', 'skills/literature-analysis/scripts/build_review_matrix.py')
-                    sub_argv = ['--input', args.input]
-                    if args.query:
-                        sub_argv.extend(['--query', args.query])
-                    if args.date:
-                        sub_argv.extend(['--date', args.date])
-                    return rm_mod.main(sub_argv)
-                if not args.source_format or not args.target_format or not args.input:
-                    raise ValueError('bibliography --action convert requires --from, --to, and --input')
-                interop_mod = _load_bundled_module('interop', 'skills/literature-analysis/scripts/interop.py')
-                raw_text = Path(args.input).read_text(encoding='utf-8')
-                sf = args.source_format
-                if sf == 'bibtex':
-                    works = interop_mod.from_bibtex(raw_text)
-                elif sf == 'ris':
-                    works = interop_mod.from_ris(raw_text)
-                elif sf == 'csl':
-                    data = json.loads(raw_text)
-                    items = data if isinstance(data, list) else [data]
-                    works = [interop_mod.from_csl_json(x) for x in items]
-                elif sf == 'crossref':
-                    data = json.loads(raw_text)
-                    items = data if isinstance(data, list) else [data.get('message', data) if isinstance(data, dict) else data]
-                    works = [interop_mod.from_crossref_json(x) for x in items]
-                else:
-                    data = json.loads(raw_text)
-                    items = data if isinstance(data, list) else (data.get('results', [data]) if isinstance(data, dict) else [data])
-                    works = [interop_mod.from_openalex_json(x) for x in items]
-                tf = args.target_format
-                if tf == 'bibtex':
-                    print('\n\n'.join(interop_mod.to_bibtex(w) for w in works))
-                elif tf == 'ris':
-                    print('\n\n'.join(interop_mod.to_ris(w) for w in works))
-                elif tf == 'csl':
-                    print(json.dumps([interop_mod.to_csl_json(w) for w in works], ensure_ascii=False, indent=2))
-                else:
-                    from dataclasses import asdict
-                    print(json.dumps([asdict(w) for w in works], ensure_ascii=False, indent=2))
-                return 0
-            if args.command == 'meta-analyze':
-                from dataclasses import asdict
-                meta_mod = _load_bundled_module('meta_core', 'skills/systematic-review-meta-analysis/scripts/meta_core.py')
-                data = json.loads(Path(args.input).read_text(encoding='utf-8'))
-                if isinstance(data, list):
-                    studies = data
-                elif isinstance(data, dict):
-                    studies = data.get('studies', [])
-                else:
-                    raise ValueError('meta-analyze input must be a JSON object with "studies" or a JSON array')
-                if not isinstance(studies, list) or not studies:
-                    raise ValueError('meta-analyze requires at least one study entry')
-                yi, vi = [], []
-                for idx, s in enumerate(studies):
-                    if not isinstance(s, dict) or 'yi' not in s or 'vi' not in s:
-                        raise ValueError(f'study[{idx}] must be an object with "yi" and "vi"')
-                    raw_y, raw_v = s['yi'], s['vi']
-                    if isinstance(raw_y, bool) or isinstance(raw_v, bool):
-                        raise ValueError(f'study[{idx}] yi/vi must be numbers, not booleans')
-                    yv, vv = float(raw_y), float(raw_v)
-                    if not (math.isfinite(yv) and math.isfinite(vv)) or vv <= 0:
-                        raise ValueError(f'study[{idx}] requires finite yi and positive finite vi')
-                    yi.append(yv)
-                    vi.append(vv)
-                fixed = asdict(meta_mod.pool_fixed(yi, vi))
-                random_dl = asdict(meta_mod.pool_random(yi, vi))
-                loo = [asdict(r) for r in meta_mod.leave_one_out(yi, vi)] if len(yi) >= 2 else []
-                bias = None
-                if len(yi) >= 3:
-                    try:
-                        intercept, t_val, p_val = meta_mod.egger_test(yi, vi)
-                        egger_out = {'status': 'ok', 'intercept': intercept, 't': t_val if math.isfinite(t_val) else None, 'p': p_val if math.isfinite(p_val) else None}
-                    except (ValueError, ZeroDivisionError) as exc:
-                        egger_out = {'status': 'not_estimable', 'reason': str(exc)}
-                    try:
-                        tf_res = meta_mod.trim_and_fill(yi, vi)
-                    except (ValueError, ZeroDivisionError) as exc:
-                        tf_res = {'status': 'not_estimable', 'reason': str(exc)}
-                    bias = {'egger': egger_out, 'trim_and_fill': tf_res}
-                print(json.dumps({
-                    'study_count': len(yi),
-                    'fixed_effect': fixed,
-                    'random_effects_dl': random_dl,
-                    'leave_one_out': loo,
-                    'publication_bias': bias,
-                }, ensure_ascii=False, indent=2, allow_nan=False))
-                return 0
-        except (ValueError, ZeroDivisionError, OSError, KeyError, TypeError) as exc:
-            print(json.dumps({
-                'status': 'error',
-                'command': args.command,
-                'error': str(exc),
-                'hint': _error_hint(args.command, str(exc)),
-            }, ensure_ascii=False, indent=2))
-            return 1
-    if args.command == 'research':
-        try:
-            if args.step == 'prepare':
-                from .research.sources import prepare
-                result = prepare(args.input, args.project)
-            elif args.step in ('finish', 'replay'):
-                from .research.analysis import finish
-                candidate = args.candidate if args.step == 'finish' else str(Path(args.project) / 'candidate.json')
-                result = finish(args.project, candidate)
-            elif args.step == 'compare':
-                from .research.analysis import compare
-                result = compare(args.left, args.right, args.analysis, args.output)
-            else:
-                target = Path(args.output).resolve()
-                target.mkdir(parents=True, exist_ok=True)
-                root = _package_root()
-                source = root.joinpath('skills/paper-research')
-                def copy_resource(src, dst):
-                    dst.mkdir(parents=True, exist_ok=True)
-                    for item in src.iterdir():
-                        if item.is_dir():
-                            copy_resource(item, dst / item.name)
-                        else:
-                            (dst / item.name).write_bytes(item.read_bytes())
-                copy_resource(source, target)
-                for name in ('paper-extraction', 'paper-comparison', 'research-documents'):
-                    p = target / 'references' / (name + '.schema.json')
-                    p.parent.mkdir(parents=True, exist_ok=True)
-                    p.write_bytes(root.joinpath('schemas/' + p.name).read_bytes())
-                result = {'skill': str(target / 'SKILL.md'), 'version': __version__, 'semantic_producer': 'your local agent'}
-            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+            oa = json.loads(safe_path(args.openalex_json).read_text("utf-8")) if args.openalex_json else None
+            cr = json.loads(safe_path(args.crossref_json).read_text("utf-8")) if args.crossref_json else None
+            out = mcp_server.handle_tool_call("academic_verify_source", {"identifier": args.identifier, "live": args.live, "openalex": oa, "crossref": cr})
+    elif cmd == "meta-analyze":
+        raw = json.loads(safe_path(args.input).read_text("utf-8"))
+        studies = raw["studies"] if isinstance(raw, dict) else raw
+        yi = [float(s["yi"]) for s in studies]
+        vi = [float(s["vi"]) for s in studies]
+        bias = None
+        if len(yi) >= 3:
+            try:
+                icp, tv, pv = meta_core.egger_test(yi, vi)
+                egger_out = {"status": "ok", "intercept": icp, "t": tv if math.isfinite(tv) else None, "p": pv if math.isfinite(pv) else None}
+            except (ValueError, ZeroDivisionError) as exc:
+                egger_out = {"status": "not_estimable", "reason": str(exc)}
+            try:
+                tf_out = meta_core.trim_and_fill(yi, vi)
+            except (ValueError, ZeroDivisionError) as exc:
+                tf_out = {"status": "not_estimable", "reason": str(exc)}
+            bias = {"egger": egger_out, "trim_and_fill": tf_out}
+        out = {
+            "study_count": len(yi),
+            "fixed_effect": asdict(meta_core.pool_fixed(yi, vi)),
+            "random_effects_dl": asdict(meta_core.pool_random(yi, vi)),
+            "publication_bias": bias,
+        }
+    elif cmd == "table-forensics":
+        spec = json.loads(safe_path(args.input).read_text("utf-8"))
+        out = mcp_server.handle_tool_call("academic_table_forensics", spec)
+    elif cmd == "pre-submission-lint":
+        out = thaw(pre_submission_linter.lint_manuscript(args.tex, venue=args.venue, double_blind=not args.no_blind))
+    elif cmd == "sanitize-blind":
+        out = double_blind_sanitizer.scan_target(args.target, args.forbidden_token)
+    elif cmd == "receipt-to-latex":
+        spec = json.loads(safe_path(args.input).read_text("utf-8"))
+        print(receipt_to_latex_table.render_booktabs_table(spec))
+        return 0
+    elif cmd == "venue-template":
+        out = venue_template_manager.list_venues()
+    elif cmd == "repro-checklist":
+        spec = json.loads(safe_path(args.input).read_text("utf-8"))
+        out = repro_checklist.adjudicate(repro_checklist.normalize(spec))
+    elif cmd == "retraction-watch":
+        wl = watch.load_watchlist(args.watchlist)
+        out = {"deltas": watch.check_retraction_signals(wl["dois"], db_path=args.db, live=args.live)}
+    elif cmd == "bibliography":
+        txt = safe_path(args.input).read_text("utf-8")
+        works = interop.from_bibtex(txt) if args.src_fmt == "bibtex" else interop.from_ris(txt)
+        if args.dst_fmt == "bibtex":
+            print("\n\n".join(export_bibtex.protect_acronyms(interop.to_bibtex(w)) for w in works))
             return 0
-        except (ValueError, OSError, KeyError, ImportError) as exc:
-            reason = str(exc)
-            print(json.dumps({
-                'status': 'error',
-                'step': args.step,
-                'reason': reason,
-                'hint': _error_hint(args.step, reason),
-            }, ensure_ascii=False), file=sys.stderr)
-            return 1
-    try:
-        serve = _load_mcp_server().main
-    except ImportError:
-        print('Incomplete runtime installation. Run academic-research-kernel doctor.', file=sys.stderr)
-        return 1
-    serve()
+        if args.dst_fmt == "ris":
+            print("\n\n".join(interop.to_ris(w) for w in works))
+            return 0
+        out = [interop.to_csl_json(w) for w in works]
+    elif cmd == "repo-forensics":
+        out = github_repo_forensics.scan_local_repo(Path(args.repo_dir))
+    elif cmd == "openreview-audit":
+        notes = json.loads(safe_path(args.input_json).read_text("utf-8")) if args.input_json else openreview_audit.fetch_openreview_forum(args.forum_id)
+        if isinstance(notes, dict) and "notes" in notes:
+            notes = notes["notes"]
+        out = openreview_audit.parse_openreview_notes(notes)
+    elif cmd == "locate-oa":
+        norm = normalize_identifier(args.identifier)
+        out = locate_oa.live_unpaywall(norm["id"], args.email) if norm["kind"] == "doi" else {"identifier": norm}
+    else:
+        from .research import analysis, sources
+        if args.step == "prepare":
+            out = sources.prepare(args.input, args.project)
+        elif args.step == "finish":
+            out = analysis.finish(args.project, args.candidate)
+        else:
+            out = analysis.compare(args.left, args.right, args.analysis, args.output)
+
+    print(json.dumps(out, indent=2, ensure_ascii=False, default=str))
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

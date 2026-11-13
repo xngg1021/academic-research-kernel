@@ -1,0 +1,126 @@
+"""构建语料内引文网络与引用者候选池（工作流 C 的确定性层）。
+
+build_graph 为纯离线建图：语料内互相引用成边，语料外引用只计数；
+live_citation_pool 明确标记，分页获取目标论文引用者（预算上限，记录截断）。
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode, urlsplit
+from urllib.request import Request
+
+from .research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
+
+
+USER_AGENT = 'academic-research-kernel/1.2'
+
+
+def _node_id(work: dict):
+    raw = work.get('id') or work.get('openalex_id')
+    if raw:
+        return str(raw).split('/')[-1]
+    doi = (work.get('doi') or '').lower().removeprefix('https://doi.org/')
+    return doi or None
+
+
+def build_graph(works: list) -> dict:
+    """从含 referenced_works 的 work 列表建语料内引文网络 (简单图口径, LA-04)。
+
+    同一 (citing, cited) 引用对只记一条边; 重复输入记录或重复引用 ID
+    不再放大边数与度数, 重复边单独计数为数据质量问题。
+    """
+    nodes = {}
+    for work in works:
+        node = _node_id(work)
+        if node:
+            nodes[node] = {'id': node, 'title': work.get('title'),
+                           'year': work.get('publication_year') or work.get('year')}
+    edges = []
+    edge_set = set()
+    duplicate_edges = 0
+    external_counts = {}
+    for work in works:
+        src = _node_id(work)
+        if not src:
+            continue
+        for ref in work.get('referenced_works') or []:
+            rid = str(ref).split('/')[-1]
+            if rid in nodes and rid != src:
+                pair = (src, rid)
+                if pair in edge_set:
+                    duplicate_edges += 1
+                    continue
+                edge_set.add(pair)
+                edges.append({'citing': src, 'cited': rid})
+            else:
+                external_counts[src] = external_counts.get(src, 0) + 1
+    return {
+        'nodes': list(nodes.values()),
+        'edges': edges,
+        'external_reference_counts': external_counts,
+        'summary': {'node_count': len(nodes), 'internal_edge_count': len(edges),
+                    'duplicate_edge_count': duplicate_edges},
+    }
+
+
+def in_degrees(graph: dict) -> dict:
+    """语料内被引次数（仅内部边，不等于数据库被引数）。"""
+    degrees = {node['id']: 0 for node in graph['nodes']}
+    for edge in graph['edges']:
+        degrees[edge['cited']] = degrees.get(edge['cited'], 0) + 1
+    return degrees
+
+
+def live_get(url: str):
+    """LIVE: 网络访问。OpenAlex 可匿名或用 OPENALEX_API_KEY；429/5xx 有界退避。"""
+    headers = {'User-Agent': USER_AGENT}
+    key = os.environ.get('OPENALEX_API_KEY')
+    if urlsplit(url).netloc == 'api.openalex.org' and key:
+        headers['Authorization'] = 'Bearer ' + key
+    for attempt in range(3):
+        try:
+            with urlopen(Request(url, headers=headers), timeout=20) as response:
+                return json.load(response)
+        except HTTPError as error:
+            if error.code not in {429, 500, 502, 503, 504} or attempt == 2:
+                raise
+            retry = error.headers.get('Retry-After', '')
+            delay = float(retry) if retry.isdigit() else 2 ** attempt
+            if delay > 10:
+                raise
+            time.sleep(delay)
+    return None
+
+
+def live_citation_pool(wid: str, per_page: int = 25, max_pages: int = 4) -> dict:
+    """LIVE: 分页获取 filter=cites:<WID> 的引用者候选池；达到预算上限标 truncated，不称全部引用者。"""
+    works = []
+    cursor = '*'
+    truncated = False
+    pages = 0
+    for pages in range(1, max_pages + 1):
+        params = {'filter': 'cites:' + wid, 'per_page': per_page, 'cursor': cursor,
+                  'select': 'id,title,abstract_inverted_index,publication_year,doi'}
+        message = live_get('https://api.openalex.org/works?' + urlencode(params))
+        batch = message.get('results') or []
+        works.extend(batch)
+        cursor = (message.get('meta') or {}).get('next_cursor')
+        if not batch or not cursor:
+            break
+    else:
+        # 页数预算耗尽且每页均有结果：只能称部分样本。
+        truncated = bool(works)
+    return {'pool': works, 'fetched': len(works), 'pages_fetched': pages, 'truncated': truncated}
+
+
+def _utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding='utf-8', errors='replace')
+        except (AttributeError, ValueError):
+            pass

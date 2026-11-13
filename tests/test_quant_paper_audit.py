@@ -10,10 +10,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    'recompute', ROOT / 'skills' / 'quantitative-paper-audit' / 'scripts' / 'recompute.py')
-recompute = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(recompute)
+from academic_research_kernel import recompute
 
 
 # ---------------------------------------------------------------------------

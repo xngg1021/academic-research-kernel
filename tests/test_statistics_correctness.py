@@ -10,12 +10,7 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "statistics_correctness_recompute",
-    ROOT / "skills/quantitative-paper-audit/scripts/recompute.py",
-)
-recompute = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(recompute)
+from academic_research_kernel import recompute
 
 
 def test_small_p_counterexample_and_ordinary_positive_control():

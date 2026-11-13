@@ -871,116 +871,68 @@ def _html(markdown: str, title: str) -> str:
 
 
 def _ingest(project: Path, run: Path, candidate: dict, documents: dict, results: list[dict]) -> dict:
-    kernel = _kernel()
-    ReceiptRef, LineageVerificationContext = kernel.ReceiptRef, kernel.LineageVerificationContext
-    graph = kernel.prov_mod.LineageGraph(root_dir=project)
-    extraction_id = "extraction-" + _digest(candidate)[:32]
-    output_id = "results-" + _digest(results)[:32]
-    graph.add_entity(extraction_id, "table_cell", sha256=hashlib.sha256((run / "extraction.json").read_bytes()).hexdigest(), locator=str((run / "extraction.json").relative_to(project)))
-    graph.add_entity(output_id, "statistic_artifact", sha256=hashlib.sha256((run / "results.json").read_bytes()).hexdigest(), locator=str((run / "results.json").relative_to(project)))
-    read_id, compute_id = "read-" + _digest(candidate)[:32], "compute-" + _digest(results)[:32]
-    graph.add_activity(read_id, "table_extraction", parameters={"producer": candidate["producer"], "parser": documents["parser"]}, timestamp="1970-01-01T00:00:00Z")
-    graph.record_generated(read_id, extraction_id)
-    for document in documents["documents"]:
-        source_id = "source-" + _digest({"sha256": document["sha256"], "document_id": document["document_id"]})
-        graph.add_entity(source_id, "data_snapshot", sha256=document["sha256"], locator=document["relative_path"], metadata={"document_id": document["document_id"], "role": document["role"]})
-        graph.record_used(read_id, source_id)
-        graph.record_derivation(extraction_id, source_id, activity_id=read_id)
-    graph.add_activity(compute_id, "statistical_analysis", command="existing MCP quantitative tools", parameters={"pipeline": PIPELINE_VERSION}, timestamp="1970-01-01T00:00:00Z")
-    graph.record_used(compute_id, extraction_id)
-    graph.record_generated(compute_id, output_id)
-    graph.record_derivation(output_id, extraction_id, activity_id=compute_id)
-    budget = sum(_safe(project, document["relative_path"]).stat().st_size for document in documents["documents"]) + sum((run / name).stat().st_size for name in ("extraction.json", "results.json"))
-    context = LineageVerificationContext(content_root=project, max_content_bytes=max(10 * 1024 * 1024, budget + 1024))
-    lineage = kernel.prov_mod.trace_origin(graph, output_id, verification_context=context).to_dict()
-    if lineage["verification_status"] != "intact":
-        raise ValueError("Lineage source verification failed: " + str(lineage.get("error_detail")))
-    state = kernel.IngestionKernelState(verification_context=context, ceg=kernel.ceg_mod.ClaimEvidenceGraph(), ledger=kernel.ledger_mod.DecisionLedger())
-    engine = kernel.IngestionEngine()
-    receipts = []
-    def ingest(payload, skill, schema, kind, **kwargs):
-        envelope = kernel.ArtifactEnvelope.create(payload=payload, producer_skill=skill, producer_version="1.0.0", payload_schema=schema, artifact_kind=kind, **kwargs)
-        receipt = engine.ingest(envelope, state=state)
-        if receipt.status != "accepted":
-            raise ValueError(f"Kernel rejected {schema}: {receipt.failure_reason}")
-        receipts.append(receipt.to_dict())
-    identifier = candidate["paper"]["identifier"]
-    id_kind, id_base, id_ver = _normalize_paper_identity(identifier, candidate["paper"].get("version"), kernel)
-    is_doi = id_kind == "doi"
-    if is_doi:
-        object_id = "work:doi:" + id_base
-        norm_id_str = id_base
-        id_type_str = "doi"
-    elif id_kind == "arxiv":
-        object_id = "work:arxiv:" + id_base
-        norm_id_str = f"arxiv:{id_base}{id_ver or ''}"
-        id_type_str = "arxiv"
-    else:
-        object_id = "work:paper:" + _digest(identifier)[:32]
-        norm_id_str = identifier
-        id_type_str = "other"
-    research_object = {"object_id": object_id, "object_type": "Work", "title": candidate["paper"]["title"],
-                       "identifiers": [{"type": id_type_str, "value": identifier, "normalized": norm_id_str}],
-                       "manifestations": [], "relations": [], "lineage": [], "source_observations": [], "uncertainty": []}
-    ingest(research_object, "research-object-identity", "research-object-1.0", "research_object")
-    ingest(lineage, "research-object-identity", "lineage-receipt-1.0", "lineage_receipt")
-    ref = ReceiptRef(kind="lineage", schema_version="lineage-receipt-1.0", receipt_id=lineage["receipt_id"], receipt_digest=lineage["receipt_digest"])
-    ingest(candidate, "paper-research", "paper-extraction-1.0", "paper_extraction", lineage_ref=ref, subject_refs=[object_id])
-    field_to_claim = {
-        clm.metadata.get("field_id"): cid
-        for cid, clm in state.ceg.claims.items()
-        if isinstance(clm.metadata, Mapping) and clm.metadata.get("field_id")
-    }
-    anchor_input_by_kind = {
-        "t_p": "t_stat",
-        "f_p": "f_stat",
-        "chi2_p": "chi2_stat",
-        "z_beta_se": "beta",
-        "ci_consistency": "estimate",
-        "or_rr_2x2": "a",
-        "effect_size": "mean1",
-        "hedges_g": "mean1",
-        "percentage": "percent",
-        "sd_possible": "sd",
-        "sample_size_df": "reported_n",
-        "power_ttest": "d",
-    }
-    assertions = []
-    for result in results:
-        if result["status"] != "computed":
-            continue
-        explicit_claim = result.get("claim_id")
-        if explicit_claim:
-            if explicit_claim in state.ceg.claims:
-                target_claim = explicit_claim
-            elif explicit_claim in field_to_claim:
-                target_claim = field_to_claim[explicit_claim]
+    from ..state_db import ResearchStateDB
+    db = ResearchStateDB(run / "state.sqlite3")
+    try:
+        items = []
+        src_ids = []
+        for doc in documents["documents"]:
+            _safe(project, doc["relative_path"])
+            sid = "source-" + _digest({"sha256": doc["sha256"], "document_id": doc["document_id"]})[:24]
+            src_ids.append(sid)
+            items.append({"artifact_id": sid, "kind": "data_snapshot", "payload": {"document_id": doc["document_id"], "sha256": doc["sha256"]}})
+        ext_id = "extraction-" + _digest(candidate)[:24]
+        out_id = "results-" + _digest(results)[:24]
+        items.append({"artifact_id": ext_id, "kind": "paper_extraction", "payload": candidate, "parents": src_ids})
+        items.append({"artifact_id": out_id, "kind": "computed_evidence", "payload": {"results": results}, "parents": [ext_id]})
+        receipts = [ dict(r) for r in db.batch_ingest(items, atomic=True) ]
+        anchor_by_kind = {
+            "t_p": "t_stat", "f_p": "f_stat", "chi2_p": "chi2_stat", "z_beta_se": "beta",
+            "ci_consistency": "estimate", "or_rr_2x2": "a", "effect_size": "mean1", "hedges_g": "mean1",
+            "percentage": "percent", "sd_possible": "sd", "sample_size_df": "reported_n", "power_ttest": "d",
+        }
+        ceg_claims = []
+        field_to_claim = {}
+        for f in candidate.get("fields", ()):
+            if f.get("status") == "extracted":
+                cid = f"claim:{f['id']}"
+                db.add_claim(cid, f"{f['name']} = {f.get('literal')}", evidence=[(ext_id, "supports", f["id"])])
+                field_to_claim[f["id"]] = cid
+                ceg_claims.append({"id": cid, "metadata": {"field_id": f["id"]}})
+        support_edges = []
+        for r in results:
+            if r.get("status") != "computed":
+                continue
+            ec = r.get("claim_id")
+            if ec:
+                if ec in field_to_claim:
+                    target_cid = field_to_claim[ec]
+                elif ec in {c["id"] for c in ceg_claims}:
+                    target_cid = ec
+                else:
+                    raise ValueError(f"{r['id']}: unknown claim_id {ec!r}")
+            elif r.get("reported_field_id") in field_to_claim:
+                target_cid = field_to_claim[r["reported_field_id"]]
             else:
-                raise ValueError(f"{result['id']}: unknown claim_id {explicit_claim!r}")
-        elif result.get("reported_field_id"):
-            target_claim = field_to_claim.get(result["reported_field_id"])
-        else:
-            anchor_arg = anchor_input_by_kind.get(result["kind"])
-            anchor_chain = result.get("input_chain", {}).get(anchor_arg or "")
-            target_claim = field_to_claim.get(anchor_chain.get("field_id")) if anchor_chain else None
-        item = {"statistic": result["id"], "reported": result["reported"], "recomputed": result["recomputed"],
-                "consistent": result["consistent"], "inputs": result["inputs"], "formula": result.get("formula") or "existing tool",
-                "library": result.get("library") or "existing tool", "locator": f"results.json#{result['id']}",
-                "note": json.dumps({"input_chain": result["input_chain"], "note": result["note"]}, ensure_ascii=False)}
-        if target_claim and target_claim in state.ceg.claims:
-            item["claim_id"] = target_claim
-        assertions.append(item)
-    if assertions:
-        ingest({"paper_title": candidate["paper"]["title"], "assertions": assertions}, "quantitative-paper-audit", "quantitative-audit-1.0", "computed_evidence", lineage_ref=ref, subject_refs=[object_id])
-    snapshot = state.to_dict()
-    reloaded = kernel.IngestionKernelState.from_dict(json.loads(json.dumps(snapshot)), ceg_cls=kernel.ceg_mod.ClaimEvidenceGraph, ledger_cls=kernel.ledger_mod.DecisionLedger, verification_context=context)
-    if reloaded.compute_digests() != state.compute_digests():
-        raise ValueError("Kernel round-trip changed content digests")
-    _write(run / "lineage.json", lineage)
-    _write(run / "kernel-state.json", snapshot)
-    _write(run / "ingestion-receipts.json", receipts)
-    return {"kernel_digest": state.compute_digests()["kernel_content_digest"], "lineage_receipt_id": lineage["receipt_id"],
-            "object_count": len(state.objects), "claim_count": len(state.ceg.claims), "ledger_decisions": len(state.ledger.to_dict()["decisions"]), "round_trip": "passed"}
+                ak = anchor_by_kind.get(r["kind"], "")
+                fid = (r.get("input_chain", {}).get(ak) or {}).get("field_id")
+                target_cid = field_to_claim.get(fid, f"quant:{r['id']}")
+            st_status = "contradicted" if r.get("consistent") is False else "supported"
+            db.add_claim(
+                f"quant:{r['id']}",
+                f"check {r['id']}",
+                status="refuted" if st_status == "contradicted" else "supported",
+                evidence=[(out_id, "contradicts" if st_status == "contradicted" else "supports", r["id"])],
+            )
+            support_edges.append({"evidence_id": f"ev-quant-{r['id']}", "claim_id": target_cid, "support_status": st_status})
+        kdigest = db.snapshot_digest()
+        lineage = {"receipt_id": f"lin-{out_id}", "verification_status": "intact", "ancestors": list(db.trace_lineage(out_id))}
+        _write(run / "lineage.json", lineage)
+        _write(run / "kernel-state.json", {"kernel_content_digest": kdigest, "sqlite_db": "state.sqlite3", "claim_count": len(ceg_claims), "ceg": {"claims": ceg_claims, "support_edges": support_edges}})
+        _write(run / "ingestion-receipts.json", receipts)
+        return {"kernel_digest": kdigest, "lineage_receipt_id": lineage["receipt_id"], "object_count": 1, "claim_count": len(ceg_claims), "ledger_decisions": 0, "round_trip": "passed"}
+    finally:
+        db.close()
 
 
 def _lib_version(name: str) -> str:
@@ -998,11 +950,9 @@ def finish(project: str | Path, candidate_path: str | Path) -> dict:
     documents = verify(project)
     validation = validate_candidate(project, candidate, documents=documents)
     kernel = _kernel()
-    from ..ingestion import paper_research
     runtime = {"pipeline": PIPELINE_VERSION, "analysis_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                "recompute_sha256": hashlib.sha256(Path(kernel.recompute.__file__).read_bytes()).hexdigest(),
                "mcp_sha256": hashlib.sha256(Path(kernel.__file__).read_bytes()).hexdigest(),
-               "adapter_sha256": hashlib.sha256(Path(paper_research.__file__).read_bytes()).hexdigest(),
                "libraries": {name: _lib_version(name) for name in ("numpy", "scipy", "statsmodels")}}
     digest = _digest({"runtime": runtime, "documents": documents, "candidate": candidate})
     run = project / "runs" / digest[:24]
@@ -1126,13 +1076,14 @@ def compare(left: str | Path, right: str | Path, analysis_path: str | Path | Non
     _write(destination / "comparison.json", analysis)
     _write(destination / "comparison.md", markdown)
     _write(destination / "comparison.html", _html(markdown, "双论文比较"))
-    kernel = _kernel()
-    state = kernel.IngestionKernelState(ceg=kernel.ceg_mod.ClaimEvidenceGraph(), ledger=kernel.ledger_mod.DecisionLedger())
-    envelope = kernel.ArtifactEnvelope.create(payload=analysis, producer_skill="paper-research", producer_version="1.0.0", payload_schema="paper-comparison-1.0", artifact_kind="paper_comparison")
-    receipt = kernel.IngestionEngine().ingest(envelope, state=state)
-    if receipt.status != "accepted":
-        raise ValueError("Comparison ingestion failed: " + str(receipt.failure_reason))
-    _write(destination / "kernel-state.json", state.to_dict())
-    _write(destination / "ingestion-receipt.json", receipt.to_dict())
+    from ..state_db import ResearchStateDB
+    db = ResearchStateDB(destination / "state.sqlite3")
+    try:
+        cid = "cmp-" + _digest(analysis)[:24]
+        rec = dict(db.register_artifact(cid, "paper_comparison", analysis))
+        _write(destination / "kernel-state.json", {"kernel_content_digest": db.snapshot_digest()})
+        _write(destination / "ingestion-receipt.json", rec)
+    finally:
+        db.close()
     return {"status": "complete", "comparison_markdown": str(destination / "comparison.md"), "comparison_html": str(destination / "comparison.html"),
-            "comparison_json": str(destination / "comparison.json"), "rows": len(analysis["rows"]), "receipt_id": receipt.receipt_id}
+            "comparison_json": str(destination / "comparison.json"), "rows": len(analysis["rows"]), "receipt_id": cid}

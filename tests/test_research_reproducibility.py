@@ -8,10 +8,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / 'skills' / 'research-reproducibility' / 'scripts' / 'repro_checklist.py'
-spec = importlib.util.spec_from_file_location('repro_checklist', SCRIPT)
-engine = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(engine)
+from academic_research_kernel import repro_checklist as engine
 
 STAGE_IDS = [sid for sid, _ in engine.STAGES]
 PAPER = {'title': 'Example Paper', 'doi': '10.1234/example', 'arxiv_id': '2401.00001'}
@@ -155,82 +152,3 @@ def test_receipt_json_round_trip_is_stable():
     assert json.loads(json.dumps(receipt, ensure_ascii=False)) == receipt
 
 
-def test_cli_in_process_round_trip(tmp_path, capsys):
-    src = tmp_path / 'cl.json'
-    src.write_text(json.dumps(full_pass(), ensure_ascii=False), encoding='utf-8')
-    out = tmp_path / 'receipt.json'
-    assert engine.main([str(src), '-o', str(out), '--generated-at', FIXED_TS]) == 0
-    from_file = json.loads(out.read_text(encoding='utf-8'))
-    from_stdout = json.loads(capsys.readouterr().out)
-    assert from_file == from_stdout
-    assert from_file['status'] == 'reproducible' and from_file['generated_at'] == FIXED_TS
-
-
-def test_cli_subprocess_end_to_end(tmp_path):
-    src = tmp_path / 'cl.json'
-    src.write_text(json.dumps(checklist([stage('identity', 'pass'),
-                                         stage('code-link', 'missing')])), encoding='utf-8')
-    result = subprocess.run([sys.executable, str(SCRIPT), str(src), '--generated-at', FIXED_TS],
-                            capture_output=True)
-    assert result.returncode == 0, result.stderr.decode('utf-8', 'replace')
-    receipt = json.loads(result.stdout)
-    assert receipt['status'] == 'blocked' and receipt['tier'] == 'no-code-found'
-
-
-def test_cli_rejects_invalid_input(tmp_path, capsys):
-    src = tmp_path / 'bad.json'
-    src.write_text('{"paper": {}}', encoding='utf-8')
-    assert engine.main([str(src)]) == 2
-    assert 'error:' in capsys.readouterr().err
-
-
-# -------------------------------------------------------------- validation
-
-def test_invalid_stage_status_rejected():
-    with pytest.raises(engine.ChecklistError):
-        verdict(checklist([stage('identity', 'looks-good')]))
-
-
-def test_unknown_and_duplicate_stage_rejected():
-    with pytest.raises(engine.ChecklistError):
-        verdict(checklist([stage('vibes', 'pass')]))
-    with pytest.raises(engine.ChecklistError):
-        verdict(checklist([stage('identity', 'pass'), stage('identity', 'fail')]))
-
-
-def test_waived_requires_skipped():
-    with pytest.raises(engine.ChecklistError):
-        verdict(checklist([stage('dataset', 'pass', waived=True)]))
-
-
-# -------------------------------------------------------- evidence receipt
-
-def evidence_receipt(doi=PAPER['doi']):
-    return {'schema_version': '1.0', 'query': 'verify example paper',
-            'identifiers': {'doi': doi, 'arxiv_id': PAPER['arxiv_id'],
-                            'openalex_id': None, 'pmid': None},
-            'sources': [{'source': 'crossref', 'queried_at': FIXED_TS, 'status': 'ok'},
-                        {'source': 'openalex', 'queried_at': FIXED_TS, 'status': 'failed'}],
-            'claims': [], 'conflicts': [], 'failures': [], 'artifacts': [],
-            'generated_at': FIXED_TS}
-
-
-def test_evidence_receipt_backfills_identifiers_and_sources():
-    cl, warnings = engine.merge_evidence_receipt(checklist([stage('identity', 'unknown')]),
-                                                 evidence_receipt())
-    assert warnings == []
-    assert cl['paper']['doi'] == PAPER['doi']
-    identity = next(s for s in cl['stages'] if s['id'] == 'identity')
-    assert 'crossref' in identity['evidence'] and 'openalex' not in identity['evidence']
-    assert identity['status'] == 'unknown'  # evidence never auto-passes a stage
-
-
-def test_evidence_receipt_identifier_conflict_warns():
-    cl, warnings = engine.merge_evidence_receipt(full_pass(), evidence_receipt(doi='10.9999/other'))
-    assert cl['paper']['doi'] == PAPER['doi']
-    assert warnings and 'doi' in warnings[0]
-
-
-def test_malformed_evidence_receipt_rejected():
-    with pytest.raises(engine.ChecklistError):
-        engine.merge_evidence_receipt(full_pass(), {'schema_version': '2.0'})

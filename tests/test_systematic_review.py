@@ -7,11 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location(
-    'meta_core', ROOT / 'skills' / 'systematic-review-meta-analysis' / 'scripts' / 'meta_core.py')
-meta_core = importlib.util.module_from_spec(spec)
-sys.modules['meta_core'] = meta_core  # dataclass 需要模块注册
-spec.loader.exec_module(meta_core)
+from academic_research_kernel import meta_core
 
 
 def test_effect_size_conversions_handchecked():
