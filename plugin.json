@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "academic-skills",
-  "version": "2.4.2",
-  "description": "Harness-neutral academic research, statistical recompute, and multi-model deliberation skills.",
+  "version": "3.0.0",
+  "description": "Stdlib-first SQLite STRICT academic research state, citation verification, and statistical recompute skills.",
   "author": {
     "name": "Junfu Shi (SJF, xngg1021)",
     "url": "https://github.com/xngg1021"
@@ -10,11 +10,13 @@
   "homepage": "https://github.com/xngg1021/academic-research-kernel",
   "repository": "https://github.com/xngg1021/academic-research-kernel.git",
   "license": "LicenseRef-Source-Lineage-1.0",
+  "skills": "skills/",
+  "mcpServers": "mcp.json",
   "keywords": [
     "academic",
     "research",
     "citations",
-    "cross-review",
-    "scfabric"
+    "statistics",
+    "reproducibility"
   ]
 }

@@ -17,12 +17,7 @@ from urllib.request import Request
 
 from .research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
 
-if sys.platform == "win32":
-    for _s in (sys.stdout, sys.stderr):
-        if _s and hasattr(_s, "reconfigure"):
-            _s.reconfigure(encoding="utf-8")
-
-USER_AGENT = 'academic-research-kernel/1.2'
+USER_AGENT = 'academic-research-kernel/3.0'
 FALLBACK_ORDER = ['OpenAlex open_access.oa_url', 'Semantic Scholar openAccessPdf.url',
                   'archive.org（公版书/专著）']
 

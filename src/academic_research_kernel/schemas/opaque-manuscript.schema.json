@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/opaque-manuscript.schema.json",
+  "title": "OpaqueManuscriptArtifact",
+  "type": "object",
+  "anyOf": [{"required": ["content"]}, {"required": ["text"]}, {"required": ["sections"]}],
+  "properties": {
+    "title": {"type": "string"},
+    "content": {},
+    "text": {},
+    "sections": {},
+    "submission_checklist": {},
+    "metadata": {"type": "object"}
+  }
+}

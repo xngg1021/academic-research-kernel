@@ -17,11 +17,6 @@ import re
 import sys
 from typing import Any
 
-if sys.platform == "win32":
-    for _s in (sys.stdout, sys.stderr):
-        if _s and hasattr(_s, "reconfigure"):
-            _s.reconfigure(encoding="utf-8")
-
 SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
 
 
@@ -447,7 +442,7 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
         pos_cnt = len(pos_by_claim.get(cid, ()))
         neg_cnt = len(neg_by_claim.get(cid, ()))
         unres_cnt = unresolved_by_claim.get(cid, 0)
-        if neg_cnt > 0 or c_status in ("conflicted", "contradicted", "refuted"):
+        if neg_cnt > 0 or c_status in ("conflicted", "contested", "contradicted", "refuted"):
             anchor_status = "conflicted"
         elif pos_cnt > 0 and norm_txt and unres_cnt == 0 and c_status not in ("unverifiable", "out_of_scope"):
             anchor_status = "eligible"

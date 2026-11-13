@@ -15,11 +15,6 @@ import subprocess
 import sys
 from pathlib import Path, PurePosixPath
 
-if sys.platform == "win32":
-    for _s in (sys.stdout, sys.stderr):
-        if _s and hasattr(_s, "reconfigure"):
-            _s.reconfigure(encoding="utf-8")
-
 UNCONDITIONAL_VENDORED_DIRS = {
     "third_party", "3rdparty", "vendor", "vendored", "external", "externals",
     "baselines", "memory_toolkits", "node_modules", "site-packages",

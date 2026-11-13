@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/legacy-academic-evidence.schema.json",
+  "title": "Legacy AcademicEvidence v1 physical receipt",
+  "description": "Explicit read/adoption compatibility for compact v1 physical receipts retained by pre-PR12 CEG and Ledger snapshots. New producers use evidence-receipt.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "claims"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "query": {
+      "type": "string",
+      "description": "Original research question or lookup request, verbatim."
+    },
+    "identifiers": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "doi": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "arxiv_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "openalex_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pmid": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "array",
+          "maxItems": 0
+        }
+      ]
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "queried_at",
+          "status"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "queried_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "failed",
+              "skipped"
+            ]
+          },
+          "coverage": {
+            "type": "string"
+          },
+          "raw_identifier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "claim",
+          "evidence_type",
+          "source",
+          "support_status"
+        ],
+        "properties": {
+          "claim": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_type": {
+            "enum": [
+              "metadata",
+              "citation_count",
+              "update_signal",
+              "full_text",
+              "computed"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "locator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "support_status": {
+            "enum": [
+              "supported",
+              "contradicted",
+              "unverifiable",
+              "out_of_scope"
+            ]
+          },
+          "claim_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Claims from different sources that disagree."
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Queries that could not be completed; must not be inferred as results."
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Paths to downloaded files (PDFs, dumps) supporting the receipt."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "receipt_id": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

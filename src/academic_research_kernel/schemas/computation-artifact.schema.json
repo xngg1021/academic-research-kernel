@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/computation-artifact.schema.json",
+  "title": "ComputationArtifact",
+  "type": "object",
+  "additionalProperties": false,
+  "anyOf": [{"required": ["expression"]}, {"required": ["result"]}],
+  "properties": {
+    "expression": {},
+    "result": {},
+    "verified": {"type": ["boolean", "null"]},
+    "verification_error": {"type": "string"},
+    "backend": {"type": "string"},
+    "inputs": {"type": "object"},
+    "locator": {"type": "string"}
+  }
+}

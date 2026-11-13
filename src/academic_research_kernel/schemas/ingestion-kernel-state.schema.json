@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/ingestion-kernel-state.schema.json",
+  "title": "IngestionKernelState",
+  "description": "Complete stateless-MCP round-trippable snapshot of the deterministic research-state kernel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "snapshot_digest",
+    "ceg",
+    "ledger",
+    "objects",
+    "receipts",
+    "uncertainties",
+    "ingested_artifacts",
+    "ingestion_receipts",
+    "content_digests"
+  ],
+  "properties": {
+    "protocol": {"const": "ingestion-kernel-state-1.0"},
+    "snapshot_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ceg": {"type": ["object", "null"]},
+    "ledger": {"type": ["object", "null"]},
+    "objects": {"type": "object", "propertyNames": {"type": "string", "minLength": 1}, "additionalProperties": {"type": "object"}},
+    "receipts": {"type": "object", "propertyNames": {"type": "string", "minLength": 1}, "additionalProperties": {"type": "object"}},
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item_id",
+          "subject_id",
+          "kind",
+          "reason",
+          "needs_human"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "kind": {
+            "enum": [
+              "ambiguous_locator",
+              "computation_unverified",
+              "decision_without_basis",
+              "expert_disagreement",
+              "generic_uncertainty",
+              "literature_coverage_gap",
+              "missing_receipt",
+              "publication_status_change",
+              "quantitative_verification_gap",
+              "reproducibility_gap",
+              "retraction_alert",
+              "screening_ambiguity",
+              "unevidenced_claim_basis",
+              "unresolved_contradiction",
+              "unsupported_negative_result",
+              "unsupported_pruning",
+              "unverifiable_claim"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "needs_human": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "ingested_artifacts": {
+      "type": "object",
+      "propertyNames": {"type": "string", "pattern": "^art-[0-9a-f]{32}$"},
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "ingestion_sources": {"type":"object","additionalProperties":{"type":"object","additionalProperties":false,"required":["envelope","bindings"],"properties":{"envelope":{"type":"object"},"bindings":{"type":"object"}}}},
+    "ingestion_receipts": {
+      "type": "object", "propertyNames": {"type": "string", "minLength": 1},
+      "additionalProperties": {"type": "object"}
+    },
+    "content_digests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object_registry_digest",
+        "receipt_registry_digest",
+        "uncertainty_state_digest",
+        "ingested_artifact_digest",
+        "kernel_content_digest"
+      ],
+      "properties": {
+        "object_registry_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "receipt_registry_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "uncertainty_state_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "ingested_artifact_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "ceg_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "ledger_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "kernel_content_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

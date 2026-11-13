@@ -18,11 +18,6 @@ from pathlib import Path
 from typing import Any
 import xml.etree.ElementTree as ET
 
-if sys.platform == "win32":
-    for _s in (sys.stdout, sys.stderr):
-        if _s and hasattr(_s, "reconfigure"):
-            _s.reconfigure(encoding="utf-8")
-
 TEXT_SUFFIXES = {
     ".tex", ".md", ".bib", ".bbl", ".sty", ".cls", ".txt", ".py",
     ".json", ".yaml", ".yml", ".sh", ".toml", ".ipynb", ".cff", ".cfg", ".ini", ".r", ".jl",

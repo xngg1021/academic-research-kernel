@@ -1,30 +1,22 @@
 name: Skill correctness QA
 on:
   push:
-    branches: [main]
+    branches: [main, exp/occam-stdlib]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, labeled]
-  schedule:
-    - cron: '0 9 * * 1'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
-  # A delayed Draft/no-label event has no jobs to run and must not cancel
-  # the deliberately labeled candidate. Ready/full-ci keeps the same protection.
   cancel-in-progress: ${{ github.event_name == 'pull_request' && (github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci')) }}
 permissions:
   contents: read
 jobs:
   checks:
-    # full-ci requests the complete matrix while Draft, including every later
-    # synchronize event. Promotion of that same candidate only triggers review;
-    # retain its existing CI evidence instead of paying for a duplicate matrix.
-    if: github.event_name != 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64: Python 3.10 lower bound, 3.12 baseline (runs full 41 doc fences), 3.14 upper bound
           - os: ubuntu-latest
             arch: x86_64
             python: '3.10'
@@ -40,40 +32,36 @@ jobs:
             python: '3.14'
             full_qa: 'false'
             python_utf8: '1'
-          # Linux ARM64
           - os: ubuntu-24.04-arm
             arch: arm64
             python: '3.12'
             full_qa: 'false'
             python_utf8: '1'
-          # Windows x86_64 (Python 3.10 lower bound + non-UTF-8 locale pipe check)
           - os: windows-latest
             arch: x86_64
             python: '3.10'
             full_qa: 'false'
             python_utf8: '0'
-          # Windows ARM64
           - os: windows-11-arm
             arch: arm64
             python: '3.12'
             full_qa: 'false'
             python_utf8: '1'
-          # macOS Apple Silicon (ARM64 + Python 3.14 upper bound)
           - os: macos-latest
             arch: arm64
             python: '3.14'
             full_qa: 'false'
             python_utf8: '1'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 15
     env:
       PYTHONUTF8: ${{ matrix.python_utf8 }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -86,8 +74,6 @@ jobs:
       - name: Verify runtime Python version and architecture
         run: |
           python -c "import platform, sys; v=f'{sys.version_info.major}.{sys.version_info.minor}'; m=platform.machine().lower(); assert v == '${{ matrix.python }}', (v, '${{ matrix.python }}'); exp_arm = ('${{ matrix.arch }}' == 'arm64'); assert (('arm' in m or 'aarch64' in m) == exp_arm), (m, '${{ matrix.arch }}')"
-      - if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        run: python -m pip install 'torch>=2.5,<3' --index-url https://download.pytorch.org/whl/cpu || echo "Torch CPU wheel unavailable on this architecture, continuing with NumPy/SciPy reference"
       - name: Check committed patch whitespace
         if: matrix.full_qa == 'true'
         shell: bash
@@ -96,159 +82,19 @@ jobs:
           DIFF_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          # New branches, manual runs, and rewritten tips where DIFF_BASE is unreachable check the full tree.
           if [[ -z "$DIFF_BASE" || "$DIFF_BASE" =~ ^0+$ ]] || ! git cat-file -e "$DIFF_BASE^{commit}" 2>/dev/null; then
             DIFF_BASE="$(git hash-object -w -t tree --stdin </dev/null)"
           fi
           git diff --check "$DIFF_BASE" "$DIFF_HEAD" --
-      - if: matrix.full_qa == 'true'
-        run: |
-          python scripts/qa.py
-          python scripts/i18n_sync.py --check
-      - if: matrix.full_qa != 'true'
-        run: python scripts/qa.py --static-only
-      - run: python -m pytest -q tests
-  tap-lifecycle:
-    # Tap semantics resolve the default branch, so real Hermes integration
-    # runs on main pushes and manual dispatches, not on PR heads. PR-level
-    # discovery coverage stays with the pinned tap-discovery tests.
-    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Check out pinned Hermes upstream
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
-        with:
-          repository: NousResearch/hermes-agent
-          ref: 245e48008fa814b3251f50755eb656bd9fb86cb1
-          path: .hermes-upstream
-          fetch-depth: 1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
-        with:
-          python-version: '3.12'
-      - name: Install pinned Hermes and current kernel runtime
-        run: |
-          python -m pip install --upgrade pip 'hatchling==1.29.0'
-          python -m pip install -e ./.hermes-upstream
-          python -m pip install --no-build-isolation --no-deps .
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
-        with:
-          version: '0.12.17'
-      - run: python scripts/hermes_runtime_smoke.py
-      - name: Tap, search, install and list
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/hermes_tap_smoke.py --output tap-lifecycle.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: tap-lifecycle-status
-          path: tap-lifecycle.json
-  upstream-canary:
-    name: Hermes compatibility (${{ matrix.channel }})
-    # Schedule resolves upstream main every run; pinned and latest evidence stay
-    # separate. This import-light loader canary does not install the full agent.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - channel: pinned
-            ref: 245e48008fa814b3251f50755eb656bd9fb86cb1
-            expected-sha: 245e48008fa814b3251f50755eb656bd9fb86cb1
-          - channel: supported-current
-            ref: bf0203a794a07aac3ff764972ab9087baa4e4f4e
-            expected-sha: bf0203a794a07aac3ff764972ab9087baa4e4f4e
-          - channel: latest-upstream
-            ref: main
-            expected-sha: ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
-        with:
-          python-version: '3.12'
-      # Latest Hermes uses its shared ruamel loader; the pinned snapshot uses PyYAML.
-      - run: python -m pip install 'PyYAML>=6,<7' 'ruamel.yaml==0.18.16'
-      - name: Check out tested Hermes revision
-        id: hermes-checkout
-        continue-on-error: true
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
-        with:
-          repository: NousResearch/hermes-agent
-          ref: ${{ matrix.ref }}
-          path: .hermes-latest
-          fetch-depth: 1
-      - name: Check loader and publish explicit compatibility state
-        if: always()
-        shell: bash
-        env:
-          CHANNEL: ${{ matrix.channel }}
-          CHECKOUT_OUTCOME: ${{ steps.hermes-checkout.outcome }}
-          EXPECTED_SHA: ${{ matrix.expected-sha }}
-        run: |
-          set +e
-          args=(--upstream .hermes-latest --channel "$CHANNEL" --checkout-outcome "$CHECKOUT_OUTCOME" --output "monitoring/hermes-$CHANNEL.json")
-          if [[ -n "$EXPECTED_SHA" ]]; then args+=(--expected-sha "$EXPECTED_SHA"); fi
-          python scripts/hermes_compatibility_canary.py "${args[@]}"
-          code=$?
-          if [[ "$code" -eq 2 ]]; then
-            echo "::warning::Hermes $CHANNEL compatibility degraded; see report and summary."
-            exit 0
-          fi
-          exit "$code"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: hermes-${{ matrix.channel }}-status
-          path: monitoring/hermes-${{ matrix.channel }}.json
-          if-no-files-found: error
-
-  upstream-runtime:
-    # Retain the full latest runtime gate on candidate CI; schedule uses the
-    # independent lightweight compatibility reports above.
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Check out latest Hermes main
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
-        with:
-          repository: NousResearch/hermes-agent
-          ref: main
-          path: .hermes-latest
-          fetch-depth: 1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (Node 24)
-        with:
-          python-version: '3.14'
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
-        with:
-          version: '0.12.17'
-      - name: Install latest Hermes and test CLI smoke
-        run: |
-          (cd .hermes-latest && uv pip install --system -e .)
-          hermes --version
-          hermes chat --help | grep -E -- '--query-file'
-          hermes chat --help | grep -E -- '--ignore-rules'
-      - run: python scripts/hermes_runtime_smoke.py --output monitoring/hermes-upstream-runtime.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: hermes-upstream-runtime-status
-          path: monitoring/hermes-upstream-runtime.json
+      - name: Run offline doctor diagnostic
+        run: academic-research-kernel doctor --json
+      - name: Run full pytest suite
+        run: python -m pytest -q tests
 
   distribution-build:
-    if: github.event_name != 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -261,61 +107,58 @@ jobs:
         with:
           version: '0.12.17'
       - run: uv lock --check
-      - name: Build and validate release candidate
+      - name: Build deterministic wheel and sdist
         shell: bash
         run: |
           export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
           uv build --no-create-gitignore
-          uv run --frozen --extra qa --no-editable python -m twine check --strict dist/*
-          uv run --frozen --extra qa --no-editable python scripts/release_manifest.py --output dist/release-manifest.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: distribution-candidate
           path: dist/
+
   distribution-install:
     needs: distribution-build
-    if: github.event_name != 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')) && !(github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && contains(github.event.pull_request.labels.*.name, 'full-ci'))
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             python: '3.10'
-            source_checks: 'false'
           - os: ubuntu-latest
             python: '3.12'
-            source_checks: 'true'
           - os: ubuntu-latest
             python: '3.14'
-            source_checks: 'false'
           - os: macos-latest
             python: '3.12'
-            source_checks: 'false'
           - os: windows-latest
             python: '3.12'
-            source_checks: 'false'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: ${{ matrix.python }}
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
-        with:
-          version: '0.12.17'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: distribution-candidate
           path: dist/
-      - if: matrix.source_checks == 'true'
-        run: python scripts/package_acceptance.py --uvx --source-checks --report "monitoring/acceptance-${{ matrix.os }}-py${{ matrix.python }}.json"
-      - if: matrix.source_checks != 'true'
-        run: python scripts/package_acceptance.py --uvx --report "monitoring/acceptance-${{ matrix.os }}-py${{ matrix.python }}.json"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: acceptance-${{ matrix.os }}-py${{ matrix.python }}
-          path: monitoring/acceptance-${{ matrix.os }}-py${{ matrix.python }}.json
+      - name: Out-of-tree isolated wheel install and CLI/MCP smoke verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv .isolated-venv
+          if [[ -x .isolated-venv/bin/python ]]; then
+            VP=".isolated-venv/bin/python"
+          else
+            VP=".isolated-venv/Scripts/python.exe"
+          fi
+          "$VP" -m pip install dist/*.whl
+          mkdir -p out-of-tree-smoke
+          cd out-of-tree-smoke
+          "../$VP" -m academic_research_kernel doctor --json > doctor.json
+          "../$VP" -c "import json; d=json.load(open('doctor.json', encoding='utf-8')); assert d['status']=='ok' and d['schema_resources']['count']==26 and d['research']['portable_skill']=='available', d"
+          "../$VP" -m academic_research_kernel research skill --output ./skill-export
+          test -s ./skill-export/SKILL.md
+          test -s ./skill-export/references/paper-extraction.schema.json

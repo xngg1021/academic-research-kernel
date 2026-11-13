@@ -871,68 +871,171 @@ def _html(markdown: str, title: str) -> str:
 
 
 def _ingest(project: Path, run: Path, candidate: dict, documents: dict, results: list[dict]) -> dict:
+    from .. import _stdlib as stdlib_mod
     from ..state_db import ResearchStateDB
-    db = ResearchStateDB(run / "state.sqlite3")
-    try:
-        items = []
-        src_ids = []
-        for doc in documents["documents"]:
-            _safe(project, doc["relative_path"])
-            sid = "source-" + _digest({"sha256": doc["sha256"], "document_id": doc["document_id"]})[:24]
-            src_ids.append(sid)
-            items.append({"artifact_id": sid, "kind": "data_snapshot", "payload": {"document_id": doc["document_id"], "sha256": doc["sha256"]}})
-        ext_id = "extraction-" + _digest(candidate)[:24]
-        out_id = "results-" + _digest(results)[:24]
-        items.append({"artifact_id": ext_id, "kind": "paper_extraction", "payload": candidate, "parents": src_ids})
-        items.append({"artifact_id": out_id, "kind": "computed_evidence", "payload": {"results": results}, "parents": [ext_id]})
-        receipts = [ dict(r) for r in db.batch_ingest(items, atomic=True) ]
-        anchor_by_kind = {
-            "t_p": "t_stat", "f_p": "f_stat", "chi2_p": "chi2_stat", "z_beta_se": "beta",
-            "ci_consistency": "estimate", "or_rr_2x2": "a", "effect_size": "mean1", "hedges_g": "mean1",
-            "percentage": "percent", "sd_possible": "sd", "sample_size_df": "reported_n", "power_ttest": "d",
-        }
-        ceg_claims = []
-        field_to_claim = {}
-        for f in candidate.get("fields", ()):
-            if f.get("status") == "extracted":
-                cid = f"claim:{f['id']}"
-                db.add_claim(cid, f"{f['name']} = {f.get('literal')}", evidence=[(ext_id, "supports", f["id"])])
-                field_to_claim[f["id"]] = cid
-                ceg_claims.append({"id": cid, "metadata": {"field_id": f["id"]}})
-        support_edges = []
-        for r in results:
-            if r.get("status") != "computed":
-                continue
-            ec = r.get("claim_id")
-            if ec:
-                if ec in field_to_claim:
-                    target_cid = field_to_claim[ec]
-                elif ec in {c["id"] for c in ceg_claims}:
-                    target_cid = ec
-                else:
-                    raise ValueError(f"{r['id']}: unknown claim_id {ec!r}")
-            elif r.get("reported_field_id") in field_to_claim:
-                target_cid = field_to_claim[r["reported_field_id"]]
-            else:
-                ak = anchor_by_kind.get(r["kind"], "")
-                fid = (r.get("input_chain", {}).get(ak) or {}).get("field_id")
-                target_cid = field_to_claim.get(fid, f"quant:{r['id']}")
-            st_status = "contradicted" if r.get("consistent") is False else "supported"
-            db.add_claim(
-                f"quant:{r['id']}",
-                f"check {r['id']}",
-                status="refuted" if st_status == "contradicted" else "supported",
-                evidence=[(out_id, "contradicts" if st_status == "contradicted" else "supports", r["id"])],
+
+    kernel = _kernel()
+    # Physical byte verification of all source documents and generated run artifacts at admission
+    src_items = []
+    src_ids = []
+    for doc in documents["documents"]:
+        src_path = stdlib_mod.safe_path(project / doc["relative_path"], root=project)
+        if not src_path.is_file():
+            raise ValueError(f"Lineage source verification failed: Missing source file {doc['relative_path']}")
+        actual_sha = hashlib.sha256(src_path.read_bytes()).hexdigest()
+        if actual_sha != doc["sha256"]:
+            raise ValueError(
+                f"Lineage source verification failed: Content hash mismatch for {doc['document_id']} "
+                f"(expected {doc['sha256']}, got {actual_sha})"
             )
-            support_edges.append({"evidence_id": f"ev-quant-{r['id']}", "claim_id": target_cid, "support_status": st_status})
-        kdigest = db.snapshot_digest()
-        lineage = {"receipt_id": f"lin-{out_id}", "verification_status": "intact", "ancestors": list(db.trace_lineage(out_id))}
-        _write(run / "lineage.json", lineage)
-        _write(run / "kernel-state.json", {"kernel_content_digest": kdigest, "sqlite_db": "state.sqlite3", "claim_count": len(ceg_claims), "ceg": {"claims": ceg_claims, "support_edges": support_edges}})
-        _write(run / "ingestion-receipts.json", receipts)
-        return {"kernel_digest": kdigest, "lineage_receipt_id": lineage["receipt_id"], "object_count": 1, "claim_count": len(ceg_claims), "ledger_decisions": 0, "round_trip": "passed"}
-    finally:
-        db.close()
+        sid = "source-" + _digest({"sha256": actual_sha, "document_id": doc["document_id"]})[:24]
+        src_ids.append(sid)
+        src_items.append({
+            "artifact_id": sid,
+            "kind": "data_snapshot",
+            "payload": {"document_id": doc["document_id"], "sha256": actual_sha, "relative_path": doc["relative_path"]},
+        })
+
+    ext_file = run / "extraction.json"
+    res_file = run / "results.json"
+    if ext_file.is_file() and _json(ext_file) != candidate:
+        raise ValueError("Lineage verification failed: extraction.json on disk disagrees with candidate")
+    if res_file.is_file() and _json(res_file) != results:
+        raise ValueError("Lineage verification failed: results.json on disk disagrees with results")
+
+    identifier = candidate["paper"]["identifier"]
+    id_kind, id_base, id_ver = _normalize_paper_identity(identifier, candidate["paper"].get("version"), kernel)
+    if id_kind == "doi":
+        object_id = "work:doi:" + id_base
+        norm_id_str = id_base
+        id_type_str = "doi"
+    elif id_kind == "arxiv":
+        object_id = "work:arxiv:" + id_base
+        norm_id_str = f"arxiv:{id_base}{id_ver or ''}"
+        id_type_str = "arxiv"
+    else:
+        object_id = "work:paper:" + _digest(identifier)[:32]
+        norm_id_str = identifier
+        id_type_str = "other"
+
+    research_object = {
+        "object_id": object_id,
+        "object_type": "Work",
+        "title": candidate["paper"]["title"],
+        "identifiers": [{"type": id_type_str, "value": identifier, "normalized": norm_id_str}],
+        "manifestations": [],
+        "relations": [],
+        "lineage": [],
+        "source_observations": [],
+        "uncertainty": [],
+    }
+
+    ext_id = "extraction-" + _digest(candidate)[:24]
+    out_id = "results-" + _digest(results)[:24]
+    items = [
+        *src_items,
+        {"artifact_id": object_id, "kind": "research_object", "payload": research_object},
+        {"artifact_id": ext_id, "kind": "paper_extraction", "payload": candidate, "parents": src_ids, "relation": "extracted_from"},
+        {"artifact_id": out_id, "kind": "computed_evidence", "payload": {"results": results}, "parents": [ext_id], "relation": "recomputed_from"},
+    ]
+
+    anchor_by_kind = {
+        "t_p": "t_stat", "f_p": "f_stat", "chi2_p": "chi2_stat", "z_beta_se": "beta",
+        "ci_consistency": "estimate", "or_rr_2x2": "a", "effect_size": "mean1", "hedges_g": "mean1",
+        "percentage": "percent", "sd_possible": "sd", "sample_size_df": "reported_n", "power_ttest": "d",
+    }
+
+    db_file = run / "state.sqlite3"
+    with ResearchStateDB(db_file, root=project) as db:
+        with db.transaction() as conn:
+            db.register_work(
+                object_id,
+                candidate["paper"]["title"],
+                doi=id_base if id_kind == "doi" else None,
+                arxiv_id=id_base if id_kind == "arxiv" else None,
+            )
+            receipts = [dict(r) for r in db.batch_ingest(items, atomic=True)]
+            field_to_claim: dict[str, str] = {}
+            for f in candidate.get("fields", ()):
+                if f.get("status") == "extracted":
+                    cid = f"claim:{f['id']}"
+                    db.add_claim(
+                        cid,
+                        f"{f['name']} = {f.get('literal')}",
+                        evidence=[(ext_id, "supports", str(f["id"]))],
+                        metadata={"field_id": f["id"]},
+                    )
+                    field_to_claim[f["id"]] = cid
+
+            for r in results:
+                if r.get("status") != "computed":
+                    continue
+                ec = r.get("claim_id")
+                if ec:
+                    if ec in field_to_claim:
+                        target_cid = field_to_claim[ec]
+                    elif ec in set(field_to_claim.values()):
+                        target_cid = ec
+                    else:
+                        raise ValueError(f"{r['id']}: unknown claim_id {ec!r}")
+                elif r.get("reported_field_id") in field_to_claim:
+                    target_cid = field_to_claim[r["reported_field_id"]]
+                else:
+                    ak = anchor_by_kind.get(r["kind"], "")
+                    fid = (r.get("input_chain", {}).get(ak) or {}).get("field_id")
+                    target_cid = field_to_claim.get(fid, f"quant:{r['id']}")
+
+                raw_cons = r.get("consistent")
+                if raw_cons is True:
+                    ev_stance = "supports"
+                elif raw_cons is False:
+                    ev_stance = "contradicts"
+                else:
+                    ev_stance = "qualifies"
+
+                if target_cid.startswith("quant:"):
+                    db.add_claim(
+                        target_cid,
+                        f"quantitative check {r['id']}",
+                        evidence=[(out_id, ev_stance, str(r["id"]))],
+                        metadata={"check_id": r["id"]},
+                    )
+                else:
+                    db.attach_claim_evidence(target_cid, out_id, ev_stance, str(r["id"]))
+
+            work_count = int(conn.execute("SELECT COUNT(*) FROM works").fetchone()[0])
+            decision_count = int(conn.execute("SELECT COUNT(*) FROM decisions").fetchone()[0])
+            ancestors = list(db.trace_lineage(out_id))
+            ceg_export = db.export_ceg_dict()
+            kdigest = db.snapshot_digest()
+
+    # Real independent read-only reload & digest round-trip verification
+    with ResearchStateDB(db_file, readonly=True, root=project) as ro_db:
+        reloaded_digest = ro_db.snapshot_digest()
+        if reloaded_digest != kdigest:
+            raise ValueError(f"Kernel round-trip digest mismatch: {reloaded_digest} != {kdigest}")
+
+    lineage = {"receipt_id": f"lin-{out_id}", "verification_status": "intact", "ancestors": ancestors}
+    _write(run / "lineage.json", lineage)
+    _write(
+        run / "kernel-state.json",
+        {
+            "kernel_content_digest": kdigest,
+            "sqlite_db": "state.sqlite3",
+            "object_count": work_count,
+            "claim_count": len(ceg_export["claims"]),
+            "ceg": ceg_export,
+        },
+    )
+    _write(run / "ingestion-receipts.json", receipts)
+    return {
+        "kernel_digest": kdigest,
+        "lineage_receipt_id": lineage["receipt_id"],
+        "object_count": work_count,
+        "claim_count": len(ceg_export["claims"]),
+        "ledger_decisions": decision_count,
+        "round_trip": "passed",
+    }
 
 
 def _lib_version(name: str) -> str:
@@ -944,23 +1047,42 @@ def _lib_version(name: str) -> str:
 
 def finish(project: str | Path, candidate_path: str | Path) -> dict:
     """Complete all deterministic stages after a source-grounded Agent reading."""
-    project = Path(project).resolve()
-    candidate = _json(Path(candidate_path))
+    from .. import _stdlib as stdlib_mod, state_db as state_db_mod
     from .sources import verify
+
+    project = stdlib_mod.safe_path(project)
+    candidate = _json(stdlib_mod.safe_path(candidate_path))
     documents = verify(project)
     validation = validate_candidate(project, candidate, documents=documents)
     kernel = _kernel()
-    runtime = {"pipeline": PIPELINE_VERSION, "analysis_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-               "recompute_sha256": hashlib.sha256(Path(kernel.recompute.__file__).read_bytes()).hexdigest(),
-               "mcp_sha256": hashlib.sha256(Path(kernel.__file__).read_bytes()).hexdigest(),
-               "libraries": {name: _lib_version(name) for name in ("numpy", "scipy", "statsmodels")}}
+    runtime = {
+        "pipeline": PIPELINE_VERSION,
+        "analysis_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "recompute_sha256": hashlib.sha256(Path(kernel.recompute.__file__).read_bytes()).hexdigest(),
+        "mcp_sha256": hashlib.sha256(Path(kernel.__file__).read_bytes()).hexdigest(),
+        "state_db_sha256": hashlib.sha256(Path(state_db_mod.__file__).read_bytes()).hexdigest(),
+        "stdlib_sha256": hashlib.sha256(Path(stdlib_mod.__file__).read_bytes()).hexdigest(),
+        "libraries": {name: _lib_version(name) for name in ("numpy", "scipy", "statsmodels")},
+    }
     digest = _digest({"runtime": runtime, "documents": documents, "candidate": candidate})
     run = project / "runs" / digest[:24]
     completion = run / "completion.json"
     if completion.is_file():
         previous = _json(completion)
         expected = previous.get("artifact_hashes", {})
-        if expected and all((run / name).is_file() and hashlib.sha256((run / name).read_bytes()).hexdigest() == sha for name, sha in expected.items()):
+        expected_kdigest = (previous.get("ingestion") or {}).get("kernel_digest")
+        db_ok = False
+        if expected_kdigest and (run / "state.sqlite3").is_file():
+            try:
+                with state_db_mod.ResearchStateDB(run / "state.sqlite3", readonly=True, root=project) as ro_db:
+                    db_ok = ro_db.snapshot_digest() == expected_kdigest
+            except Exception:
+                db_ok = False
+        if (
+            db_ok
+            and expected
+            and all((run / name).is_file() and hashlib.sha256((run / name).read_bytes()).hexdigest() == sha for name, sha in expected.items())
+        ):
             replay = {**previous, "run_directory": str(run), "report_markdown": str(run / "report.md"),
                       "report_html": str(run / "report.html"), "extraction": str(run / "extraction.json"),
                       "results": str(run / "results.json"), "reused": True}

@@ -26,3 +26,19 @@ path = "src/academic_research_kernel/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/academic_research_kernel"]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "src/academic_research_kernel",
+    "tests",
+    "skills",
+    "pyproject.toml",
+    "plugin.json",
+    "mcp.json",
+    "README.md",
+    "LICENSE",
+    "LICENSE-APPLICATION.md",
+    "LICENSE-HISTORY.md",
+    "SOURCE-LINEAGE.md",
+    "LICENSES/MIT-pre-SLL.txt",
+]

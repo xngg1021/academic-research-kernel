@@ -1,0 +1,356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/xngg1021/academic-research-kernel/main/schemas/artifact-ingestion-receipt.schema.json",
+  "title": "ArtifactIngestionReceipt",
+  "description": "Deterministic receipt proving ingestion of a research artifact into the kernel state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "receipt_id",
+    "source_artifact_id",
+    "source_artifact_sha256",
+    "adapter_id",
+    "adapter_version",
+    "status",
+    "validation_state",
+    "output_digests"
+  ],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "const": "ingestion-receipt-1.0"
+    },
+    "receipt_id": {
+      "type": "string",
+      "description": "Deterministic identifier derived from canonical ingestion inputs (ingest- + 32 hex chars).",
+      "pattern": "^ingest-[0-9a-f]{32}$"
+    },
+    "source_artifact_id": {
+      "type": "string",
+      "pattern": "^art-[0-9a-f]{32}$"
+    },
+    "source_artifact_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "adapter_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]{1,64}$"
+    },
+    "adapter_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "rejected",
+        "partial"
+      ]
+    },
+    "ingestion_context_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source_lineage_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "schema_version",
+        "receipt_id",
+        "receipt_digest"
+      ],
+      "properties": {
+        "kind": {
+          "const": "lineage"
+        },
+        "schema_version": {
+          "const": "lineage-receipt-1.0"
+        },
+        "receipt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "receipt_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "validation_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid",
+        "errors"
+      ],
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "created_or_reused_objects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ceg_nodes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ceg_edges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ledger_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decision_id",
+          "binding_kind",
+          "basis_id",
+          "record_digest"
+        ],
+        "properties": {
+          "decision_id": {
+            "type": "string"
+          },
+          "binding_kind": {
+            "type": "string",
+            "enum": [
+              "decision",
+              "negative_result",
+              "outcome_correction",
+              "evidence_receipt",
+              "reproduction_receipt",
+              "computed_evidence",
+              "review_finding",
+              "uncertainty",
+              "ledger_decision",
+              "ledger_fork",
+              "ledger_state_event"
+            ]
+          },
+          "basis_id": {
+            "type": "string"
+          },
+          "record_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item_id",
+          "subject_id",
+          "kind",
+          "reason",
+          "needs_human"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "kind": {
+            "enum": [
+              "ambiguous_locator",
+              "computation_unverified",
+              "decision_without_basis",
+              "expert_disagreement",
+              "generic_uncertainty",
+              "literature_coverage_gap",
+              "missing_receipt",
+              "publication_status_change",
+              "quantitative_verification_gap",
+              "reproducibility_gap",
+              "retraction_alert",
+              "screening_ambiguity",
+              "unevidenced_claim_basis",
+              "unresolved_contradiction",
+              "unsupported_negative_result",
+              "unsupported_pruning",
+              "unverifiable_claim"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "needs_human": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "ignored_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "output_digests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "object_registry_digest",
+        "receipt_registry_digest",
+        "uncertainty_state_digest",
+        "ingested_artifact_digest",
+        "kernel_content_digest"
+      ],
+      "properties": {
+        "object_registry_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "ceg_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "ledger_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "receipt_registry_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "uncertainty_state_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "ingested_artifact_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "kernel_content_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "failure_reason": {
+      "type": "string"
+    },
+    "caller_metadata": {
+      "type": "object"
+    },
+    "mutation_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "identity",
+          "canonical_digest"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "object",
+              "physical_receipt",
+              "artifact",
+              "uncertainty",
+              "derived_uncertainty",
+              "ceg_container",
+              "ceg_claim",
+              "ceg_evidence",
+              "ceg_support",
+              "ceg_relation",
+              "ledger_container",
+              "ledger_decision",
+              "ledger_basis",
+              "ledger_fork",
+              "ledger_state_event",
+              "ledger_correction"
+            ]
+          },
+          "identity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "canonical_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "accepted"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "ingestion_context_digest",
+          "mutation_bindings"
+        ],
+        "properties": {
+          "mutation_bindings": {
+            "minItems": 1
+          },
+          "validation_state": {
+            "properties": {
+              "valid": {
+                "const": true
+              },
+              "errors": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

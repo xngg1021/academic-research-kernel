@@ -19,14 +19,11 @@ import statistics
 import sys
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
-if sys.platform == "win32":
-    for _s in (sys.stdout, sys.stderr):
-        if _s and hasattr(_s, "reconfigure"):
-            _s.reconfigure(encoding="utf-8")
+from .research.sources import controlled_urlopen
 
-USER_AGENT = "Mozilla/5.0 (compatible; academic-research-kernel/2.2)"
+USER_AGENT = "Mozilla/5.0 (compatible; academic-research-kernel/3.0)"
 ACCEPT_VENUE_RE = re.compile(r"\b(?:poster|spotlight|oral|notable)\b", re.I)
 ACCEPT_DECISION_RE = re.compile(r"(?<!not\s)(?<!un)(?<!cannot\s)(?<!never\s)\baccept(?:ed)?\b(?!\s+threshold)", re.I)
 REJECT_DECISION_RE = re.compile(r"\breject(?:ed)?\b|\bdesk[\s_-]*reject", re.I)
@@ -421,8 +418,14 @@ def _find_local_mirror_fallback(forum_id: str, mirror_path: str | None = None) -
     return None
 
 
-def fetch_openreview_forum(forum_id: str) -> dict:
+def fetch_openreview_forum(forum_id: str, max_bytes: int = 16 * 1024 * 1024) -> dict:
     url = "https://api2.openreview.net/notes?" + urlencode({"forum": forum_id, "limit": 1000})
     req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
-    with urlopen(req, timeout=20) as resp:
-        return json.load(resp)
+    with controlled_urlopen(req, timeout=20, max_bytes=max_bytes) as resp:
+        raw = resp.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            raise ValueError(f"OpenReview response exceeds {max_bytes} byte cap")
+        data = json.loads(raw.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("OpenReview forum response must be a JSON object")
+        return data

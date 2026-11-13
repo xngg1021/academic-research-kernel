@@ -1,2 +1,2 @@
-"""Canonical product release version (independent of skill/schema versions)."""
-__version__ = "2.4.2"
+"""Canonical product release version (Occam stdlib SQLite kernel edition)."""
+__version__ = "3.0.0"

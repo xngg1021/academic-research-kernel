@@ -26,11 +26,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-if sys.platform == "win32":
-    for _s in (sys.stdout, sys.stderr):
-        if _s and hasattr(_s, "reconfigure"):
-            _s.reconfigure(encoding="utf-8")
-
 LATEX_ESCAPES = {
     "\\": r"\textbackslash{}",
     "&": r"\&",
