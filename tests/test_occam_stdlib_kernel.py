@@ -429,3 +429,167 @@ def test_cli_exit_codes_csl_dispatch_cold_import_and_research_ceg_closed_loop(tm
     fin_rebuilt = analysis.finish(proj_dir, cand_path)
     assert fin_rebuilt.get("reused") is not True
     assert (run_dir / "state.sqlite3").is_file()
+
+
+def test_openreview_iclr2027_schema_and_mcp_mirror_list(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from academic_research_kernel import cli, mcp_server, openreview_audit
+
+    mirror_records = [
+        {
+            "id": "0h3CZLWS71",
+            "title": "Brain-Inspired Agent Memory",
+            "status": "Active",
+            "primary_area": "foundation or frontier models, including LLMs",
+            "rating": "3;3;4",
+            "confidence": "3;4;4",
+            "soundness": "2;3;3",
+            "informativeness": "2;2;3",
+            "presentation": "3;3;3",
+            "wc_review": "480;512;610",
+            "wc_summary": "80;90;100",
+            "wc_strengths": "110;120;130",
+            "wc_weaknesses": "190;192;240",
+            "wc_questions": "100;110;140",
+            "wc_reply_authors": "1250",
+            "wc_reply_reviewers": "0;0;0",
+        },
+        {
+            "id": "wxyz987654",
+            "title": "Withdrawn Baseline",
+            "status": "Withdraw",
+            "primary_area": "reinforcement learning",
+            "rating": "1;2;2",
+            "confidence": "2;2;3",
+            "soundness": "1;2;2",
+            "informativeness": "1;1;2",
+            "presentation": "2;2;2",
+            "wc_review": "500;490;510",
+            "wc_reply_authors": "",
+            "wc_reply_reviewers": "",
+        },
+    ]
+    mirror_file = tmp_path / "iclr2027_sample.json"
+    mirror_file.write_text(json.dumps(mirror_records), encoding="utf-8")
+
+    rc = cli.main(["openreview-audit", "--forum-id", "0h3CZLWS71", "--mirror-json", str(mirror_file)])
+    assert rc == 0
+    cli_out = json.loads(capsys.readouterr().out)
+    assert cli_out["ratings"] == [3.0, 3.0, 4.0]
+    assert cli_out["informativeness"] == [2.0, 2.0, 3.0]
+    assert cli_out["contribution"] == []
+    assert cli_out["review_word_counts"] == [480, 512, 610]
+    assert cli_out["question_word_counts"] == [100, 110, 140]
+    assert cli_out["author_rebuttal_word_counts"] == [1250]
+    assert cli_out["reviewer_reply_word_counts"] == [0, 0, 0]
+    assert cli_out["did_authors_rebut"] is True
+    assert cli_out["did_reviewers_reply"] is False
+    assert cli_out["verification_status"] == "unverified_local_mirror"
+
+    mcp_single = mcp_server.handle_tool_call(
+        "academic_openreview_audit",
+        {"forum_id": "0h3CZLWS71", "notes": mirror_records},
+    )
+    assert mcp_single["informativeness"] == [2.0, 2.0, 3.0]
+    assert mcp_single["review_word_counts"] == [480, 512, 610]
+
+    vs = openreview_audit.summarize_venue_mirror(mirror_records)
+    assert vs["total_submissions"] == 2
+    assert vs["total_reviews"] == 6
+    assert vs["subscore_means"]["informativeness"] == 1.833
+    assert vs["subscore_means"]["contribution"] is None
+    assert vs["review_word_count_stats"] == {"count": 6, "mean": 517.0, "median": 505.0}
+
+    v2_notes = {
+        "count": 3,
+        "notes": [
+            {"id": "f2027", "forum": "f2027", "content": {"title": {"value": "CLM"}, "venue": {"value": "Submitted to ICLR 2027"}}},
+            {
+                "id": "r1",
+                "forum": "f2027",
+                "invitations": ["ICLR.cc/2027/Conference/Submission1/-/Official_Review"],
+                "content": {
+                    "overall_decision": {"value": "4: Clear acceptance"},
+                    "confidence": {"value": "4: Expert"},
+                    "soundness": {"value": "3: Good"},
+                    "informativeness": {"value": "3: High"},
+                    "presentation": {"value": "3: Clear"},
+                },
+            },
+            {
+                "id": "r2",
+                "forum": "f2027",
+                "invitations": ["ICLR.cc/2027/Conference/Submission1/-/Official_Review"],
+                "content": {
+                    "overall_decision": {"value": "3: Weak acceptance"},
+                    "confidence": {"value": "3: Fairly confident"},
+                    "soundness": {"value": "3: Good"},
+                    "informativeness": {"value": "2: Moderate"},
+                    "presentation": {"value": "2: Readable"},
+                },
+            },
+        ],
+    }
+    parsed_v2 = openreview_audit.parse_openreview_notes(v2_notes, forum_id="f2027")
+    assert parsed_v2["ratings"] == [4.0, 3.0]
+    assert parsed_v2["informativeness"] == [3.0, 2.0]
+    assert parsed_v2["soundness"] == [3.0, 3.0]
+    assert parsed_v2["status_classification"] == "under_review"
+
+
+def test_openreview_live_403_mirror_fallback_and_reparse_guard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from urllib.error import HTTPError
+    from academic_research_kernel import openreview_audit
+
+    mirror_dir = tmp_path / "mirrors"
+    mirror_dir.mkdir()
+    snap = mirror_dir / "iclr2027_20261112.json"
+    snap.write_text(
+        json.dumps([{"id": "U1ObEVC4A7", "title": "Context Language Models", "status": "Active", "rating": "4;4;4", "informativeness": "3;3;2"}]),
+        encoding="utf-8",
+    )
+
+    def _mock_403(forum_id: str, max_bytes: int = 16777216):
+        raise HTTPError("https://api2.openreview.net/notes", 403, "Forbidden", hdrs=None, fp=None)
+
+    monkeypatch.setattr(openreview_audit, "fetch_openreview_forum", _mock_403)
+    monkeypatch.setenv("OPENREVIEW_MIRROR_DIR", str(mirror_dir))
+
+    res = openreview_audit.audit_forum("U1ObEVC4A7")
+    assert res["forum_id"] == "U1ObEVC4A7"
+    assert res["ratings"] == [4.0, 4.0, 4.0]
+    assert res["informativeness"] == [3.0, 3.0, 2.0]
+    assert res["verification_status"] == "unverified_local_mirror"
+    assert len(res["mirror_sha256"]) == 64
+
+
+def test_cold_cli_import_and_manifest_version_lockstep() -> None:
+    import subprocess
+    import sys
+    import typing
+    from academic_research_kernel import __version__, _stdlib
+
+    hints = typing.get_type_hints(_stdlib.configure_sqlite_connection)
+    assert "conn" in hints
+
+    src_root = str(Path(__file__).resolve().parents[1] / "src")
+    cp = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            f"import sys; sys.path.insert(0, {src_root!r}); import academic_research_kernel.cli; "
+            "assert 'scipy' not in sys.modules and 'sqlite3' not in sys.modules, [m for m in ('scipy','sqlite3') if m in sys.modules]",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert cp.returncode == 0
+
+    repo_root = Path(__file__).resolve().parents[1]
+    for manifest_name in ("plugin.json", "server.json"):
+        mpath = repo_root / manifest_name
+        if mpath.is_file():
+            mdata = json.loads(mpath.read_text(encoding="utf-8"))
+            assert mdata["version"] == __version__
+            for pkg_entry in mdata.get("packages", []):
+                assert pkg_entry["version"] == __version__

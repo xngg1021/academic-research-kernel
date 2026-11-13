@@ -2,19 +2,12 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
-import hashlib
 import importlib
-from importlib import metadata, resources, util
 import json
-import math
-import os
 from pathlib import Path
-import platform
 import sys
 from typing import Any
 
-from ._stdlib import normalize_doi, normalize_identifier, safe_path, thaw
 from ._version import __version__
 
 EXPECTED_SCHEMAS = frozenset({
@@ -68,21 +61,31 @@ def _error_hint(step: str, reason: str) -> str:
     return f'Check inputs for step "{step}" or run: academic-research-kernel doctor'
 
 
+def __getattr__(name: str) -> Any:
+    if name in ("metadata", "resources", "util"):
+        mod = importlib.import_module(f"importlib.{name}")
+        globals()[name] = mod
+        return mod
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 def _opt_ver(mod_name: str, dist_name: str | None = None) -> str:
+    self_mod = sys.modules[__name__]
     try:
-        if util.find_spec(mod_name) is None:
+        if self_mod.util.find_spec(mod_name) is None:
             return "not installed; use [research]"
     except (ImportError, ValueError):
         return "not installed; use [research]"
     try:
-        return metadata.version(dist_name or mod_name)
+        return self_mod.metadata.version(dist_name or mod_name)
     except Exception:
         return "available"
 
 
 def _locate_portable_skill_dir() -> Path | None:
+    self_mod = sys.modules[__name__]
     try:
-        ref = resources.files("academic_research_kernel").joinpath("portable_skills", "paper-research")
+        ref = self_mod.resources.files("academic_research_kernel").joinpath("portable_skills", "paper-research")
         if ref.joinpath("SKILL.md").is_file():
             return Path(str(ref))
     except Exception:
@@ -98,16 +101,19 @@ def _locate_portable_skill_dir() -> Path | None:
 
 def doctor() -> dict[str, Any]:
     """Offline diagnostic check inspecting actual packaged schemas, portable skill, and dependencies."""
+    import platform
+
+    self_mod = sys.modules[__name__]
     deps: dict[str, str] = {}
     errors: list[str] = []
     for name in ("jsonschema", "numpy", "scipy", "statsmodels"):
         try:
-            present = util.find_spec(name) is not None
+            present = self_mod.util.find_spec(name) is not None
         except (ImportError, ValueError):
             present = False
         if present:
             try:
-                deps[name] = metadata.version(name)
+                deps[name] = self_mod.metadata.version(name)
             except Exception:
                 deps[name] = "available"
         else:
@@ -121,7 +127,7 @@ def doctor() -> dict[str, Any]:
 
         found_files = []
         try:
-            pkg_root = resources.files("academic_research_kernel")
+            pkg_root = self_mod.resources.files("academic_research_kernel")
             sdir = pkg_root.joinpath("schemas")
             if sdir.is_dir():
                 found_files = [p for p in sdir.iterdir() if p.name.endswith(".schema.json")]
@@ -362,6 +368,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if rep["status"] == "ok" else 1
 
     try:
+        from dataclasses import asdict
+        import hashlib
+        from importlib import resources
+        from ._stdlib import normalize_doi, normalize_identifier, safe_path, thaw
+
         if cmd == "verify-source":
             modes = sum([bool(args.normalize_only), bool(args.check_updates), bool(args.verify_pdf)])
             if modes > 1:
@@ -674,21 +685,17 @@ def main(argv: list[str] | None = None) -> int:
         if cmd == "openreview-audit":
             ora = _mod("openreview_audit")
             if args.venue_stats:
-                recs = json.loads(safe_path(args.venue_stats).read_text("utf-8"))
+                recs = json.loads(safe_path(args.venue_stats, must_exist=True).read_text("utf-8"))
                 _emit_json(ora.summarize_venue_mirror(recs, topic_regex=args.topic_regex))
                 return 0
             if args.input_json:
-                payload = json.loads(safe_path(args.input_json).read_text("utf-8"))
+                payload = json.loads(safe_path(args.input_json, must_exist=True).read_text("utf-8"))
                 _emit_json(ora.parse_openreview_notes(payload, forum_id=args.forum_id))
                 return 0
-            if args.mirror_json:
-                if not args.forum_id:
-                    raise ValueError("--mirror-json requires --forum-id")
-                payload = json.loads(safe_path(args.mirror_json).read_text("utf-8"))
-                _emit_json(ora.parse_openreview_notes(payload, forum_id=args.forum_id))
-                return 0
+            if args.mirror_json and not args.forum_id:
+                raise ValueError("--mirror-json requires --forum-id")
             if args.forum_id:
-                _emit_json(ora.parse_openreview_notes(ora.fetch_openreview_forum(args.forum_id), forum_id=args.forum_id))
+                _emit_json(ora.audit_forum(args.forum_id, mirror_path=args.mirror_json))
                 return 0
             raise ValueError("openreview-audit requires --forum-id, --input-json, --mirror-json, or --venue-stats")
 

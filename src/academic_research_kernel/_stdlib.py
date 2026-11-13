@@ -13,12 +13,10 @@ import collections.abc
 from contextlib import contextmanager
 import errno
 import hashlib
-from importlib import resources
 import json
 import math
 import os
 from pathlib import Path
-import random
 import re
 import sqlite3
 import stat
@@ -26,7 +24,6 @@ import threading
 import time
 from types import MappingProxyType
 from typing import Any, Iterator, Optional
-import unicodedata
 
 _SQLITE_INIT_LOCK = threading.RLock()
 _REPARSE_ATTR = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
@@ -144,6 +141,8 @@ def sha256_hex(data: bytes | str) -> str:
 
 
 def nfc_compact(text: str) -> str:
+    import unicodedata
+
     return _WS_RE.sub(" ", unicodedata.normalize("NFC", str(text))).strip()
 
 
@@ -186,7 +185,7 @@ def _walk_lexical_no_reparse(target: Path) -> None:
             raise ValueError(f"Symlink or NTFS reparse point rejected: {cur}")
 
 
-def safe_path(path: str | Path, root: Optional[str | Path] = None) -> Path:
+def safe_path(path: str | Path, root: Optional[str | Path] = None, *, must_exist: bool = False) -> Path:
     """Reject symlinks/dangling junctions along every lexical component and enforce optional root containment."""
     raw_str = str(path)
     if not raw_str.strip() or "\x00" in raw_str:
@@ -202,10 +201,15 @@ def safe_path(path: str | Path, root: Optional[str | Path] = None) -> Path:
         resolved = probe.resolve(strict=False)
         if not resolved.is_relative_to(root_resolved):
             raise ValueError(f"Path escapes workspace root ({root_resolved}): {resolved}")
+        if must_exist and not resolved.exists():
+            raise FileNotFoundError(f"Path does not exist: {resolved}")
         return resolved
     probe = p if p.is_absolute() else (Path.cwd() / p)
     _walk_lexical_no_reparse(probe)
-    return probe.resolve(strict=False)
+    resolved = probe.resolve(strict=False)
+    if must_exist and not resolved.exists():
+        raise FileNotFoundError(f"Path does not exist: {resolved}")
+    return resolved
 
 
 def normalize_doi(value: Any) -> str:
@@ -285,6 +289,8 @@ def tex_escape(text: Any) -> str:
 
 def configure_sqlite_connection(conn: sqlite3.Connection, *, readonly: bool = False) -> None:
     """Apply and verify mandatory per-connection SQLite safety pragmas."""
+    import sqlite3
+
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 10000")
     conn.execute("PRAGMA foreign_keys = ON")
@@ -316,6 +322,9 @@ def verify_or_claim_sqlite_identity(conn: sqlite3.Connection, *, readonly: bool 
 
 def run_with_sqlite_retry(fn, *, max_attempts: int = 16):
     """Bounded exponential backoff + jitter for cold cross-process WAL/schema initialization races."""
+    import random
+    import sqlite3
+
     for attempt in range(max_attempts):
         try:
             return fn()
@@ -335,6 +344,8 @@ def open_sqlite(
     root: Optional[str | Path] = None,
 ) -> Iterator[sqlite3.Connection]:
     """Open a configured SQLite connection with reparse checks, application_id guard, and WAL retry."""
+    import sqlite3
+
     if str(db_path) == ":memory:":
         if readonly:
             raise ValueError("Cannot open transient ':memory:' database in read-only mode")
@@ -382,6 +393,7 @@ def open_sqlite(
 
 def read_packaged_schema(schema_name: str) -> dict[str, Any]:
     """Load a canonical JSON schema from package resources first, then repository root."""
+    from importlib import resources
     if "/" in schema_name or "\\" in schema_name or ".." in schema_name:
         raise ValueError(f"Invalid schema name: {schema_name!r}")
     try:

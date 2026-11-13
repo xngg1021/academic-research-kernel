@@ -35,6 +35,8 @@ only-include = [
     "pyproject.toml",
     "plugin.json",
     "mcp.json",
+    "server.json",
+    "SLL-APPLICATION.json",
     "README.md",
     "LICENSE",
     "LICENSE-APPLICATION.md",

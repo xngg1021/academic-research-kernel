@@ -971,12 +971,17 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         if a.get("notes") is not None:
             notes_in = a["notes"]
             fid = a.get("forum_id")
-            if isinstance(notes_in, list) and not fid and notes_in and isinstance(notes_in[0], dict):
-                fid = notes_in[0].get("forum") or notes_in[0].get("id")
+            if isinstance(notes_in, list) and notes_in and isinstance(notes_in[0], dict):
+                if not fid:
+                    fid = notes_in[0].get("forum") or notes_in[0].get("id") or notes_in[0].get("openreview_forum")
+                if "content" not in notes_in[0] and (
+                    "rating" in notes_in[0] or "openreview_forum" in notes_in[0] or "status" in notes_in[0]
+                ):
+                    return ora.parse_openreview_notes(notes_in, forum_id=fid)
             payload = notes_in if isinstance(notes_in, dict) else {"notes": notes_in}
             return ora.parse_openreview_notes(payload, forum_id=fid)
         if a.get("forum_id"):
-            return ora.parse_openreview_notes(ora.fetch_openreview_forum(a["forum_id"]), forum_id=a["forum_id"])
+            return ora.audit_forum(a["forum_id"])
         raise ValueError("Provide one of: venue_records, notes, or forum_id")
 
     if name == "academic_double_blind_sanitize":

@@ -21,6 +21,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request
 
+from ._stdlib import safe_path
 from .research.sources import controlled_urlopen
 
 USER_AGENT = "Mozilla/5.0 (compatible; academic-research-kernel/3.0)"
@@ -102,7 +103,14 @@ def parse_mirror_record(rec: dict) -> dict:
     confidences = _parse_semi_numbers(rec.get("confidence"))
     soundness = _parse_semi_numbers(rec.get("soundness"))
     contribution = _parse_semi_numbers(rec.get("contribution"))
+    informativeness = _parse_semi_numbers(rec.get("informativeness"))
     presentation = _parse_semi_numbers(rec.get("presentation"))
+    review_words = _parse_semi_numbers(rec.get("wc_review"))
+    summary_words = _parse_semi_numbers(rec.get("wc_summary"))
+    strengths_words = _parse_semi_numbers(rec.get("wc_strengths"))
+    weaknesses_words = _parse_semi_numbers(rec.get("wc_weaknesses"))
+    question_words = _parse_semi_numbers(rec.get("wc_questions"))
+
     has_rebuttal_field = ("wc_reply_authors" in rec and rec.get("wc_reply_authors") is not None) or (
         "reply_authors" in rec and rec.get("reply_authors") is not None
     )
@@ -113,6 +121,17 @@ def parse_mirror_record(rec: dict) -> dict:
     else:
         did_rebut = None
         completeness = "partial_mirror"
+
+    has_rev_reply_field = ("wc_reply_reviewers" in rec and rec.get("wc_reply_reviewers") is not None) or (
+        "reply_reviewers" in rec and rec.get("reply_reviewers") is not None
+    )
+    rev_reply_words = _parse_semi_numbers(rec.get("wc_reply_reviewers"))
+    if has_rev_reply_field:
+        did_rev_reply: bool | None = (
+            bool(sum(rev_reply_words) > 0) if rev_reply_words else bool(rec.get("reply_reviewers"))
+        )
+    else:
+        did_rev_reply = None
 
     return {
         "forum_id": fid,
@@ -131,9 +150,17 @@ def parse_mirror_record(rec: dict) -> dict:
         "confidences": confidences,
         "soundness": soundness,
         "contribution": contribution,
+        "informativeness": informativeness,
         "presentation": presentation,
+        "review_word_counts": [int(x) for x in review_words],
+        "summary_word_counts": [int(x) for x in summary_words],
+        "strengths_word_counts": [int(x) for x in strengths_words],
+        "weaknesses_word_counts": [int(x) for x in weaknesses_words],
+        "question_word_counts": [int(x) for x in question_words],
         "author_rebuttal_word_counts": [int(x) for x in rebuttal_words],
+        "reviewer_reply_word_counts": [int(x) for x in rev_reply_words],
         "did_authors_rebut": did_rebut,
+        "did_reviewers_reply": did_rev_reply,
     }
 
 
@@ -195,6 +222,10 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
 
     ratings = []
     confidences = []
+    soundness = []
+    contribution = []
+    informativeness = []
+    presentation = []
     decisions = []
     reviewer_recommendations = []
 
@@ -220,6 +251,8 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
         rat = _unwrap(c.get("rating"))
         if rat is None:
             rat = _unwrap(c.get("overall_assessment"))
+        if rat is None and not is_dec:
+            rat = _unwrap(c.get("overall_decision"))
         rec = _unwrap(c.get("recommendation"))
         if rat is None and rec is not None:
             if isinstance(rec, (int, float)) and not isinstance(rec, bool):
@@ -246,6 +279,20 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
                 c_val = float(m.group(1))
                 if math.isfinite(c_val):
                     confidences.append(c_val)
+
+        for key_name, bucket in (
+            ("soundness", soundness),
+            ("contribution", contribution),
+            ("informativeness", informativeness),
+            ("presentation", presentation),
+        ):
+            s_raw = _unwrap(c.get(key_name))
+            if s_raw is not None and not isinstance(s_raw, bool):
+                m_sub = re.match(r"^\s*(-?\d+(?:\.\d+)?)", str(s_raw))
+                if m_sub:
+                    sv = float(m_sub.group(1))
+                    if math.isfinite(sv):
+                        bucket.append(sv)
 
     venue_lower = venue.lower()
     venueid_lower = venueid.lower()
@@ -298,11 +345,15 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
         "ratings": ratings,
         "mean_rating": float(sum(ratings) / len(ratings)) if ratings else None,
         "confidences": confidences,
+        "soundness": soundness,
+        "contribution": contribution,
+        "informativeness": informativeness,
+        "presentation": presentation,
     }
 
 
 def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) -> dict:
-    """对顶会全量 OpenReview 镜像列表执行确定性统计（状态分布、评分分位数、主领域与主题筛选）。"""
+    """对顶会全量 OpenReview 镜像列表执行确定性统计（状态分布、评分分位数、子维度均值、词数与主题筛选）。"""
     if not isinstance(records, list) or not records:
         raise ValueError("Venue mirror records must be a non-empty JSON list")
     status_cnt = Counter()
@@ -312,6 +363,14 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
     by_status = {}
     topic_matches = []
     topic_re = re.compile(topic_regex, re.I) if topic_regex else None
+    sub_totals: dict[str, list[float]] = {
+        "soundness": [],
+        "presentation": [],
+        "contribution": [],
+        "informativeness": [],
+        "confidence": [],
+    }
+    wc_reviews_pos: list[float] = []
 
     seen_ids = set()
     valid_submissions = 0
@@ -341,6 +400,13 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
             by_status.setdefault(st, []).append(m)
             for x in rats:
                 raw_hist[round(float(x), 4)] += 1
+        for sk in sub_totals:
+            vals_sk = _parse_semi_numbers(r.get(sk))
+            if vals_sk:
+                sub_totals[sk].extend(vals_sk)
+        for wv in _parse_semi_numbers(r.get("wc_review")):
+            if wv > 0:
+                wc_reviews_pos.append(wv)
         if topic_re:
             blob = f"{r.get('title', '')} {r.get('keywords', '')} {r.get('abstract', '')}"
             if topic_re.search(blob):
@@ -363,6 +429,20 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
             "max": round(s_vals[-1], 3),
         }
 
+    subscore_means = {
+        sk: (round(sum(sv) / len(sv), 3) if sv else None)
+        for sk, sv in sub_totals.items()
+    }
+    wc_stats = (
+        {
+            "count": len(wc_reviews_pos),
+            "mean": round(sum(wc_reviews_pos) / len(wc_reviews_pos), 2),
+            "median": round(statistics.median(wc_reviews_pos), 2),
+        }
+        if wc_reviews_pos
+        else None
+    )
+
     out = {
         "raw_record_count": len(records),
         "invalid_records_skipped": invalid_skipped,
@@ -375,6 +455,8 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
         "status_counts": dict(status_cnt),
         "tier_rating_stats": tier_stats,
         "raw_rating_histogram": {f"{k:g}": v for k, v in sorted(raw_hist.items(), key=lambda kv: kv[0])},
+        "subscore_means": subscore_means,
+        "review_word_count_stats": wc_stats,
         "top_primary_areas": area_cnt.most_common(10),
     }
     if topic_re:
@@ -389,19 +471,27 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
 
 def _find_local_mirror_fallback(forum_id: str, mirror_path: str | None = None) -> tuple[dict, str] | None:
     """Resolve from an explicitly provided mirror_path or explicit OPENREVIEW_MIRROR_DIR only (never ambient TMPDIR/TEMP)."""
-    candidates = []
+    candidates: list[Path] = []
     if mirror_path and str(mirror_path).strip():
         candidates.append(Path(str(mirror_path).strip()))
     explicit_dir = (os.environ.get("OPENREVIEW_MIRROR_DIR") or "").strip()
     if explicit_dir:
+        base_dir = safe_path(explicit_dir, must_exist=True)
+        for p in sorted(base_dir.glob("iclr2027_*.json"), reverse=True):
+            if p not in candidates:
+                candidates.append(p)
         for fn in ("iclr2027.json", "iclr2026.json", "iclr2025.json"):
-            p = Path(explicit_dir) / fn
+            p = base_dir / fn
             if p.exists() and p not in candidates:
                 candidates.append(p)
-    for p in candidates:
-        if not p.exists() or p.is_symlink():
-            continue
+        for p in sorted(base_dir.glob("iclr*.json"), reverse=True):
+            if p not in candidates:
+                candidates.append(p)
+    for raw_p in candidates:
         try:
+            p = safe_path(raw_p, must_exist=True)
+            if not p.is_file():
+                continue
             raw_bytes = p.read_bytes()
             sha = hashlib.sha256(raw_bytes).hexdigest()
             data = json.loads(raw_bytes.decode("utf-8"))
@@ -412,10 +502,37 @@ def _find_local_mirror_fallback(forum_id: str, mirror_path: str | None = None) -
                         rec["verification_status"] = "unverified_local_mirror"
                         rec["authenticated"] = False
                         rec["mirror_sha256"] = sha
+                        rec["source"] = f"mirror-fallback:{p.name}"
                         return rec, f"mirror-fallback:{p.name}"
-        except Exception:
+        except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
             continue
     return None
+
+
+def audit_forum(forum_id: str, mirror_path: str | None = None) -> dict:
+    """Audit a single OpenReview forum via live API with explicit local mirror fallback on HTTP/network blocks."""
+    if mirror_path and str(mirror_path).strip():
+        p = safe_path(mirror_path, must_exist=True)
+        raw_bytes = p.read_bytes()
+        sha = hashlib.sha256(raw_bytes).hexdigest()
+        payload = json.loads(raw_bytes.decode("utf-8"))
+        res = parse_openreview_notes(payload, forum_id=forum_id)
+        if isinstance(payload, list):
+            res["verification_status"] = "unverified_local_mirror"
+            res["authenticated"] = False
+            res["mirror_sha256"] = sha
+        return res
+    try:
+        live_payload = fetch_openreview_forum(forum_id)
+        res = parse_openreview_notes(live_payload, forum_id=forum_id)
+        res.setdefault("verification_status", "live_openreview_api")
+        res.setdefault("authenticated", False)
+        return res
+    except (HTTPError, URLError, TimeoutError, OSError):
+        fb = _find_local_mirror_fallback(forum_id)
+        if fb is not None:
+            return fb[0]
+        raise
 
 
 def fetch_openreview_forum(forum_id: str, max_bytes: int = 16 * 1024 * 1024) -> dict:
