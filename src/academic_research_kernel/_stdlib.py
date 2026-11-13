@@ -304,20 +304,30 @@ def configure_sqlite_connection(conn: sqlite3.Connection, *, readonly: bool = Fa
 
 
 def verify_or_claim_sqlite_identity(conn: sqlite3.Connection, *, readonly: bool = False) -> None:
-    """Prevent accidental mutation or misinterpretation of unrelated SQLite databases."""
+    """Prevent accidental mutation or misinterpretation of unrelated or newer-schema SQLite databases."""
     app_id = int(conn.execute("PRAGMA application_id").fetchone()[0])
+    user_ver = int(conn.execute("PRAGMA user_version").fetchone()[0])
     if app_id == ARK_SQLITE_APP_ID:
+        if user_ver < 0 or user_ver > ARK_SQLITE_USER_VERSION:
+            raise ValueError(
+                f"Unsupported ARK SQLite schema user_version={user_ver} (supported <= {ARK_SQLITE_USER_VERSION})"
+            )
         return
     tables = [
         str(r[0])
         for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
     ]
     if readonly:
-        if not tables:
+        if not tables and user_ver == 0:
             raise ValueError("Database is empty or uninitialized")
-        raise ValueError(f"Refusing to read non-ARK SQLite database (application_id={app_id:#x})")
-    if app_id != 0 or tables:
-        raise ValueError(f"Refusing to initialize or mutate non-ARK SQLite database (application_id={app_id:#x}, tables={tables})")
+        raise ValueError(
+            f"Refusing to read non-ARK SQLite database (application_id={app_id:#x}, user_version={user_ver})"
+        )
+    if app_id != 0 or user_ver != 0 or tables:
+        raise ValueError(
+            f"Refusing to initialize or mutate non-ARK SQLite database "
+            f"(application_id={app_id:#x}, user_version={user_ver}, tables={tables})"
+        )
 
 
 def run_with_sqlite_retry(fn, *, max_attempts: int = 16):

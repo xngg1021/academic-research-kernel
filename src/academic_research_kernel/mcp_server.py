@@ -161,7 +161,9 @@ TOOLS: list[dict[str, Any]] = [
                 "db_path": {"type": "string"},
                 "artifact_id": {"type": "string", "minLength": 1},
                 "target_entity_id": {"type": "string", "minLength": 1},
+                "target_id": {"type": "string", "minLength": 1},
                 "lineage_graph": {"type": "object"},
+                "lineage": {"type": "object"},
             },
         },
     },
@@ -189,8 +191,10 @@ TOOLS: list[dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["ceg"],
-            "properties": {"ceg": {"type": "object"}},
+            "properties": {
+                "ceg": {"type": "object"},
+                "graph": {"type": "object"},
+            },
         },
     },
     {
@@ -541,26 +545,175 @@ def _redact_blind_scan_report(rep: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _trace_inline_lineage_graph(graph: Mapping[str, Any], target_id: str) -> dict[str, Any]:
-    edges = graph.get("derivations") or graph.get("edges") or []
+    tid = str(target_id or "").strip()
+    if not tid:
+        raise ValueError("target_entity_id must be a non-empty string")
+    raw_entities = graph.get("entities")
+    raw_activities = graph.get("activities")
+    declared_entities: set[str] | None = None
+    declared_activities: set[str] = set()
+    has_verified_hashes = False
+
+    if isinstance(raw_entities, Mapping):
+        declared_entities = {str(k).strip() for k in raw_entities.keys() if str(k).strip()}
+    elif isinstance(raw_entities, list):
+        declared_entities = set()
+        for ent in raw_entities:
+            if isinstance(ent, Mapping):
+                eid = str(ent.get("id") or ent.get("entity_id") or ent.get("artifact_id") or "").strip()
+                if eid:
+                    declared_entities.add(eid)
+    if isinstance(raw_activities, Mapping):
+        declared_activities = {str(k).strip() for k in raw_activities.keys() if str(k).strip()}
+    elif isinstance(raw_activities, list):
+        for act in raw_activities:
+            if isinstance(act, Mapping):
+                aid = str(act.get("id") or act.get("activity_id") or "").strip()
+                if aid:
+                    declared_activities.add(aid)
+
+    edges = graph.get("derivations") if graph.get("derivations") is not None else graph.get("edges")
+    if edges is None:
+        edges = []
+    if not isinstance(edges, list):
+        raise ValueError("lineage_graph edges/derivations must be a list")
+
     parents_by_child: dict[str, set[str]] = {}
-    if isinstance(edges, list):
-        for e in edges:
-            if isinstance(e, dict):
-                c = str(e.get("child_id") or e.get("derived_id") or e.get("entity_id") or "")
-                p = str(e.get("parent_id") or e.get("source_id") or e.get("used_id") or "")
-                if c and p:
-                    parents_by_child.setdefault(c, set()).add(p)
-    visited: set[str] = set()
-    stack = list(parents_by_child.get(target_id, ()))
-    while stack:
-        cur = stack.pop()
-        if cur == target_id:
-            raise ValueError(f"Cycle detected in inline lineage_graph at {target_id!r}")
-        if cur in visited:
+    edge_nodes: set[str] = set()
+    broken_refs: list[str] = []
+    known_declared = (declared_entities | declared_activities) if declared_entities is not None else None
+
+    for idx, e in enumerate(edges):
+        if not isinstance(e, Mapping):
+            raise ValueError(f"lineage_graph edge[{idx}] must be an object")
+        etype = str(e.get("type") or e.get("relation") or "").strip().lower()
+        if "child_id" in e or "parent_id" in e:
+            c = str(e.get("child_id") or "").strip()
+            p = str(e.get("parent_id") or "").strip()
+        elif "source_id" in e and "target_id" in e:
+            src = str(e.get("source_id") or "").strip()
+            tgt = str(e.get("target_id") or "").strip()
+            if etype in ("generated", "produces", "produced"):
+                # activity -> generated entity: target depends on source
+                c, p = tgt, src
+            elif etype in ("derived_from", "used", "extracted_from", "recomputed_from", "verified_by", ""):
+                # W3C PROV: derived/activity (source_id) -> upstream entity (target_id)
+                c, p = src, tgt
+            else:
+                raise ValueError(f"Unsupported inline lineage edge type: {etype!r}")
+        elif "derived_id" in e or "entity_id" in e:
+            c = str(e.get("derived_id") or e.get("entity_id") or "").strip()
+            p = str(e.get("source_id") or e.get("used_id") or "").strip()
+        else:
+            raise ValueError(f"Unrecognized inline lineage edge format at index {idx}")
+
+        if not c or not p:
+            broken_refs.append(f"edge[{idx}] has empty endpoint")
             continue
-        visited.add(cur)
-        stack.extend(parents_by_child.get(cur, ()))
-    return {"artifact_id": target_id, "ancestors": sorted(visited), "verification_status": "intact"}
+        edge_nodes.add(c)
+        edge_nodes.add(p)
+        if known_declared is not None and (c not in known_declared or p not in known_declared):
+            broken_refs.append(f"edge[{idx}] references undeclared node ({c!r} -> {p!r})")
+        parents_by_child.setdefault(c, set()).add(p)
+        act_id = str(e.get("activity_id") or "").strip()
+        if act_id:
+            edge_nodes.add(act_id)
+            if known_declared is not None and act_id not in known_declared:
+                broken_refs.append(f"edge[{idx}] references undeclared activity {act_id!r}")
+
+    universe = known_declared if known_declared is not None else edge_nodes
+    if tid not in universe:
+        return {
+            "artifact_id": tid,
+            "target_id": tid,
+            "ancestors": [],
+            "root_ancestors": [],
+            "chain_length": 0,
+            "verification_status": "missing_input",
+            "topology_status": "missing_input",
+            "content_verification": "unchecked",
+            "error_detail": f"Target {tid!r} not found in provenance graph",
+        }
+
+    # Explicit iterative DFS stack (avoids Python RecursionError on 1,000+ node chains)
+    visited: set[str] = set()
+    state: dict[str, int] = {tid: 1}  # 1 = active on stack, 2 = finished
+    dfs_stack: list[tuple[str, list[str], int]] = [(tid, sorted(parents_by_child.get(tid, ())), 0)]
+    has_cycle = False
+    while dfs_stack:
+        cur_n, ups, idx_u = dfs_stack[-1]
+        if idx_u >= len(ups):
+            state[cur_n] = 2
+            dfs_stack.pop()
+            continue
+        dfs_stack[-1] = (cur_n, ups, idx_u + 1)
+        up = ups[idx_u]
+        up_state = state.get(up, 0)
+        if up_state == 1:
+            has_cycle = True
+            break
+        visited.add(up)
+        if up_state == 0:
+            state[up] = 1
+            dfs_stack.append((up, sorted(parents_by_child.get(up, ())), 0))
+
+    if has_cycle:
+        return {
+            "artifact_id": tid,
+            "target_id": tid,
+            "ancestors": sorted(visited),
+            "root_ancestors": [],
+            "chain_length": 0,
+            "verification_status": "cycle_detected",
+            "topology_status": "cycle_detected",
+            "content_verification": "unchecked",
+            "error_detail": f"Cycle detected in lineage closure of {tid!r}",
+        }
+
+    if broken_refs:
+        return {
+            "artifact_id": tid,
+            "target_id": tid,
+            "ancestors": sorted(visited),
+            "root_ancestors": [],
+            "chain_length": 0,
+            "verification_status": "broken_chain",
+            "topology_status": "broken_chain",
+            "content_verification": "unchecked",
+            "error_detail": "; ".join(broken_refs),
+        }
+
+    # Root ancestors = upstream entities with no further transitive upstream entity (traversing through activities)
+    entity_filter = declared_entities if declared_entities is not None else (universe - declared_activities)
+
+    def _has_upstream_entity(ent_node: str) -> bool:
+        seen_a: set[str] = set()
+        q_a = list(parents_by_child.get(ent_node, ()))
+        while q_a:
+            cand_u = q_a.pop()
+            if cand_u in seen_a:
+                continue
+            seen_a.add(cand_u)
+            if cand_u in entity_filter and cand_u != ent_node:
+                return True
+            q_a.extend(parents_by_child.get(cand_u, ()))
+        return False
+
+    roots = sorted(n for n in visited if n in entity_filter and not _has_upstream_entity(n))
+    if not roots and tid in entity_filter and not _has_upstream_entity(tid):
+        roots = [tid]
+
+    v_status = "intact" if has_verified_hashes else "unchecked"
+    return {
+        "artifact_id": tid,
+        "target_id": tid,
+        "ancestors": sorted(visited),
+        "root_ancestors": roots,
+        "chain_length": len(visited) + 1,
+        "verification_status": v_status,
+        "topology_status": "valid_dag",
+        "content_verification": v_status,
+    }
 
 
 def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -612,9 +765,11 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         return {"valid": actual == expected, "computed_sha256": actual, "expected_sha256": expected}
 
     if name == "research_lineage_trace":
-        if isinstance(a.get("lineage_graph"), Mapping) and a.get("target_entity_id"):
-            return _trace_inline_lineage_graph(a["lineage_graph"], str(a["target_entity_id"]))
-        aid = a.get("artifact_id") or a.get("target_entity_id")
+        inline_lg = a.get("lineage_graph") if isinstance(a.get("lineage_graph"), Mapping) else a.get("lineage")
+        inline_tid = a.get("target_entity_id") or a.get("target_id") or a.get("artifact_id")
+        if isinstance(inline_lg, Mapping) and inline_tid:
+            return _trace_inline_lineage_graph(inline_lg, str(inline_tid))
+        aid = a.get("artifact_id") or a.get("target_entity_id") or a.get("target_id")
         if not aid:
             raise ValueError("research_lineage_trace requires artifact_id (or lineage_graph + target_entity_id)")
         return _with_db(
@@ -638,7 +793,17 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         )
 
     if name == "claim_evidence_validate":
-        errs = validate_schema(a["ceg"], "claim-evidence-graph.schema.json")
+        ceg_doc = a.get("ceg") if a.get("ceg") is not None else a.get("graph")
+        if not isinstance(ceg_doc, Mapping):
+            return {"valid": False, "errors": ["claim_evidence_validate requires a 'ceg' (or 'graph') object"]}
+        errs = list(validate_schema(ceg_doc, "claim-evidence-graph.schema.json"))
+        try:
+            from .venue_template_manager import validate_ceg_semantics
+
+            sem = validate_ceg_semantics(dict(ceg_doc))
+            errs.extend(sem["semantic_errors"])
+        except Exception as exc:
+            errs.append(str(exc))
         return {"valid": len(errs) == 0, "errors": errs}
 
     if name == "claim_evidence_trace":

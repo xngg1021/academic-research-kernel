@@ -1,161 +1,75 @@
-# Research-State Kernel Architecture & Ingestion Bridge
+# Research-State Kernel Architecture (`v3.0.0`)
 
 ## Overview
 
-The **Academic Research Kernel** provides an offline-first, deterministic, cryptographically verifiable research-state runtime for autonomous AI agents and scholars.
+`academic-research-kernel` (`v3.0.0`) is an offline-first, deterministic scholarly verification and manuscript engineering runtime built on Python's standard library, `SQLite` (`STRICT` tables + `WAL` journaling + `application_id = 0x41524B33`, `user_version = 3`), and on-demand scientific libraries (`numpy`, `scipy`, `statsmodels`, `jsonschema`).
 
-Rather than treating tools as disconnected utility scripts, the kernel unifies 14 specialized scholarly capabilities around three core state models and a centralized ingestion bridge:
+Rather than scattering dozens of duplicated helper scripts across skill directories, `v3.0.0` consolidates the entire runtime inside a single installable package (`src/academic_research_kernel/`), exposing **22 stdio MCP tools**, **26 Draft 2020-12 JSON Schemas**, **17 CLI command groups** (with clean human-readable `3.0.0` verb-object aliases), and **5 First-Principles Agent Skills**:
 
 ```mermaid
 flowchart TD
-    A["14 skills and external producers"] --> B["Artifact envelope and adapters"]
-    B --> C["Research objects"]
-    B --> D["Claim-evidence graph"]
-    B --> E["Decision ledger"]
-    C --> F["Mutation-bound ingestion receipt"]
-    D --> F
-    E --> F
-    F --> G["18 stateless MCP tools"]
+    A["5 Agent Skills & CLI / MCP Callers"] --> B["Single Package: academic_research_kernel"]
+    B --> C["SQLite STRICT + WAL State (ResearchStateDB)"]
+    B --> D["Controlled HTTP & Isolated PDF Subprocess I/O"]
+    B --> E["Statistical & Meta-Analytic Recompute Engine"]
+    B --> F["LaTeX / BibTeX / Double-Blind / CEG Gatekeeper"]
+    C --> G["22 Deterministic stdio MCP Tools"]
 ```
 
 ---
 
-## Five-Step Paper Research Workflow & Irreducible Scope
+## Core Architectural Pillars
 
-For end-to-end paper reading and verification (`academic-research-kernel research` and `skills/paper-research`), the kernel executes a five-step deterministic pipeline around five irreducible components:
+### 1. Transactional SQLite Research State (`state_db.py`, `_stdlib.py`)
 
-1. **Source Acquisition & Identity Verification (`normalize_identifier.py`, `verify_work.py`, `locate_oa.py`, `openreview_audit.py`, `github_repo_forensics.py`, `skills/research-object-identity/scripts/identity.py`)**: Normalize DOIs, arXiv IDs, PMIDs, and OpenAlex IDs; cross-check bibliographic identity and retraction/correction states across OpenAlex, Crossref, Semantic Scholar, and Retraction Watch.
-2. **Document Segmentation & Exact Provenance (`research/sources.py`, `skills/research-object-identity/scripts/provenance.py`)**: Hash raw PDF (`.pdf`), HTML (`.html`, `.htm`), XML/JATS (`.xml`), DOCX (`.docx`), XLSX (`.xlsx`), LaTeX/BibTeX (`.tex`, `.bib`, `.bbl`), Markdown (`.md`), plain-text (`.txt`), and Python (`.py`) source bundles; index passages with page numbers, printed page labels, or structural locators (`tex:abstract=1`, `tex:table=N`, `tex:block=N`, `bib:entry=<citekey>`).
-3. **Context-Bound Extraction Validation (`research/analysis.py`, `schemas/paper-extraction.schema.json`)**: Verify that every extracted number, literal, unit, group, timepoint, and analysis set is backed by a continuous substring quote at its declared document locator.
-4. **Deterministic Statistical Recomputation & Cross-Paper Comparison (`recompute.py`, `meta_core.py`)**: Recompute 15 statistical and physical-bound checks (`t_p`, `f_p`, `chi2_p`, `z_beta_se`, `ci_consistency`, `or_rr_2x2`, `effect_size`, `hedges_g`, `percentage`, `sd_possible`, `sample_size_df`, `power_ttest`, `partition_conservation`, `ablation_delta_regularity`, `storage_bandwidth_bounds`), fixed/random-effects meta-analyses, and two-paper comparability matrices using exact decimal half-open rounding intervals.
-5. **Claim-Evidence Graph Binding & Replayable Reporting (`skills/claim-evidence-graph/scripts/graph.py`, `skills/decision-ledger/scripts/ledger.py`, `skills/academic-writing/scripts/pre_submission_linter.py`)**: Automatically attach `supported` or `contradicted` evidence edges to target claims in `ClaimEvidenceGraph`, record analytical decisions in `DecisionLedger`, update `workflow-state.json`, and render traceable Chinese Markdown/HTML reports with offline snapshot replay.
+`ResearchStateDB` replaces ad-hoc multi-file JSON snapshot caches with relational `STRICT` tables protected by foreign keys, `SAVEPOINT` atomic batches, cycle-checked provenance graphs, and SHA-256 canonical JSON digests:
+- **Database identity guard**: Rejects unrelated SQLite files (`application_id != 0x41524B33`) and refuses to open or downgrade databases created by newer schema versions (`user_version > 3`).
+- **Research objects & provenance lineage**: Stores canonical object identities, content hashes, and directed derivation edges; inline graphs without verified content digests report `verification_status="unchecked"`, reserving `"intact"` strictly for hash-verified provenance chains.
+- **Claim-Evidence Graph (`CEG`)**: Validates endpoint existence (`validate_ceg_semantics`), detects dangling support or relation edges, and derives deterministic evidence-anchor IDs over `canonical_json([artifact_id, locator])` so identically named tables across distinct runs never collide.
+- **Decision ledger & retraction watch state**: Maintains append-only decision events and dual-sequence DOI watch state (`applied_seq` + `confirmed_seq`), preserving provider-scoped retraction signals (`openalex:` / `crossref:`) when a peer upstream source times out (`signals_complete=False`) and emitting `unacked_delta` alerts even when confirmed retractions arrive out of sequence after transient timeouts.
 
-**Scope discipline**: Deterministic code in this repository covers the 86 verification, locator-anchoring, statistical-recomputation, meta-analytic, and provenance invariants where probabilistic language models hallucinate or miscalculate. Pure prose summarization and terminology explanation remain native agent reading tasks, while reference library management, collaborative typesetting, wet-lab LIMS, and spaced-repetition learning belong to external tools (such as Zotero, Overleaf, or dedicated learning systems).
+### 2. Controlled Network & Subprocess I/O (`research/sources.py`, `double_blind_sanitizer.py`)
 
----
+- **DNS-pinned public HTTP (`controlled_urlopen`)**: Disables ambient proxies (`ProxyHandler({})`), resolves and pins public IPs before socket connection to block DNS-rebinding TOCTOU attacks, revalidates redirects, and enforces strict response byte caps.
+- **Isolated PDF worker subprocess (`controlled_read_pdf_pages`)**: Extracts PDF page text, `/Info` metadata dictionaries, and raw XMP XML streams inside a `python -I -c` child process with wall-clock timeouts and bounded output drains (`pypdf==7.0.0`, `fonttools==4.65.0`). `research prepare`, `lint-submission`, and `sanitize-submission` route untrusted PDFs exclusively through this isolated worker.
 
-## The Three Core State Layers
+### 3. Deterministic Statistical, Meta-Analytic & Forensic Engines (`recompute.py`, `meta_core.py`, `openreview_audit.py`)
 
-1. **Research Object Identity & Lineage (`skills/research-object-identity`)**:
-   - Discrete, rule-based equivalence judgments (EXACT, STRONG_MATCH, CANDIDATE, CONFLICT, UNRESOLVED) with zero opaque similarity scores;
-   - Cryptographic `LineageReceipt` anchors tracking entity derivation and activity history.
-2. **Claim-Evidence Graph (`skills/claim-evidence-graph`)**:
-   - Directed tripartite graph connecting Claims, Evidence Anchors, and Support/Refutation Edges;
-   - Physical payload SHA-256 verification via `ReceiptRef`.
-3. **Decision & Negative Result Ledger (`skills/decision-ledger`)**:
-   - Append-only event sourcing (`DecisionStateEvent`) driving active, pruned, and reopened route transitions;
-   - Content-addressed outcome corrections and explicit failure recording without in-place updates.
+- **Single-paper statistical audit (`recompute.py`, `table-forensics`)**: Exact `Decimal` rounding-interval verification for $t$, $F$, $\chi^2$, and Wald $z$ $p$-values, confidence-interval symmetry, `2x2` odds/risk ratios, `Cohen's d` / `Hedges' g`, percentage denominators, bounded-scale SD bounds, partition conservation, ablation constant-offset shifts, and hardware storage/bandwidth lower bounds.
+- **Meta-analysis (`meta_core.py`, `meta-analyze`)**: Fixed-effect and DerSimonian-Laird random-effects pooling, $Q / I^2 / \tau^2$ heterogeneity, leave-one-out sensitivity, Egger regression, and trim-and-fill, using `min(v_i) / v_i` scaled inverse-variance weights so ultra-small variances (`1e-320`) never overflow IEEE-754 `1/v` to `NaN`.
+- **Cross-venue OpenReview forensics (`openreview_audit.py`)**: Parses ICLR (`rating`, `confidence`, `soundness`, `informativeness`), ICML (`recommendation`), NeurIPS (`clarity`, `quality`, `originality`, `wc_strengths_and_weaknesses`), and COLM schemas offline without hitting live `openreview.net` Cloudflare blocks, computing score quantiles, unanimous identical-score rates, confidence-stratified review word-count medians, and zero-discussion rates.
 
----
+### 4. Pre-Submission LaTeX, BibTeX & CEG Gatekeeper (`pre_submission_linter.py`)
 
-## Research Artifact Ingestion Bridge v1
-
-The Ingestion Bridge (`scripts/ingestion/`) is the universal translation layer that ingests structured outputs from tools into the kernel through staged, atomic state mutations.
-
-Every public ingestion path executes the repository's Draft 2020-12 JSON Schemas at runtime. Envelope identity, payload hash, producer-major compatibility, payload size/depth/cardinality bounds, and adapter routing are checked before planning. Unknown structured contracts fail closed; only the explicit opaque fallback stores an unknown artifact without claiming structured interoperability.
-
-Batch execution is transactional. Plans run against a detached state clone, every intermediate CEG/Ledger/kernel invariant is checked, and cache entries become visible only with the final commit. Idempotency keys include the complete mutation context (producer, kind, schema, subjects, lineage, locator, and bindings), so a replay cannot be incorrectly shared across a different target state or routing context. Caller metadata is retained for audit correlation but deliberately excluded from mutation identity.
-
-### Ingestion Adapters (3 Tiers)
-
-- **Tier 1: Native Structured Receipts (Lossless)**
-  - `academic-source-verification`: Ingests `AcademicEvidenceReceipt`, registers works, populates CEG claims and evidences with physical payload hashes.
-  - `research-object-identity`: Pass-through ingestion for canonical research objects and lineage receipts.
-  - `claim-evidence-graph`: Validates and merges CEG sub-graphs.
-  - `decision-ledger`: Validates and replays Decision Ledger snapshots.
-- **Tier 2: Structured Analytical Artifacts**
-  - `quantitative-paper-audit`: Recomputes statistics; verified/discrepant calculations enter as CEG evidence anchors.
-  - `research-reproducibility`: Ingests reproduction attempts; inconclusive results emit uncertainty findings.
-  - `cross-review-five`: Ingests multi-agent review findings; dissenting opinions are strictly preserved as uncertainties (never squashed by majority vote).
-  - `systematic-review-meta-analysis`: Ingests screening matrices and pooled effect sizes.
-  - `literature-analysis`: Ingests canonical work matrices.
-  - `literature-watch`: Ingests monitoring deltas without mutating decision states.
-  - `retraction-watch`: Signals retraction alerts and marks affected evidence as requiring revalidation (never deletes history).
-  - `math-computation`: Ingests symbolic/numerical evaluations.
-  - `paper-research`: Ingests verified paper extractions, source-addressed evidence, and two-paper comparability assessments.
-- **Tier 3: Opaque Artifacts (Prose Stays Prose)**
-  - `academic-writing`: Manuscripts, submission packages, and drafts are stored with cryptographic hashes. The kernel **strictly forbids** extracting speculative claims or making automated decisions from unannotated prose.
-
-### Tamper-Evident Kernel State
-
-`IngestionKernelState` serializes the complete CEG, decision ledger, research-object registry, physical receipt registry, kernel uncertainty queue, ingested-artifact registry, semantic receipt cache, and `ingestion_sources` containing each accepted source envelope and normalized caller bindings. Each first-class registry has a deterministic digest; those digests roll into `kernel_content_digest`, while the complete transport object carries a separate `snapshot_digest`. Strict loaders verify declared graph/ledger/lineage/receipt digests, replay invariants, and snapshot identity before accepting state.
-
-The public physical-receipt registry and internal CEG/Ledger registries must agree. Synchronization rejects orphaned or conflicting internal receipts, including before serialization; it cannot certify a snapshot that depends on hidden stale receipts.
-
-All envelope, receipt, object, uncertainty, CEG, ledger, and lineage metadata is recursively frozen inside domain objects. Serialization returns detached mutable copies, preventing callers from changing content-addressed state through a retained nested dictionary.
-
-### Complete semantic mutation commitments
-
-An accepted `ArtifactIngestionReceipt` contains immutable `mutation_bindings`, each with `kind`, `identity` and `canonical_digest`. The digest uses the kernel's canonical JSON rules. Bindings cover newly created and adopted records; matching an ID alone never proves replay integrity. Re-signing an outer snapshot cannot hide a changed bound record. These are integrity commitments, not authenticated signatures from an external trust authority.
-
-| State | Committed semantics |
-| --- | --- |
-| ResearchObjects, including opaque artifacts | Full canonical record: payload, identifiers, producer, locator, metadata and context |
-| CEG | Container protocol/identity plus every adopted Claim, EvidenceAnchor, SupportEdge and ClaimRelation |
-| Decision Ledger | Container protocol/identity plus decisions, bases, forks, state events and corrections; an empty ledger needs no invented record |
-| Uncertainty | Item identity and full canonical record, distinguishing adapter declarations, domain projections and unrelated historical entries |
-| Physical receipts | Registry key and full payload, including a zero-claim receipt whose registration is its only scientific mutation |
-| Artifact/context/lineage | Artifact payload commitment, complete mutation-context digest, source reference and any available physical lineage receipt |
-
-Containers commit identity separately from their record sets so later append-only mutations do not invalidate earlier receipts. Adapter warnings are retained unchanged. A domain-derived uncertainty may leave the live queue only when independent recomputation shows its causal condition has disappeared; its historical receipt remains unchanged. The only ResearchObject upgrade exception is the exact minimal `{id, kind: work}` placeholder to a schema-valid canonical work, attested by its own accepted literature ingestion. Arbitrary replacement is forbidden. Physical lineage emission timestamps use the existing explicitly defined receipt-equivalence rule; semantic payload fields remain bound.
-
-Pre-closeout experimental ingestion caches without complete bindings or independent sources fail closed and require reingestion; they are not silently treated as verified. Persisted CEG/Ledger historical hash modes remain supported. Current `evidence-receipt-1.0` admission uses the full producer schema. The explicit `academic-evidence-1.0` compatibility alias uses `legacy-academic-evidence.schema.json` for the historical compact receipt shape; physical consumers recognize that same closed shape, and any supplied claim digest must match the complete canonical claim.
-
-### Source-derived cache completeness
-
-`expected_mutation_inventory` validates each retained source envelope against the receipt's artifact SHA, context digest, source lineage reference and installed adapter identity/version. It plans and applies to detached empty domain containers using the production constructors, then checks the source-derived records against both cached bindings and retained state. Later appended CEG/Ledger records do not become requirements of an older cache entry. Sequence-bearing corrections are located by source-derived semantics in the append-only history. Live derived uncertainty is independently recomputed. No expected-record list supplied by the cached receipt defines completeness.
-
-The source envelope includes the original payload, so snapshot size grows with retained source content. Sources are immutable in memory and portable on the wire; they confer no filesystem or network authority. If an experimental or damaged cache lacks a source, replay fails closed. Recovery explicitly discards the invalid cache and reingests an intact envelope against a valid retained prefix. It never reports a damaged cache as an accepted hit. Source-derived hashes are integrity checks; no external authentication is implied.
-
-DOI-bearing `work_id`, DOI fields, resolver URLs and single-work evidence/retraction references must agree after canonical normalization. arXiv, PMID and OpenAlex identifier/reference pairs follow the same coherence rule. Literature without an explicit work ID or DOI uses a digest of its complete canonical bibliographic record, so equal titles with different authors or years remain distinct. Evidence without publication identifiers or subject references leaves its target unset; a search query is never a publication identity. Quantitative `discrepancy_detected` and boolean `consistent` must be inverse; a null consistency with no determinate discrepancy yields `unverifiable`. Receipt and state uncertainties use the same normalizer and equivalent schema definitions, including closed kinds, required identity/reason fields, boolean human-review flags, object metadata and bounded JSON. Contract parity has a regression gate.
-
-### Closure contract rules
-
-Explicit monitoring object IDs and every kernel registry key must be nonempty strings; no Python `str()` representation may define a research identity. Missing monitoring and systematic-review IDs use canonical JSON digests, including frozen nested JSON. Canonical serialization preserves the existing distinctions between booleans, integers and floating-point values.
-
-Serialized CEG, Ledger and kernel uncertainty collections reject duplicate record identities before replay. Records without a separate ID are compared using complete canonical bytes. This is distinct from the intentional idempotence of incremental add operations. Schemas enforce structural field contracts; adapters and replay check identity uniqueness and canonical record uniqueness with linear set-based checks. In particular, records whose metadata differs canonically as `1`, `1.0` or `true` remain distinct, avoiding JSON Schema numeric-equality deduplication. Lineage entity/activity/edge/root uniqueness remains enforced by its independent structural replay.
-
-Retraction records with a current observation must agree with `is_retracted` unless the explicit `retained_prior` state applies. That exception requires a retained boolean and an unknown (`null`, or omitted in the older compact shape) current observation. Conflicting verified, unverified or unspecified-status observations fail schema, adapter, preflight and admission checks without mutation. Retained positive retractions still emit both the alert and the current-coverage uncertainty.
-
-### Trusted lineage verification context
-
-Portable receipts contain evidence, never filesystem authority. `LineageVerificationContext` is an immutable invocation argument carrying a trusted content root, exact authorized paths or entity-indexed bytes and a maximum byte budget. Trusted Python producers, adapters, CEG/Ledger replay and `IngestionKernelState.from_dict(..., verification_context=...)` use this same context. It is excluded from serialized receipts and snapshots. The historical trusted absolute-locator producer API authorizes only the exact explicitly supplied files; it does not grant directory-wide authority.
-
-The default content budget is 10 MiB. Trusted callers can explicitly authorize a larger budget for datasets. Producer and verifier share the bounded verification algorithm, so the producer cannot claim content verification that the same policy cannot reproduce. Missing content, hash mismatch, unavailable authority, unchecked mode and exceeded budget remain distinct reasons. Without content authority, a serialized `fully_verified` claim fails verification deterministically; it does not authorize an ambient host read. Replaying a snapshot containing such a claim likewise requires explicit authority. Root traversal and symlink escape fail containment checks.
-
-MCP accepts base64 `content_payloads` indexed by entity ID on the seven content-consuming tools. The wire limit is fixed at 10 MiB unless trusted host configuration supplies a larger context. Wire arguments cannot nominate a root, authorize paths or increase the budget. Malformed registries and domain construction are inside the structured input-validation boundary across all eighteen tools; preflight dry-run admission catches errors already knowable at validation time.
+- Resolves root-relative and parent-relative `\input{...}` and braceless `\input file` trees while masking comments, `\verb`, and `verbatim` / `lstlisting` / `minted` / `comment` environments line-accurately.
+- Scopes BibTeX key and duplicate checks strictly to `\bibliography{...}` and `\addbibresource[...]{...}` declarations (with transitive `crossref` / `xdata` closure for `--check-academic-style` uncited-entry checks).
+- Distinguishes conference template `[final]` / `[preprint]` / `[cameraready]` leaks from benign typesetting package options (`\usepackage[final]{microtype}`, `hyperref`, `listings`, `graphicx`).
+- Counts shared body+`References` transition pages accurately toward main-body page limits when substantive prose precedes the bibliography heading.
+- Verifies per-line `% ark:claim=<ID>` bindings against `eligible` CEG anchors and checks numeric/lexical consistency between manuscript sentences (including escaped `12.5\%`) and bound CEG claim statements.
 
 ---
 
-## Universal MCP Interface (18 Tools)
+## All 22 MCP Tools (`academic_research_kernel.mcp_server`)
 
-The stdio MCP server ([scripts/mcp_server.py](../scripts/mcp_server.py)) exposes the deterministic kernel directly to Claude Code, Cursor, Codex, Gemini CLI, and Hermes:
-
-1. `research_artifact_validate`: Runs the same envelope, registry, planning, dry-run apply and invariant checks as admission against the supplied state and bindings.
-2. `research_artifact_ingest`: Ingests envelope into kernel state and emits an `ArtifactIngestionReceipt`.
-3. `research_receipt_verify`: Verifies physical receipt payloads against `ReceiptRef`.
-4. `research_object_resolve`: Resolves candidate records to canonical objects.
-5. `research_lineage_trace`: Traces provenance ancestry.
-6. `claim_evidence_validate`: Validates CEG integrity and cycles.
-7. `claim_evidence_trace`: Traces evidence and receipts for a claim.
-8. `decision_ledger_validate`: Executes four-gate verification on a decision ledger.
-9. `decision_trace`: Traces causal ancestry and corrections for a decision.
-10. `academic_recompute_statistics`: Recomputes statistical claims (t/F/chi-square/Wald-z tests, Cohen's d and Hedges' g, 2x2 OR/RR, CI consistency, statistical power, SD bounds, df-implied sample sizes, partition conservation, ablation delta regularity, and storage/bandwidth bounds) with on-demand SciPy/statsmodels loading for probability distributions and closed-form standard-library arithmetic.
-11. `academic_check_percentage`: Checks count/percentage compatibility.
-12. `academic_scfabric_hardware_probe`: Probes execution accelerators.
-13. `academic_pre_submission_lint`: Runs venue formatting, page-limit, required-section, CEG-anchor, and optional `--check-academic-style` advisory checks on a manuscript.
-14. `academic_double_blind_sanitize`: Scans `.tex`, `.bib`, and compiled PDF metadata for double-blind anonymity leaks, returning a strict redacted allowlist (`matched="[REDACTED]"`).
-15. `academic_table_forensics`: Audits tables for partition conservation, constant-offset ablation shifts, and uncompressed vector storage/bandwidth bounds.
-16. `academic_meta_analyze`: Runs fixed-effect and DerSimonian-Laird random-effects pooling, $Q/I^2/\tau^2$ heterogeneity, Egger regression, and trim-and-fill.
-17. `academic_verify_source`: Normalizes scholarly identifiers, verifies local PDF identity, or cross-checks OpenAlex/Crossref metadata and retraction/update records.
-18. `academic_openreview_audit`: Audits OpenReview forum ratings, reviewer variance, venue-wide quantiles, or topic acceptance rates.
-
-Tool arguments use closed JSON Schemas and are validated before dispatch. Each response sets MCP `isError` consistently, and `research_artifact_ingest` accepts and returns a complete kernel snapshot rather than a lossy projection. The stdio surface is covered by an actual subprocess initialize → tools/list → tools/call exchange.
-
----
-
-## Verification and residual boundaries
-
-The current local regression suite covers **1348 passed** tests (1351 total with the 3 optional skips) plus 41 executable documentation fences. Cross-platform CI runs a 7-cell orthogonal matrix across Python 3.10/3.12/3.14, Linux x86_64/ARM64, Windows x86_64/ARM64, and macOS ARM64, alongside isolated wheel/sdist/[research] installation smoke and current-upstream loading.
-
-Final candidate SHA/tree, exact-head CI and cumulative review evidence are bound in the [closeout ledger](https://github.com/xngg1021/academic-research-kernel/pull/12#issuecomment-5750357151); historical CI is not substituted for the new candidate.
+1. `research_state_ingest` — Atomic batch ingestion of research objects, claims, decisions, and lineage edges into SQLite `STRICT` state.
+2. `research_artifact_ingest` — Single-envelope ingestion returning tamper-evident mutation digests.
+3. `research_artifact_validate` — Dry-run envelope and schema validation without mutating state.
+4. `research_receipt_verify` — SHA-256 receipt verification against `ReceiptRef`.
+5. `research_object_resolve` — Deterministic five-state entity resolution (`EXACT`, `STRONG_MATCH`, `CANDIDATE`, `CONFLICT`, `UNRESOLVED`).
+6. `research_lineage_trace` — Provenance ancestry traversal across SQLite or inline graphs (`unchecked` vs hash-verified `intact`).
+7. `claim_evidence_add` — Transactional insertion of claims and evidence bindings.
+8. `claim_evidence_validate` — Schema + `validate_ceg_semantics` endpoint closure check (`ceg` or `graph` input).
+9. `claim_evidence_trace` — Upstream evidence and receipt trace for a target claim.
+10. `decision_record` — Append-only research decision & negative-result logging.
+11. `decision_transition` — State-event transitions (`active`, `pruned`, `reopened`, `superseded`).
+12. `decision_ledger_validate` — Structural & causal-ancestry validation of decision ledgers.
+13. `decision_trace` — Causal fork and correction trace for a decision ID.
+14. `academic_recompute_statistics` — 15 deterministic statistical and physical-bound checks.
+15. `academic_check_percentage` — Integer numerator / denominator compatibility verification.
+16. `academic_table_forensics` — Partition conservation, ablation offset, and uncompressed bandwidth bound checks.
+17. `academic_meta_analyze` — Fixed/DL random-effects pooling, $Q/I^2/\tau^2$, LOO, Egger test, and trim-and-fill.
+18. `academic_verify_source` — Identifier normalization and Crossref/OpenAlex bibliographic & update verification.
+19. `academic_openreview_audit` — Offline mirror & forum score/forensics audit across ICLR, ICML, NeurIPS, and COLM.
+20. `academic_double_blind_sanitize` — Redacted (`matched="[REDACTED]"`) double-blind leak scan across TeX, BibTeX, and PDF `/Info` + XMP streams.
+21. `academic_pre_submission_lint` — Venue formatting, page-limit, BibTeX scope, CEG claim-binding, and academic-style gate.
+22. `academic_retraction_watch` — Dual-source DOI retraction delta check backed by SQLite state.

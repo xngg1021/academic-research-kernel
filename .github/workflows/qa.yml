@@ -90,6 +90,8 @@ jobs:
         run: academic-research-kernel doctor --json
       - name: Run full pytest suite
         run: python -m pytest -q tests
+      - name: Verify upstream skill authoring standards
+        run: python -m pytest -q -k "not test_at_least_the_expected_population" tests/upstream/hermes_authoring_standards.py
 
   distribution-build:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'full-ci')
@@ -107,11 +109,13 @@ jobs:
         with:
           version: '0.12.17'
       - run: uv lock --check
-      - name: Build deterministic wheel and sdist
+      - name: Build deterministic wheel and sdist and run release gate
         shell: bash
         run: |
           export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
           uv build --no-create-gitignore
+          uv run --frozen --extra qa --no-editable python -m twine check --strict dist/*
+          PYTHONPATH=src python -m academic_research_kernel.release_gate --package-acceptance --dist dist
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: distribution-candidate

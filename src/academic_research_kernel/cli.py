@@ -84,18 +84,19 @@ def _opt_ver(mod_name: str, dist_name: str | None = None) -> str:
 
 def _locate_portable_skill_dir() -> Path | None:
     self_mod = sys.modules[__name__]
-    try:
-        ref = self_mod.resources.files("academic_research_kernel").joinpath("portable_skills", "paper-research")
-        if ref.joinpath("SKILL.md").is_file():
-            return Path(str(ref))
-    except Exception:
-        pass
-    pkg_skill = Path(__file__).resolve().parent / "portable_skills" / "paper-research"
-    if (pkg_skill / "SKILL.md").is_file():
-        return pkg_skill
-    repo_skill = Path(__file__).resolve().parents[2] / "skills" / "paper-research"
-    if (repo_skill / "SKILL.md").is_file():
-        return repo_skill
+    for skill_name in ("audit-paper", "paper-research"):
+        try:
+            ref = self_mod.resources.files("academic_research_kernel").joinpath("portable_skills", skill_name)
+            if ref.joinpath("SKILL.md").is_file():
+                return Path(str(ref))
+        except Exception:
+            pass
+        pkg_skill = Path(__file__).resolve().parent / "portable_skills" / skill_name
+        if (pkg_skill / "SKILL.md").is_file():
+            return pkg_skill
+        repo_skill = Path(__file__).resolve().parents[2] / "skills" / skill_name
+        if (repo_skill / "SKILL.md").is_file():
+            return repo_skill
     return None
 
 
@@ -217,22 +218,23 @@ def main(argv: list[str] | None = None) -> int:
     p_doc.add_argument("--json", action="store_true")
     sub.add_parser("mcp", help="Serve stdio JSON-RPC 2.0 MCP tools")
 
-    p_ver = sub.add_parser("verify-source", help="Normalize identifier, verify metadata, check updates, or verify PDF")
-    p_ver.add_argument("identifier", nargs="?")
-    p_ver.add_argument("--doi")
-    p_ver.add_argument("--live", action="store_true")
-    p_ver.add_argument("--offline", action="store_true")
-    p_ver.add_argument("--normalize-only", action="store_true")
-    p_ver.add_argument("--openalex-json")
-    p_ver.add_argument("--crossref-json")
-    p_ver.add_argument("--check-updates", action="store_true")
-    p_ver.add_argument("--records")
-    p_ver.add_argument("--rows", type=int, default=100)
-    p_ver.add_argument("--max-pages", type=int, default=10)
-    p_ver.add_argument("--verify-pdf")
-    p_ver.add_argument("--title")
-    p_ver.add_argument("--pages", type=int, default=1)
-    p_ver.add_argument("--threshold", type=float, default=0.8)
+    for vw_alias in ("verify-source", "verify-work"):
+        p_ver = sub.add_parser(vw_alias, help="Normalize identifier, verify metadata, check updates, or verify PDF")
+        p_ver.add_argument("identifier", nargs="?")
+        p_ver.add_argument("--doi")
+        p_ver.add_argument("--live", action="store_true")
+        p_ver.add_argument("--offline", action="store_true")
+        p_ver.add_argument("--normalize-only", action="store_true")
+        p_ver.add_argument("--openalex-json")
+        p_ver.add_argument("--crossref-json")
+        p_ver.add_argument("--check-updates", action="store_true")
+        p_ver.add_argument("--records")
+        p_ver.add_argument("--rows", type=int, default=100)
+        p_ver.add_argument("--max-pages", type=int, default=10)
+        p_ver.add_argument("--verify-pdf")
+        p_ver.add_argument("--title")
+        p_ver.add_argument("--pages", type=int, default=1)
+        p_ver.add_argument("--threshold", type=float, default=0.8)
 
     p_meta = sub.add_parser("meta-analyze", help="Fixed & random-effects pooling + LOO + Egger/trim-and-fill")
     p_meta.add_argument("--input", required=True)
@@ -240,46 +242,49 @@ def main(argv: list[str] | None = None) -> int:
     p_tf = sub.add_parser("table-forensics", help="Audit partition conservation, ablation deltas, and bandwidth bounds")
     p_tf.add_argument("--input", required=True)
 
-    p_lint = sub.add_parser("pre-submission-lint", help="Lint TeX manuscript bundle")
-    p_lint.add_argument("tex_pos", nargs="?")
-    p_lint.add_argument("--tex", dest="tex_opt")
-    p_lint.add_argument("--venue", default="iclr")
-    p_lint.add_argument("--phase", choices=["submission", "rebuttal", "camera_ready"], default="submission")
-    p_lint.add_argument("--contribution-type", "--track", dest="contribution_type", default="general_empirical")
-    p_lint.add_argument("--no-blind", action="store_true")
-    p_lint.add_argument("--pdf")
-    p_lint.add_argument("--ceg")
-    p_lint.add_argument("--require-ceg-binding", action="store_true")
-    p_lint.add_argument("--check-academic-style", action="store_true")
-    p_lint.add_argument("--output")
+    for lint_alias in ("pre-submission-lint", "lint-submission"):
+        p_lint = sub.add_parser(lint_alias, help="Lint TeX manuscript bundle")
+        p_lint.add_argument("tex_pos", nargs="?")
+        p_lint.add_argument("--tex", dest="tex_opt")
+        p_lint.add_argument("--venue", default="iclr")
+        p_lint.add_argument("--phase", choices=["submission", "rebuttal", "camera_ready"], default="submission")
+        p_lint.add_argument("--contribution-type", "--track", dest="contribution_type", default="general_empirical")
+        p_lint.add_argument("--no-blind", action="store_true")
+        p_lint.add_argument("--pdf")
+        p_lint.add_argument("--ceg")
+        p_lint.add_argument("--require-ceg-binding", action="store_true")
+        p_lint.add_argument("--check-academic-style", action="store_true")
+        p_lint.add_argument("--output")
 
-    for sb_alias in ("sanitize-blind", "double-blind-sanitize"):
+    for sb_alias in ("sanitize-blind", "double-blind-sanitize", "sanitize-submission"):
         p_san = sub.add_parser(sb_alias, help="Scan manuscript for double-blind anonymity leaks")
         p_san.add_argument("target_pos", nargs="?")
         p_san.add_argument("--target", dest="target_opt")
         p_san.add_argument("--forbidden-token", action="append", default=[])
 
-    p_ltx = sub.add_parser("receipt-to-latex", help="Render booktabs LaTeX table from JSON spec or research artifact")
-    p_ltx.add_argument("input_pos", nargs="?")
-    p_ltx.add_argument("--input", dest="input_opt")
-    p_ltx.add_argument("--from-research", choices=["extraction", "results", "comparison"])
-    p_ltx.add_argument("--left-extraction")
-    p_ltx.add_argument("--right-extraction")
-    p_ltx.add_argument("--output")
-    p_ltx.add_argument("--caption")
-    p_ltx.add_argument("--label")
+    for ltx_alias in ("receipt-to-latex", "generate-table"):
+        p_ltx = sub.add_parser(ltx_alias, help="Render booktabs LaTeX table from JSON spec or research artifact")
+        p_ltx.add_argument("input_pos", nargs="?")
+        p_ltx.add_argument("--input", dest="input_opt")
+        p_ltx.add_argument("--from-research", choices=["extraction", "results", "comparison"])
+        p_ltx.add_argument("--left-extraction")
+        p_ltx.add_argument("--right-extraction")
+        p_ltx.add_argument("--output")
+        p_ltx.add_argument("--caption")
+        p_ltx.add_argument("--label")
 
-    p_vt = sub.add_parser("venue-template", help="List venue contracts, scaffold workspace, verify styles, or export CEG anchors")
-    p_vt.add_argument("--list", action="store_true")
-    p_vt.add_argument("--action", choices=["list-venues", "scaffold", "verify-styles", "export-ceg-anchors"], default="list-venues")
-    p_vt.add_argument("--workspace-dir")
-    p_vt.add_argument("--slug")
-    p_vt.add_argument("--venue", default="iclr")
-    p_vt.add_argument("--year", type=int, default=2027)
-    p_vt.add_argument("--contribution-type", default="general_empirical")
-    p_vt.add_argument("--force", action="store_true")
-    p_vt.add_argument("--manuscript-dir")
-    p_vt.add_argument("--ceg")
+    for vt_alias in ("venue-template", "check-venue"):
+        p_vt = sub.add_parser(vt_alias, help="List venue contracts, scaffold workspace, verify styles, or export CEG anchors")
+        p_vt.add_argument("--list", "--list-venues", dest="list", action="store_true")
+        p_vt.add_argument("--action", choices=["list-venues", "scaffold", "verify-styles", "export-ceg-anchors"], default="list-venues")
+        p_vt.add_argument("--workspace-dir")
+        p_vt.add_argument("--slug")
+        p_vt.add_argument("--venue", default="iclr")
+        p_vt.add_argument("--year", type=int, default=2027)
+        p_vt.add_argument("--contribution-type", default="general_empirical")
+        p_vt.add_argument("--force", action="store_true")
+        p_vt.add_argument("--manuscript-dir")
+        p_vt.add_argument("--ceg", "--export-ceg-anchors", dest="ceg")
 
     p_rc = sub.add_parser("repro-checklist", help="Adjudicate 14-stage reproducibility checklist")
     p_rc.add_argument("input_pos", nargs="?")
@@ -291,13 +296,16 @@ def main(argv: list[str] | None = None) -> int:
 
     p_rw = sub.add_parser("retraction-watch", help="SQLite-backed DOI retraction delta watcher")
     p_rw.add_argument("--watchlist")
-    p_rw.add_argument("--db", "--state", dest="db", default=":memory:")
+    p_rw.add_argument("--dois", help="comma-separated DOI list alternative to --watchlist")
+    p_rw.add_argument("--db", "--state", "--state-db", dest="db", default=":memory:")
+    p_rw.add_argument("--import-legacy-json")
     p_rw.add_argument("--live", "--run", dest="live", action="store_true")
     p_rw.add_argument("--self-test", action="store_true")
 
     p_lw = sub.add_parser("literature-watch", help="SQLite-backed bounded incremental literature watcher")
     p_lw.add_argument("--watchlist")
-    p_lw.add_argument("--db", "--state", dest="db", default=":memory:")
+    p_lw.add_argument("--db", "--state", "--state-db", dest="db", default=":memory:")
+    p_lw.add_argument("--import-legacy-json")
     p_lw.add_argument("--live", "--run", dest="live", action="store_true")
     p_lw.add_argument("--days", type=int, default=7)
     p_lw.add_argument("--self-test", action="store_true")
@@ -324,14 +332,15 @@ def main(argv: list[str] | None = None) -> int:
     p_or.add_argument("--forum-id", "--forum", dest="forum_id")
     p_or.add_argument("--input-json")
     p_or.add_argument("--mirror-json", "--mirror", dest="mirror_json")
-    p_or.add_argument("--venue-stats")
+    p_or.add_argument("--venue-stats", "--venue-summary", dest="venue_stats")
     p_or.add_argument("--topic-regex")
 
     p_oa = sub.add_parser("locate-oa", help="Locate open-access full text")
     p_oa.add_argument("identifier", nargs="?")
     p_oa.add_argument("--doi")
     p_oa.add_argument("--arxiv")
-    p_oa.add_argument("--email", default="local@localhost")
+    p_oa.add_argument("--email", default=None)
+    p_oa.add_argument("--fallback-openalex", action="store_true")
 
     p_res = sub.add_parser("research", help="Prepare/finish/replay/compare/skill paper research workflow")
     rsub = p_res.add_subparsers(dest="step", required=True)
@@ -373,7 +382,7 @@ def main(argv: list[str] | None = None) -> int:
         from importlib import resources
         from ._stdlib import normalize_doi, normalize_identifier, safe_path, thaw
 
-        if cmd == "verify-source":
+        if cmd in ("verify-source", "verify-work"):
             modes = sum([bool(args.normalize_only), bool(args.check_updates), bool(args.verify_pdf)])
             if modes > 1:
                 raise ValueError("--normalize-only, --check-updates, and --verify-pdf are mutually exclusive")
@@ -442,10 +451,10 @@ def main(argv: list[str] | None = None) -> int:
             _emit_json(out)
             return 0 if out.get("consistent") is not False else 1
 
-        if cmd == "pre-submission-lint":
+        if cmd in ("pre-submission-lint", "lint-submission"):
             tex_target = args.tex_opt or args.tex_pos
             if not tex_target:
-                raise ValueError("pre-submission-lint requires a positional TeX path or --tex")
+                raise ValueError(f"{cmd} requires a positional TeX path or --tex")
             psl = _mod("pre_submission_linter")
             out = thaw(
                 psl.lint_manuscript(
@@ -467,7 +476,7 @@ def main(argv: list[str] | None = None) -> int:
             _emit_json(out)
             return 0 if out["passed"] else 1
 
-        if cmd in ("sanitize-blind", "double-blind-sanitize"):
+        if cmd in ("sanitize-blind", "double-blind-sanitize", "sanitize-submission"):
             target = args.target_opt or args.target_pos
             if not target:
                 raise ValueError(f"{cmd} requires a target path or --target")
@@ -477,10 +486,10 @@ def main(argv: list[str] | None = None) -> int:
             has_leaks = bool(out.get("findings")) or out.get("status") not in ("clean", "ok")
             return 1 if has_leaks else 0
 
-        if cmd == "receipt-to-latex":
+        if cmd in ("receipt-to-latex", "generate-table"):
             src_in = args.input_opt or args.input_pos
             if not src_in:
-                raise ValueError("receipt-to-latex requires an input path or --input")
+                raise ValueError(f"{cmd} requires an input path or --input")
             rlt = _mod("receipt_to_latex_table")
             in_path = safe_path(src_in)
             raw_bytes = in_path.read_bytes()
@@ -511,9 +520,9 @@ def main(argv: list[str] | None = None) -> int:
             print(tex_str)
             return 0
 
-        if cmd == "venue-template":
+        if cmd in ("venue-template", "check-venue"):
             vtm = _mod("venue_template_manager")
-            act = "list-venues" if args.list else args.action
+            act = "list-venues" if args.list else ("export-ceg-anchors" if (args.ceg and args.action == "list-venues") else args.action)
             if act == "list-venues":
                 _emit_json(vtm.list_venues())
                 return 0
@@ -542,10 +551,16 @@ def main(argv: list[str] | None = None) -> int:
 
         if cmd == "repro-checklist":
             rc_in = args.input_opt or args.input_pos
-            if not rc_in:
-                raise ValueError("repro-checklist requires an input file path or --input")
             rc = _mod("repro_checklist")
-            checklist = json.loads(safe_path(rc_in).read_text("utf-8"))
+            if not rc_in or rc_in == "-":
+                if sys.stdin is None or sys.stdin.isatty():
+                    raise ValueError("repro-checklist requires an input file path, --input, or piped JSON on stdin")
+                raw_stdin = sys.stdin.read(10 * 1024 * 1024 + 1)
+                if len(raw_stdin) > 10 * 1024 * 1024:
+                    raise ValueError("repro-checklist stdin exceeds 10 MiB limit")
+                checklist = json.loads(raw_stdin)
+            else:
+                checklist = json.loads(safe_path(rc_in).read_text("utf-8"))
             if args.evidence_receipt:
                 ev = json.loads(safe_path(args.evidence_receipt).read_text("utf-8"))
                 checklist = rc.merge_evidence_receipt(checklist, ev)
@@ -560,6 +575,17 @@ def main(argv: list[str] | None = None) -> int:
 
         if cmd == "retraction-watch":
             wmod = _mod("watch")
+            if args.db != ":memory:" and str(args.db).lower().endswith(".json"):
+                raise ValueError("v3.0.0 uses SQLite state (--state-db watch.sqlite3); migrate legacy JSON once with --import-legacy-json")
+            if args.import_legacy_json:
+                from .state_db import ResearchStateDB
+
+                legacy_data = json.loads(safe_path(args.import_legacy_json, must_exist=True).read_text("utf-8"))
+                with ResearchStateDB(args.db) as db:
+                    mig = db.import_legacy_watch_json("retraction", legacy_data)
+                if not args.self_test and not args.watchlist and not args.dois:
+                    _emit_json(mig)
+                    return 0
             if args.self_test:
                 rep = wmod.check_retraction_report(
                     ["10.1000/selftest"],
@@ -568,14 +594,28 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 _emit_json({"self_test": "passed" if len(rep["deltas"]) == 1 else "failed", "report": rep})
                 return 0 if len(rep["deltas"]) == 1 else 1
-            if not args.watchlist:
-                raise ValueError("retraction-watch requires --watchlist (or --self-test)")
-            wl = wmod.load_watchlist(args.watchlist)
-            _emit_json(wmod.check_retraction_report(wl["dois"], db_path=args.db, live=args.live))
+            if args.dois:
+                doi_list = [d.strip() for d in args.dois.split(",") if d.strip()]
+            elif args.watchlist:
+                doi_list = wmod.load_watchlist(args.watchlist)["dois"]
+            else:
+                raise ValueError("retraction-watch requires --watchlist, --dois, --import-legacy-json, or --self-test")
+            _emit_json(wmod.check_retraction_report(doi_list, db_path=args.db, live=args.live))
             return 0
 
         if cmd == "literature-watch":
             wmod = _mod("watch")
+            if args.db != ":memory:" and str(args.db).lower().endswith(".json"):
+                raise ValueError("v3.0.0 uses SQLite state (--state-db watch.sqlite3); migrate legacy JSON once with --import-legacy-json")
+            if args.import_legacy_json:
+                from .state_db import ResearchStateDB
+
+                legacy_data = json.loads(safe_path(args.import_legacy_json, must_exist=True).read_text("utf-8"))
+                with ResearchStateDB(args.db) as db:
+                    mig = db.import_legacy_watch_json("literature", legacy_data)
+                if not args.self_test and not args.watchlist:
+                    _emit_json(mig)
+                    return 0
             if args.self_test:
                 rep = wmod.run_literature_watch(
                     {"dois": [], "topics": ["test"], "authors": []},
@@ -705,14 +745,9 @@ def main(argv: list[str] | None = None) -> int:
             if not raw_target:
                 raise ValueError("locate-oa requires an identifier, --doi, or --arxiv")
             norm = normalize_identifier(raw_target if not args.arxiv else f"arxiv:{args.arxiv}")
-            if norm["type"] == "doi":
-                _emit_json(loa.live_unpaywall(norm["value"], args.email))
-                return 0
-            if norm["type"] == "arxiv":
-                _emit_json({"identifier": norm, "oa_url": f"https://arxiv.org/pdf/{norm['value']}.pdf", "is_oa": True})
-                return 0
-            _emit_json({"identifier": norm, "is_oa": False})
-            return 1
+            rc_oa, rep_oa = loa.resolve_oa(norm, email=args.email, fallback_openalex=bool(args.fallback_openalex))
+            _emit_json(rep_oa)
+            return 0 if rc_oa in (0, 2) else rc_oa
 
         if cmd == "research":
             from .research import analysis, sources

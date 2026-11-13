@@ -307,26 +307,10 @@ def verify_style_directory(manuscript_dir: str | Path, specs_path: str | Path | 
     return manifest
 
 
-def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
-    """Read-only export of all CEG claims with support/contradiction status and CEG SHA-256 fingerprint."""
-    p = Path(ceg_path)
-    cur = p
-    while True:
-        if _is_link_or_reparse(cur):
-            raise ValueError(f"CEG path cannot be a symlink or junction: {cur}")
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    if p.exists() and not p.is_file():
-        raise ValueError(f"CEG path must be a regular file: {p}")
-    if not p.is_file():
-        raise FileNotFoundError(f"CEG file not found: {p}")
-    raw_bytes = p.read_bytes()
-    ceg_sha256 = hashlib.sha256(raw_bytes).hexdigest()
-    data = json.loads(raw_bytes.decode("utf-8"))
+def validate_ceg_semantics(data: Any) -> dict[str, Any]:
+    """Semantic & referential closure validator for Claim-Evidence Graphs (shared by MCP & linter)."""
     if not isinstance(data, dict):
-        raise ValueError("CEG file must be a JSON object")
-
+        raise ValueError("CEG must be a JSON object")
     ceg_root = data.get("ceg") if isinstance(data.get("ceg"), dict) else data
     raw_claims = ceg_root.get("claims")
     raw_edges = (
@@ -347,9 +331,10 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
             )
         )
     )
+    raw_relations = ceg_root.get("claim_relations")
 
-    # Normalize claims
     claims_by_id: dict[str, dict[str, Any]] = {}
+    semantic_errors: list[str] = []
     if isinstance(raw_claims, dict):
         for cid, cobj in raw_claims.items():
             if not isinstance(cobj, dict):
@@ -379,16 +364,30 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
     else:
         raise ValueError("CEG must contain a 'claims' list or object")
 
-    # Normalize evidence IDs if an evidence collection is present
     known_evidence_ids: set[str] | None = None
     if isinstance(raw_evidence, dict):
-        known_evidence_ids = {str(k).strip() for k in raw_evidence.keys() if str(k).strip()}
+        known_evidence_ids = set()
+        for k in raw_evidence.keys():
+            ks = str(k).strip()
+            if not ks:
+                semantic_errors.append("Empty evidence_anchor key")
+            elif ks in known_evidence_ids:
+                semantic_errors.append(f"Duplicate evidence_id in CEG: {ks!r}")
+            else:
+                known_evidence_ids.add(ks)
     elif isinstance(raw_evidence, list):
-        known_evidence_ids = {
-            str(e.get("id") or e.get("evidence_id")).strip()
-            for e in raw_evidence
-            if isinstance(e, dict) and str(e.get("id") or e.get("evidence_id") or "").strip()
-        }
+        known_evidence_ids = set()
+        for idx_e, e in enumerate(raw_evidence):
+            if not isinstance(e, dict):
+                semantic_errors.append(f"evidence_anchors[{idx_e}] must be an object")
+                continue
+            ks = str(e.get("id") or e.get("evidence_id") or "").strip()
+            if not ks:
+                semantic_errors.append(f"evidence_anchors[{idx_e}] missing id")
+            elif ks in known_evidence_ids:
+                semantic_errors.append(f"Duplicate evidence_id in CEG: {ks!r}")
+            else:
+                known_evidence_ids.add(ks)
 
     pos_by_claim: dict[str, list[dict[str, Any]]] = {cid: [] for cid in claims_by_id}
     neg_by_claim: dict[str, list[dict[str, Any]]] = {cid: [] for cid in claims_by_id}
@@ -403,9 +402,10 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
                 raise ValueError(f"edges[{idx}] must be an object")
             cid = str(edge.get("claim_id") or edge.get("target_claim_id") or edge.get("target") or "").strip()
             ev_id = str(edge.get("evidence_id") or edge.get("source_id") or edge.get("source") or "").strip()
-            if not cid or cid not in claims_by_id:
+            claim_missing = (not cid) or (cid not in claims_by_id)
+            if claim_missing:
                 dangling_edges.append({"edge_index": idx, "reason": "unknown_claim_id", "claim_id": cid or None})
-                continue
+                semantic_errors.append(f"dangling support edge[{idx}]: unknown claim_id {cid!r}")
             endpoint_problem = None
             if not ev_id:
                 endpoint_problem = "missing_evidence_id"
@@ -417,10 +417,14 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
                 dangling_edges.append({
                     "edge_index": idx,
                     "reason": endpoint_problem,
-                    "claim_id": cid,
+                    "claim_id": cid or None,
                     "evidence_id": ev_id or None,
                 })
-                unresolved_by_claim[cid] += 1
+                semantic_errors.append(f"dangling support edge[{idx}]: {endpoint_problem} {ev_id!r}")
+                if not claim_missing:
+                    unresolved_by_claim[cid] += 1
+                continue
+            if claim_missing:
                 continue
             status = str(
                 edge.get("support_status")
@@ -434,15 +438,66 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
             else:
                 unresolved_by_claim[cid] += 1
 
+    dep_adj: dict[str, set[str]] = {}
+    if isinstance(raw_relations, list):
+        for idx_r, rel in enumerate(raw_relations):
+            if not isinstance(rel, dict):
+                semantic_errors.append(f"claim_relations[{idx_r}] must be an object")
+                continue
+            sc = str(rel.get("source_claim_id") or rel.get("src_claim_id") or "").strip()
+            tc = str(rel.get("target_claim_id") or rel.get("dst_claim_id") or "").strip()
+            rtype = str(rel.get("relation_type") or rel.get("relation") or "").strip()
+            if not sc or sc not in claims_by_id:
+                semantic_errors.append(f"dangling claim_relations[{idx_r}]: unknown source_claim_id {sc!r}")
+            if not tc or tc not in claims_by_id:
+                semantic_errors.append(f"dangling claim_relations[{idx_r}]: unknown target_claim_id {tc!r}")
+            if sc and sc == tc and rtype in ("contradicts", "depends_on", "entails", "refines"):
+                semantic_errors.append(f"claim_relations[{idx_r}]: self-loop {rtype} on {sc!r}")
+            elif sc in claims_by_id and tc in claims_by_id and rtype in ("depends_on", "entails", "refines"):
+                dep_adj.setdefault(sc, set()).add(tc)
+            ev_refs = rel.get("evidence_refs")
+            if isinstance(ev_refs, list) and known_evidence_ids is not None:
+                for er in ev_refs:
+                    ers = str(er).strip()
+                    if not ers or ers not in known_evidence_ids:
+                        semantic_errors.append(f"dangling claim_relations[{idx_r}] evidence_ref: {ers!r}")
+
+    # Iterative cycle detection across directed claim dependency relations
+    color: dict[str, int] = {}
+    for start_c in sorted(dep_adj):
+        if color.get(start_c, 0) != 0:
+            continue
+        stack_c: list[tuple[str, list[str], int]] = [(start_c, sorted(dep_adj.get(start_c, ())), 0)]
+        color[start_c] = 1
+        while stack_c:
+            cur_c, nbrs, idx_n = stack_c[-1]
+            if idx_n >= len(nbrs):
+                color[cur_c] = 2
+                stack_c.pop()
+                continue
+            stack_c[-1] = (cur_c, nbrs, idx_n + 1)
+            nxt_c = nbrs[idx_n]
+            st_c = color.get(nxt_c, 0)
+            if st_c == 1:
+                semantic_errors.append(f"claim_relations cycle detected involving {cur_c!r} -> {nxt_c!r}")
+                break
+            if st_c == 0:
+                color[nxt_c] = 1
+                stack_c.append((nxt_c, sorted(dep_adj.get(nxt_c, ())), 0))
+
+    has_graph_errors = bool(semantic_errors)
     anchors: list[dict[str, Any]] = []
     for cid, cobj in claims_by_id.items():
         raw_txt = str(cobj.get("text") or cobj.get("statement") or "").strip()
         norm_txt = " ".join(raw_txt.split()).rstrip(".").strip()
-        c_status = str(cobj.get("support_status") or cobj.get("status") or "").strip().lower()
+        meta_c = cobj.get("metadata") if isinstance(cobj.get("metadata"), dict) else {}
+        c_status = str(cobj.get("support_status") or cobj.get("status") or meta_c.get("status") or "").strip().lower()
         pos_cnt = len(pos_by_claim.get(cid, ()))
         neg_cnt = len(neg_by_claim.get(cid, ()))
         unres_cnt = unresolved_by_claim.get(cid, 0)
-        if neg_cnt > 0 or c_status in ("conflicted", "contested", "contradicted", "refuted"):
+        if has_graph_errors:
+            anchor_status = "invalid_graph"
+        elif neg_cnt > 0 or c_status in ("conflicted", "contested", "contradicted", "refuted"):
             anchor_status = "conflicted"
         elif pos_cnt > 0 and norm_txt and unres_cnt == 0 and c_status not in ("unverifiable", "out_of_scope"):
             anchor_status = "eligible"
@@ -460,12 +515,44 @@ def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
         })
 
     return {
-        "schema_version": "1.0.0",
-        "ceg_sha256": ceg_sha256,
         "total_claims": len(anchors),
         "eligible_count": sum(1 for a in anchors if a["anchor_status"] == "eligible"),
         "conflicted_count": sum(1 for a in anchors if a["anchor_status"] == "conflicted"),
         "unsupported_count": sum(1 for a in anchors if a["anchor_status"] == "unsupported"),
         "dangling_edges": dangling_edges,
+        "semantic_errors": semantic_errors,
         "anchors": anchors,
+    }
+
+
+def export_ceg_anchors(ceg_path: str | Path) -> dict[str, Any]:
+    """Read-only export of all CEG claims with support/contradiction status and CEG SHA-256 fingerprint."""
+    p = Path(ceg_path)
+    cur = p
+    while True:
+        if _is_link_or_reparse(cur):
+            raise ValueError(f"CEG path cannot be a symlink or junction: {cur}")
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    if p.exists() and not p.is_file():
+        raise ValueError(f"CEG path must be a regular file: {p}")
+    if not p.is_file():
+        raise FileNotFoundError(f"CEG file not found: {p}")
+    raw_bytes = p.read_bytes()
+    ceg_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+    data = json.loads(raw_bytes.decode("utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("CEG file must be a JSON object")
+    rep = validate_ceg_semantics(data)
+    return {
+        "schema_version": "1.0.0",
+        "ceg_sha256": ceg_sha256,
+        "total_claims": rep["total_claims"],
+        "eligible_count": rep["eligible_count"],
+        "conflicted_count": rep["conflicted_count"],
+        "unsupported_count": rep["unsupported_count"],
+        "dangling_edges": rep["dangling_edges"],
+        "semantic_errors": rep["semantic_errors"],
+        "anchors": rep["anchors"],
     }

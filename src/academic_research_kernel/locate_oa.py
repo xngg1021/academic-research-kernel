@@ -179,15 +179,109 @@ def _build_openalex_report(doi: str, oa_work: dict, mode: str) -> tuple[int, dic
     locations = pick_openalex_oa_locations(oa_work)
     oa_meta = oa_work.get('open_access') if isinstance(oa_work.get('open_access'), dict) else {}
     is_oa = bool(oa_meta.get('is_oa') or locations)
+    loc0 = locations[0] if locations else None
     report = {
         'doi': doi,
+        'identifier': {'type': 'doi', 'value': doi, 'normalized': doi},
         'status': 'ok',
         'mode': mode,
         'is_oa': is_oa,
-        'location': locations[0] if locations else None,
+        'oa_url': (loc0.get('url_for_pdf') or loc0.get('url')) if loc0 else oa_meta.get('oa_url'),
+        'location': loc0,
         'alternate_locations': locations,
         'fallback_order': FALLBACK_ORDER,
     }
     if not locations:
         report['note'] = 'OpenAlex 未定位到直链 OA 版本，不证明不存在。'
     return 0, report
+
+
+def resolve_oa(identifier_norm: dict, email: str | None = None, *, fallback_openalex: bool = False) -> tuple[int, dict]:
+    """Normalized OA locator respecting explicit --email > UNPAYWALL_EMAIL env > OpenAlex fallback."""
+    id_type = identifier_norm.get('type')
+    val = str(identifier_norm.get('value') or identifier_norm.get('normalized') or '')
+    if id_type == 'arxiv':
+        pdf_url = f'https://arxiv.org/pdf/{val}.pdf'
+        abs_url = f'https://arxiv.org/abs/{val}'
+        loc = {
+            'url_for_pdf': pdf_url,
+            'url': abs_url,
+            'version': 'submittedVersion',
+            'host_type': 'repository',
+            'license': None,
+            'source': 'arXiv',
+        }
+        return 0, {
+            'identifier': identifier_norm,
+            'status': 'ok',
+            'mode': 'arxiv-direct',
+            'is_oa': True,
+            'oa_url': pdf_url,
+            'location': loc,
+        }
+    if id_type != 'doi':
+        return 1, {
+            'identifier': identifier_norm,
+            'status': 'unsupported',
+            'mode': 'none',
+            'is_oa': False,
+            'oa_url': None,
+            'location': None,
+        }
+    clean_doi = _normalize_doi(val)
+    eff_email = (email.strip() if isinstance(email, str) and email.strip() else '') or os.environ.get('UNPAYWALL_EMAIL', '').strip()
+    unpaywall_err: str | None = None
+    if eff_email:
+        try:
+            rec = live_unpaywall(clean_doi, eff_email)
+        except Exception as exc:
+            unpaywall_err = f"{type(exc).__name__}: {exc}"
+            rec = None
+        if isinstance(rec, dict):
+            loc = pick_oa_location(rec)
+            is_oa = bool(rec.get('is_oa') and loc is not None)
+            if not is_oa and fallback_openalex:
+                rc_fb, rep_fb = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-fallback')
+                rep_fb['identifier'] = identifier_norm
+                return rc_fb, rep_fb
+            return 0, {
+                'doi': clean_doi,
+                'identifier': identifier_norm,
+                'status': 'ok',
+                'mode': 'unpaywall-live',
+                'is_oa': is_oa,
+                'oa_url': (loc.get('url_for_pdf') or loc.get('url')) if loc else None,
+                'location': loc,
+                'oa_status': rec.get('oa_status'),
+            }
+        if fallback_openalex:
+            rc_fb, rep_fb = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-fallback')
+            rep_fb['identifier'] = identifier_norm
+            if unpaywall_err:
+                rep_fb['unpaywall_error'] = unpaywall_err
+            return rc_fb, rep_fb
+        return 1, {
+            'doi': clean_doi,
+            'identifier': identifier_norm,
+            'status': 'failed',
+            'mode': 'unpaywall-live',
+            'is_oa': False,
+            'oa_url': None,
+            'location': None,
+            'error': unpaywall_err or 'Unpaywall response was not a JSON object',
+        }
+    if fallback_openalex:
+        rc_oa, rep_oa = _build_openalex_report(clean_doi, live_openalex_oa(clean_doi), 'openalex-live')
+        rep_oa['identifier'] = identifier_norm
+        return rc_oa, rep_oa
+    return 2, {
+        'doi': clean_doi,
+        'identifier': identifier_norm,
+        'status': 'skipped',
+        'mode': 'offline-no-email',
+        'is_oa': None,
+        'oa_url': None,
+        'location': None,
+        'reason': 'UNPAYWALL_EMAIL is not configured and --email / --fallback-openalex was not provided',
+        'fallback_order': FALLBACK_ORDER,
+    }

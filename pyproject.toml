@@ -19,7 +19,7 @@ academic-research-kernel = "academic_research_kernel.cli:main"
 
 [project.optional-dependencies]
 research = ["pypdf==7.0.0", "fonttools==4.65.0"]
-qa = ["pytest>=8,<10", "build>=1.2,<2"]
+qa = ["pytest>=8,<10", "build>=1.2,<2", "twine>=6,<7", "pyyaml>=6,<7"]
 
 [tool.hatch.version]
 path = "src/academic_research_kernel/_version.py"
@@ -33,11 +33,16 @@ only-include = [
     "tests",
     "skills",
     "pyproject.toml",
+    "uv.lock",
+    "requirements-qa.txt",
     "plugin.json",
     "mcp.json",
     "server.json",
     "SLL-APPLICATION.json",
     "README.md",
+    "README.zh-CN.md",
+    "CHANGELOG.md",
+    "REPOSITORY-IDENTITY.md",
     "LICENSE",
     "LICENSE-APPLICATION.md",
     "LICENSE-HISTORY.md",

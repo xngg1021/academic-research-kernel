@@ -138,6 +138,18 @@ def _arrays(yi, vi) -> tuple[np.ndarray, np.ndarray]:
     return y, v
 
 
+def _scaled_inverse_weights(v_arr: np.ndarray) -> tuple[np.ndarray, float]:
+    """Scale variances by v_min before inversion so extreme positive variances (e.g. 1e-320) never overflow."""
+    v_min = float(np.min(v_arr))
+    if not (v_min > 0.0 and math.isfinite(v_min)):
+        raise ValueError("Study variances must be strictly positive and finite")
+    w_rel = v_min / v_arr
+    w_rel_sum = float(np.sum(w_rel))
+    if not (w_rel_sum > 0.0 and math.isfinite(w_rel_sum)):
+        raise ValueError("Scaled study weights failed finite-sum check")
+    return w_rel, v_min
+
+
 def heterogeneity(yi, vi) -> tuple[float, int, float, float]:
     """Cochran's Q、自由度、I²(0–1)与 DL 法 τ²。
 
@@ -146,13 +158,30 @@ def heterogeneity(yi, vi) -> tuple[float, int, float, float]:
     τ² = max(0, (Q - df) / C),C = Σw - Σw²/Σw(DerSimonian–Laird)。
     """
     y, v = _arrays(yi, vi)
-    w = 1.0 / v
-    theta_f = float(np.sum(w * y) / np.sum(w))
-    q = float(np.sum(w * (y - theta_f) ** 2))
+    w_rel, v_min = _scaled_inverse_weights(v)
+    w_rel_sum = float(np.sum(w_rel))
+    p_norm = w_rel / w_rel_sum
+    theta_f = float(np.sum(p_norm * y))
+    if not math.isfinite(theta_f):
+        raise ValueError("Weighted fixed-effect mean overflowed float64")
+    # Q = sum(((y_i - theta_f) / sqrt(v_i))^2) avoids premature squaring overflow
+    with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
+        z_resid = (y - theta_f) / np.sqrt(v)
+        q_raw = float(np.sum(z_resid * z_resid))
+    if not math.isfinite(q_raw):
+        raise ValueError("Cochran's Q overflowed float64 range for extreme study variances")
+    q = max(0.0, q_raw)
     df = y.size - 1
     i2 = max(0.0, (q - df) / q) if q > 0 else 0.0
-    c = float(np.sum(w) - np.sum(w ** 2) / np.sum(w))
-    tau2 = max(0.0, (q - df) / c) if (c > 0 and df > 0) else 0.0
+    # Positive complement (1 - p_i) = sum_{j != i} p_j prevents catastrophic cancellation when one study dominates
+    if p_norm.size <= 128:
+        comp = np.array([float(np.sum(np.delete(p_norm, idx))) for idx in range(p_norm.size)], dtype=float)
+    else:
+        comp = np.maximum(0.0, 1.0 - p_norm)
+    c_rel = float(np.sum(w_rel * comp))
+    tau2 = max(0.0, ((q - df) * v_min) / c_rel) if (c_rel > 0 and df > 0) else 0.0
+    if not math.isfinite(tau2):
+        raise ValueError("DerSimonian-Laird tau2 is non-finite")
     return q, df, i2, tau2
 
 
@@ -160,13 +189,18 @@ def _pool(yi, vi, model: str) -> PoolResult:
     y, v = _arrays(yi, vi)
     q, df, i2, tau2 = heterogeneity(y, v)
     extra = tau2 if model == 'random' else 0.0
-    w = 1.0 / (v + extra)
-    est = float(np.sum(w * y) / np.sum(w))
-    se = math.sqrt(1.0 / float(np.sum(w)))
+    v_eff = v + extra
+    w_rel, v_min = _scaled_inverse_weights(v_eff)
+    w_rel_sum = float(np.sum(w_rel))
+    norm_weights = w_rel / w_rel_sum
+    est = float(np.sum(norm_weights * y))
+    se = math.sqrt(v_min / w_rel_sum)
+    if not (math.isfinite(est) and math.isfinite(se)):
+        raise ValueError("Pooled meta-analysis estimate or standard error is non-finite")
     z = stats.norm.ppf(0.975)
     return PoolResult(estimate=est, se=se, ci_low=est - z * se, ci_high=est + z * se,
                       q=q, df=df, i2=i2, tau2=tau2, k=y.size, model=model,
-                      weights=(w / np.sum(w)).tolist())
+                      weights=norm_weights.tolist())
 
 
 def pool_fixed(yi, vi) -> PoolResult:
@@ -177,6 +211,9 @@ def pool_fixed(yi, vi) -> PoolResult:
 def pool_random(yi, vi) -> PoolResult:
     """随机效应合并(DL τ²):权重 w* = 1/(v + τ²)。τ² = 0 时退化为固定效应。"""
     return _pool(yi, vi, 'random')
+
+
+pool_dl = pool_random
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +334,8 @@ def egger_test(yi, vi) -> tuple[float, float, float]:
     mse = float(np.sum(resid ** 2)) / df
     se_intercept = math.sqrt(mse * float(np.sum(precision ** 2)) /
                              (y.size * float(np.sum((precision - precision.mean()) ** 2))))
+    if se_intercept == 0.0 or not math.isfinite(se_intercept):
+        raise ValueError("Egger regression residual variance is zero or non-finite; t-statistic undefined")
     t = intercept / se_intercept
     p = 2.0 * float(stats.t.sf(abs(t), df))
     return float(intercept), float(t), p

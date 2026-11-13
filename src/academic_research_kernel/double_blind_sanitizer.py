@@ -198,7 +198,7 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
 
 
 def _extract_xmp_entries(xmp_xml: str) -> list[tuple[str, str]]:
-    """Parse XMP XML packet and return (field_key, text_value) pairs for all elements, tails, and attributes."""
+    """Parse XMP XML packet and return (ancestor_path_key, text_value) pairs preserving container semantics."""
     cleaned = xmp_xml.strip()
     if not cleaned:
         raise ValueError("Empty XMP metadata stream")
@@ -207,82 +207,40 @@ def _extract_xmp_entries(xmp_xml: str) -> list[tuple[str, str]]:
         raise ValueError("XMP metadata stream contains no XML root")
     root = ET.fromstring(cleaned)
     entries: list[tuple[str, str]] = []
-    for elem in root.iter():
+
+    def _walk_elem(elem: ET.Element, prefix: str) -> None:
         local_tag = elem.tag.split("}", 1)[-1] if "}" in elem.tag else elem.tag
+        cur_key = f"{prefix}/{local_tag}" if prefix else f"xmp:{local_tag}"
         if elem.text and elem.text.strip():
-            entries.append((f"xmp:{local_tag}", elem.text.strip()))
+            entries.append((cur_key, elem.text.strip()))
         if elem.tail and elem.tail.strip():
-            entries.append((f"xmp:{local_tag}#tail", elem.tail.strip()))
+            entries.append((f"{cur_key}#tail", elem.tail.strip()))
         for attr_k, attr_v in elem.attrib.items():
             local_attr = attr_k.split("}", 1)[-1] if "}" in attr_k else attr_k
             if attr_v and attr_v.strip():
-                entries.append((f"xmp:{local_tag}@{local_attr}", attr_v.strip()))
+                entries.append((f"{cur_key}@{local_attr}", attr_v.strip()))
+        for child in list(elem):
+            _walk_elem(child, cur_key)
+
+    _walk_elem(root, "")
     return entries
 
 
 def _scan_pdf_file(pdf_path: Path, rel_path: str, forbidden_tokens: list[str] | None = None) -> tuple[list[dict], bool]:
-    """Scan all PDF metadata string fields, full XMP XML stream, and extracted page text using pypdf or fitz."""
-    findings: list[dict] = []
-    meta_author = ""
-    meta_dict: dict[str, Any] = {}
-    xmp_xml = ""
-    has_xmp_stream = False
-    page_texts: list[str] | None = None
+    """Scan all PDF metadata string fields, full XMP XML stream, and extracted page text via isolated subprocess worker."""
+    from .research.sources import controlled_read_pdf_pages
 
+    findings: list[dict] = []
     try:
-        from pypdf import PdfReader  # type: ignore
-        reader = PdfReader(str(pdf_path))
-        raw_meta = reader.metadata or {}
-        for k, v in raw_meta.items():
-            if v is not None:
-                meta_dict[str(k)] = str(v)
-        meta_author = str(raw_meta.get("/Author") or raw_meta.get("Author") or "").strip()
-        root_obj = reader.trailer.get("/Root") if reader.trailer else None
-        if root_obj is not None:
-            if hasattr(root_obj, "get_object"):
-                root_obj = root_obj.get_object()
-            if isinstance(root_obj, dict) and "/Metadata" in root_obj:
-                has_xmp_stream = True
-                m_obj = root_obj["/Metadata"]
-                if hasattr(m_obj, "get_object"):
-                    m_obj = m_obj.get_object()
-                raw_xmp = m_obj.get_data()
-                xmp_xml = raw_xmp.decode("utf-8", errors="strict") if isinstance(raw_xmp, bytes) else str(raw_xmp)
-        if not has_xmp_stream:
-            xmp = getattr(reader, "xmp_metadata", None)
-            if xmp is not None:
-                has_xmp_stream = True
-                stream_obj = getattr(xmp, "stream", None)
-                if stream_obj is not None and hasattr(stream_obj, "get_data"):
-                    raw_xmp = stream_obj.get_data()
-                    xmp_xml = raw_xmp.decode("utf-8", errors="strict") if isinstance(raw_xmp, bytes) else str(raw_xmp)
-        page_texts = [(p.extract_text() or "") for p in reader.pages]
-    except ImportError:
-        try:
-            import fitz  # type: ignore
-            doc = fitz.open(str(pdf_path))
-            try:
-                raw_meta = doc.metadata or {}
-                for k, v in raw_meta.items():
-                    if v is not None:
-                        meta_dict[str(k)] = str(v)
-                meta_author = str(raw_meta.get("author") or "").strip()
-                cat_xref = doc.pdf_catalog() if hasattr(doc, "pdf_catalog") else 0
-                if cat_xref and hasattr(doc, "xref_get_key"):
-                    k_type, k_val = doc.xref_get_key(cat_xref, "Metadata")
-                    if k_type not in ("null", "none", "") and k_val not in ("null", ""):
-                        has_xmp_stream = True
-                if hasattr(doc, "get_xml_metadata"):
-                    xmp_xml = str(doc.get_xml_metadata() or "")
-                    if xmp_xml.strip():
-                        has_xmp_stream = True
-                page_texts = [(doc[i].get_text("text") or "") for i in range(len(doc))]
-            finally:
-                doc.close()
-        except ImportError:
-            return [], False
-        except Exception:
-            return [], False
+        res = controlled_read_pdf_pages(pdf_path, max_pages=500, timeout_sec=20.0)
+        raw_meta = res.get("metadata") or {}
+        meta_dict: dict[str, Any] = {str(k): str(v) for k, v in raw_meta.items() if v is not None}
+        meta_author = str(
+            meta_dict.get("Author") or meta_dict.get("/Author") or meta_dict.get("author") or ""
+        ).strip()
+        has_xmp_stream = bool(res.get("has_xmp_stream"))
+        xmp_xml = str(res.get("xmp_xml") or "")
+        page_texts: list[str] | None = list(res.get("pages") or [])
     except Exception:
         return [], False
 

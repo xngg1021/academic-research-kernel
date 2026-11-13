@@ -130,20 +130,28 @@ def check_retraction_report(
 
             try:
                 oa = _fetch_json(f"{OPENALEX_BASE}/works/https://doi.org/{quote(doi, safe='')}")
-                raw_oa_ret = oa.get("is_retracted")
-                if isinstance(raw_oa_ret, bool):
-                    oa_flag = raw_oa_ret
+                if not isinstance(oa, dict) or not isinstance(oa.get("is_retracted"), bool):
+                    oa_err = "openalex: invalid_response: missing boolean is_retracted"
+                else:
+                    oa_flag = oa["is_retracted"]
             except Exception as exc:
                 oa_err = f"openalex: {type(exc).__name__}: {exc}"
 
             try:
                 cr = _fetch_json(f"{CROSSREF_BASE}/works?filter=updates:{quote(doi, safe='')}&rows={int(rows)}")
-                msg = cr.get("message") if isinstance(cr.get("message"), dict) else None
-                if msg is not None and isinstance(msg.get("items"), list):
+                msg = cr.get("message") if isinstance(cr, dict) and isinstance(cr.get("message"), dict) else None
+                tot = msg.get("total-results") if msg is not None else None
+                if (
+                    msg is None
+                    or not isinstance(msg.get("items"), list)
+                    or not isinstance(tot, int)
+                    or isinstance(tot, bool)
+                ):
+                    cr_err = "crossref: invalid_response: missing message.items or integer total-results"
+                else:
                     items = msg["items"]
                     sigs, has_ret_upd = classify_crossref_updates(items, doi)
-                    tot = msg.get("total-results")
-                    if isinstance(tot, int) and tot > len(items):
+                    if tot > len(items):
                         is_truncated = True
                         truncated_dois.append(doi)
             except Exception as exc:
@@ -156,7 +164,7 @@ def check_retraction_report(
 
             if oa_flag is True or has_ret_upd:
                 obs_status = "retracted"
-            elif oa_flag is False and cr_err is None:
+            elif oa_flag is False and cr_err is None and not is_truncated:
                 obs_status = "not_retracted"
             else:
                 obs_status = "unknown"
@@ -167,6 +175,7 @@ def check_retraction_report(
                 seq=seq,
                 status=obs_status,
                 signals=sigs,
+                signals_complete=(cr_err is None and not is_truncated),
                 truncated=is_truncated,
                 error=err_msg,
             )

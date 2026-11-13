@@ -44,12 +44,13 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
-      - run: python -m pip install 'PyYAML>=6,<7'
       - name: Resolve explicit release target on main
         id: target
         shell: bash
+        env:
+          PYTHONPATH: src
         run: |
-          python scripts/verify_release_assets.py --validate-target --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT"
+          python -m academic_research_kernel.release_gate --validate-target --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.target.outputs.commit }}
@@ -63,16 +64,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_COMMIT: ${{ steps.target.outputs.commit }}
+          PYTHONPATH: src
         run: |
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release-input"
           args=("$RUNNER_TEMP/release-input" --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --dist "$RUNNER_TEMP/verified-dist" --pypi-upload-dir "$RUNNER_TEMP/pypi-upload" --github-output "$GITHUB_OUTPUT")
           if [[ "$VERIFY_ONLY" == "true" ]]; then args+=(--verify-only); fi
-          python scripts/verify_release_assets.py "${args[@]}"
+          python -m academic_research_kernel.release_gate "${args[@]}"
       - name: Validate the verified package bytes
         shell: bash
+        env:
+          PYTHONPATH: src
         run: |
           uv run --frozen --extra qa --no-editable python -m twine check --strict "$RUNNER_TEMP"/verified-dist/*
-          python scripts/package_acceptance.py --dist "$RUNNER_TEMP/verified-dist" --uvx
+          python -m academic_research_kernel.release_gate --package-acceptance --dist "$RUNNER_TEMP/verified-dist"
       - name: Publish missing files with PyPI Trusted Publishing
         if: inputs.verify_only == false && steps.assets.outputs.upload_count != '0'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
@@ -83,17 +87,13 @@ jobs:
         env:
           RELEASE_COMMIT: ${{ steps.target.outputs.commit }}
         run: |
-          # The publisher writes .github/.tmp in its checkout. Verify clean source
-          # in a distinct immutable worktree without excluding any source paths.
           git worktree add --detach "$RUNNER_TEMP/public-source" "$RELEASE_COMMIT"
-          # Only reads are retried here. Each attempt gets new empty staging
-          # directories; existing same-hash files never trigger another upload.
           for attempt in 1 2 3; do
-            if python scripts/verify_release_assets.py "$RUNNER_TEMP/release-input" --repo "$RUNNER_TEMP/public-source" --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --dist "$RUNNER_TEMP/public-verified-$attempt" --pypi-upload-dir "$RUNNER_TEMP/public-plan-$attempt" --verify-only; then
+            if PYTHONPATH="$RUNNER_TEMP/public-source/src" python -m academic_research_kernel.release_gate "$RUNNER_TEMP/release-input" --repo "$RUNNER_TEMP/public-source" --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --dist "$RUNNER_TEMP/public-verified-$attempt" --pypi-upload-dir "$RUNNER_TEMP/public-plan-$attempt" --verify-only; then
               break
             fi
             if [[ "$attempt" == 3 ]]; then exit 1; fi
             sleep "$((attempt * 5))"
           done
           unset PYTHONPATH PYTHONHOME VIRTUAL_ENV
-          uv run --no-cache --no-project --python 3.12 --with "academic-research-kernel==$RELEASE_VERSION" python -I scripts/distribution_smoke.py --expected-version "$RELEASE_VERSION" -- uvx --no-cache --python 3.12 "academic-research-kernel@$RELEASE_VERSION"
+          uv run --no-cache --no-project --python 3.12 --with "academic-research-kernel==$RELEASE_VERSION" python -I -m academic_research_kernel.release_gate --distribution-smoke --expected-version "$RELEASE_VERSION" -- uvx --no-cache --python 3.12 "academic-research-kernel@$RELEASE_VERSION"

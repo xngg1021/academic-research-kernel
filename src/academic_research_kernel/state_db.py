@@ -315,11 +315,21 @@ CREATE TABLE IF NOT EXISTS doi_watch_state (
     signals_json TEXT NOT NULL DEFAULT '[]',
     reserved_seq INTEGER NOT NULL DEFAULT 0 CHECK (reserved_seq >= 0),
     applied_seq INTEGER NOT NULL DEFAULT 0 CHECK (applied_seq >= 0),
+    confirmed_seq INTEGER NOT NULL DEFAULT 0 CHECK (confirmed_seq >= 0),
     observation_version INTEGER NOT NULL DEFAULT 0 CHECK (observation_version >= 0),
     truncated INTEGER NOT NULL DEFAULT 0 CHECK (truncated IN (0, 1)),
     last_error TEXT,
     unacked_delta_json TEXT,
     PRIMARY KEY (watcher, item_key)
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS doi_watch_commits (
+    watcher TEXT NOT NULL CHECK (length(trim(watcher)) > 0),
+    item_key TEXT NOT NULL CHECK (length(trim(item_key)) > 0),
+    seq INTEGER NOT NULL CHECK (seq >= 1),
+    commit_digest TEXT NOT NULL CHECK (length(commit_digest) = 64 AND commit_digest NOT GLOB '*[^0-9a-f]*'),
+    snapshot_json TEXT NOT NULL CHECK (length(snapshot_json) >= 2),
+    PRIMARY KEY (watcher, item_key, seq)
 ) STRICT;
 """
 
@@ -404,6 +414,12 @@ class ResearchStateDB:
                                 stmt_buf = ""
                         if stmt_buf.strip():
                             conn.execute(stmt_buf)
+                        cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(doi_watch_state)").fetchall()}
+                        if "confirmed_seq" not in cols:
+                            conn.execute("ALTER TABLE doi_watch_state ADD COLUMN confirmed_seq INTEGER NOT NULL DEFAULT 0")
+                            conn.execute(
+                                "UPDATE doi_watch_state SET confirmed_seq = applied_seq WHERE confirmed_retracted IS NOT NULL AND confirmed_seq = 0"
+                            )
                         conn.execute("COMMIT")
                     except BaseException:
                         if conn.in_transaction:
@@ -983,6 +999,7 @@ class ResearchStateDB:
         seq: int,
         status: str,
         signals: Iterable[str] = (),
+        signals_complete: bool = True,
         truncated: bool = False,
         error: Optional[str] = None,
     ) -> Mapping[str, Any]:
@@ -991,51 +1008,100 @@ class ResearchStateDB:
         k = normalize_doi(item_key) if w == "retraction" else _require_str_id(item_key, "item_key")
         if not k:
             raise ValueError("Watch item_key must be non-empty")
+        if isinstance(seq, bool) or not isinstance(seq, int) or seq < 1:
+            raise ValueError(f"Watch observation seq must be a positive integer, got {seq!r}")
         if status not in ("retracted", "not_retracted", "unknown"):
             raise ValueError(f"Invalid watch observation status: {status!r}")
         sig_list = sorted({str(s) for s in signals if str(s).strip()})
         sig_json = canonical_json(sig_list)
         trunc_int = 1 if truncated else 0
+        commit_digest = sha256_hex(
+            canonical_json(
+                {
+                    "status": status,
+                    "signals": sig_list,
+                    "signals_complete": bool(signals_complete),
+                    "truncated": bool(truncated),
+                }
+            )
+        )
 
         with self.transaction() as conn:
+            prior_commit = conn.execute(
+                "SELECT commit_digest, snapshot_json FROM doi_watch_commits WHERE watcher = ? AND item_key = ? AND seq = ?",
+                (w, k, seq),
+            ).fetchone()
+            if prior_commit is not None:
+                if str(prior_commit["commit_digest"]) != commit_digest:
+                    raise ValueError(
+                        f"Conflicting watch observation replay for ({w!r}, {k!r}, seq={seq})"
+                    )
+                idem = json.loads(str(prior_commit["snapshot_json"]))
+                idem["changed"] = False
+                return freeze(idem)
+
             prev = conn.execute(
                 """
                 SELECT current_status, confirmed_retracted, signals_json, reserved_seq, applied_seq,
-                       observation_version, unacked_delta_json
+                       confirmed_seq, observation_version, truncated, last_error, unacked_delta_json
                 FROM doi_watch_state WHERE watcher = ? AND item_key = ?
                 """,
                 (w, k),
             ).fetchone()
 
-            if prev is not None and seq < int(prev["applied_seq"]):
-                # Stale out-of-order network response: preserve newer committed state untouched
-                conf = prev["confirmed_retracted"]
-                return freeze({
+            prev_applied = int(prev["applied_seq"]) if prev is not None else 0
+            prev_conf_seq = int(prev["confirmed_seq"]) if prev is not None else 0
+            prev_conf = prev["confirmed_retracted"] if prev is not None else None
+            prev_sigs_list = json.loads(str(prev["signals_json"])) if prev is not None else []
+            prev_sigs = canonical_json(prev_sigs_list)
+            prev_ver = int(prev["observation_version"]) if prev is not None else 0
+            prev_unacked = prev["unacked_delta_json"] if prev is not None else None
+            prev_status = str(prev["current_status"]) if prev is not None else "unknown"
+
+            is_stale = (status == "unknown" and seq < prev_applied) or (
+                status != "unknown" and seq < prev_conf_seq
+            )
+            if prev is not None and is_stale:
+                stale_obj = {
                     "doi": k,
                     "changed": False,
                     "stale_ignored": True,
-                    "status": str(prev["current_status"]),
-                    "is_retracted": bool(conf) if conf is not None else None,
-                    "version": int(prev["observation_version"]),
-                    "signals": json.loads(prev["signals_json"]),
-                    "truncated": truncated,
-                })
+                    "status": prev_status,
+                    "is_retracted": bool(prev_conf) if prev_conf is not None else None,
+                    "version": prev_ver,
+                    "signals": prev_sigs_list,
+                    "truncated": bool(trunc_int),
+                }
+                conn.execute(
+                    "INSERT INTO doi_watch_commits (watcher, item_key, seq, commit_digest, snapshot_json) VALUES (?, ?, ?, ?, ?)",
+                    (w, k, seq, commit_digest, canonical_json(stale_obj)),
+                )
+                return freeze(stale_obj)
 
-            prev_conf = prev["confirmed_retracted"] if prev is not None else None
-            prev_sigs = str(prev["signals_json"]) if prev is not None else "[]"
-            prev_ver = int(prev["observation_version"]) if prev is not None else 0
-            prev_unacked = prev["unacked_delta_json"] if prev is not None else None
-
+            new_applied = max(prev_applied, seq)
+            eff_trunc = int(prev["truncated"]) if (prev is not None and seq < prev_applied) else trunc_int
+            eff_error = prev["last_error"] if (prev is not None and seq < prev_applied) else error
             if status == "unknown":
                 # Offline or unavailable observation: NEVER overwrite confirmed_retracted or prior signals
                 new_conf = prev_conf
-                new_sigs = prev_sigs
-                changed = False
-                new_ver = prev_ver
+                new_conf_seq = prev_conf_seq
+                merged_sigs = sorted(set(prev_sigs_list) | set(sig_list)) if sig_list else prev_sigs_list
+                new_sigs = canonical_json(merged_sigs)
+                new_current_status = "unknown"
+                changed = new_sigs != prev_sigs
+                new_ver = prev_ver + 1 if changed else prev_ver
             else:
                 obs_flag = 1 if status == "retracted" else 0
+                # If a newer unknown observation already arrived (seq < prev_applied), keep current_status='unknown'
+                # while recording the newly confirmed historical truth at confirmed_seq = seq and preserving newer diagnostics.
+                new_current_status = prev_status if seq < prev_applied else status
                 new_conf = obs_flag
-                new_sigs = sig_json
+                new_conf_seq = max(prev_conf_seq, seq)
+                if seq < prev_applied or not signals_complete:
+                    merged_sigs = sorted(set(prev_sigs_list) | set(sig_list))
+                else:
+                    merged_sigs = sig_list
+                new_sigs = canonical_json(merged_sigs)
                 changed = (prev_conf is None) or (int(prev_conf) != obs_flag) or (prev_sigs != new_sigs)
                 new_ver = prev_ver + 1 if (changed or prev_ver == 0) else prev_ver
 
@@ -1043,12 +1109,12 @@ class ResearchStateDB:
                 "doi": k,
                 "changed": changed,
                 "stale_ignored": False,
-                "status": status,
+                "status": new_current_status,
                 "is_retracted": bool(new_conf) if new_conf is not None else None,
                 "version": new_ver,
                 "signals": json.loads(new_sigs),
-                "truncated": bool(trunc_int),
-                "error": error,
+                "truncated": bool(eff_trunc),
+                "error": eff_error,
             }
             new_unacked = canonical_json(delta_obj) if changed else prev_unacked
             new_reserved = max(seq, int(prev["reserved_seq"]) if prev is not None else seq)
@@ -1057,20 +1123,28 @@ class ResearchStateDB:
                 """
                 INSERT INTO doi_watch_state (
                     watcher, item_key, current_status, confirmed_retracted, signals_json,
-                    reserved_seq, applied_seq, observation_version, truncated, last_error, unacked_delta_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    reserved_seq, applied_seq, confirmed_seq, observation_version, truncated, last_error, unacked_delta_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(watcher, item_key) DO UPDATE SET
                     current_status = excluded.current_status,
                     confirmed_retracted = excluded.confirmed_retracted,
                     signals_json = excluded.signals_json,
                     reserved_seq = excluded.reserved_seq,
                     applied_seq = excluded.applied_seq,
+                    confirmed_seq = excluded.confirmed_seq,
                     observation_version = excluded.observation_version,
                     truncated = excluded.truncated,
                     last_error = excluded.last_error,
                     unacked_delta_json = excluded.unacked_delta_json
                 """,
-                (w, k, status, new_conf, new_sigs, new_reserved, seq, new_ver, trunc_int, error, new_unacked),
+                (
+                    w, k, new_current_status, new_conf, new_sigs,
+                    new_reserved, new_applied, new_conf_seq, new_ver, eff_trunc, eff_error, new_unacked,
+                ),
+            )
+            conn.execute(
+                "INSERT INTO doi_watch_commits (watcher, item_key, seq, commit_digest, snapshot_json) VALUES (?, ?, ?, ?, ?)",
+                (w, k, seq, commit_digest, canonical_json(delta_obj)),
             )
             return freeze(delta_obj)
 
@@ -1104,8 +1178,40 @@ class ResearchStateDB:
             self.drain_unacked_watch_deltas(watcher, [doi])
         return res
 
+    def import_legacy_watch_json(self, watcher: str, legacy_payload: Mapping[str, Any]) -> dict[str, Any]:
+        """One-time migration helper importing v2.4.x JSON watch state into SQLite STRICT tables."""
+        w = _require_str_id(watcher, "watcher")
+        imported = 0
+        with self.transaction():
+            if w == "retraction":
+                items = legacy_payload.get("dois") or legacy_payload.get("items") or legacy_payload
+                if isinstance(items, Mapping):
+                    for raw_doi, entry in items.items():
+                        if raw_doi in ("schema_version", "updated_at", "watcher") or not isinstance(entry, Mapping):
+                            continue
+                        is_ret = entry.get("is_retracted")
+                        sigs = entry.get("signals") or []
+                        seq = self.reserve_watch_seq("retraction", str(raw_doi))
+                        st = "unknown" if is_ret is None else ("retracted" if bool(is_ret) else "not_retracted")
+                        self.commit_watch_observation("retraction", str(raw_doi), seq=seq, status=st, signals=sigs)
+                        self.drain_unacked_watch_deltas("retraction", [str(raw_doi)])
+                        imported += 1
+            else:
+                seen_list = legacy_payload.get("seen_ids") or legacy_payload.get("seen") or []
+                if isinstance(seen_list, Mapping):
+                    seen_list = list(seen_list.keys())
+                for raw_id in seen_list:
+                    sid = str(raw_id).strip()
+                    if not sid:
+                        continue
+                    seq = self.reserve_watch_seq(w, sid)
+                    self.commit_watch_observation(w, sid, seq=seq, status="not_retracted", signals=["legacy_import"])
+                    self.drain_unacked_watch_deltas(w, [sid])
+                    imported += 1
+        return {"watcher": w, "imported_count": imported}
+
     def export_ceg_dict(self) -> dict[str, Any]:
-        """Export complete authoritative Claim-Evidence Graph in one consistent read snapshot."""
+        """Export complete authoritative Claim-Evidence Graph in canonical claim-evidence-graph-1.0 format."""
         with self._read_snapshot() as conn:
             c_rows = conn.execute("SELECT * FROM claims ORDER BY claim_id").fetchall()
             ev_rows = conn.execute("SELECT * FROM claim_evidence ORDER BY claim_id, artifact_id, locator").fetchall()
@@ -1113,51 +1219,78 @@ class ResearchStateDB:
 
         claims = []
         for r in c_rows:
+            raw_meta = json.loads(str(r["metadata_json"]))
+            meta_out = dict(raw_meta) if isinstance(raw_meta, dict) else {"value": raw_meta}
+            meta_out.setdefault("status", str(r["status"]))
+            txt = str(r["claim_text"])
             claims.append({
                 "id": str(r["claim_id"]),
-                "claim_id": str(r["claim_id"]),
-                "text": str(r["claim_text"]),
+                "text": txt,
+                "normalized_text": nfc_compact(txt),
+                "claim_type": str(meta_out.get("claim_type") or "generic_claim")
+                if meta_out.get("claim_type") in (
+                    "empirical_finding", "theoretical_claim", "benchmark_result", "methodological_assertion", "generic_claim"
+                )
+                else "generic_claim",
                 "claim_digest": str(r["claim_digest"]),
-                "status": str(r["status"]),
-                "support_status": str(r["status"]),
-                "metadata": json.loads(str(r["metadata_json"])),
+                "metadata": meta_out,
             })
 
         evidence_by_id: dict[str, dict[str, Any]] = {}
         support_edges = []
-        stance_to_support = {"supports": "supported", "contradicts": "contradicted", "qualifies": "unresolved"}
+        stance_to_support = {"supports": "supported", "contradicts": "contradicted", "qualifies": "partially_supported"}
         for r in ev_rows:
             art_s = str(r["artifact_id"])
             loc_s = str(r["locator"])
-            if art_s.startswith("results-") and loc_s:
-                ev_id = f"ev-quant-{loc_s}"
-            else:
-                ev_id = "ev-" + sha256_hex(f"{r['claim_id']}|{art_s}|{loc_s}")[:20]
+            ev_prefix = "ev-quant-" if art_s.startswith("results-") else "ev-"
+            ev_id = ev_prefix + sha256_hex(canonical_json([art_s, loc_s]))[:20]
             if ev_id not in evidence_by_id:
                 evidence_by_id[ev_id] = {
                     "id": ev_id,
-                    "evidence_id": ev_id,
-                    "artifact_id": art_s,
+                    "anchor_type": "evidence_receipt",
                     "locator": loc_s,
-                    "stance": str(r["stance"]),
+                    "metadata": {"artifact_id": art_s, "stance": str(r["stance"])},
                 }
             support_edges.append({
                 "evidence_id": ev_id,
                 "claim_id": str(r["claim_id"]),
-                "stance": str(r["stance"]),
                 "support_status": stance_to_support[str(r["stance"])],
             })
         evidence_anchors = list(evidence_by_id.values())
 
+        rel_map = {
+            "depends_on": "depends_on",
+            "supports": "entails",
+            "refines": "refines",
+            "contradicts": "contradicts",
+            "supersedes": "equivalent",
+        }
         claim_relations = [
-            {"src_claim_id": str(r["src_claim_id"]), "dst_claim_id": str(r["dst_claim_id"]), "relation": str(r["relation"])}
+            {
+                "source_claim_id": str(r["src_claim_id"]),
+                "target_claim_id": str(r["dst_claim_id"]),
+                "relation_type": rel_map.get(str(r["relation"]), "depends_on"),
+            }
             for r in ce_rows
         ]
-        return {
+        body_for_digest = {
+            "protocol": "claim-evidence-graph-1.0",
             "claims": claims,
             "evidence_anchors": evidence_anchors,
             "support_edges": support_edges,
-            "claim_edges": claim_relations,
+            "claim_relations": claim_relations,
+            "uncertainties": [],
+        }
+        g_digest = sha256_hex(canonical_json(body_for_digest))
+        return {
+            "protocol": "claim-evidence-graph-1.0",
+            "graph_id": f"ceg-{g_digest[:16]}",
+            "graph_digest": g_digest,
+            "claims": claims,
+            "evidence_anchors": evidence_anchors,
+            "support_edges": support_edges,
+            "claim_relations": claim_relations,
+            "uncertainties": [],
         }
 
     def snapshot_digest(self) -> str:
@@ -1172,6 +1305,7 @@ class ResearchStateDB:
             "decisions",
             "decision_events",
             "doi_watch_state",
+            "doi_watch_commits",
         )
         with self._read_snapshot() as conn:
             dump: dict[str, Any] = {"schema_version": ARK_SQLITE_USER_VERSION}

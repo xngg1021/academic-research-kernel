@@ -62,13 +62,40 @@ def _parse_semi_numbers(val) -> list[float]:
     return out
 
 
+def _parse_semi_slots(val: Any) -> list[Optional[float]]:
+    if isinstance(val, list):
+        out: list[Optional[float]] = []
+        for x in val:
+            if isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(float(x)):
+                out.append(float(x))
+            else:
+                out.append(None)
+        return out
+    if not isinstance(val, str) or not val.strip():
+        return []
+    out = []
+    for part in val.split(";"):
+        part = part.strip()
+        if not part:
+            out.append(None)
+            continue
+        try:
+            f = float(part)
+            out.append(f if math.isfinite(f) else None)
+        except ValueError:
+            out.append(None)
+    return out
+
+
 def _is_decision_note(note: dict) -> bool:
     invs = note.get("invitations")
     if isinstance(invs, list):
         inv_text = " ".join(str(x) for x in invs).lower()
     else:
         inv_text = str(note.get("invitation") or "").lower()
-    return "decision" in inv_text or "meta_review" in inv_text or "acceptance" in inv_text
+    if "meta_review" in inv_text or "metareview" in inv_text:
+        return False
+    return "decision" in inv_text or "acceptance" in inv_text
 
 
 def parse_mirror_record(rec: dict) -> dict:
@@ -100,15 +127,26 @@ def parse_mirror_record(rec: dict) -> dict:
         status = "unknown"
 
     ratings = _parse_semi_numbers(rec.get("rating"))
+    score_field = "rating"
+    if not ratings and rec.get("recommendation") is not None:
+        ratings = _parse_semi_numbers(rec.get("recommendation"))
+        if ratings:
+            score_field = "recommendation"
     confidences = _parse_semi_numbers(rec.get("confidence"))
     soundness = _parse_semi_numbers(rec.get("soundness"))
     contribution = _parse_semi_numbers(rec.get("contribution"))
     informativeness = _parse_semi_numbers(rec.get("informativeness"))
     presentation = _parse_semi_numbers(rec.get("presentation"))
+    clarity = _parse_semi_numbers(rec.get("clarity"))
+    quality = _parse_semi_numbers(rec.get("quality"))
+    significance = _parse_semi_numbers(rec.get("significance"))
+    originality = _parse_semi_numbers(rec.get("originality"))
     review_words = _parse_semi_numbers(rec.get("wc_review"))
     summary_words = _parse_semi_numbers(rec.get("wc_summary"))
     strengths_words = _parse_semi_numbers(rec.get("wc_strengths"))
     weaknesses_words = _parse_semi_numbers(rec.get("wc_weaknesses"))
+    sw_combined_words = _parse_semi_numbers(rec.get("wc_strengths_and_weaknesses"))
+    limitations_words = _parse_semi_numbers(rec.get("wc_limitations"))
     question_words = _parse_semi_numbers(rec.get("wc_questions"))
 
     has_rebuttal_field = ("wc_reply_authors" in rec and rec.get("wc_reply_authors") is not None) or (
@@ -145,6 +183,7 @@ def parse_mirror_record(rec: dict) -> dict:
         "status_classification": status,
         "completeness": completeness,
         "review_count": len(ratings),
+        "score_field": score_field,
         "ratings": ratings,
         "mean_rating": float(sum(ratings) / len(ratings)) if ratings else None,
         "confidences": confidences,
@@ -152,10 +191,16 @@ def parse_mirror_record(rec: dict) -> dict:
         "contribution": contribution,
         "informativeness": informativeness,
         "presentation": presentation,
+        "clarity": clarity,
+        "quality": quality,
+        "significance": significance,
+        "originality": originality,
         "review_word_counts": [int(x) for x in review_words],
         "summary_word_counts": [int(x) for x in summary_words],
         "strengths_word_counts": [int(x) for x in strengths_words],
         "weaknesses_word_counts": [int(x) for x in weaknesses_words],
+        "strengths_and_weaknesses_word_counts": [int(x) for x in sw_combined_words],
+        "limitations_word_counts": [int(x) for x in limitations_words],
         "question_word_counts": [int(x) for x in question_words],
         "author_rebuttal_word_counts": [int(x) for x in rebuttal_words],
         "reviewer_reply_word_counts": [int(x) for x in rev_reply_words],
@@ -177,7 +222,7 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
         raise ValueError(f"Forum ID {forum_id!r} not found in mirror list ({len(payload)} records)")
 
     if isinstance(payload, dict) and "notes" not in payload and (
-        "id" in payload or "openreview_forum" in payload or "rating" in payload
+        "id" in payload or "openreview_forum" in payload or "rating" in payload or "recommendation" in payload
     ):
         rec_fid = payload.get("id") or payload.get("openreview_forum")
         if forum_id and rec_fid and rec_fid != forum_id:
@@ -236,7 +281,7 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
     for n in raw_notes:
         if n.get("id") == fid:
             continue
-        if n.get("forum") and n.get("forum") != fid:
+        if fid and n.get("forum") != fid:
             continue
         c = n.get("content") if isinstance(n.get("content"), dict) else {}
         is_dec = _is_decision_note(n)
@@ -368,9 +413,18 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
         "presentation": [],
         "contribution": [],
         "informativeness": [],
+        "clarity": [],
+        "quality": [],
+        "significance": [],
+        "originality": [],
         "confidence": [],
     }
     wc_reviews_pos: list[float] = []
+    wc_by_conf: dict[int, list[float]] = {}
+    multi_rev_papers = 0
+    unanimous_papers = 0
+    reply_eligible_reviews = 0
+    zero_rev_reply_reviews = 0
 
     seen_ids = set()
     valid_submissions = 0
@@ -394,19 +448,45 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
         if area:
             area_cnt[area] += 1
         rats = _parse_semi_numbers(r.get("rating"))
+        if not rats and r.get("recommendation") is not None:
+            rats = _parse_semi_numbers(r.get("recommendation"))
         if rats:
             m = sum(rats) / len(rats)
             all_means.append(m)
             by_status.setdefault(st, []).append(m)
             for x in rats:
                 raw_hist[round(float(x), 4)] += 1
+            if len(rats) >= 2:
+                multi_rev_papers += 1
+                if len({round(float(x), 4) for x in rats}) == 1:
+                    unanimous_papers += 1
         for sk in sub_totals:
             vals_sk = _parse_semi_numbers(r.get(sk))
             if vals_sk:
                 sub_totals[sk].extend(vals_sk)
-        for wv in _parse_semi_numbers(r.get("wc_review")):
-            if wv > 0:
+        conf_slots = _parse_semi_slots(r.get("confidence"))
+        wc_slots = _parse_semi_slots(r.get("wc_review"))
+        if not any(x is not None and x > 0 for x in wc_slots):
+            sw_s = _parse_semi_slots(r.get("wc_strengths_and_weaknesses"))
+            lim_s = _parse_semi_slots(r.get("wc_limitations"))
+            if sw_s or lim_s:
+                wc_slots = [
+                    ((sw_s[i] or 0.0) + (lim_s[i] or 0.0))
+                    if ((i < len(sw_s) and sw_s[i] is not None) or (i < len(lim_s) and lim_s[i] is not None))
+                    else None
+                    for i in range(max(len(sw_s), len(lim_s)))
+                ]
+        for idx_w, wv in enumerate(wc_slots):
+            if wv is not None and wv > 0:
                 wc_reviews_pos.append(wv)
+                if idx_w < len(conf_slots) and conf_slots[idx_w] is not None:
+                    wc_by_conf.setdefault(int(round(conf_slots[idx_w])), []).append(wv)
+        if r.get("replies_avg") is not None and rats:
+            ravg = r.get("replies_avg")
+            if isinstance(ravg, list) and ravg and isinstance(ravg[0], (int, float)):
+                reply_eligible_reviews += 1
+                if float(ravg[0]) <= len(rats):
+                    zero_rev_reply_reviews += 1
         if topic_re:
             blob = f"{r.get('title', '')} {r.get('keywords', '')} {r.get('abstract', '')}"
             if topic_re.search(blob):
@@ -414,7 +494,7 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
                     "id": fid,
                     "title": r.get("title"),
                     "status": st,
-                    "rating": r.get("rating"),
+                    "rating": r.get("rating") if r.get("rating") is not None else r.get("recommendation"),
                     "mean_rating": round(sum(rats) / len(rats), 2) if rats else None,
                 })
 
@@ -457,6 +537,20 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
         "raw_rating_histogram": {f"{k:g}": v for k, v in sorted(raw_hist.items(), key=lambda kv: kv[0])},
         "subscore_means": subscore_means,
         "review_word_count_stats": wc_stats,
+        "review_forensics": {
+            "multi_review_submissions": multi_rev_papers,
+            "unanimous_identical_rating_count": unanimous_papers,
+            "unanimous_identical_rating_share": (
+                round(unanimous_papers / multi_rev_papers, 4) if multi_rev_papers else None
+            ),
+            "discussion_tracked_submissions": reply_eligible_reviews,
+            "zero_discussion_beyond_reviews_share": (
+                round(zero_rev_reply_reviews / reply_eligible_reviews, 4) if reply_eligible_reviews else None
+            ),
+            "word_count_median_by_confidence": {
+                str(k): round(statistics.median(v), 1) for k, v in sorted(wc_by_conf.items()) if v
+            },
+        },
         "top_primary_areas": area_cnt.most_common(10),
     }
     if topic_re:
@@ -480,11 +574,11 @@ def _find_local_mirror_fallback(forum_id: str, mirror_path: str | None = None) -
         for p in sorted(base_dir.glob("iclr2027_*.json"), reverse=True):
             if p not in candidates:
                 candidates.append(p)
-        for fn in ("iclr2027.json", "iclr2026.json", "iclr2025.json"):
+        for fn in ("iclr2027.json", "iclr2026.json", "iclr2025.json", "icml2026.json", "nips2025.json", "colm2025.json"):
             p = base_dir / fn
             if p.exists() and p not in candidates:
                 candidates.append(p)
-        for p in sorted(base_dir.glob("iclr*.json"), reverse=True):
+        for p in sorted(base_dir.glob("*.json"), reverse=True):
             if p not in candidates:
                 candidates.append(p)
     for raw_p in candidates:

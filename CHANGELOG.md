@@ -4,6 +4,29 @@
 
 ---
 
+## 3.0.0 — 2026-11-14 Occam pure-stdlib SQLite STRICT kernel, 5 first-principles skills, 22 MCP tools & cross-venue peer-review forensics
+
+- **Single-package pure-stdlib + SQLite `STRICT` / `WAL` architecture (`src/academic_research_kernel/`)**:
+  - Consolidated runtime logic from `72` scattered script files (`32,167` non-test Python lines in `2.4.2`) into a single installable package under `src/academic_research_kernel/` (`~14K` lines), eliminating `scripts/` wrapper indirection, custom JSON file locks, and optional `scfabric` hardware probes while preserving all `26` Draft 2020-12 JSON Schemas and all `5` `SLL-APPLICATION.json` preserved-MIT upstream files bit-for-bit.
+  - Introduced `ResearchStateDB` (`state_db.py`, `_stdlib.py`) backed by `sqlite3` `STRICT` tables, `WAL` mode, `SAVEPOINT` atomic batches, `application_id = 0x41524B33`, and `user_version = 3` (with explicit forward-version downgrade protection).
+  - Reduced CLI cold-import latency to `~25 ms` via PEP 562 lazy submodule loading in `cli.py` and `mcp_server.py`.
+- **Correctness, provenance & pre-submission gate hardening**:
+  - **CEG & inline lineage semantics (`mcp_server.py`, `venue_template_manager.py`, `state_db.py`)**: Enforced `validate_ceg_semantics` endpoint closure on `claim_evidence_validate` (accepting both `ceg` and `graph` inputs); derived exported CEG quantitative anchor IDs from `canonical_json([artifact_id, locator])` to prevent cross-artifact collisions; supported both `{edge_type, upstream_id, downstream_id}` and legacy `{type, source_id, target_id}` edges in `research_lineage_trace` while rejecting missing entities/activities and reporting `verification_status="unchecked"` on hashless inline graphs.
+  - **Dual-source retraction & watch state (`state_db.py`, `watch.py`)**: Separated `applied_seq` from `confirmed_seq` so late-arriving confirmed retractions still emit `unacked_delta` alerts after higher-sequence `unknown` timeouts, rejected conflicting same-sequence digests, preserved peer-provider signals (`openalex:` / `crossref:`) when one upstream source fails (`signals_complete=False`), validated Crossref `message.items` / `total-results` structure strictly, and added `--import-legacy-json` migration for `v2.4.x` JSON watch files.
+  - **Pre-submission LaTeX/PDF/BibTeX gate (`pre_submission_linter.py`, `double_blind_sanitizer.py`, `research/sources.py`)**: Routed all PDF page-limit and double-blind `/Info` + XMP scans through isolated `controlled_read_pdf_pages` worker subprocesses; counted shared prose+`References` transition pages toward main-body page limits; added braceless `\input file`, root-first nested `\input{sub/b}`, and line-preserving `verbatim`/`lstlisting`/`minted`/`comment` masking; scoped `.bib` checks strictly to declared `\bibliography` / `\addbibresource[...]{...}` files; exempted benign package `[final]` options (`microtype`, `hyperref`, `listings`, `graphicx`); restored `--check-academic-style` (`UNCITED_BIBLIOGRAPHY_ENTRY` with `crossref`/`xdata` closure and `OVERCLAIM_PHRASING`); and enforced per-line `% ark:claim=<ID>` numeric/lexical verification against `--ceg` (including escaped `12.5\%`).
+  - **Numerical stability & CLI contracts (`meta_core.py`, `locate_oa.py`, `cli.py`, `release_gate.py`)**: Scaled inverse-variance meta-analysis weights by `min(v_i) / v_i` to prevent `1e-320` overflow to `NaN`; guarded zero-residual `egger_test`; restored `--email` > `UNPAYWALL_EMAIL` > `--fallback-openalex` priority and structured `{identifier, status, mode, is_oa, oa_url, location}` output in `locate-oa`; restored piped `stdin` support in `repro-checklist`; and added self-contained `academic_research_kernel.release_gate` (`twine>=6,<7` locked in `qa`) plus reproducible `sdist` inclusions.
+- **First-principles skill consolidation (`11 -> 5` verb-object skills) & cross-venue OpenReview forensics**:
+  - Replaced `11` fragmented skill folders with `5` self-explanatory skills: `audit-paper`, `verify-citations`, `audit-peer-review`, `meta-analysis`, and `check-submission` (retaining `paper-research` fallback compatibility in `research skill`).
+  - Expanded `openreview_audit.py` to support ICLR (`2026` 10-point & `2027` 4-point + `informativeness`), ICML (`recommendation`), NeurIPS (`clarity`/`quality`/`originality` + `wc_strengths_and_weaknesses`), and COLM schemas plus `review_forensics` (`unanimous_identical_rating_share`, `word_count_median_by_confidence`, `zero_discussion_beyond_reviews_share`), publishing the 5-venue empirical receipt in `docs/benchmarks/peer-review-forensics-2025-2027-v1.json`.
+  - Removed `21` unmaintained minor-language README translations and obsolete `docs/i18n` + `docs/style` manifests, rewriting `README.md` and `README.zh-CN.md` around a 6-section practical workflow.
+- **`v2.4.x` -> `v3.0.0` CLI & State Migration Summary**:
+  - Legacy `python scripts/mcp_server.py` -> `academic-research-kernel mcp` (or `python -m academic_research_kernel.mcp_server`, **22** tools).
+  - Legacy `scripts/verify_release_assets.py` / `package_acceptance.py` / `distribution_smoke.py` -> `python -m academic_research_kernel.release_gate`.
+  - Legacy JSON watch state `--state watch.json` -> SQLite `--state-db watch.sqlite3` (one-time import via `--import-legacy-json watch.json`).
+  - Legacy CLI aliases consolidated: `verify-source` -> `verify-work`, `pre-submission-lint` -> `lint-submission`, `sanitize-blind` -> `sanitize-submission`, `receipt-to-latex` -> `generate-table`, `venue-template` -> `check-venue` (`meta-analyze` and `table-forensics` retained unchanged).
+
+---
+
 ## 2.4.2 — 2026-11-11 unified CEG anchor validation in pre-submission linter & 30-item real-world audit benchmark
 
 - **Unified CEG endpoint & dangling-edge validation in pre-submission linter (`skills/academic-writing/scripts/pre_submission_linter.py`, `venue_template_manager.py`, `skills/academic-writing/SKILL.md` `1.3.2`)**:
