@@ -150,5 +150,3 @@ def test_normalize_is_idempotent():
 def test_receipt_json_round_trip_is_stable():
     receipt = verdict(full_pass(**{'metric-diff': 'fail'}))
     assert json.loads(json.dumps(receipt, ensure_ascii=False)) == receipt
-
-
