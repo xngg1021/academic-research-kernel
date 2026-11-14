@@ -1,7 +1,7 @@
 {
   "schema": "ark-real-world-audit-benchmark/1.0",
-  "kernel_version": "2.4.2",
-  "snapshot_date_utc": "2026-11-11",
+  "kernel_version": "3.0.0",
+  "snapshot_date_utc": "2026-11-14",
   "summary": {
     "bibliographic_track": {
       "n": 16,
@@ -39,8 +39,8 @@
   },
   "known_limitations": [
     "S14 (Bakker & Wicherts 2011, t(15)=2.3, p=.033) is a documented false positive under point-statistic recomputation because recompute.py bounds p-value rounding intervals without varying the rounded input statistic across [2.25, 2.35).",
-    "Track 2 combines 12 published statistical examples/observations (PMC5101263, PMC3174372; S12 and S13 derive from the same APA Manual reporting example) with 2 repository-grounded partition/CEG gate cases (S07, S08).",
-    "Bibliographic offline replay verifies deterministic classification over frozen OpenAlex/Crossref API responses; pass --capture-live to re-query live upstream APIs."
+    "Track 2 combines 12 published statistical examples/observations across 11 distinct reported expressions (PMC5101263, PMC3174372; S12 and S13 evaluate t-test and CI facets of the same APA Manual reporting example) with 2 repository-grounded partition/CEG gate cases (S07, S08).",
+    "Bibliographic offline replay verifies deterministic classification over frozen OpenAlex/Crossref API snapshots; pass --capture-live to re-query live upstream APIs."
   ],
   "bibliographic_results": [
     {
@@ -395,14 +395,18 @@
       "id": "S08",
       "kind": "ceg_dangling_lint",
       "provenance_type": "constructed_gate_regression",
-      "source_doi": "skills/academic-writing/scripts/pre_submission_linter.py",
+      "source_doi": "src/academic_research_kernel/pre_submission_linter.py",
       "source_pmcid": null,
       "reported_expression": "support_status='supported' pointing to missing evidence_id='MISSING' with evidence=[]",
       "expected_defect": true,
       "detected_defect": true,
       "correct": true,
       "detail": {
-        "flagged_ungrounded": true
+        "flagged_ungrounded": true,
+        "codes": [
+          "CEG_DANGLING_EDGES",
+          "INVALID_CEG_BINDING"
+        ]
       }
     },
     {
@@ -2253,5 +2257,5 @@
       }
     }
   },
-  "content_sha256": "b99be3ba0c58256ca29a2150789bc6c2e15371098efd6ccd4e0ab41db288dc9f"
+  "content_sha256": "e8d2724ad66a84c79313c5508b4810b415eca527808285eaa26dfebc05922ff3"
 }

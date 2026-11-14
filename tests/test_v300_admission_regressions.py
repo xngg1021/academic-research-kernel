@@ -84,6 +84,9 @@ def test_p0_01_and_p2_06_release_gate_twine_and_sdist_completeness(tmp_path: Pat
 
 
 def test_p1_01_claim_evidence_validate_rejects_dangling_edges() -> None:
+    from academic_research_kernel._stdlib import canonical_json, nfc_compact, sha256_hex
+
+    c1_text = "Accuracy is 91.2%"
     base_ceg = {
         "protocol": "claim-evidence-graph-1.0",
         "graph_id": "g-test-1",
@@ -91,10 +94,10 @@ def test_p1_01_claim_evidence_validate_rejects_dangling_edges() -> None:
         "claims": [
             {
                 "id": "c1",
-                "text": "Accuracy is 91.2%",
-                "normalized_text": "Accuracy is 91.2%",
+                "text": c1_text,
+                "normalized_text": nfc_compact(c1_text),
                 "claim_type": "empirical_finding",
-                "claim_digest": "b" * 64,
+                "claim_digest": sha256_hex(nfc_compact(c1_text)),
             }
         ],
         "evidence_anchors": [{"id": "e1", "anchor_type": "table_cell", "locator": "Table 1"}],
@@ -113,9 +116,20 @@ def test_p1_01_claim_evidence_validate_rejects_dangling_edges() -> None:
         assert res["valid"] is False
         assert len(res["errors"]) >= 2
 
-    good_ceg = {
-        **base_ceg,
+    good_body = {
+        "protocol": "claim-evidence-graph-1.0",
+        "claims": base_ceg["claims"],
+        "evidence_anchors": base_ceg["evidence_anchors"],
         "support_edges": [{"claim_id": "c1", "evidence_id": "e1", "support_status": "supported"}],
+        "claim_relations": [],
+        "uncertainties": [],
+    }
+    gd = sha256_hex(canonical_json(good_body))
+    good_ceg = {
+        "protocol": "claim-evidence-graph-1.0",
+        "graph_id": f"ceg-{gd[:16]}",
+        "graph_digest": gd,
+        **good_body,
     }
     res_ok = mcp_server.handle_tool_call("claim_evidence_validate", {"ceg": good_ceg})
     assert res_ok["valid"] is True
@@ -622,8 +636,8 @@ Accuracy is 12.5\%.
 
     # 8. Astra-15: Verify peer-review-forensics-2025-2027-v1.json aggregate totals equal exact sum of venues
     bench = json.loads((ROOT / "docs" / "benchmarks" / "peer-review-forensics-2025-2027-v1.json").read_text(encoding="utf-8"))
-    assert sum(v["paper_count"] for v in bench["venues"]) == bench["aggregate_totals"]["total_public_records"] == 74933
-    assert sum(v["total_reviews"] for v in bench["venues"]) == bench["aggregate_totals"]["total_reviews"] == 234128
+    assert sum(v["paper_count"] for v in bench["venues"]) == bench["totals"]["total_unique_submissions"] == 75574
+    assert sum(v["total_reviews"] for v in bench["venues"]) == bench["totals"]["total_positive_reviews"] == 251800
 
 
 def test_restored_14_to_7_skill_capabilities_and_schemas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
@@ -665,8 +679,11 @@ def test_restored_14_to_7_skill_capabilities_and_schemas(tmp_path: Path, monkeyp
     assert c_contradict["reviewer"] == "seat-c"
     assert all(d["reviewer"] != d["target"] for d in mcp_cr["derangement_pairings"])
 
-    # Synthesis with replies: C01 conceded, singleton target_mod.py unrefuted -> preserved in unresolved_ledger; ghost discarded
-    replies = {c["challenge_id"]: "【CONCEDE】 Proposal-1 verified on line 10." for c in mcp_cr["challenge_plan"]}
+    # Synthesis with replies: C01 conceded (bound to bundle_sha256), singleton target_mod.py unrefuted -> preserved in unresolved_ledger; ghost discarded
+    replies = {
+        c["challenge_id"]: {"text": "【CONCEDE】 Proposal-1 verified on line 10.", "bundle_sha256": c["bundle_sha256"]}
+        for c in mcp_cr["challenge_plan"]
+    }
     mcp_syn = mcp_server.handle_tool_call(
         "academic_cross_review",
         {"findings_by_model": inline_findings, "mode": "standard", "challenge_replies": replies},
@@ -779,6 +796,7 @@ def test_restored_14_to_7_skill_capabilities_and_schemas(tmp_path: Path, monkeyp
 
     st_db = tmp_path / "ledger.sqlite3"
     ceg_out = tmp_path / "exported_ceg.json"
+    assert cli.main(["ledger", "--db", str(st_db), "--action", "register-artifact", "--artifact-id", "art1", "--artifact-kind", "computed_evidence", "--payload-json", '{"table": 1, "gain_pct": 5.1}']) == 0
     assert cli.main(["ledger", "--db", str(st_db), "--action", "add-claim", "--claim-id", "c1", "--text", "Gain is 5.1%.", "--artifact-id", "art1", "--locator", "Table 1"]) == 0
     assert cli.main(["ledger", "--db", str(st_db), "--action", "export-ceg", "--output", str(ceg_out)]) == 0
     assert cli.main(["ledger", "--db", str(st_db), "--action", "validate-ceg"]) == 0

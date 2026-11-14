@@ -40,5 +40,18 @@ PYTHONPATH=src python -m academic_research_kernel.release_gate --package-accepta
 For tagged GitHub Releases (`vX.Y.Z` on `main`), `.github/workflows/publish-pypi.yml` executes four deterministic gates through `academic_research_kernel.release_gate`:
 1. **`--validate-target`**: Confirms `vX.Y.Z` is an annotated Git tag whose commit is an ancestor of `origin/main`, matches `src/academic_research_kernel/_version.py`, and preserves every SHA-256 digest listed in `SLL-APPLICATION.json`.
 2. **Release bundle & PyPI idempotency planning**: Verifies `release-manifest.json`, `SHA256SUMS`, `server.json`, wheel (`26` schemas + portable skill), and sdist (`uv.lock`, `requirements-qa.txt`, `CHANGELOG.md`, `SLL-APPLICATION.json`). Queries PyPI's JSON API so already-published same-hash files are skipped cleanly while byte conflicts abort immediately.
-3. **`twine check --strict` + `--package-acceptance`**: Validates built distributions and exercises an out-of-tree wheel installation over real stdio JSON-RPC (`24` tools) before Trusted Publishing (`OIDC`).
+3. **`twine check --strict` + `--package-acceptance`**: Validates exact bidirectional source-file sets (`src/academic_research_kernel/**` + `skills/**`) and `RECORD` SHA-256 / `entry_points.txt` console scripts on both wheel and sdist, builds an independent wheel from the sdist, and exercises both isolated out-of-tree virtual environments (`venv-wheel` and `venv-sdist-wheel`) using the installed `academic-research-kernel` executable and stdio JSON-RPC (`24` tools) before Trusted Publishing (`OIDC`).
 4. **`--distribution-smoke`**: Verifies the live PyPI package via `uvx --no-cache` in a scrubbed temporary directory.
+
+---
+
+## `v2.4.2 -> v3.0.0` Breaking Changes, Compatibility Adapters & Retired Interfaces
+
+| Area | `v2.4.2` Legacy Surface | `v3.0.0` Behavior & Migration Contract |
+| --- | --- | --- |
+| Package & MCP server | `python scripts/mcp_server.py` (18 tools) | `academic-research-kernel mcp` (24 tools: all 18 legacy tool names preserved + 6 new tools). |
+| Statistical recompute | `target_power`, `sample_ratio`, `p_value_decimals`, `required-sample-size` | Fully supported in `academic_recompute_statistics` alongside `achieved_power_ttest` and `required_n_ttest`. |
+| Table rendering | `receipt-to-latex` JSON wrapper | `receipt-to-latex` emits legacy JSON (`{status, source_sha256, row_count, col_count, latex}`); `generate-table` emits raw booktabs TeX (`--format {auto,json,tex}`). |
+| Pre-submission lint | `hits` list on return dict | Returns both `findings` (canonical) and `hits` (legacy alias). |
+| State persistence | Multi-file JSON snapshots (`--state watch.json`, `research-artifact-envelope`, snapshot-dict trace) | Migrated to transactional SQLite `STRICT + WAL` (`--state-db`, `user_version = 4`). Import legacy JSON watch state once via `--import-legacy-json`; `research_receipt_verify` retains legacy `receipt_ref + content_payloads` compatibility. |
+| Compute probe & backend admission | Multi-file `scripts/scfabric/*` | Consolidated into `compute-probe --receipt [--measure-candidates]` and `academic_scfabric_hardware_probe` (`measure_candidates=true` runs paired numerical parity + material-gain admission; unmeasured external candidates are always marked `REFERENCE` / `unverified_external_candidate`). |

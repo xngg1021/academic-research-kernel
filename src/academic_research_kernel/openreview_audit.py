@@ -87,12 +87,20 @@ def _parse_semi_slots(val: Any) -> list[Optional[float]]:
     return out
 
 
-def _is_decision_note(note: dict) -> bool:
+def _note_inv_text(note: dict) -> str:
     invs = note.get("invitations")
     if isinstance(invs, list):
-        inv_text = " ".join(str(x) for x in invs).lower()
-    else:
-        inv_text = str(note.get("invitation") or "").lower()
+        return " ".join(str(x) for x in invs).lower()
+    return str(note.get("invitation") or "").lower()
+
+
+def _is_meta_review_note(note: dict) -> bool:
+    inv_text = _note_inv_text(note)
+    return "meta_review" in inv_text or "metareview" in inv_text
+
+
+def _is_decision_note(note: dict) -> bool:
+    inv_text = _note_inv_text(note)
     if "meta_review" in inv_text or "metareview" in inv_text:
         return False
     return "decision" in inv_text or "acceptance" in inv_text
@@ -273,6 +281,7 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
     presentation = []
     decisions = []
     reviewer_recommendations = []
+    meta_reviews: list[dict] = []
 
     root_dec = _unwrap(content.get("decision"))
     if isinstance(root_dec, str) and root_dec.strip():
@@ -284,7 +293,18 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
         if fid and n.get("forum") != fid:
             continue
         c = n.get("content") if isinstance(n.get("content"), dict) else {}
+        is_meta = _is_meta_review_note(n)
         is_dec = _is_decision_note(n)
+
+        if is_meta:
+            mr_rec = _unwrap(c.get("recommendation")) or _unwrap(c.get("decision")) or _unwrap(c.get("rating"))
+            mr_text = _unwrap(c.get("metareview")) or _unwrap(c.get("comment")) or _unwrap(c.get("summary"))
+            meta_reviews.append({
+                "id": n.get("id"),
+                "recommendation": str(mr_rec).strip() if mr_rec is not None else None,
+                "has_text": bool(isinstance(mr_text, str) and mr_text.strip()),
+            })
+            continue
 
         dec = _unwrap(c.get("decision"))
         if isinstance(dec, str) and dec.strip():
@@ -292,6 +312,12 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
                 decisions.append(dec.strip())
             else:
                 reviewer_recommendations.append(dec.strip())
+
+        if is_dec:
+            rec_dec = _unwrap(c.get("recommendation"))
+            if dec is None and isinstance(rec_dec, str) and rec_dec.strip():
+                decisions.append(rec_dec.strip())
+            continue
 
         rat = _unwrap(c.get("rating"))
         if rat is None:
@@ -383,6 +409,7 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
         "venue": venue,
         "venueid": venueid,
         "decisions": decisions,
+        "meta_reviews": meta_reviews,
         "reviewer_recommendations": reviewer_recommendations,
         "status_classification": status,
         "completeness": completeness,
@@ -421,6 +448,10 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
     }
     wc_reviews_pos: list[float] = []
     wc_by_conf: dict[int, list[float]] = {}
+    partial_wc_slots = 0
+    non_positive_rating_count = 0
+    non_positive_rating_papers = 0
+    raw_hist_all: Counter[float] = Counter()
     multi_rev_papers = 0
     unanimous_papers = 0
     reply_eligible_reviews = 0
@@ -447,9 +478,16 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
         area = str(r.get("primary_area") or "").strip()
         if area:
             area_cnt[area] += 1
-        rats = _parse_semi_numbers(r.get("rating"))
-        if not rats and r.get("recommendation") is not None:
-            rats = _parse_semi_numbers(r.get("recommendation"))
+        raw_rats = _parse_semi_numbers(r.get("rating"))
+        if not raw_rats and r.get("recommendation") is not None:
+            raw_rats = _parse_semi_numbers(r.get("recommendation"))
+        for x_all in raw_rats:
+            raw_hist_all[round(float(x_all), 4)] += 1
+        non_pos_here = [x for x in raw_rats if x <= 0]
+        if non_pos_here:
+            non_positive_rating_count += len(non_pos_here)
+            non_positive_rating_papers += 1
+        rats = [x for x in raw_rats if x > 0]
         if rats:
             m = sum(rats) / len(rats)
             all_means.append(m)
@@ -465,17 +503,26 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
             if vals_sk:
                 sub_totals[sk].extend(vals_sk)
         conf_slots = _parse_semi_slots(r.get("confidence"))
-        wc_slots = _parse_semi_slots(r.get("wc_review"))
-        if not any(x is not None and x > 0 for x in wc_slots):
-            sw_s = _parse_semi_slots(r.get("wc_strengths_and_weaknesses"))
-            lim_s = _parse_semi_slots(r.get("wc_limitations"))
-            if sw_s or lim_s:
-                wc_slots = [
-                    ((sw_s[i] or 0.0) + (lim_s[i] or 0.0))
-                    if ((i < len(sw_s) and sw_s[i] is not None) or (i < len(lim_s) and lim_s[i] is not None))
-                    else None
-                    for i in range(max(len(sw_s), len(lim_s)))
-                ]
+        raw_wc_slots = _parse_semi_slots(r.get("wc_review"))
+        sw_s = _parse_semi_slots(r.get("wc_strengths_and_weaknesses"))
+        lim_s = _parse_semi_slots(r.get("wc_limitations"))
+        expected_slots = max(len(rats), len(raw_wc_slots), len(sw_s), len(lim_s))
+        has_any_wc_field = bool(raw_wc_slots or sw_s or lim_s)
+        wc_slots: list[float | None] = []
+        if has_any_wc_field:
+            for i in range(expected_slots):
+                w_main = raw_wc_slots[i] if i < len(raw_wc_slots) else None
+                if w_main is not None and w_main > 0:
+                    wc_slots.append(w_main)
+                    continue
+                sw_v = sw_s[i] if i < len(sw_s) else None
+                lim_v = lim_s[i] if i < len(lim_s) else None
+                if sw_v is not None and lim_v is not None:
+                    wc_slots.append(sw_v + lim_v)
+                else:
+                    if (sw_v is not None or lim_v is not None) or (i < len(rats)):
+                        partial_wc_slots += 1
+                    wc_slots.append(None)
         for idx_w, wv in enumerate(wc_slots):
             if wv is not None and wv > 0:
                 wc_reviews_pos.append(wv)
@@ -513,15 +560,25 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
         sk: (round(sum(sv) / len(sv), 3) if sv else None)
         for sk, sv in sub_totals.items()
     }
-    wc_stats = (
-        {
+    if wc_reviews_pos:
+        wc_stats: dict[str, Any] | None = {
             "count": len(wc_reviews_pos),
             "mean": round(sum(wc_reviews_pos) / len(wc_reviews_pos), 2),
             "median": round(statistics.median(wc_reviews_pos), 2),
         }
-        if wc_reviews_pos
-        else None
-    )
+        if partial_wc_slots:
+            wc_stats["completeness"] = "partial"
+            wc_stats["partial_component_slots"] = partial_wc_slots
+    elif partial_wc_slots:
+        wc_stats = {
+            "count": 0,
+            "mean": None,
+            "median": None,
+            "completeness": "partial",
+            "partial_component_slots": partial_wc_slots,
+        }
+    else:
+        wc_stats = None
 
     out = {
         "raw_record_count": len(records),
@@ -530,11 +587,16 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
         "total_submissions": valid_submissions,
         "scored_submissions": len(all_means),
         "total_reviews": int(sum(raw_hist.values())),
+        "non_positive_rating_anomalies": {
+            "count": non_positive_rating_count,
+            "submissions_affected": non_positive_rating_papers,
+        },
         "overall_mean_rating": round(sum(all_means) / len(all_means), 3) if all_means else None,
         "overall_median_rating": round(statistics.median(all_means), 3) if all_means else None,
         "status_counts": dict(status_cnt),
         "tier_rating_stats": tier_stats,
         "raw_rating_histogram": {f"{k:g}": v for k, v in sorted(raw_hist.items(), key=lambda kv: kv[0])},
+        "raw_rating_histogram_including_anomalies": {f"{k:g}": v for k, v in sorted(raw_hist_all.items(), key=lambda kv: kv[0])},
         "subscore_means": subscore_means,
         "review_word_count_stats": wc_stats,
         "review_forensics": {
@@ -550,6 +612,7 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
             "word_count_median_by_confidence": {
                 str(k): round(statistics.median(v), 1) for k, v in sorted(wc_by_conf.items()) if v
             },
+            "partial_word_count_slots": partial_wc_slots,
         },
         "top_primary_areas": area_cnt.most_common(10),
     }

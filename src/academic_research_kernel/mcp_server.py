@@ -140,14 +140,15 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "research_receipt_verify",
-        "description": "Verify canonical SHA-256 digest of an artifact payload against an expected receipt digest.",
+        "description": "Verify canonical SHA-256 digest of an artifact payload or legacy ReceiptRef against expected digest.",
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["payload", "expected_sha256"],
             "properties": {
                 "payload": {"type": "object"},
                 "expected_sha256": {"type": "string", "minLength": 64, "maxLength": 64},
+                "receipt_ref": {"type": "object"},
+                "content_payloads": {"type": "object"},
             },
         },
     },
@@ -181,6 +182,7 @@ TOOLS: list[dict[str, Any]] = [
                 "status": {"type": "string"},
                 "evidence": {"type": "array", "items": {"type": "array"}},
                 "depends_on": {"type": "array", "items": {"type": "string"}},
+                "relations": {"type": "array", "items": {"type": "object"}},
                 "metadata": {"type": "object"},
             },
         },
@@ -289,6 +291,7 @@ TOOLS: list[dict[str, Any]] = [
                 "df": {"type": "number"},
                 "p_value": {"type": "number"},
                 "p_value_literal": {"type": "string"},
+                "p_value_decimals": {"type": "integer"},
                 "f_stat": {"type": "number"},
                 "df1": {"type": "number"},
                 "df2": {"type": "number"},
@@ -324,6 +327,8 @@ TOOLS: list[dict[str, Any]] = [
                 "effect_size_d": {"type": "number"},
                 "power_n1": {"type": "integer"},
                 "power_n2": {"type": "integer"},
+                "target_power": {"type": "number"},
+                "sample_ratio": {"type": "number"},
                 "alpha": {"type": "number"},
             },
         },
@@ -475,6 +480,7 @@ TOOLS: list[dict[str, Any]] = [
             "additionalProperties": False,
             "properties": {
                 "emit_receipt": {"type": "boolean"},
+                "measure_candidates": {"type": "boolean"},
                 "operation": {"type": "string"},
                 "scale": {"type": "string", "enum": ["small", "medium", "large"]},
                 "dtype": {"type": "string", "enum": ["float32", "float64"]},
@@ -797,6 +803,18 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             return {"valid": False, "errors": [str(exc)]}
 
     if name == "research_receipt_verify":
+        if "receipt_ref" in a and isinstance(a["receipt_ref"], Mapping):
+            rref = a["receipt_ref"]
+            cpayloads = a.get("content_payloads") if isinstance(a.get("content_payloads"), Mapping) else {}
+            rid = str(rref.get("receipt_id") or rref.get("artifact_id") or "")
+            expected = str(rref.get("receipt_digest") or rref.get("payload_sha256") or "").strip().lower()
+            target_payload = cpayloads.get(rid) if rid in cpayloads else a.get("payload")
+            if not isinstance(target_payload, Mapping) or len(expected) != 64:
+                raise ValueError("research_receipt_verify with receipt_ref requires matching content_payloads[receipt_id] (or payload) and a 64-hex digest")
+            actual = sha256_hex(canonical_json(target_payload))
+            return {"valid": actual == expected, "computed_sha256": actual, "expected_sha256": expected, "receipt_id": rid}
+        if not isinstance(a.get("payload"), Mapping) or not isinstance(a.get("expected_sha256"), str):
+            raise ValueError("research_receipt_verify requires 'payload' and 'expected_sha256' (or 'receipt_ref' + 'content_payloads')")
         actual = sha256_hex(canonical_json(a["payload"]))
         expected = str(a["expected_sha256"]).strip().lower()
         return {"valid": actual == expected, "computed_sha256": actual, "expected_sha256": expected}
@@ -816,26 +834,39 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         )
 
     if name == "claim_evidence_add":
-        ev = [tuple(x) for x in a.get("evidence", ())]
+        ev = [
+            (x["artifact_id"], x.get("stance", "supports"), x.get("locator", ""))
+            if isinstance(x, Mapping)
+            else tuple(x)
+            for x in a.get("evidence", ())
+        ]
         rels = list(a.get("relations") or ())
 
         def _add_ceg(db: ResearchStateDB) -> Mapping[str, Any]:
-            res_c = db.add_claim(
-                a["claim_id"],
-                a["claim_text"],
-                a.get("status"),
-                ev,
-                a.get("depends_on", ()),
-                metadata=a.get("metadata"),
-            )
-            for rel_item in rels:
-                if isinstance(rel_item, Mapping):
-                    db.add_claim_relation(
-                        a["claim_id"],
-                        str(rel_item["target_claim_id"]),
-                        str(rel_item.get("relation") or rel_item.get("relation_type") or "depends_on"),
-                    )
-            return res_c
+            with db.transaction():
+                res_c = db.add_claim(
+                    a["claim_id"],
+                    a["claim_text"],
+                    a.get("status"),
+                    ev,
+                    a.get("depends_on", ()),
+                    metadata=a.get("metadata"),
+                )
+                for rel_item in rels:
+                    if isinstance(rel_item, Mapping):
+                        db.add_claim_relation(
+                            a["claim_id"],
+                            str(rel_item["target_claim_id"]),
+                            str(rel_item.get("relation") or rel_item.get("relation_type") or "depends_on"),
+                        )
+                if rels:
+                    ceg_now = db.export_ceg_dict()
+                    matched = next((c for c in ceg_now.get("claims", ()) if c.get("id") == a["claim_id"]), None)
+                    if matched and "metadata" in matched and "status" in matched["metadata"]:
+                        res_out = dict(thaw(res_c))
+                        res_out["status"] = matched["metadata"]["status"]
+                        return res_out
+                return res_c
 
         return _with_db(a, _add_ceg)
 
@@ -949,6 +980,9 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                 "cohens_d": rec_mod.cohens_d,
                 "ci": rec_mod.check_ci_consistency,
                 "power": rec_mod.achieved_power_ttest,
+                "required_sample_size": rec_mod.required_n_ttest,
+                "required-sample-size": rec_mod.required_n_ttest,
+                "required_n": rec_mod.required_n_ttest,
             }
             if a["kind"] not in dispatch:
                 raise ValueError(f"Unsupported statistics kind: {a['kind']!r}")
@@ -973,6 +1007,7 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                         pm = rec_mod.check_p_match(
                             rep_val,
                             r["recomputed"],
+                            decimals=a.get("p_value_decimals"),
                             reported_literal=a.get("p_value_literal"),
                         )
                     except ValueError as exc:
@@ -1061,14 +1096,27 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             )
 
         if "effect_size_d" in a:
-            _run_part(
-                "achieved_power",
-                lambda: out_stat.update(
-                    achieved_power=rec_mod.achieved_power_ttest(
-                        a["effect_size_d"], a["power_n1"], n2=a.get("power_n2"), alpha=a.get("alpha", 0.05)
-                    )
-                ),
-            )
+            if "power_n1" in a:
+                _run_part(
+                    "achieved_power",
+                    lambda: out_stat.update(
+                        achieved_power=rec_mod.achieved_power_ttest(
+                            a["effect_size_d"], a["power_n1"], n2=a.get("power_n2"), alpha=a.get("alpha", 0.05)
+                        )
+                    ),
+                )
+            if "target_power" in a or "power_n1" not in a:
+                _run_part(
+                    "required_sample_size",
+                    lambda: out_stat.update(
+                        required_sample_size=rec_mod.required_n_ttest(
+                            a["effect_size_d"],
+                            power=a.get("target_power", 0.8),
+                            alpha=a.get("alpha", 0.05),
+                            ratio=a.get("sample_ratio", 1.0),
+                        )
+                    ),
+                )
 
         if not out_stat and not partial_errors:
             raise ValueError("No statistical parameters provided to academic_recompute_statistics")
@@ -1213,34 +1261,41 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
     if name == "academic_double_blind_sanitize":
         target = a.get("target_path") or a.get("target")
         if not target:
-            return {"error": "Invalid tool input", "details": ["Provide target or target_path"]}
+            raise ValueError("Provide target or target_path")
+        ws_root = authorized_workspace_root()
+        try:
+            target_p = safe_path(str(target), root=ws_root, must_exist=True)
+        except Exception as exc:
+            raise ValueError("Target path is outside authorized workspace root or inaccessible") from exc
         try:
             dbs = _mod("double_blind_sanitizer")
             forb = [str(t) for t in (a.get("forbidden_tokens") or []) if str(t)]
-            rep = dbs.scan_target(Path(str(target)), forbidden_tokens=forb)
+            rep = dbs.scan_target(target_p, forbidden_tokens=forb, root=ws_root)
             return _redact_blind_scan_report(rep)
-        except Exception:
-            return {
-                "error": "Anonymity scan failed",
-                "details": ["Source path and error details were withheld to prevent identifier leakage"],
-            }
+        except Exception as exc:
+            raise RuntimeError("Anonymity scan failed; source path and error details were withheld to prevent identifier leakage") from exc
 
     if name == "academic_pre_submission_lint":
         tex = a.get("tex_path") or a.get("tex")
         if not tex:
             raise ValueError("Provide tex or tex_path")
+        ws_root = authorized_workspace_root()
+        tex_p = safe_path(str(tex), root=ws_root, must_exist=True)
+        pdf_p = safe_path(str(a["pdf_path"]), root=ws_root, must_exist=True) if a.get("pdf_path") else None
+        ceg_p = safe_path(str(a["ceg_path"]), root=ws_root, must_exist=True) if a.get("ceg_path") else None
         psl = _mod("pre_submission_linter")
         return thaw(
             psl.lint_manuscript(
-                tex,
+                tex_p,
                 venue=a.get("venue", "iclr"),
                 double_blind=a.get("double_blind"),
                 phase=a.get("phase", "submission"),
                 contribution_type=a.get("contribution_type", "general_empirical"),
-                pdf_path=a.get("pdf_path"),
-                ceg_path=a.get("ceg_path"),
+                pdf_path=pdf_p,
+                ceg_path=ceg_p,
                 require_ceg_binding=bool(a.get("require_ceg_binding", False)),
                 check_academic_style=bool(a.get("check_academic_style", False)),
+                workspace_root=ws_root,
             )
         )
 
@@ -1264,7 +1319,8 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             return cp.build_compute_receipt(
                 operation=str(a.get("operation") or "matmul_f64"),
                 scale=str(a.get("scale") or "small"),
-                dtype=str(a.get("dtype") or "float64"),
+                dtype=str(a["dtype"]) if a.get("dtype") is not None else None,
+                measure_candidates=bool(a.get("measure_candidates", False)),
             )
         return cp.probe()
 

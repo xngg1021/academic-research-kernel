@@ -14,22 +14,22 @@
 
 ---
 
-## 一、五大 AI 顶会审稿水位与机器审稿异常实测：2025 至 2027
+## 一、五大 AI 顶会公开审稿镜像实测：2025 至 2027
 
-为什么读论文和投论文都应当配备确定性核查工具？我们直接运行本内核的 `openreview-audit --venue-summary` 命令，对五大 AI 顶会公开镜像共 `74,933` 篇论文记录与 `234,128` 条官方评审做了全量确定性统计，原始镜像 SHA-256 与分母口径存档于 [peer-review-forensics-2025-2027-v1.json](docs/benchmarks/peer-review-forensics-2025-2027-v1.json)：
+为什么读论文和投论文都应当配备确定性核查工具？我们直接运行本内核的 `openreview-audit --venue-summary` 命令，对 `papercopilot/paperlists@181a85021c63ab26745c42ed70a9d9ea7b57ad7e` 冻结修订下的五大 AI 顶会公开镜像共 `75,574` 篇去重投稿记录、`73,226` 篇含正分论文与 `251,800` 条有效评审做了全量确定性统计，冻结 URL、原始字节 SHA-256 与重放脚本存档于 [peer-review-forensics-2025-2027-v1.json](docs/benchmarks/peer-review-forensics-2025-2027-v1.json)：
 
-| 顶会与公开范围 | 含评分论文数 $N$ | 官方评审总数 | 论文均分均值与分制 | 评审词数中位数：`conf=2` 对照 `conf=4` | 多审稿人全员同分率 | 除初始评审外零后续讨论率 |
-| --- | ---: | ---: | --- | --- | ---: | ---: |
-| **ICLR 2026** 全量投稿公开 | 15,922 | 60,829 | `4.33` 1至10偶分制 | 总中位数 `468`：`419` 对 `481` | **10.50%** 即 `1,667 / 15,879` | 12.66% |
-| **ICLR 2027** 答辩期快照共 `42,790` 篇 | 32,835 | 126,369 | `2.06` 1至4整数制 | 总中位数 `492`：**`491`** 对 `496` | **23.76%** 即 `7,800 / 32,834` | **91.85%** 答辩第7天 |
-| **ICML 2026** 公开录用稿 | 6,556 | 24,877 | `3.59` 1至5推荐制 | 总中位数 `429`：`397` 对 `436` | 8.13% 即 `533 / 6,556` | 8.63% |
-| **NeurIPS 2025** 公开录用稿 | 5,280 | 20,257 | `4.42` 1至6评分制 | 总中位数 `536`：**`541`** 对 `536` | 6.14% 即 `324 / 5,280` | 3.12% |
-| **COLM 2025** 公开录用稿 | 497 | 1,796 | `6.66` 1至10评分制 | 总中位数 `453`：`416` 对 `451` | 5.63% 即 `28 / 497` | 20.12% |
+| 顶会与冻结公开镜像范围 | 含正分论文数 $N$ | 有效评审总数 | 论文均分均值与分制 | 评审词数中位数：`conf=2` 对照 `conf=4` | 多审稿人全员同分率 |
+| --- | ---: | ---: | --- | --- | ---: |
+| **ICLR 2026** 全量投稿共 `19,813` 篇，单列 `1,319` 条零分异常 | 19,454 | 74,540 | `4.26` 2至10偶分制 | 总中位数 `391`：`328` 对 `409` | **8.13%** 即 `1,578 / 19,412` |
+| **ICLR 2027** 答辩期快照共 `42,790` 篇 | 40,801 | 126,369 | `2.06` 1至4整数制 | 总中位数 `429`：`405` 对 `451` | **23.90%** 即 `9,752 / 40,801` |
+| **ICML 2026** 公开录用稿 | 6,341 | 24,378 | `4.15` 1至5推荐制 | 总中位数 `345`：`298` 对 `364` | **16.53%** 即 `1,048 / 6,341` |
+| **NeurIPS 2025** 公开录用稿 | 6,212 | 24,927 | `4.36` 1至6评分制 | 总中位数 `382`：`324` 对 `402` | **13.60%** 即 `845 / 6,212` |
+| **COLM 2025** 公开录用稿，镜像不含词数字段 | 418 | 1,586 | `6.50` 1至10评分制 | 镜像未收录词数 | **7.89%** 即 `33 / 418` |
 
-实测数据呈现出三个清晰的结构变化：
-1. **分制压缩下的全员同分翻倍**：ICLR 2027 总投稿增至 `42,790` 篇并改用 `1–4` 四分制后，`57.36%` 的评审集中在 `2` 分档，多审稿人给出完全相同分数的论文占比从 ICLR 2026 的 **`10.50%`** 翻倍升至 **`23.76%`**，涉及 `7,800` 篇投稿。
-2. **低把握度审稿词数反常倒挂**：在传统人工审稿分布中，把握度为 `2` 分的外行审稿词数明显短于 `4` 分专家，例如 ICLR 2026 为 `419` 词对 `481` 词，COLM 2025 为 `416` 词对 `451` 词。但在 NeurIPS 2025 录用稿中，`conf=2` 词数中位数达 `541` 词，反超 `conf=4` 专家的 `536` 词；ICLR 2027 中 `conf=2` 也涨至 `491` 词，追平 `conf=4` 的 `496` 词。同期 ICML 2026 程序委员会官方通报查处了 `398` 名违规使用大模型生成审稿意见的审稿人，NeurIPS 2026 官方总投稿也已升至 `30,709` 篇。
-3. **稿件自身的确定性硬伤发生率高**：在 ICLR 2026 共 `19,473` 篇有分投稿的审稿意见统计中，见 [iclr2026-openreview-incidence-receipt.json](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)，缺失误差棒或标准差、版式章节违规，以及表格消融矛盾、漏引基线与缺失复现代码这五类确定性问题，在 Oral 稿件中被指出的比例为 **`48.2%`**，Poster 为 **`54.0%`**，拒稿为 **`59.8%`**，带评语桌拒达 **`63.6%`**。在包含 16 项真实撤稿与虚构引文以及 14 项 Nuijten 与 Bakker 统计错案的实测基准中，见 [real-world-audit-benchmark-v1.json](docs/benchmarks/real-world-audit-benchmark-v1.json)，本内核在引文与撤稿核查上取得 `TP=10, TN=6, FP=0, FN=0`，在已发表统计错案复核上取得 `TP=8, TN=5, FP=1, FN=0`。
+实测数据呈现出三个清晰的经验特征：
+1. **分制压缩下的全员同分激增**：ICLR 2027 总投稿增至 `42,790` 篇并从五档偶分制压缩为 `1–4` 四分制后，`57.36%` 的评审集中在 `2` 分档，多审稿人给出完全相同分数的论文占比从 ICLR 2026 的 **`8.13%`** 升至 **`23.90%`**，涉及 `9,752` 篇投稿。同分率同时受分制档位数、审稿阶段与录用筛选范围影响，回执对各分母与 `1,319` 条 `rating=0` 异常记录均做了分桶留存。
+2. **自报把握度与审稿篇幅分布**：在包含词数字段的四份镜像中，自报 `confidence=2` 的审稿词数中位数均低于 `confidence=4`，例如 ICLR 2026 为 `328` 词对 `409` 词，ICML 2026 为 `298` 词对 `364` 词，NeurIPS 2025 为 `324` 词对 `402` 词，而 ICLR 2027 缩小至 `405` 词对 `451` 词。自报把握度与篇幅仅反映公开元数据分布；同期 ICML 2026 程序委员会在官方博客中通报查处了 `398` 名违反大模型审稿规定的互惠审稿违规者并桌拒 `497` 篇关联投稿。
+3. **审稿意见中的高频词项提及率与基准复核**：在关联 `insomnia7/iclr2026_stats@50507ab3` 核验的 `19,473` 篇 ICLR 2026 有分投稿及 `75,769` 条官方评审中，见 [iclr2026-openreview-incidence-receipt.json](docs/benchmarks/iclr2026-openreview-incidence-receipt.json)，针对 `Weaknesses` 与 `Questions` 字段运行五类确定性主题词项筛查，至少命中一类词项的稿件占比在 Oral 中为 **`48.2%`**，Poster 为 **`54.0%`**，拒稿为 **`59.8%`**，带评语桌拒为 **`63.6%`**，全量有分稿件合计 **`59.0%`**。词项正则用于快速筛查提及线索，具体是否构成硬伤仍需确定性工具复算或人工判读。在绑定 `v3.0.0` 重放的 30 例真实审计基准中，见 [real-world-audit-benchmark-v1.json](docs/benchmarks/real-world-audit-benchmark-v1.json)，本内核在 16 例冻结快照引文与撤稿核查上取得 `TP=10, TN=6, FP=0, FN=0`，在 12 例 Nuijten 与 Bakker 已发表统计观测外加 2 例仓内门禁案例上取得 `TP=8, TN=5, FP=1, FN=0`。
 
 ---
 
@@ -72,12 +72,12 @@ academic-research-kernel research skill --output ./audit-paper
 
 ## 三、完整整合原版十四项能力的七大核心技能
 
-`3.0.0` 版本把旧版按内部脚本拆分的十四项技能目录完整归并为七个直观的“动词加宾语”技能，方便科研人员与智能体第一眼识别用途：
+`3.0.0` 版本把旧版按内部脚本拆分的十四项技能目录归并为七个直观的工作流技能，方便科研人员与智能体第一眼识别用途：
 
 | 技能目录 | 一句话用途说明 | 关联核心子命令与工具 |
 | --- | --- | --- |
 | [`skills/audit-paper`](skills/audit-paper/SKILL.md) | 审读单篇或双篇论文：重算统计量与表格守恒，裁决复现清单并管理证据图与决策台账 | `research`、`table-forensics` 与 `repro-checklist`、`ledger` |
-| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | 核查引文真伪：双源验证 DOI 与更正记录，追踪撤稿与新文献，合并多路语料并定位五源开放全文 | `verify-work`、`retraction-watch` 与 `collect-corpus`、`locate-oa` |
+| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | 核查引文真伪：双源验证 DOI 与更正记录，追踪撤稿与新文献，合并语料并定位开放全文 | `verify-work`、`retraction-watch` 与 `collect-corpus`、`locate-oa` |
 | [`skills/audit-peer-review`](skills/audit-peer-review/SKILL.md) | 透视顶会审稿：离线统计 OpenReview 评分分布与异常体征，取证本地或远端配套代码仓 | `openreview-audit`、`repo-forensics` 与 `academic_openreview_audit` |
 | [`skills/meta-analysis`](skills/meta-analysis/SKILL.md) | 文献综述合并：固定与随机效应合并，执行亚组分解与元回归，生成引文图与综述对照表 | `meta-analyze`、`bibliography` 与 `academic_meta_analyze` |
 | [`skills/check-submission`](skills/check-submission/SKILL.md) | 投稿前安检门：建立会刊工程，转换收据与双篇对比三线表，扫描多文件 LaTeX 与双盲 PDF | `lint-submission`、`sanitize-submission` 与 `generate-table`、`check-venue` |
@@ -132,7 +132,7 @@ academic-research-kernel lint-submission ./submission-dir/main.tex \
 
 ## 五、纯标准库 SQLite 架构、安全隔离与外部数据源说明
 
-1. **单包 `SQLite STRICT + WAL` 状态内核**：`v3.0.0` 将非测试 Python 源码从 `32,167` 行精简至约 `14,000` 行，移除分散在各目录的自定义 JSON 文件锁与重复包装脚本，统一由 `ResearchStateDB` 提供外键约束与 `SAVEPOINT` 原子回滚，内置 `application_id = 0x41524B33` 与 `user_version = 3` 身份校验、谱系有向无环检查以及 `applied_seq` 与 `confirmed_seq` 双序号撤稿状态机。单侧外部接口超时或格式异常时，系统自动保留另一侧已确认的撤稿信号。
+1. **单包 `SQLite STRICT + WAL` 状态内核**：`v3.0.0` 将非测试 Python 源码从 `32,167` 行精简至约 `16,000` 行，移除分散在各目录的自定义 JSON 文件锁与重复包装脚本，统一由 `ResearchStateDB` 提供外键约束与 `SAVEPOINT` 原子回滚，内置 `application_id = 0x41524B33` 与 `user_version = 4` 身份及迁移校验、全部 `26` 类受管回执强制 Schema 门禁、谱系单快照校验以及 `applied_seq` 与 `confirmed_seq` 双序号撤稿状态机。单侧外部接口超时或格式异常时，系统自动保留另一侧已确认的撤稿信号。
 2. **受控子进程 PDF 解析与网络防重绑定隔离**：`research prepare`、`lint-submission` 与 `sanitize-submission` 读取不可信 PDF 时，全程在带超时熔断的 `python -I -c` 隔离子进程中提取正文、`/Info` 属性与 XMP 流，固定使用 `pypdf==7.0.0` 与 `fonttools==4.65.0`。外部联网请求统一经过 `controlled_urlopen`，默认禁用环境变量代理并在连接前锁定公网 DNS 解析结果，严格限制响应体字节上限。MCP 双盲扫描接口默认遮蔽命中文本，防止作者真名回流进第三方客户端日志。
 3. **外部开放接口配额规则**：`doctor` 全程离线运行。`OpenAlex` 首屏查询支持匿名调用，翻页或高频检索建议配置 `OPENALEX_API_KEY`；`Crossref` 提供公开元数据与 `update-to` 更正记录查询；`Unpaywall` 需通过 `--email` 或环境变量 `UNPAYWALL_EMAIL` 提供联系邮箱，未配置邮箱时可加 `--fallback-openalex` 回退检索。
 

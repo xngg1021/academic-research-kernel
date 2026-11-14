@@ -51,16 +51,10 @@ ANONYMOUS_PLACEHOLDERS = {
 
 
 def _strip_tex_comments(text: str) -> str:
-    out_lines = []
-    for line in text.splitlines():
-        i = 0
-        while i < len(line):
-            if line[i] == "%" and (i == 0 or line[i - 1] != "\\"):
-                line = line[:i]
-                break
-            i += 1
-        out_lines.append(line)
-    return "\n".join(out_lines)
+    """Delegate to the shared verbatim/verb-aware TeX lexical masker in pre_submission_linter."""
+    from .pre_submission_linter import strip_tex_comments
+
+    return strip_tex_comments(text)
 
 
 def _extract_balanced_braces(text: str) -> list[tuple[int, str]]:
@@ -91,9 +85,12 @@ def _extract_balanced_braces(text: str) -> list[tuple[int, str]]:
         start_body = pos
         while pos < n and depth > 0:
             ch = cleaned[pos]
-            if ch == "{" and (pos == 0 or cleaned[pos - 1] != "\\"):
+            if ch == "\\":
+                pos += 2
+                continue
+            if ch == "{":
                 depth += 1
-            elif ch == "}" and (pos == 0 or cleaned[pos - 1] != "\\"):
+            elif ch == "}":
                 depth -= 1
             pos += 1
         if depth == 0:
@@ -337,8 +334,12 @@ def _has_ancestor_link_or_junction(p: Path) -> bool:
     return False
 
 
-def scan_target(target: Path, forbidden_tokens: list[str] | None = None) -> dict:
+def scan_target(target: Path, forbidden_tokens: list[str] | None = None, *, root: Path | None = None) -> dict:
+    from ._stdlib import safe_path
+
     raw_target = Path(target)
+    if root is not None:
+        raw_target = safe_path(raw_target, root=root, must_exist=True)
     if not raw_target.exists() and not _is_link_or_junction(raw_target):
         raise ValueError(f"Target path does not exist: {target}")
     if _has_ancestor_link_or_junction(raw_target):

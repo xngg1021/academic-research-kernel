@@ -30,7 +30,7 @@ _REPARSE_ATTR = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 _MAX_FREEZE_DEPTH = 64
 
 ARK_SQLITE_APP_ID = 0x41524B33  # 'ARK3'
-ARK_SQLITE_USER_VERSION = 3
+ARK_SQLITE_USER_VERSION = 4
 
 
 class ImmutableStateError(ValueError):
@@ -422,9 +422,10 @@ def read_packaged_schema(schema_name: str) -> dict[str, Any]:
 
 
 def validate_schema(instance: Any, schema_name: str) -> list[str]:
-    """Validate JSON instance against schemas/<schema_name> using Draft 2020-12."""
-    from jsonschema import Draft202012Validator
+    """Validate JSON instance against schemas/<schema_name> using its declared Draft-07 or Draft 2020-12 validator."""
+    from jsonschema import Draft7Validator, Draft202012Validator
 
     schema = read_packaged_schema(schema_name)
-    validator = Draft202012Validator(schema)
+    meta_uri = str(schema.get("$schema") or "")
+    validator = Draft7Validator(schema) if "draft-07" in meta_uri else Draft202012Validator(schema)
     return [f"{'/'.join(str(p) for p in err.path) or '<root>'}: {err.message}" for err in validator.iter_errors(instance)]

@@ -66,4 +66,4 @@ The following literal machine translations and engineering jargon are strictly p
 | `剪枝因果` | Chinese (algorithmic jargon) | 终止原因与后续关联 (`stop reason & causal link`) |
 | `十四原语` | Chinese (software architecture) | 十四项核心学术能力 (`core research capabilities`) |
 
-All concept definitions, standards citations, and deprecated label inventories are machine-enforced via `registry.json` and checked in CI via [tests/test_terminology_registry.py](../../tests/test_terminology_registry.py).
+All concept definitions, standards citations, and deprecated label inventories are machine-enforced via [registry.json](registry.json) and regression-tested in CI via [tests/test_v300_admission_regressions.py](../../tests/test_v300_admission_regressions.py).

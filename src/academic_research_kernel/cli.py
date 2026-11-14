@@ -57,7 +57,7 @@ def _error_hint(step: str, reason: str) -> str:
     if "stale" in lower or "fingerprint" in lower or "changed" in lower:
         return "Materials changed; re-run: academic-research-kernel research prepare <input> --project <dir>"
     if "semantic producer" in lower or "candidate" in lower or "schema" in lower:
-        return "Have your Agent read the prepared materials using paper-research/SKILL.md and pass --candidate"
+        return "Have your Agent read the prepared materials using audit-paper/SKILL.md and pass --candidate"
     return f'Check inputs for step "{step}" or run: academic-research-kernel doctor'
 
 
@@ -124,7 +124,7 @@ def doctor() -> dict[str, Any]:
     schema_status = "error"
     schema_count = 0
     try:
-        from jsonschema import Draft202012Validator
+        from jsonschema import Draft7Validator, Draft202012Validator
 
         found_files = []
         try:
@@ -142,7 +142,11 @@ def doctor() -> dict[str, Any]:
             errors.append(f"missing packaged schemas: {missing_schemas[:5]}")
         else:
             for sp in found_files:
-                Draft202012Validator.check_schema(json.loads(sp.read_text(encoding="utf-8")))
+                s_obj = json.loads(sp.read_text(encoding="utf-8"))
+                if "draft-07" in str(s_obj.get("$schema") or ""):
+                    Draft7Validator.check_schema(s_obj)
+                else:
+                    Draft202012Validator.check_schema(s_obj)
             schema_status = "ok"
             schema_count = len(found_files)
     except Exception as exc:
@@ -153,7 +157,7 @@ def doctor() -> dict[str, Any]:
         portable_skill = "available"
     else:
         portable_skill = "unavailable"
-        errors.append("missing portable paper-research/SKILL.md resource")
+        errors.append("missing portable audit-paper/SKILL.md resource")
 
     mcp_tools = 0
     try:
@@ -236,8 +240,9 @@ def main(argv: list[str] | None = None) -> int:
         p_ver.add_argument("--pages", type=int, default=1)
         p_ver.add_argument("--threshold", type=float, default=0.8)
 
-    p_meta = sub.add_parser("meta-analyze", help="Fixed & random-effects pooling + LOO + Egger/trim-and-fill")
-    p_meta.add_argument("--input", required=True)
+    for ma_alias in ("meta-analyze", "meta-pool"):
+        p_meta = sub.add_parser(ma_alias, help="Fixed & random-effects pooling + LOO + Egger/trim-and-fill")
+        p_meta.add_argument("--input", required=True)
 
     p_tf = sub.add_parser("table-forensics", help="Audit partition conservation, ablation deltas, and bandwidth bounds")
     p_tf.add_argument("--input", required=True)
@@ -274,11 +279,12 @@ def main(argv: list[str] | None = None) -> int:
         p_ltx.add_argument("--output")
         p_ltx.add_argument("--caption")
         p_ltx.add_argument("--label")
+        p_ltx.add_argument("--format", choices=["auto", "json", "tex"], default="auto")
 
     for vt_alias in ("venue-template", "check-venue"):
         p_vt = sub.add_parser(vt_alias, help="List venue contracts, scaffold workspace, verify styles, or export CEG anchors")
         p_vt.add_argument("--list", "--list-venues", dest="list", action="store_true")
-        p_vt.add_argument("--action", choices=["list-venues", "scaffold", "verify-styles", "export-ceg-anchors"], default="list-venues")
+        p_vt.add_argument("--action", choices=["list", "list-venues", "scaffold", "verify-styles", "export-ceg-anchors"], default="list-venues")
         p_vt.add_argument("--workspace-dir")
         p_vt.add_argument("--slug")
         p_vt.add_argument("--venue", default="iclr")
@@ -366,9 +372,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_cp = sub.add_parser("compute-probe", help="Probe CPU/GPU hardware, thread environment, numerical libraries, and optional ComputeReceipt")
     p_cp.add_argument("--receipt", action="store_true")
+    p_cp.add_argument("--measure-candidates", action="store_true")
     p_cp.add_argument("--operation", default="matmul_f64")
     p_cp.add_argument("--scale", choices=["small", "medium", "large"], default="small")
-    p_cp.add_argument("--dtype", choices=["float32", "float64"], default="float64")
+    p_cp.add_argument("--dtype", choices=["float32", "float64"], default=None)
     p_cp.add_argument("--output")
 
     p_lg = sub.add_parser("ledger", help="Manage SQLite-backed Claim-Evidence Graph (CEG) and Research Decision Ledger")
@@ -376,6 +383,7 @@ def main(argv: list[str] | None = None) -> int:
     p_lg.add_argument(
         "--action",
         choices=[
+            "register-artifact",
             "add-claim",
             "export-ceg",
             "validate-ceg",
@@ -396,6 +404,9 @@ def main(argv: list[str] | None = None) -> int:
     p_lg.add_argument("--text")
     p_lg.add_argument("--claim-type", default="empirical_finding")
     p_lg.add_argument("--artifact-id")
+    p_lg.add_argument("--artifact-kind", default="computed_evidence")
+    p_lg.add_argument("--payload-json")
+    p_lg.add_argument("--payload-file")
     p_lg.add_argument("--locator", default="")
     p_lg.add_argument("--stance", choices=["supports", "contradicts", "qualifies", "contextualizes"], default="supports")
     p_lg.add_argument("--decision-id")
@@ -502,7 +513,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             return 0 if any(s.get("status") == "ok" for s in (out.get("sources") or {}).values()) else 1
 
-        if cmd == "meta-analyze":
+        if cmd in ("meta-analyze", "meta-pool"):
             raw = json.loads(safe_path(args.input).read_text("utf-8"))
             studies = raw["studies"] if isinstance(raw, dict) and "studies" in raw else raw
             if not isinstance(studies, list) or not studies:
@@ -597,12 +608,28 @@ def main(argv: list[str] | None = None) -> int:
                 out_p = safe_path(args.output)
                 out_p.parent.mkdir(parents=True, exist_ok=True)
                 out_p.write_text(tex_str + "\n", encoding="utf-8")
-            print(tex_str)
+            emit_fmt = args.format
+            if emit_fmt == "json" or (emit_fmt == "auto" and cmd == "receipt-to-latex"):
+                rows_list = spec.get("rows") if isinstance(spec, dict) and isinstance(spec.get("rows"), list) else []
+                cols_list = spec.get("columns") if isinstance(spec, dict) and isinstance(spec.get("columns"), list) else []
+                col_cnt = len(cols_list) if cols_list else (len(rows_list[0]) if rows_list and isinstance(rows_list[0], (list, tuple, dict)) else 0)
+                _emit_json(
+                    {
+                        "status": "ok",
+                        "source_sha256": sha,
+                        "row_count": len(rows_list),
+                        "col_count": col_cnt,
+                        "latex": tex_str if tex_str.endswith("\n") else tex_str + "\n",
+                    }
+                )
+            else:
+                print(tex_str)
             return 0
 
         if cmd in ("venue-template", "check-venue"):
             vtm = _mod("venue_template_manager")
-            act = "list-venues" if args.list else ("export-ceg-anchors" if (args.ceg and args.action == "list-venues") else args.action)
+            raw_act = "list-venues" if args.action == "list" else args.action
+            act = "list-venues" if args.list else ("export-ceg-anchors" if (args.ceg and raw_act == "list-venues") else raw_act)
             if act == "list-venues":
                 _emit_json(vtm.list_venues())
                 return 0
@@ -813,10 +840,20 @@ def main(argv: list[str] | None = None) -> int:
             local_dir = args.local_repo or args.repo_dir
             if args.tree_json:
                 tj = json.loads(safe_path(args.tree_json).read_text("utf-8"))
-                entries = tj["tree"] if isinstance(tj, dict) and "tree" in tj else tj
-                trunc = bool(tj.get("truncated")) if isinstance(tj, dict) else False
+                if isinstance(tj, dict):
+                    if "tree" not in tj or not isinstance(tj["tree"], list):
+                        raise ValueError("--tree-json object must contain a 'tree' array")
+                    entries = tj["tree"]
+                    trunc = bool(tj.get("truncated"))
+                    tree_sha = str(tj.get("sha") or "")
+                else:
+                    entries = tj
+                    trunc = False
+                    tree_sha = ""
                 rep_rf = rf.analyze_entries(entries, truncated=trunc)
                 rep_rf["mode"] = "tree-json"
+                if tree_sha:
+                    rep_rf["tree_sha"] = tree_sha
                 _emit_json(rep_rf)
                 return 0
             if args.github_repo:
@@ -912,7 +949,16 @@ def main(argv: list[str] | None = None) -> int:
 
         if cmd == "compute-probe":
             cp = _mod("compute_probe")
-            out_cp = cp.build_compute_receipt(operation=args.operation, scale=args.scale, dtype=args.dtype) if args.receipt else cp.probe()
+            out_cp = (
+                cp.build_compute_receipt(
+                    operation=args.operation,
+                    scale=args.scale,
+                    dtype=args.dtype,
+                    measure_candidates=bool(args.measure_candidates),
+                )
+                if args.receipt
+                else cp.probe()
+            )
             if args.output:
                 out_p = safe_path(args.output)
                 out_p.parent.mkdir(parents=True, exist_ok=True)
@@ -925,6 +971,36 @@ def main(argv: list[str] | None = None) -> int:
 
             mcp_m = _mod("mcp_server")
             act_l = args.action
+            if act_l == "register-artifact":
+                if not args.artifact_id:
+                    raise ValueError("ledger --action register-artifact requires --artifact-id and (--payload-json or --payload-file)")
+                if args.payload_file:
+                    art_payload = json.loads(safe_path(args.payload_file, must_exist=True).read_text("utf-8"))
+                elif args.payload_json:
+                    art_payload = json.loads(args.payload_json)
+                else:
+                    raise ValueError("ledger --action register-artifact requires --payload-json or --payload-file")
+                with ResearchStateDB(args.db) as db:
+                    res_art = thaw(db.register_artifact(args.artifact_id, args.artifact_kind, art_payload))
+                _emit_json(res_art)
+                return 0
+
+            def _ensure_registered_artifact(db: ResearchStateDB, aid: str) -> None:
+                with db._read_snapshot() as conn:
+                    has_art = conn.execute("SELECT 1 FROM artifacts WHERE artifact_id = ?", (aid,)).fetchone()
+                if has_art is None:
+                    if args.payload_file or args.payload_json:
+                        art_payload = (
+                            json.loads(safe_path(args.payload_file, must_exist=True).read_text("utf-8"))
+                            if args.payload_file
+                            else json.loads(args.payload_json)
+                        )
+                        db.register_artifact(aid, args.artifact_kind, art_payload)
+                    else:
+                        raise ValueError(
+                            f"Unknown artifact_id {aid!r}; register empirical evidence artifact first via --action register-artifact (or supply --payload-json / --payload-file)"
+                        )
+
             if act_l == "add-claim":
                 if not args.claim_id or not args.text:
                     raise ValueError("ledger --action add-claim requires --claim-id and --text")
@@ -932,10 +1008,7 @@ def main(argv: list[str] | None = None) -> int:
                 with ResearchStateDB(args.db) as db:
                     ev_tuples: list[tuple[str, str, str]] = []
                     if args.artifact_id:
-                        with db._read_snapshot() as conn:
-                            has_art = conn.execute("SELECT 1 FROM artifacts WHERE artifact_id = ?", (args.artifact_id,)).fetchone()
-                        if has_art is None:
-                            db.register_artifact(args.artifact_id, "computed_evidence", {"source": args.artifact_id, "locator": args.locator})
+                        _ensure_registered_artifact(db, args.artifact_id)
                         ev_tuples.append((args.artifact_id, st_norm, args.locator or ""))
                     res_c = thaw(db.add_claim(args.claim_id, args.text, evidence=ev_tuples, metadata={"claim_type": args.claim_type}))
                 _emit_json(res_c)
@@ -973,10 +1046,7 @@ def main(argv: list[str] | None = None) -> int:
                 st_init = "pruned" if args.status in ("abandoned", "rejected") else args.status
                 with ResearchStateDB(args.db) as db:
                     if args.artifact_id:
-                        with db._read_snapshot() as conn:
-                            has_art = conn.execute("SELECT 1 FROM artifacts WHERE artifact_id = ?", (args.artifact_id,)).fetchone()
-                        if has_art is None:
-                            db.register_artifact(args.artifact_id, "computed_evidence", {"source": args.artifact_id})
+                        _ensure_registered_artifact(db, args.artifact_id)
                     ek = "negative_result" if args.is_negative_result else "decision"
                     act_kind = "negative_result" if args.is_negative_result else "explore"
                     res_d = thaw(
@@ -1007,10 +1077,7 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("ledger --action correct-decision requires --decision-id, --verdict, and --rationale")
                 with ResearchStateDB(args.db) as db:
                     if args.artifact_id:
-                        with db._read_snapshot() as conn:
-                            has_art = conn.execute("SELECT 1 FROM artifacts WHERE artifact_id = ?", (args.artifact_id,)).fetchone()
-                        if has_art is None:
-                            db.register_artifact(args.artifact_id, "computed_evidence", {"source": args.artifact_id})
+                        _ensure_registered_artifact(db, args.artifact_id)
                     res_cd = thaw(db.correct_decision_outcome(args.decision_id, args.verdict, args.rationale, args.artifact_id))
                 _emit_json(res_cd)
                 return 0
@@ -1049,7 +1116,7 @@ def main(argv: list[str] | None = None) -> int:
             # step == "skill"
             skill_src = _locate_portable_skill_dir()
             if skill_src is None:
-                raise FileNotFoundError("Portable paper-research skill is unavailable in this installation")
+                raise FileNotFoundError("Portable audit-paper skill is unavailable in this installation")
             dst = safe_path(args.output)
             dst.mkdir(parents=True, exist_ok=True)
             for item in sorted(skill_src.rglob("*")):

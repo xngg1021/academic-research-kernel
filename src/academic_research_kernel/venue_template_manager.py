@@ -439,6 +439,7 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 unresolved_by_claim[cid] += 1
 
     dep_adj: dict[str, set[str]] = {}
+    contra_claim_ids: set[str] = set()
     if isinstance(raw_relations, list):
         for idx_r, rel in enumerate(raw_relations):
             if not isinstance(rel, dict):
@@ -453,14 +454,32 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 semantic_errors.append(f"dangling claim_relations[{idx_r}]: unknown target_claim_id {tc!r}")
             if sc and sc == tc and rtype in ("contradicts", "depends_on", "entails", "refines"):
                 semantic_errors.append(f"claim_relations[{idx_r}]: self-loop {rtype} on {sc!r}")
-            elif sc in claims_by_id and tc in claims_by_id and rtype in ("depends_on", "entails", "refines"):
-                dep_adj.setdefault(sc, set()).add(tc)
+            elif sc in claims_by_id and tc in claims_by_id:
+                if rtype in ("depends_on", "entails", "refines"):
+                    dep_adj.setdefault(sc, set()).add(tc)
+                elif rtype == "contradicts":
+                    contra_claim_ids.add(sc)
+                    contra_claim_ids.add(tc)
             ev_refs = rel.get("evidence_refs")
             if isinstance(ev_refs, list) and known_evidence_ids is not None:
                 for er in ev_refs:
                     ers = str(er).strip()
                     if not ers or ers not in known_evidence_ids:
                         semantic_errors.append(f"dangling claim_relations[{idx_r}] evidence_ref: {ers!r}")
+
+    uncert_conflict_ids: set[str] = set()
+    uncert_unverifiable_ids: set[str] = set()
+    raw_uncerts = ceg_root.get("uncertainties")
+    if isinstance(raw_uncerts, list):
+        for u in raw_uncerts:
+            if isinstance(u, dict):
+                sid = str(u.get("subject_id") or "").strip()
+                uk = str(u.get("kind") or "").strip()
+                if sid:
+                    if uk == "unresolved_contradiction":
+                        uncert_conflict_ids.add(sid)
+                    elif uk in ("unverifiable_claim", "missing_receipt", "ambiguous_locator", "generic_uncertainty"):
+                        uncert_unverifiable_ids.add(sid)
 
     # Iterative cycle detection across directed claim dependency relations
     color: dict[str, int] = {}
@@ -485,6 +504,34 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 color[nxt_c] = 1
                 stack_c.append((nxt_c, sorted(dep_adj.get(nxt_c, ())), 0))
 
+    # Content-addressed integrity checks on canonical claim-evidence-graph-1.0 documents
+    if ceg_root.get("protocol") == "claim-evidence-graph-1.0":
+        from ._stdlib import canonical_json, nfc_compact, sha256_hex
+
+        for cid, cobj in claims_by_id.items():
+            raw_t = str(cobj.get("text") or "")
+            exp_nt = nfc_compact(raw_t)
+            if "normalized_text" in cobj and cobj.get("normalized_text") != exp_nt:
+                semantic_errors.append(f"claim {cid!r} normalized_text disagrees with text")
+            exp_cd = sha256_hex(exp_nt)
+            if "claim_digest" in cobj and cobj.get("claim_digest") != exp_cd:
+                semantic_errors.append(f"claim {cid!r} claim_digest mismatch (expected {exp_cd})")
+        if "graph_digest" in ceg_root:
+            body_for_digest = {
+                "protocol": "claim-evidence-graph-1.0",
+                "claims": ceg_root.get("claims"),
+                "evidence_anchors": ceg_root.get("evidence_anchors"),
+                "support_edges": ceg_root.get("support_edges"),
+                "claim_relations": ceg_root.get("claim_relations"),
+                "uncertainties": ceg_root.get("uncertainties"),
+            }
+            exp_gd = sha256_hex(canonical_json(body_for_digest))
+            if ceg_root.get("graph_digest") != exp_gd:
+                semantic_errors.append(f"graph_digest mismatch (expected {exp_gd}, got {ceg_root.get('graph_digest')!r})")
+            gid_s = str(ceg_root.get("graph_id") or "")
+            if gid_s.startswith("ceg-") and len(gid_s) == 20 and gid_s != f"ceg-{exp_gd[:16]}":
+                semantic_errors.append(f"graph_id {gid_s!r} disagrees with graph_digest prefix ceg-{exp_gd[:16]}")
+
     has_graph_errors = bool(semantic_errors)
     anchors: list[dict[str, Any]] = []
     for cid, cobj in claims_by_id.items():
@@ -497,9 +544,20 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
         unres_cnt = unresolved_by_claim.get(cid, 0)
         if has_graph_errors:
             anchor_status = "invalid_graph"
-        elif neg_cnt > 0 or c_status in ("conflicted", "contested", "contradicted", "refuted"):
+        elif (
+            neg_cnt > 0
+            or cid in contra_claim_ids
+            or cid in uncert_conflict_ids
+            or c_status in ("conflicted", "contested", "contradicted", "refuted")
+        ):
             anchor_status = "conflicted"
-        elif pos_cnt > 0 and norm_txt and unres_cnt == 0 and c_status not in ("unverifiable", "out_of_scope"):
+        elif (
+            pos_cnt > 0
+            and norm_txt
+            and unres_cnt == 0
+            and cid not in uncert_unverifiable_ids
+            and c_status not in ("unverifiable", "unresolved", "out_of_scope")
+        ):
             anchor_status = "eligible"
         else:
             anchor_status = "unsupported"

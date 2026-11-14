@@ -14,12 +14,12 @@
   - `d_to_log_or(d)` ($\frac{\pi}{\sqrt{3}}\,d$), `log_or_to_d(lor)`, `var_log_or_from_d(v_d)`, `d_to_r(d, n1=None, n2=None)`, `r_to_d(r)`.
 - **Subgroup & moderator tests**:
   - `subgroup_analysis(yi, vi, groups)`: partitions fixed-effect $Q_{\text{total}} = Q_{\text{within}} + Q_{\text{between}}$ ($df = G - 1$) and reports DerSimonian-Laird estimates within each subgroup. Test subgroup differences strictly via $p_{\text{between}}$, never by comparing subgroup-specific $p$-values against $0.05$.
-  - `meta_regression(yi, vi, moderators, model="random")`: scale-invariant WLS slope $\beta_1$ with DL weights $w_i^* = 1/(v_i + \tau^2)$ and residual heterogeneity $Q_E$ ($df = k - 2$).
+  - `meta_regression(yi, vi, moderators, model="random")`: scale-invariant WLS slope $\beta_1$ with generalized DerSimonian-Laird residual $\tau^2_{\text{resid}}$ ($w_i^* = 1/(v_i + \tau^2_{\text{resid}})$) and null sampling-variance residual heterogeneity $Q_E$ ($df = k - 2$).
 
 ## 2. PRISMA 2020, Study-vs-Report Discipline, and Risk-of-Bias Rubrics
 
 1. **`Study` vs `Report` separation (PRISMA 2020 Item 16a/17)**:
-   - A single underlying *study* (cohort / RCT registration / benchmark run) may appear across multiple *reports* (arXiv preprint, conference paper, journal extension, erratum). Link companion reports to one canonical `study_id` before calling `meta-pool` so participant counts $N$ are never double-counted.
+   - A single underlying *study* (cohort / RCT registration / benchmark run) may appear across multiple *reports* (arXiv preprint, conference paper, journal extension, erratum). Link companion reports to one canonical `study_id` before calling `meta-analyze` so participant counts $N$ are never double-counted.
 2. **Search & exclusion accounting (PRISMA-S)**:
    - Record exact query strings, date bounds, and retrieved counts per source (`OpenAlex`, `Crossref`, `PubMed`, `arXiv`).
    - Run `bibliography --action deduplicate` and maintain a full-text exclusion log (`report_id`, `stage`, `exclusion_reason`).
@@ -40,4 +40,4 @@
    - Score-free 6-part diagnostic: contribution clarity, baseline fairness, statistical/error-bar validity, claim-evidence alignment, explicit limitations, reproducibility artifacts.
 4. **Author research-trajectory profile & journal/venue matching**:
    - Build author profiles strictly from verified OpenAlex/Crossref works (`verify-work` / `collect-corpus`): group verified publications by period, recurring methods, co-author clusters, and retraction/correction status without speculating on unverified affiliations or demographics.
-   - Match manuscripts to target venues by comparing empirical scope, page/format limits (`check-venue --action list`), open-access mandates, review model (double-blind vs single-blind), and verified reference overlap in `citation-graph`.
+   - Match manuscripts to target venues by comparing empirical scope, page/format limits (`check-venue --action list-venues` or `check-venue --list-venues`), open-access mandates, review model (double-blind vs single-blind), and verified reference overlap in `citation-graph`.

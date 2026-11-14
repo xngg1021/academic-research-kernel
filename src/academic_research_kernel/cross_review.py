@@ -26,7 +26,7 @@ import time
 from typing import Any, Iterable, Mapping, Optional
 import uuid
 
-from ._stdlib import safe_path, sha256_hex
+from ._stdlib import canonical_json, safe_path, sha256_hex
 
 PARTICIPANT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _FILE_TOKEN_RE = re.compile(r"[a-z0-9_.-]+\.[a-z0-9]{1,8}")
@@ -656,6 +656,27 @@ def _run_participant_command(
         return False, f"{type(exc).__name__}: {exc}", round(time.perf_counter() - t0, 4)
 
 
+def _purge_downstream_stream_files(stream_dir: Path, *, include_plan_outputs: bool) -> None:
+    patterns = [
+        "issue-registry.json",
+        "challenge-plan.json",
+        "challenge-skipped.json",
+        "graph-summary.md",
+        "bundle-*.json",
+        "prompt-challenge-*.txt",
+        "challenge-reply-*.md",
+        "challenge-meta-*.json",
+        "unresolved-ledger.json",
+        "review-run-receipt.json",
+        "consensus-report.md",
+    ]
+    if include_plan_outputs:
+        patterns.extend(["prompt-*.txt", "review-*.md", "findings-*.json"])
+    for pat in patterns:
+        for p in stream_dir.glob(pat):
+            p.unlink(missing_ok=True)
+
+
 def stage_plan(
     stream_dir: Path,
     task_path: Path,
@@ -671,13 +692,9 @@ def stage_plan(
     run_id = f"run-{uuid.uuid4().hex[:12]}"
     started_at = datetime.now(timezone.utc).isoformat()
 
-    # Remove stale outputs if task digest changed
+    # Invalidate all prior run outputs and downstream deliberation artifacts
     manifest_p = stream_dir / "run-manifest.json"
-    if manifest_p.is_file():
-        old_m = json.loads(manifest_p.read_text(encoding="utf-8"))
-        if old_m.get("task_sha256") and old_m.get("task_sha256") != task_sha:
-            for p in list(stream_dir.glob("review-*.md")) + list(stream_dir.glob("findings-*.json")):
-                p.unlink(missing_ok=True)
+    _purge_downstream_stream_files(stream_dir, include_plan_outputs=True)
 
     statuses: dict[str, dict[str, Any]] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(participants), 8)) as pool:
@@ -819,18 +836,22 @@ def plan_challenges(
                 })
                 continue
             c_props, c_map = _anon_proposals(obj["claims"])
+            c_bundle = {
+                "title": f"Contradiction adjudication on {obj['target']}",
+                "target": obj["target"],
+                "proposals": c_props,
+            }
             challenges.append({
                 "challenge_id": f"C{len(challenges) + 1:02d}",
                 "type": "contradiction",
                 "issue_id": obj["issue_id"],
                 "target": obj["target"],
                 "reviewer": reviewer,
+                "run_id": run_id,
+                "task_sha256": task_sha256,
+                "bundle_sha256": sha256_hex(canonical_json(c_bundle)),
                 "proposal_map": c_map,
-                "bundle": {
-                    "title": f"Contradiction adjudication on {obj['target']}",
-                    "target": obj["target"],
-                    "proposals": c_props,
-                },
+                "bundle": c_bundle,
             })
         else:
             author = obj["raised_by"][0]
@@ -850,18 +871,22 @@ def plan_challenges(
             best_rev = max(pool_cands, key=lambda c: weights.get((c, author), 0.0))
             used_reviewers.add(best_rev)
             s_props, s_map = _anon_proposals(obj["claims"])
+            s_bundle = {
+                "title": f"Independent verification of high-severity singleton on {obj['target']}",
+                "target": obj["target"],
+                "proposals": s_props,
+            }
             challenges.append({
                 "challenge_id": f"C{len(challenges) + 1:02d}",
                 "type": "singleton_audit",
                 "issue_id": obj["issue_id"],
                 "target": obj["target"],
                 "reviewer": best_rev,
+                "run_id": run_id,
+                "task_sha256": task_sha256,
+                "bundle_sha256": sha256_hex(canonical_json(s_bundle)),
                 "proposal_map": s_map,
-                "bundle": {
-                    "title": f"Independent verification of high-severity singleton on {obj['target']}",
-                    "target": obj["target"],
-                    "proposals": s_props,
-                },
+                "bundle": s_bundle,
             })
 
     if cfg.get("use_derangement") and len(challenges) < max_challenges:
@@ -874,16 +899,20 @@ def plan_challenges(
             d_props, d_map = _anon_proposals(
                 [{"claim": f.get("claim", ""), "evidence": f.get("evidence", [])} for f in seat_findings if isinstance(f, dict)]
             )
+            d_bundle = {
+                "title": "Complementary peer verification of anonymized proposals",
+                "proposals": d_props,
+            }
             challenges.append({
                 "challenge_id": f"C{len(challenges) + 1:02d}",
                 "type": "derangement_peer",
                 "reviewer": reviewer,
                 "target": target_seat,
+                "run_id": run_id,
+                "task_sha256": task_sha256,
+                "bundle_sha256": sha256_hex(canonical_json(d_bundle)),
                 "proposal_map": d_map,
-                "bundle": {
-                    "title": "Complementary peer verification of anonymized proposals",
-                    "proposals": d_props,
-                },
+                "bundle": d_bundle,
             })
 
     return registry, challenges, skipped
@@ -901,6 +930,7 @@ def stage_merge(
     findings_by_model = {m: load_or_extract_findings(stream_dir, m) for m in models}
     manifest_p = stream_dir / "run-manifest.json"
     manifest = json.loads(manifest_p.read_text(encoding="utf-8")) if manifest_p.is_file() else {}
+    _purge_downstream_stream_files(stream_dir, include_plan_outputs=False)
     registry, challenges, skipped = plan_challenges(
         models,
         findings_by_model,
@@ -953,10 +983,29 @@ def stage_challenge(
         return {"stage": "challenge", "replied": 0, "total": 0}
     spec_by_id = {p.id: p for p in participants}
     task_file = safe_path(task_path, must_exist=True)
+    actual_task_sha = sha256_hex(task_file.read_bytes())
 
-    for old in stream_dir.glob("challenge-reply-*.md"):
+    manifest_p = stream_dir / "run-manifest.json"
+    reg_p = stream_dir / "issue-registry.json"
+    if not manifest_p.is_file() or not reg_p.is_file():
+        raise FileNotFoundError("Missing run-manifest.json or issue-registry.json; run --stage plan and --stage merge first")
+    manifest = json.loads(manifest_p.read_text(encoding="utf-8"))
+    reg_doc = json.loads(reg_p.read_text(encoding="utf-8"))
+    reg_meta = reg_doc.get("metadata") if isinstance(reg_doc, Mapping) and isinstance(reg_doc.get("metadata"), Mapping) else {}
+    exp_run_id = manifest.get("run_id")
+    exp_task_sha = manifest.get("task_sha256")
+    if not exp_run_id or exp_task_sha != actual_task_sha:
+        raise ValueError("Task file SHA-256 differs from active run-manifest.json; re-run stage_plan first")
+    if reg_meta.get("run_id") != exp_run_id or reg_meta.get("task_sha256") != actual_task_sha:
+        raise ValueError("issue-registry.json run_id/task_sha256 disagrees with active run-manifest.json")
+    for ch_item in challenges:
+        if ch_item.get("run_id") != exp_run_id or ch_item.get("task_sha256") != actual_task_sha:
+            raise ValueError("challenge-plan.json run_id/task_sha256 disagrees with active task file")
+
+    for old in list(stream_dir.glob("challenge-reply-*.md")) + list(stream_dir.glob("challenge-meta-*.json")):
         old.unlink(missing_ok=True)
 
+    item_by_key: dict[str, dict[str, Any]] = {}
     statuses: dict[str, dict[str, Any]] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(challenges), 8)) as pool:
         futs = {}
@@ -980,32 +1029,126 @@ def stage_challenge(
                 "out_path": str(out_p),
                 "task_path": str(task_file),
             }
-            futs[pool.submit(_run_participant_command, sp, placeholders, stream_dir, timeout_s)] = f"{cid}:{rev_id}"
+            key = f"{cid}:{rev_id}"
+            item_by_key[key] = item
+            futs[pool.submit(_run_participant_command, sp, placeholders, stream_dir, timeout_s)] = key
 
         for fut in concurrent.futures.as_completed(futs):
             key = futs[fut]
             ok, err, wall = fut.result()
+            if ok:
+                item = item_by_key[key]
+                cid = item["challenge_id"]
+                rev_id = item["reviewer"]
+                out_p = stream_dir / f"challenge-reply-{cid}-{rev_id}.md"
+                meta_p = stream_dir / f"challenge-meta-{cid}-{rev_id}.json"
+                b_sha = item.get("bundle_sha256") or sha256_hex(canonical_json(item["bundle"]))
+                meta_p.write_text(
+                    json.dumps(
+                        {
+                            "challenge_id": cid,
+                            "reviewer": rev_id,
+                            "run_id": item.get("run_id"),
+                            "task_sha256": item.get("task_sha256"),
+                            "bundle_sha256": b_sha,
+                            "reply_sha256": sha256_hex(out_p.read_text(encoding="utf-8")),
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
             statuses[key] = {"success": ok, "error": err, "wall_seconds": wall}
 
     replied = sum(1 for v in statuses.values() if v["success"])
     return {"stage": "challenge", "replied": replied, "total": len(challenges), "statuses": statuses}
 
 
-def _parse_stances(text: str) -> tuple[list[str], list[str], list[str]]:
+_STRICT_VERDICT_LINE_RE = re.compile(
+    r"^(?:[-*+]\s*)?(?:【\s*(CONCEDE|REFUTED|UNRESOLVED(?:\s*:[^】]*)?)\s*】|\[(CONCEDE|REFUTED|UNRESOLVED)\])\s+"
+    r"Proposal-([1-9]\d*)(?:\s*[:：\-—]\s*|\s+)(\S.*)$",
+    re.I,
+)
+
+
+def _parse_structured_stances(
+    text: str,
+    valid_pkeys: set[str],
+) -> dict[str, Any]:
+    """Parse stance lines with strict anchored Proposal-N validation against valid_pkeys."""
     conceded: list[str] = []
     refuted: list[str] = []
     unresolved: list[str] = []
+    by_proposal: dict[str, set[str]] = {}
+    invalid_refs: list[str] = []
+    conflicting_line = False
+    unscoped_concede_or_refute = False
+    fence_char: Optional[str] = None
+    fence_len = 0
+
     for line in text.splitlines():
         s = line.strip()
+        if fence_char is None:
+            m_open = re.match(r"^(`{3,}|~{3,})", s)
+            if m_open is not None:
+                tok = m_open.group(1)
+                fence_char = tok[0]
+                fence_len = len(tok)
+                continue
+        else:
+            if re.match(rf"^{re.escape(fence_char)}{{{fence_len},}}\s*$", s):
+                fence_char = None
+                fence_len = 0
+            continue
         if not s or s.startswith(">") or re.match(r"^\|[\s\-:|]+\|$", s):
             continue
-        if re.search(r"(?:【\s*CONCEDE\s*】|\[CONCEDE\])", s):
-            conceded.append(s[:240])
-        if re.search(r"(?:【\s*REFUTED\s*】|\[REFUTED\])", s):
-            refuted.append(s[:240])
-        if re.search(r"(?:【\s*UNRESOLVED|\[UNRESOLVED\])", s):
-            unresolved.append(s[:240])
-    return conceded, refuted, unresolved
+        is_c = bool(re.search(r"(?:【\s*CONCEDE\s*】|\[CONCEDE\])", s, re.I))
+        is_r = bool(re.search(r"(?:【\s*REFUTED\s*】|\[REFUTED\])", s, re.I))
+        is_u = bool(re.search(r"(?:【\s*UNRESOLVED|\[UNRESOLVED\])", s, re.I))
+        tag_count = int(is_c) + int(is_r) + int(is_u)
+        if tag_count == 0:
+            continue
+        if tag_count > 1:
+            conflicting_line = True
+            continue
+
+        m = _STRICT_VERDICT_LINE_RE.match(s)
+        if m is None:
+            invalid_refs.append("malformed_verdict_line")
+            unscoped_concede_or_refute = True
+            continue
+        # Reject lines mentioning multiple Proposal tokens in the body to keep 1 line = 1 Proposal verdict
+        extra_props = re.findall(r"Proposal[-\s]*\S+", m.group(4), re.I)
+        if extra_props:
+            invalid_refs.append("multiple_proposals_on_line")
+            continue
+
+        raw_tag = (m.group(1) or m.group(2) or "").strip().upper()
+        stance = "conceded" if raw_tag == "CONCEDE" else ("refuted" if raw_tag == "REFUTED" else "unresolved")
+        pk = f"proposal{m.group(3)}"
+        if pk not in valid_pkeys:
+            invalid_refs.append(pk)
+            continue
+        by_proposal.setdefault(pk, set()).add(stance)
+
+        excerpt = s[:240]
+        if stance == "conceded":
+            conceded.append(excerpt)
+        elif stance == "refuted":
+            refuted.append(excerpt)
+        else:
+            unresolved.append(excerpt)
+
+    return {
+        "conceded": conceded,
+        "refuted": refuted,
+        "unresolved": unresolved,
+        "by_proposal": by_proposal,
+        "invalid_refs": invalid_refs,
+        "conflicting_line": conflicting_line,
+        "unscoped_concede_or_refute": unscoped_concede_or_refute,
+    }
 
 
 def _evidence_check(evidence_list: Iterable[Any], base_dirs: Iterable[Path]) -> tuple[list[str], list[str], list[str]]:
@@ -1061,8 +1204,25 @@ def synthesize_deliberation(
                 "reason": "missing_reply",
             })
             continue
-        reply_text = replies_by_cid[cid]
-        c_list, r_list, u_list = _parse_stances(reply_text)
+        prop_map = dict(item.get("proposal_map")) if isinstance(item.get("proposal_map"), Mapping) else {}
+        bundle_props = list((item.get("bundle") or {}).get("proposals") or [])
+        valid_pkeys = set(prop_map.keys()) or {f"proposal{k}" for k in range(1, len(bundle_props) + 1)}
+        parsed = _parse_structured_stances(replies_by_cid[cid], valid_pkeys)
+        c_list = parsed["conceded"]
+        r_list = parsed["refuted"]
+        u_list = parsed["unresolved"]
+        by_prop: dict[str, set[str]] = parsed["by_proposal"]
+
+        if parsed["invalid_refs"] or parsed["conflicting_line"]:
+            missing_challenges.append({
+                "challenge_id": cid,
+                "reviewer": rev,
+                "issue_id": item.get("issue_id"),
+                "target": item.get("target"),
+                "reason": "invalid_proposal_reference" if parsed["invalid_refs"] else "conflicting_stance_line",
+            })
+            continue
+
         if not (c_list or r_list or u_list):
             missing_challenges.append({
                 "challenge_id": cid,
@@ -1072,26 +1232,63 @@ def synthesize_deliberation(
                 "reason": "no_valid_stance_tag",
             })
             continue
-        if item.get("type") == "contradiction" and item.get("issue_id"):
-            # Contradiction closes cleanly only when adjudicator resolves without UNRESOLVED tags
-            if (c_list or r_list) and not u_list:
-                adjudicated_contradiction_issues.add(str(item["issue_id"]))
+
         src_name = f"challenge-reply-{cid}-{rev}.md"
-        prop_map = item.get("proposal_map") if isinstance(item.get("proposal_map"), Mapping) else {}
         for ex in c_list:
             conceded_items.append({"source_file": src_name, "status": "conceded", "excerpt": ex})
         for ex in r_list:
             refuted_items.append({"source_file": src_name, "status": "refuted", "excerpt": ex})
-            if item.get("issue_id") and item.get("type") == "singleton_audit":
-                m_prop = re.search(r"Proposal[-\s]*(\d+)", ex, re.I)
-                if m_prop:
-                    pkey = f"proposal{m_prop.group(1)}"
-                    orig_idx = prop_map.get(pkey, int(m_prop.group(1)))
-                    refuted_claims_by_issue.setdefault(str(item["issue_id"]), set()).add(int(orig_idx))
-                else:
-                    refuted_claims_by_issue.setdefault(str(item["issue_id"]), set()).add("all")
         for ex in u_list:
             unresolved_contested.append({"source_file": src_name, "status": "unresolved_contested", "excerpt": ex})
+
+        if item.get("type") == "contradiction" and item.get("issue_id"):
+            # Contradiction closes ONLY when every real Proposal in bundle has a single unambiguous verdict,
+            # no UNRESOLVED tags exist, and surviving CONCEDEd proposals are mutually consistent (no opposing pair).
+            all_covered = bool(valid_pkeys) and set(by_prop.keys()) == valid_pkeys
+            unambiguous = all(len(st_set) == 1 and "unresolved" not in st_set for st_set in by_prop.values())
+            conceded_pkeys = [pk for pk, st_set in by_prop.items() if st_set == {"conceded"}]
+            has_surviving_conceded = bool(conceded_pkeys)
+            not_all_conceded = len(valid_pkeys) < 2 or any("refuted" in st_set for st_set in by_prop.values())
+
+            surviving_consistent = True
+            contr_entry = next(
+                (ce for ce in (registry.get("contradictions") or []) if str(ce.get("issue_id")) == str(item["issue_id"])),
+                None,
+            )
+            orig_claims = list(contr_entry.get("claims") or []) if isinstance(contr_entry, Mapping) else []
+            if orig_claims and len(conceded_pkeys) >= 2:
+                surviving_claims: list[dict[str, Any]] = []
+                for pk in conceded_pkeys:
+                    orig_idx = int(prop_map[pk]) if pk in prop_map else int(pk.removeprefix("proposal"))
+                    if 1 <= orig_idx <= len(orig_claims):
+                        surviving_claims.append(orig_claims[orig_idx - 1])
+                if len(surviving_claims) >= 2:
+                    wrapped = [{"model": f"surv-{idx}", "raw": cl} for idx, cl in enumerate(surviving_claims)]
+                    if _has_polarity_contradiction(wrapped) or _has_claim_text_opposition([str(cl.get("claim") or "") for cl in surviving_claims]):
+                        surviving_consistent = False
+
+            if (
+                all_covered
+                and unambiguous
+                and has_surviving_conceded
+                and not_all_conceded
+                and surviving_consistent
+                and not u_list
+                and not parsed["unscoped_concede_or_refute"]
+            ):
+                adjudicated_contradiction_issues.add(str(item["issue_id"]))
+
+        elif item.get("type") == "singleton_audit" and item.get("issue_id"):
+            iid_s = str(item["issue_id"])
+            for pk, st_set in by_prop.items():
+                if st_set != {"refuted"}:
+                    continue
+                if pk in prop_map:
+                    refuted_claims_by_issue.setdefault(iid_s, set()).add(int(prop_map[pk]))
+                elif not prop_map and pk in valid_pkeys:
+                    idx_num = int(pk.removeprefix("proposal"))
+                    if 1 <= idx_num <= len(bundle_props):
+                        refuted_claims_by_issue.setdefault(iid_s, set()).add(idx_num)
 
     unresolved_ledger: list[dict[str, Any]] = list(unresolved_contested)
     ghost_discarded: list[dict[str, Any]] = []
@@ -1211,13 +1408,41 @@ def stage_synthesize(stream_dir: Path) -> dict[str, Any]:
     manifest_p = stream_dir / "run-manifest.json"
     manifest = json.loads(manifest_p.read_text(encoding="utf-8")) if manifest_p.is_file() else {}
 
+    reg_meta = registry.get("metadata") or {}
+    if manifest:
+        if manifest.get("run_id") and reg_meta.get("run_id") != manifest.get("run_id"):
+            raise ValueError("Stale issue-registry.json does not match current run-manifest.json run_id; re-run --stage merge")
+        if manifest.get("task_sha256") and reg_meta.get("task_sha256") != manifest.get("task_sha256"):
+            raise ValueError("Stale issue-registry.json does not match current run-manifest.json task_sha256; re-run --stage merge")
+        if manifest.get("task_path") and Path(manifest["task_path"]).is_file():
+            live_task_sha = sha256_hex(Path(manifest["task_path"]).read_bytes())
+            if manifest.get("task_sha256") and live_task_sha != manifest.get("task_sha256"):
+                raise ValueError("Task file changed after --stage plan; re-run --stage plan and --stage merge")
+
     replies_by_cid: dict[str, str] = {}
     for item in planned:
         cid = item["challenge_id"]
         rev = item["reviewer"]
         rp = stream_dir / f"challenge-reply-{cid}-{rev}.md"
-        if rp.is_file():
-            replies_by_cid[cid] = rp.read_text(encoding="utf-8")
+        meta_rp = stream_dir / f"challenge-meta-{cid}-{rev}.json"
+        if not rp.is_file() or not meta_rp.is_file():
+            continue
+        reply_text = rp.read_text(encoding="utf-8")
+        try:
+            rmeta = json.loads(meta_rp.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        exp_b_sha = item.get("bundle_sha256") or sha256_hex(canonical_json(item["bundle"]))
+        if (
+            rmeta.get("challenge_id") != cid
+            or rmeta.get("reviewer") != rev
+            or rmeta.get("run_id") != item.get("run_id")
+            or rmeta.get("task_sha256") != item.get("task_sha256")
+            or rmeta.get("bundle_sha256") != exp_b_sha
+            or rmeta.get("reply_sha256") != sha256_hex(reply_text)
+        ):
+            continue
+        replies_by_cid[cid] = reply_text
 
     syn = synthesize_deliberation(
         registry,
@@ -1315,7 +1540,15 @@ def deliberate_inline(
         else:
             raise ValueError(f"Findings for {pid!r} must be a list or an object with 'findings'")
 
-    registry, challenges, skipped = plan_challenges(models, normalized_map, mode=mode)
+    inline_task_sha = sha256_hex(canonical_json({"mode": mode, "findings_by_model": normalized_map}))
+    inline_run_id = f"inline-{inline_task_sha[:12]}"
+    registry, challenges, skipped = plan_challenges(
+        models,
+        normalized_map,
+        mode=mode,
+        run_id=inline_run_id,
+        task_sha256=inline_task_sha,
+    )
     weights = compute_complementarity_matrix(models, normalized_map)
     derangement = max_weight_derangement(models, weights)
     out: dict[str, Any] = {
@@ -1326,10 +1559,31 @@ def deliberate_inline(
     }
     if challenge_replies is not None:
         bases = [safe_path(base_dir, must_exist=True)] if base_dir else [Path.cwd()]
+        verified_inline: dict[str, str] = {}
+        by_cid = {c["challenge_id"]: c for c in challenges}
+        for raw_cid, raw_rep in challenge_replies.items():
+            cid = str(raw_cid)
+            ch_item = by_cid.get(cid)
+            if ch_item is None:
+                continue
+            exp_b_sha = ch_item.get("bundle_sha256")
+            if isinstance(raw_rep, Mapping):
+                rep_txt = str(raw_rep.get("text") if raw_rep.get("text") is not None else raw_rep.get("reply") or "")
+                b_sha = raw_rep.get("bundle_sha256")
+                r_id = raw_rep.get("run_id")
+                t_sha = raw_rep.get("task_sha256")
+                if b_sha != exp_b_sha:
+                    continue
+                if r_id is not None and r_id != inline_run_id:
+                    continue
+                if t_sha is not None and t_sha != inline_task_sha:
+                    continue
+                verified_inline[cid] = rep_txt
+            # Unbound plain-string inline replies cannot close challenges across distinct tasks/bundles
         out["synthesis"] = synthesize_deliberation(
             registry,
             challenges,
-            dict(challenge_replies),
+            verified_inline,
             skipped_challenges=skipped,
             base_dirs=bases,
         )

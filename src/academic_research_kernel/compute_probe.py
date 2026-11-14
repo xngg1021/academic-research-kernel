@@ -8,6 +8,7 @@ from __future__ import annotations
 import ctypes
 from datetime import datetime, timezone
 import importlib.util
+import math
 import os
 from pathlib import Path
 import platform
@@ -242,26 +243,46 @@ def build_compute_receipt(
     *,
     operation: str = "matmul_f64",
     scale: str = "small",
-    dtype: str = "float64",
+    dtype: Optional[str] = None,
     gain_threshold: float = 1.25,
     warmup: int = 1,
     repeat: int = 3,
     seed: int = 42,
     candidates: Optional[list[dict[str, Any]]] = None,
+    measure_candidates: bool = False,
 ) -> dict[str, Any]:
-    """Execute a bounded NumPy reference timing probe and emit a schema-valid ComputeReceipt."""
+    """Execute a bounded NumPy reference timing probe (plus optional paired parity/gain candidate checks) and emit a schema-valid ComputeReceipt."""
     allowed_ops = ("matmul_f64", "matmul_f32", "dot", "svd", "svd_f64", "fft_1d")
     if operation not in allowed_ops:
         raise ValueError(f"Unsupported operation {operation!r}; allowed={list(allowed_ops)}")
     if scale not in ("small", "medium", "large"):
         raise ValueError(f"Invalid scale {scale!r}; expected small, medium, or large")
-    if dtype not in ("float32", "float64"):
+    if dtype is not None and dtype not in ("float32", "float64"):
         raise ValueError(f"Invalid dtype {dtype!r}; expected float32 or float64")
+    if operation == "matmul_f32":
+        if dtype is not None and dtype != "float32":
+            raise ValueError("Conflicting dtype: operation 'matmul_f32' requires dtype='float32'")
+        eff_dtype = "float32"
+    elif operation in ("matmul_f64", "svd_f64"):
+        if dtype is not None and dtype != "float64":
+            raise ValueError(f"Conflicting dtype: operation {operation!r} requires dtype='float64'")
+        eff_dtype = "float64"
+    else:
+        eff_dtype = dtype or "float64"
+
+    if isinstance(warmup, bool) or not isinstance(warmup, int) or warmup < 0:
+        raise ValueError("warmup must be a non-negative integer (>= 0)")
+    if isinstance(repeat, bool) or not isinstance(repeat, int) or repeat < 1:
+        raise ValueError("repeat must be a positive integer (>= 1)")
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("seed must be an integer")
+    if isinstance(gain_threshold, bool) or not isinstance(gain_threshold, (int, float)) or not math.isfinite(gain_threshold) or gain_threshold <= 0:
+        raise ValueError("gain_threshold must be a positive finite number")
 
     import numpy as np
 
     dim = {"small": 64, "medium": 192, "large": 384}[scale]
-    np_dtype = np.float32 if (dtype == "float32" or operation == "matmul_f32") else np.float64
+    np_dtype = np.float32 if eff_dtype == "float32" else np.float64
     rng = np.random.default_rng(seed)
     a = rng.standard_normal((dim, dim)).astype(np_dtype)
     b = rng.standard_normal((dim, dim)).astype(np_dtype)
@@ -276,15 +297,92 @@ def build_compute_receipt(
         return np.fft.rfft(a.ravel())
 
     t_start0 = time.perf_counter()
-    for _ in range(max(1, warmup)):
+    for _ in range(warmup):
         _ = _exec_op()
     startup = round(time.perf_counter() - t_start0, 6)
 
-    times: list[float] = []
-    for _ in range(max(1, repeat)):
+    ref_out = None
+    raw_times: list[float] = []
+    for _ in range(repeat):
         t0 = time.perf_counter()
-        _ = _exec_op()
-        times.append(round(time.perf_counter() - t0, 6))
+        ref_out = _exec_op()
+        raw_times.append(max(time.perf_counter() - t0, 0.0))
+    times = [round(t, 6) for t in raw_times]
+    ref_raw_median = max(float(statistics.median(raw_times)), 1e-12)
+    ref_median = round(max(ref_raw_median, 1e-9), 6)
+
+    cand_list: list[dict[str, Any]] = []
+    for ext_c in (candidates or []):
+        if not isinstance(ext_c, dict):
+            continue
+        cand_list.append({
+            "backend": str(ext_c.get("backend") or "unknown_external"),
+            "device": ext_c.get("device"),
+            "kind": "unverified_external",
+            "dtype": eff_dtype,
+            "verdict": "REFERENCE",
+            "fallback_reason": "unverified_external_candidate",
+        })
+
+    if measure_candidates:
+        rel_tol = 1e-3 if eff_dtype == "float32" else 1e-7
+        try:
+            import scipy.linalg as sp_la
+            import scipy.fft as sp_fft
+
+            def _exec_scipy() -> Any:
+                if operation in ("matmul_f64", "matmul_f32"):
+                    return sp_la.blas.sgemm(1.0, a, b) if eff_dtype == "float32" else sp_la.blas.dgemm(1.0, a, b)
+                if operation == "dot":
+                    fn_dot = sp_la.blas.sdot if eff_dtype == "float32" else sp_la.blas.ddot
+                    return float(fn_dot(a.ravel(), b.ravel()))
+                if operation in ("svd", "svd_f64"):
+                    return sp_la.svdvals(a)
+                return sp_fft.rfft(a.ravel())
+
+            c_t0 = time.perf_counter()
+            for _ in range(warmup):
+                _ = _exec_scipy()
+            c_startup = round(time.perf_counter() - c_t0, 6)
+            c_raw_times: list[float] = []
+            c_out = None
+            for _ in range(repeat):
+                t0 = time.perf_counter()
+                c_out = _exec_scipy()
+                c_raw_times.append(max(time.perf_counter() - t0, 0.0))
+            c_times = [round(t, 6) for t in c_raw_times]
+            c_raw_med = max(float(statistics.median(c_raw_times)), 1e-12)
+            ref_arr = np.asarray(ref_out)
+            cand_arr = np.asarray(c_out)
+            denom = max(float(np.linalg.norm(ref_arr.ravel())), 1e-12)
+            rel_err = float(np.linalg.norm((cand_arr - ref_arr).ravel()) / denom)
+            raw_speedup = ref_raw_median / c_raw_med
+            speedup = round(raw_speedup, 6)
+            if not math.isfinite(rel_err) or rel_err > rel_tol:
+                verdict_c, fb_reason = "REFERENCE", f"parity_mismatch(rel_l2={rel_err:.3e})"
+            elif raw_speedup < float(gain_threshold):
+                verdict_c, fb_reason = "REFERENCE", f"insufficient_material_gain(speedup={speedup:.3f}<{gain_threshold})"
+            else:
+                verdict_c, fb_reason = "ADMITTED", None
+            cand_list.append({
+                "backend": "scipy_cpu",
+                "device": "cpu",
+                "kind": "measured_paired",
+                "dtype": eff_dtype,
+                "verdict": verdict_c,
+                "fallback_reason": fb_reason,
+                "speedup_vs_reference": speedup,
+                "timing": {"startup": c_startup, "median": round(max(c_raw_med, 1e-9), 6), "times": c_times},
+            })
+        except Exception as exc:
+            cand_list.append({
+                "backend": "scipy_cpu",
+                "device": "cpu",
+                "kind": "measured_paired",
+                "dtype": eff_dtype,
+                "verdict": "REFERENCE",
+                "fallback_reason": f"backend_error:{type(exc).__name__}",
+            })
 
     hw = probe()
     hw_schema = {
@@ -302,7 +400,6 @@ def build_compute_receipt(
             "accelerators",
         )
     }
-    cand_list = list(candidates or [])
     return {
         "protocol": PROTOCOL,
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -315,7 +412,7 @@ def build_compute_receipt(
         },
         "operation": operation,
         "scale": scale,
-        "dtype": dtype,
+        "dtype": eff_dtype,
         "gain_threshold": float(gain_threshold),
         "benchmark_parameters": {"warmup": int(warmup), "repeat": int(repeat), "seed": int(seed)},
         "reference": {
@@ -327,7 +424,7 @@ def build_compute_receipt(
             },
         },
         "candidates": cand_list,
-        "admitted_backends": [c["backend"] for c in cand_list if c.get("verdict") == "ADMITTED"],
+        "admitted_backends": [c["backend"] for c in cand_list if c.get("verdict") == "ADMITTED" and c.get("kind") == "measured_paired"],
         "fallback_backends": [
             {"backend": c["backend"], "reason": c.get("fallback_reason")}
             for c in cand_list

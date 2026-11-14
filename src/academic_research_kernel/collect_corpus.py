@@ -99,11 +99,13 @@ def merge_candidates(layers: Mapping[str, list[dict[str, Any]]]) -> dict[str, An
     def _pick_str(a: Any, b: Any) -> Any:
         sa = str(a).strip() if a is not None else ""
         sb = str(b).strip() if b is not None else ""
+        if not sa and not sb:
+            return None
         if not sa:
-            return b
+            return sb
         if not sb:
-            return a
-        return a if (len(sa), sa) >= (len(sb), sb) else b
+            return sa
+        return sa if (len(sa), sa) >= (len(sb), sb) else sb
 
     def _pick_seq(a: Any, b: Any) -> Any:
         la = len(a) if isinstance(a, list) else -1
@@ -125,18 +127,20 @@ def merge_candidates(layers: Mapping[str, list[dict[str, Any]]]) -> dict[str, An
         w_authors = work.get("authors") if work.get("authors") is not None else work.get("authorships")
         w_cited = work.get("cited_by_count")
         w_rel = work.get("relevance_score")
+        w_title = _pick_str(work.get("title"), None)
+        w_abstract = _pick_str(work.get("abstract"), None)
         entry = merged.get(canonical)
         if entry is None:
             entry = {
                 "key": canonical,
-                "title": work.get("title"),
+                "title": w_title,
                 "year": w_year,
                 "doi": item["doi"],
                 "openalex_id": item["oa_id"],
                 "cited_by_count": w_cited,
                 "relevance_score": w_rel,
                 "authors": w_authors,
-                "abstract": work.get("abstract"),
+                "abstract": w_abstract,
                 "referenced_works": work.get("referenced_works"),
                 "source_layers": [layer],
             }
@@ -146,8 +150,8 @@ def merge_candidates(layers: Mapping[str, list[dict[str, Any]]]) -> dict[str, An
                 entry["doi"] = item["doi"]
             if item["oa_id"] and (entry.get("openalex_id") is None or str(item["oa_id"]) < str(entry["openalex_id"])):
                 entry["openalex_id"] = item["oa_id"]
-            entry["title"] = _pick_str(entry.get("title"), work.get("title"))
-            entry["abstract"] = _pick_str(entry.get("abstract"), work.get("abstract"))
+            entry["title"] = _pick_str(entry.get("title"), w_title)
+            entry["abstract"] = _pick_str(entry.get("abstract"), w_abstract)
             if w_year is not None:
                 entry["year"] = w_year if entry.get("year") is None else min(int(entry["year"]), int(w_year))
             if w_cited is not None:

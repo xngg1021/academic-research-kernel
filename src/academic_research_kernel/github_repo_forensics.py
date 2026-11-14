@@ -74,6 +74,8 @@ def analyze_entries(entries: list[dict], truncated: bool = False) -> dict:
     for item in entries:
         if not isinstance(item, dict):
             continue
+        if item.get("type") is not None and str(item.get("type")) != "blob":
+            continue
         p_str = str(item.get("path", "")).replace("\\", "/").strip("/")
         if not p_str.endswith(".py"):
             continue
@@ -90,6 +92,8 @@ def analyze_entries(entries: list[dict], truncated: bool = False) -> dict:
     seen_paths = set()
     for item in entries:
         if not isinstance(item, dict):
+            continue
+        if item.get("type") is not None and str(item.get("type")) != "blob":
             continue
         path_str = str(item.get("path", "")).replace("\\", "/").strip("/")
         if not path_str or path_str in seen_paths:

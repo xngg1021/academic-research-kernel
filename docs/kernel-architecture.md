@@ -2,9 +2,9 @@
 
 ## Overview
 
-`academic-research-kernel` (`v3.0.0`) is an offline-first, deterministic scholarly verification and manuscript engineering runtime built on Python's standard library, `SQLite` (`STRICT` tables + `WAL` journaling + `application_id = 0x41524B33`, `user_version = 3`), and on-demand scientific libraries (`numpy`, `scipy`, `statsmodels`, `jsonschema`).
+`academic-research-kernel` (`v3.0.0`) is an offline-first, deterministic scholarly verification and manuscript engineering runtime built on Python's standard library, `SQLite` (`STRICT` tables + `WAL` journaling + `application_id = 0x41524B33`, `user_version = 4`), and on-demand scientific libraries (`numpy`, `scipy`, `statsmodels`, `jsonschema`).
 
-Rather than scattering dozens of duplicated helper scripts across skill directories, `v3.0.0` consolidates the entire runtime inside a single installable package (`src/academic_research_kernel/`), exposing **24 stdio MCP tools**, **26 Draft 2020-12 JSON Schemas**, **20 CLI command groups** (with clean human-readable `3.0.0` verb-object aliases), and **7 First-Principles Agent Skills**:
+Rather than scattering dozens of duplicated helper scripts across skill directories, `v3.0.0` consolidates the entire runtime inside a single installable package (`src/academic_research_kernel/`), exposing **24 stdio MCP tools**, **26 canonical JSON Schemas** (`21` Draft 2020-12 + `5` Draft-07, all bound in `KIND_SCHEMA_MAP`), **20 CLI command groups** (with clean human-readable `3.0.0` aliases), and **7 First-Principles Agent Skills**:
 
 ```mermaid
 flowchart TD
@@ -23,7 +23,7 @@ flowchart TD
 ### 1. Transactional SQLite Research State (`state_db.py`, `_stdlib.py`)
 
 `ResearchStateDB` replaces ad-hoc multi-file JSON snapshot caches with relational `STRICT` tables protected by foreign keys, `SAVEPOINT` atomic batches, cycle-checked provenance graphs, and SHA-256 canonical JSON digests:
-- **Database identity guard**: Rejects unrelated SQLite files (`application_id != 0x41524B33`) and refuses to open or downgrade databases created by newer schema versions (`user_version > 3`).
+- **Database identity guard**: Rejects unrelated SQLite files (`application_id != 0x41524B33`), atomically upgrades pre-v4 (`user_version < 4`) `claim_edges` triggers/constraints inside an immediate transaction, and refuses to open or downgrade databases created by newer schema versions (`user_version > 4`).
 - **Research objects & provenance lineage**: Stores canonical object identities, content hashes, and directed derivation edges; inline graphs without verified content digests report `verification_status="unchecked"`, reserving `"intact"` strictly for hash-verified provenance chains.
 - **Claim-Evidence Graph (`CEG`)**: Validates endpoint existence (`validate_ceg_semantics`), detects dangling support or relation edges, and derives deterministic evidence-anchor IDs over `canonical_json([artifact_id, locator])` so identically named tables across distinct runs never collide.
 - **Decision ledger & retraction watch state**: Maintains append-only decision events and dual-sequence DOI watch state (`applied_seq` + `confirmed_seq`), preserving provider-scoped retraction signals (`openalex:` / `crossref:`) when a peer upstream source times out (`signals_complete=False`) and emitting `unacked_delta` alerts even when confirmed retractions arrive out of sequence after transient timeouts.

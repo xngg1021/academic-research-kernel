@@ -35,19 +35,36 @@ from ._stdlib import (
 
 ALLOWED_ARTIFACT_KINDS: frozenset[str] = frozenset({
     "data_snapshot",
+    "source",
+    "computed_evidence",
+    "table_cell",
+    "statistic_artifact",
     "research_object",
     "research_documents",
     "lineage_receipt",
     "paper_extraction",
     "paper_comparison",
-    "computed_evidence",
     "reproduction_receipt",
     "literature_delta",
     "retraction_delta",
     "systematic_review",
-    "source",
-    "table_cell",
-    "statistic_artifact",
+    "evidence_receipt",
+    "compute_receipt",
+    "computation_artifact",
+    "quantitative_audit",
+    "opaque_manuscript",
+    "literature_analysis",
+    "claim_evidence_graph",
+    "decision_ledger",
+    "cross_review_artifact",
+    "review_run_receipt",
+    "review_panel_spec",
+    "review_finding",
+    "review_result",
+    "artifact_ingestion_receipt",
+    "research_artifact_envelope",
+    "ingestion_kernel_state",
+    "legacy_academic_evidence",
 })
 
 KIND_SCHEMA_MAP: Mapping[str, str] = {
@@ -55,6 +72,28 @@ KIND_SCHEMA_MAP: Mapping[str, str] = {
     "research_documents": "research-documents.schema.json",
     "paper_extraction": "paper-extraction.schema.json",
     "paper_comparison": "paper-comparison.schema.json",
+    "lineage_receipt": "lineage-receipt.schema.json",
+    "reproduction_receipt": "reproduction-receipt.schema.json",
+    "literature_delta": "literature-delta.schema.json",
+    "retraction_delta": "retraction-delta.schema.json",
+    "systematic_review": "systematic-review-artifact.schema.json",
+    "evidence_receipt": "evidence-receipt.schema.json",
+    "compute_receipt": "compute-receipt.schema.json",
+    "computation_artifact": "computation-artifact.schema.json",
+    "quantitative_audit": "quantitative-audit.schema.json",
+    "opaque_manuscript": "opaque-manuscript.schema.json",
+    "literature_analysis": "literature-analysis-artifact.schema.json",
+    "claim_evidence_graph": "claim-evidence-graph.schema.json",
+    "decision_ledger": "decision-ledger-receipt.schema.json",
+    "cross_review_artifact": "cross-review-artifact.schema.json",
+    "review_run_receipt": "review-run-receipt.schema.json",
+    "review_panel_spec": "review-panel-spec.schema.json",
+    "review_finding": "review-finding.schema.json",
+    "review_result": "review-result.schema.json",
+    "artifact_ingestion_receipt": "artifact-ingestion-receipt.schema.json",
+    "research_artifact_envelope": "research-artifact-envelope.schema.json",
+    "ingestion_kernel_state": "ingestion-kernel-state.schema.json",
+    "legacy_academic_evidence": "legacy-academic-evidence.schema.json",
 }
 
 ALLOWED_LINEAGE_RELATIONS: frozenset[str] = frozenset({
@@ -66,7 +105,7 @@ ALLOWED_LINEAGE_RELATIONS: frozenset[str] = frozenset({
 
 ALLOWED_CLAIM_STATUSES: frozenset[str] = frozenset({"supported", "contested", "unresolved", "refuted"})
 ALLOWED_EVIDENCE_STANCES: frozenset[str] = frozenset({"supports", "contradicts", "qualifies"})
-ALLOWED_CLAIM_RELATIONS: frozenset[str] = frozenset({"depends_on", "refines", "contradicts"})
+ALLOWED_CLAIM_RELATIONS: frozenset[str] = frozenset({"depends_on", "refines", "contradicts", "corroborates", "cites"})
 
 PRUNE_REASONS: frozenset[str] = frozenset({
     "resource_exhausted",
@@ -428,6 +467,7 @@ class ResearchStateDB:
                     if cur_mode != "wal":
                         conn.execute("PRAGMA journal_mode = WAL")
                     conn.execute("PRAGMA synchronous = NORMAL")
+                    prior_user_ver = int(conn.execute("PRAGMA user_version").fetchone()[0])
                     conn.execute("BEGIN IMMEDIATE")
                     try:
                         stmt_buf = ""
@@ -446,6 +486,74 @@ class ResearchStateDB:
                             conn.execute(
                                 "UPDATE doi_watch_state SET confirmed_seq = applied_seq WHERE confirmed_retracted IS NOT NULL AND confirmed_seq = 0"
                             )
+                        ce_sql_row = conn.execute(
+                            "SELECT sql FROM sqlite_master WHERE type='table' AND name='claim_edges'"
+                        ).fetchone()
+                        ce_trg_row = conn.execute(
+                            "SELECT sql FROM sqlite_master WHERE type='trigger' AND name='trg_claim_edges_no_cycle'"
+                        ).fetchone()
+                        ce_sql = str(ce_sql_row[0] or "") if ce_sql_row else ""
+                        ce_trg_sql = str(ce_trg_row[0] or "") if ce_trg_row else ""
+                        if (0 < prior_user_ver < ARK_SQLITE_USER_VERSION) or ("corroborates" not in ce_sql) or ("WHEN NEW.relation" not in ce_trg_sql):
+                            conn.execute("DROP TRIGGER IF EXISTS trg_claim_edges_no_cycle")
+                            conn.execute("DROP TRIGGER IF EXISTS trg_claim_edges_immutable_upd")
+                            conn.execute("DROP TRIGGER IF EXISTS trg_claim_edges_immutable_del")
+                            conn.execute(
+                                """
+                                CREATE TABLE claim_edges_v4 (
+                                    src_claim_id TEXT NOT NULL,
+                                    dst_claim_id TEXT NOT NULL,
+                                    relation TEXT NOT NULL CHECK (relation IN ('depends_on', 'refines', 'contradicts', 'corroborates', 'cites')),
+                                    CHECK (src_claim_id != dst_claim_id),
+                                    PRIMARY KEY (src_claim_id, dst_claim_id, relation),
+                                    FOREIGN KEY (src_claim_id) REFERENCES claims(claim_id),
+                                    FOREIGN KEY (dst_claim_id) REFERENCES claims(claim_id)
+                                ) STRICT
+                                """
+                            )
+                            conn.execute(
+                                "INSERT INTO claim_edges_v4 (src_claim_id, dst_claim_id, relation) SELECT src_claim_id, dst_claim_id, relation FROM claim_edges"
+                            )
+                            conn.execute("DROP TABLE claim_edges")
+                            conn.execute("ALTER TABLE claim_edges_v4 RENAME TO claim_edges")
+                            conn.execute(
+                                """
+                                CREATE TRIGGER trg_claim_edges_no_cycle
+                                BEFORE INSERT ON claim_edges
+                                WHEN NEW.relation IN ('depends_on', 'refines')
+                                BEGIN
+                                    SELECT CASE WHEN EXISTS (
+                                        WITH RECURSIVE reach(node) AS (
+                                            SELECT NEW.dst_claim_id
+                                            UNION
+                                            SELECT e.dst_claim_id FROM claim_edges e
+                                            JOIN reach r ON e.src_claim_id = r.node
+                                            WHERE e.relation IN ('depends_on', 'refines')
+                                        )
+                                        SELECT 1 FROM reach WHERE node = NEW.src_claim_id
+                                    ) THEN RAISE(ABORT, 'Cycle detected in claim_edges') END;
+                                END
+                                """
+                            )
+                            conn.execute(
+                                """
+                                CREATE TRIGGER trg_claim_edges_immutable_upd
+                                BEFORE UPDATE ON claim_edges
+                                BEGIN
+                                    SELECT RAISE(ABORT, 'claim_edges table is append-only');
+                                END
+                                """
+                            )
+                            conn.execute(
+                                """
+                                CREATE TRIGGER trg_claim_edges_immutable_del
+                                BEFORE DELETE ON claim_edges
+                                BEGIN
+                                    SELECT RAISE(ABORT, 'claim_edges table is append-only');
+                                END
+                                """
+                            )
+                            conn.execute(f"PRAGMA user_version = {ARK_SQLITE_USER_VERSION}")
                         conn.execute("COMMIT")
                     except BaseException:
                         if conn.in_transaction:
@@ -593,9 +701,17 @@ class ResearchStateDB:
         plain_payload = thaw(pmap)
         schema_file = KIND_SCHEMA_MAP.get(k)
         if schema_file is not None:
-            errs = validate_schema(plain_payload, schema_file)
+            errs = list(validate_schema(plain_payload, schema_file))
+            if not errs and k == "claim_evidence_graph":
+                from .venue_template_manager import validate_ceg_semantics
+
+                errs.extend(validate_ceg_semantics(dict(plain_payload))["semantic_errors"])
+            elif not errs and k == "decision_ledger":
+                errs.extend(validate_decision_ledger_semantics(plain_payload))
             if errs:
                 raise ValueError(f"Schema validation failed for {k} ({aid}): {'; '.join(errs[:5])}")
+        elif k in ("computed_evidence", "table_cell", "statistic_artifact") and not plain_payload:
+            raise ValueError(f"Artifact kind {k!r} ({aid}) requires a non-empty structured payload")
         cjson = canonical_json(plain_payload)
         digest = sha256_hex(cjson)
         if expected_sha256 is not None:
@@ -757,11 +873,38 @@ class ResearchStateDB:
             return tuple(str(r["id"]) for r in rows)
 
     def trace_lineage_verified(self, artifact_id: str, *, max_vm_steps: int = 500_000) -> dict[str, Any]:
-        """Trace ancestor DAG and verify stored payload SHA-256 integrity across target and all ancestors."""
+        """Trace ancestor DAG and verify stored payload SHA-256 integrity inside a single MVCC read snapshot."""
         aid = _require_str_id(artifact_id, "artifact_id")
-        ancestors = self.trace_lineage(aid, max_vm_steps=max_vm_steps)
-        all_nodes = (aid, *ancestors)
         with self._read_snapshot() as conn:
+            steps = 0
+
+            def _budget() -> int:
+                nonlocal steps
+                steps += 1
+                return 1 if steps > max_vm_steps else 0
+
+            conn.set_progress_handler(_budget, 1000)
+            try:
+                anc_rows = conn.execute(
+                    """
+                    WITH RECURSIVE anc(id) AS (
+                        SELECT parent_id FROM lineage_edges WHERE child_id = ?
+                        UNION
+                        SELECT e.parent_id FROM lineage_edges e JOIN anc a ON e.child_id = a.id
+                    )
+                    SELECT id FROM anc ORDER BY id
+                    """,
+                    (aid,),
+                ).fetchall()
+            except sqlite3.OperationalError as exc:
+                if "interrupted" in str(exc).lower():
+                    raise RuntimeError(f"Lineage trace exceeded VM step budget for {aid!r}") from exc
+                raise
+            finally:
+                conn.set_progress_handler(None, 0)
+
+            ancestors = tuple(str(r["id"]) for r in anc_rows)
+            all_nodes = (aid, *ancestors)
             art_rows = {
                 str(r["artifact_id"]): (str(r["payload_json"]), str(r["payload_sha256"]))
                 for r in conn.execute(
@@ -782,13 +925,17 @@ class ResearchStateDB:
                 all_nodes,
             ).fetchall()
 
+        all_nodes_set = set(all_nodes)
         parents_map: dict[str, list[str]] = {n: [] for n in all_nodes}
+        unclosed_edge = False
         for er in edge_rows:
             c_id, p_id = str(er["child_id"]), str(er["parent_id"])
+            if p_id not in all_nodes_set:
+                unclosed_edge = True
             if c_id in parents_map:
                 parents_map[c_id].append(p_id)
 
-        missing_any = any(n not in art_rows for n in all_nodes)
+        missing_any = unclosed_edge or any(n not in art_rows for n in all_nodes)
         corrupted_any = False
         for n in all_nodes:
             if n in art_rows:
@@ -931,7 +1078,23 @@ class ResearchStateDB:
                 final_status = "supported"
 
             for dst in dep_list:
-                self._assert_acyclic(conn, "claim_edges", "src_claim_id", "dst_claim_id", cid, dst)
+                if cid == dst:
+                    raise ValueError(f"Cycle detected in claim_edges: adding {cid!r} -> {dst!r} creates a loop")
+                cyc_row = conn.execute(
+                    """
+                    WITH RECURSIVE reach(node) AS (
+                        SELECT ?
+                        UNION
+                        SELECT e.dst_claim_id FROM claim_edges e
+                        JOIN reach r ON e.src_claim_id = r.node
+                        WHERE e.relation IN ('depends_on', 'refines')
+                    )
+                    SELECT 1 FROM reach WHERE node = ? LIMIT 1
+                    """,
+                    (dst, cid),
+                ).fetchone()
+                if cyc_row is not None:
+                    raise ValueError(f"Cycle detected in claim_edges: adding {cid!r} -> {dst!r} creates a loop")
                 conn.execute(
                     """
                     INSERT INTO claim_edges (src_claim_id, dst_claim_id, relation)
@@ -1067,6 +1230,9 @@ class ResearchStateDB:
         nst = _require_str_id(new_state, "new_state")
         rsn = _require_str_id(reason, "reason")
         sup_id = _require_str_id(superseded_by_id, "superseded_by_id") if superseded_by_id is not None else None
+        v_over = _require_str_id(verdict_override, "verdict_override") if verdict_override is not None else None
+        if v_over is not None and v_over not in ("positive", "negative", "inconclusive", "unverifiable"):
+            raise ValueError(f"Invalid verdict_override {v_over!r}")
 
         if rsn == "genesis":
             raise ValueError("Reason 'genesis' is reserved exclusively for initial decision creation")
@@ -1110,8 +1276,13 @@ class ResearchStateDB:
                 INSERT INTO decision_events (decision_id, new_state, reason, superseded_by_id, verdict_override)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (did, nst, rsn, sup_id, verdict_override),
+                (did, nst, rsn, sup_id, v_over),
             )
+            if v_over is not None:
+                conn.execute(
+                    "INSERT INTO decision_corrections (decision_id, verdict, rationale, artifact_id) VALUES (?, ?, ?, ?)",
+                    (did, v_over, f"Lifecycle transition ({nst}:{rsn}) verdict override", None),
+                )
         return freeze({"decision_id": did, "state": nst, "reason": rsn})
 
     def reserve_watch_seq(self, watcher: str, item_key: str) -> int:
@@ -1365,7 +1536,7 @@ class ResearchStateDB:
         for r in c_rows:
             raw_meta = json.loads(str(r["metadata_json"]))
             meta_out = dict(raw_meta) if isinstance(raw_meta, dict) else {"value": raw_meta}
-            meta_out.setdefault("status", str(r["status"]))
+            meta_out["status"] = str(r["status"])
             txt = str(r["claim_text"])
             claims.append({
                 "id": str(r["claim_id"]),
@@ -1508,6 +1679,16 @@ class ResearchStateDB:
         uncertainties_out: list[dict[str, Any]] = []
         v_manifest: dict[str, str] = {}
 
+        # Replay effective verdict across chronological outcome corrections (with legacy override fallback only if decision_corrections is empty)
+        eff_verdict_by_dec: dict[str, str] = {str(r["decision_id"]): str(r["verdict"]) for r in d_rows}
+        if not c_rows:
+            for er in e_rows:
+                if er["verdict_override"] is not None:
+                    eff_verdict_by_dec[str(er["decision_id"])] = str(er["verdict_override"])
+        else:
+            for cr in c_rows:
+                eff_verdict_by_dec[str(cr["decision_id"])] = str(cr["verdict"])
+
         for r in d_rows:
             did = str(r["decision_id"])
             ek = str(r["entry_kind"])
@@ -1518,7 +1699,10 @@ class ResearchStateDB:
             basis_id = str(r["basis_decision_id"]) if r["basis_decision_id"] is not None else None
             raw_meta = json.loads(str(r["metadata_json"]))
             meta_d = dict(raw_meta) if isinstance(raw_meta, dict) else {"value": raw_meta}
-            meta_d["verdict"] = str(r["verdict"])
+            init_v = str(r["verdict"])
+            eff_v = eff_verdict_by_dec.get(did, init_v)
+            meta_d["initial_verdict"] = init_v
+            meta_d["verdict"] = eff_v
             if art_id:
                 meta_d["artifact_id"] = art_id
                 if art_id in art_shas:
@@ -1573,16 +1757,18 @@ class ResearchStateDB:
 
         prev_state_by_dec: dict[str, str] = {}
         events_out: list[dict[str, Any]] = []
+        override_corrs: list[tuple[str, str, str, Optional[str]]] = []
         for er in e_rows:
             seq = int(er["seq"])
             did = str(er["decision_id"])
             to_st = str(er["new_state"])
             rsn = str(er["reason"])
             sup_id = str(er["superseded_by_id"]) if er["superseded_by_id"] is not None else None
+            v_over = str(er["verdict_override"]) if er["verdict_override"] is not None else None
             from_st = prev_state_by_dec.get(did)
             prev_state_by_dec[did] = to_st
 
-            ev_hash = sha256_hex(canonical_json([seq, did, from_st, to_st, rsn, sup_id]))[:32]
+            ev_hash = sha256_hex(canonical_json([seq, did, from_st, to_st, rsn, sup_id, v_over]))[:32]
             ev_obj: dict[str, Any] = {
                 "event_id": f"evt-{ev_hash}",
                 "decision_id": did,
@@ -1597,24 +1783,43 @@ class ResearchStateDB:
                 ev_obj["reason"] = "other"
             if sup_id is not None and to_st == "pruned":
                 ev_obj["alternative_ref"] = sup_id
+            if v_over is not None:
+                ev_obj["metadata"] = {"verdict_override": v_over}
+                if not c_rows:
+                    override_corrs.append((did, v_over, f"Lifecycle transition ({to_st}:{rsn}) verdict override", None))
             events_out.append(ev_obj)
 
         corrections_out: list[dict[str, Any]] = []
+        corr_seq_counter = 0
+        for did, verd, rat, c_art in override_corrs:
+            corr_seq_counter += 1
+            o_dig = sha256_hex(canonical_json([did, verd, rat, c_art]))
+            c_hash = sha256_hex(canonical_json(["override", corr_seq_counter, did, o_dig]))[:32]
+            corrections_out.append({
+                "correction_id": f"corr-{c_hash}",
+                "decision_id": did,
+                "verdict": verd,
+                "rationale": rat,
+                "outcome_digest": o_dig,
+                "sequence": corr_seq_counter,
+            })
         for cr in c_rows:
-            c_seq = int(cr["seq"])
+            corr_seq_counter += 1
             did = str(cr["decision_id"])
             verd = str(cr["verdict"])
             rat = str(cr["rationale"])
             c_art = str(cr["artifact_id"]) if cr["artifact_id"] is not None else None
+            if c_art and c_art in art_shas:
+                v_manifest[c_art] = art_shas[c_art]
             o_dig = sha256_hex(canonical_json([did, verd, rat, c_art]))
-            c_hash = sha256_hex(canonical_json([c_seq, did, o_dig]))[:32]
+            c_hash = sha256_hex(canonical_json(["explicit", int(cr["seq"]), corr_seq_counter, did, o_dig]))[:32]
             c_obj: dict[str, Any] = {
                 "correction_id": f"corr-{c_hash}",
                 "decision_id": did,
                 "verdict": verd,
                 "rationale": rat,
                 "outcome_digest": o_dig,
-                "sequence": c_seq,
+                "sequence": corr_seq_counter,
             }
             if c_art and c_art in art_shas:
                 c_obj["receipt_ref"] = {
@@ -1759,8 +1964,37 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
     forks = doc.get("forks")
     events = doc.get("state_events")
     corrs = doc.get("corrections")
+    uncerts = doc.get("uncertainties")
+    v_manifest = doc.get("verification_manifest") if isinstance(doc.get("verification_manifest"), Mapping) else {}
+
+    def _check_receipt_ref(rref: Any, ctx: str) -> bool:
+        if not isinstance(rref, Mapping):
+            return False
+        if rref.get("kind") == "lineage":
+            rid = str(rref.get("receipt_id") or "")
+            rdig = str(rref.get("receipt_digest") or "")
+            if rid not in v_manifest:
+                errs.append(f"{ctx} lineage receipt_id {rid!r} missing from verification_manifest")
+                return False
+            if str(v_manifest.get(rid)) != rdig:
+                errs.append(f"{ctx} lineage receipt_digest mismatch for {rid!r}")
+                return False
+            return True
+        if rref.get("kind") == "academic_evidence":
+            cdig = str(rref.get("claim_digest") or "")
+            psha = str(rref.get("payload_sha256") or "")
+            if not cdig or not psha:
+                errs.append(f"{ctx} academic_evidence receipt_ref missing claim_digest or payload_sha256")
+                return False
+            if cdig not in v_manifest or str(v_manifest.get(cdig)) != psha:
+                errs.append(f"{ctx} academic_evidence claim_digest {cdig!r} not verified in verification_manifest")
+                return False
+            return True
+        return False
 
     dec_by_id: dict[str, Mapping[str, Any]] = {}
+    replayed_verdict_by_id: dict[str, str] = {}
+    exported_verdict_by_id: dict[str, str] = {}
     if isinstance(decs, list):
         for idx, d in enumerate(decs):
             if not isinstance(d, Mapping):
@@ -1770,8 +2004,23 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                 errs.append(f"Duplicate decision id {did!r} at decisions[{idx}]")
             elif did:
                 dec_by_id[did] = d
+                title_raw = str(d.get("title") or "")
+                exp_ntitle = nfc_compact(title_raw)
+                if d.get("normalized_title") != exp_ntitle:
+                    errs.append(f"decisions[{idx}] normalized_title mismatch on {did!r}")
+                ek_d = str(d.get("entry_kind") or "")
+                act_d = str(d.get("decision_action") if ek_d != "negative_result" else (d.get("decision_type") or "negative_result"))
+                exp_ddig = sha256_hex(canonical_json({"id": did, "entry_kind": ek_d, "action": act_d, "title": exp_ntitle}))
+                if d.get("decision_digest") != exp_ddig:
+                    errs.append(f"decisions[{idx}] decision_digest mismatch on {did!r}")
+                meta_d0 = d.get("metadata") if isinstance(d.get("metadata"), Mapping) else {}
+                init_v = str(meta_d0.get("initial_verdict") or meta_d0.get("verdict") or "inconclusive")
+                exp_v = str(meta_d0.get("verdict") or init_v)
+                replayed_verdict_by_id[did] = init_v
+                exported_verdict_by_id[did] = exp_v
 
     neg_with_basis: set[str] = set()
+    neg_with_receipt: set[str] = set()
     if isinstance(bases, list):
         for idx, b in enumerate(bases):
             if not isinstance(b, Mapping):
@@ -1784,16 +2033,31 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                 errs.append(f"bases[{idx}] references unknown basis_id {bid!r}")
             if did and did == bid:
                 errs.append(f"bases[{idx}] self-basis on {did!r}")
+            has_rref = b.get("receipt_ref") is not None and _check_receipt_ref(b.get("receipt_ref"), f"bases[{idx}]")
             if did in dec_by_id and bid in dec_by_id:
                 if dec_by_id[did].get("entry_kind") == "negative_result":
                     if dec_by_id[bid].get("entry_kind") != "decision":
                         errs.append(f"negative_result {did!r} basis {bid!r} must be entry_kind='decision'")
                     else:
                         neg_with_basis.add(did)
+                        if has_rref:
+                            neg_with_receipt.add(did)
+
+    unsupported_neg_uncerts: set[str] = set()
+    if isinstance(uncerts, list):
+        for idx, u in enumerate(uncerts):
+            if isinstance(u, Mapping) and u.get("kind") == "unsupported_negative_result":
+                unsupported_neg_uncerts.add(str(u.get("subject_id") or ""))
 
     for did, d in dec_by_id.items():
-        if d.get("entry_kind") == "negative_result" and did not in neg_with_basis:
-            errs.append(f"negative_result {did!r} has no valid basisEdge to a prior decision")
+        if d.get("entry_kind") == "negative_result":
+            if did not in neg_with_basis:
+                errs.append(f"negative_result {did!r} has no valid basisEdge to a prior decision")
+            meta_d = d.get("metadata") if isinstance(d.get("metadata"), Mapping) else {}
+            art_ref = str(meta_d.get("artifact_id") or "")
+            has_manifest_art = bool(art_ref and art_ref in v_manifest)
+            if did not in neg_with_receipt and not has_manifest_art and did not in unsupported_neg_uncerts:
+                errs.append(f"negative_result {did!r} lacks empirical receipt_ref and is missing unsupported_negative_result uncertainty")
 
     if isinstance(forks, list):
         for idx, fk in enumerate(forks):
@@ -1807,11 +2071,13 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                 errs.append(f"forks[{idx}] references unknown alternative_id {aid!r}")
             if did and did == aid:
                 errs.append(f"forks[{idx}] self-fork on {did!r}")
+            if fk.get("receipt_ref") is not None:
+                _check_receipt_ref(fk.get("receipt_ref"), f"forks[{idx}]")
 
+    cur_state: dict[str, str] = {}
     if isinstance(events, list):
         seen_seq: set[int] = set()
         prev_seq = 0
-        cur_state: dict[str, str] = {}
         sup_adj: dict[str, set[str]] = {}
         for idx, ev in enumerate(events):
             if not isinstance(ev, Mapping):
@@ -1826,6 +2092,8 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
             if did not in dec_by_id:
                 errs.append(f"state_events[{idx}] references unknown decision_id {did!r}")
                 continue
+            if ev.get("receipt_ref") is not None:
+                _check_receipt_ref(ev.get("receipt_ref"), f"state_events[{idx}]")
             from_st = ev.get("from_state")
             to_st = str(ev.get("to_state") or "")
             prior = cur_state.get(did)
@@ -1872,18 +2140,62 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                     color[nxt] = 1
                     stack.append((nxt, sorted(sup_adj.get(nxt, ())), 0))
 
+    for did in dec_by_id:
+        if did not in cur_state:
+            errs.append(f"Decision {did!r} missing genesis event in state_events")
+
     if isinstance(corrs, list):
         seen_cseq: set[int] = set()
+        prev_cseq = 0
         for idx, c in enumerate(corrs):
             if not isinstance(c, Mapping):
                 continue
             did = str(c.get("decision_id") or "")
             if did not in dec_by_id:
                 errs.append(f"corrections[{idx}] references unknown decision_id {did!r}")
+            if c.get("receipt_ref") is not None:
+                _check_receipt_ref(c.get("receipt_ref"), f"corrections[{idx}]")
             cseq = c.get("sequence")
             if isinstance(cseq, int) and not isinstance(cseq, bool):
-                if cseq in seen_cseq:
-                    errs.append(f"Duplicate correction sequence {cseq}")
+                if cseq in seen_cseq or cseq <= prev_cseq:
+                    errs.append(f"corrections[{idx}] has non-monotonic or duplicate sequence {cseq}")
                 seen_cseq.add(cseq)
+                prev_cseq = max(prev_cseq, cseq)
+            verd_c = str(c.get("verdict") or "")
+            rat_c = str(c.get("rationale") or "")
+            rref_c = c.get("receipt_ref")
+            c_art_id = str(rref_c.get("receipt_id")) if isinstance(rref_c, Mapping) and rref_c.get("kind") == "lineage" and rref_c.get("receipt_id") else None
+            exp_odig = sha256_hex(canonical_json([did, verd_c, rat_c, c_art_id]))
+            if c.get("outcome_digest") != exp_odig:
+                errs.append(f"corrections[{idx}] outcome_digest mismatch on {did!r}")
+            if did in replayed_verdict_by_id and verd_c:
+                replayed_verdict_by_id[did] = verd_c
+
+    for did, exp_v in exported_verdict_by_id.items():
+        rep_v = replayed_verdict_by_id.get(did)
+        if rep_v is not None and exp_v != rep_v:
+            errs.append(f"Decision {did!r} exported metadata.verdict={exp_v!r} disagrees with replayed correction outcome {rep_v!r}")
+
+    # Verify verification_digest and ledger_digest integrity
+    try:
+        exp_v_digest = sha256_hex(canonical_json(v_manifest))
+        if doc.get("verification_digest") != exp_v_digest:
+            errs.append(f"verification_digest mismatch: expected {exp_v_digest}, got {doc.get('verification_digest')!r}")
+        body = {
+            "protocol": doc.get("protocol"),
+            "verification_digest": doc.get("verification_digest"),
+            "verification_manifest": v_manifest,
+            "decisions": decs,
+            "bases": bases,
+            "forks": forks,
+            "state_events": events,
+            "corrections": corrs,
+            "uncertainties": uncerts,
+        }
+        exp_l_digest = sha256_hex(canonical_json(body))
+        if doc.get("ledger_digest") != exp_l_digest:
+            errs.append(f"ledger_digest mismatch: expected {exp_l_digest}, got {doc.get('ledger_digest')!r}")
+    except Exception as exc:
+        errs.append(f"Digest recomputation error: {exc}")
 
     return errs

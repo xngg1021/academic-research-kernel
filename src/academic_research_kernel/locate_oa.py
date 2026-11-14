@@ -22,7 +22,6 @@ FALLBACK_ORDER = [
     'OpenAlex open_access.oa_url',
     'Semantic Scholar openAccessPdf.url',
     'Europe PMC fullTextUrlList',
-    'archive.org（公版书/专著）',
 ]
 
 
@@ -210,11 +209,15 @@ def live_semantic_scholar_oa(doi: str) -> dict | None:
     url = (
         'https://api.semanticscholar.org/graph/v1/paper/DOI:'
         + quote(clean_doi, safe='')
-        + '?fields=isOpenAccess,openAccessPdf,url'
+        + '?fields=externalIds,isOpenAccess,openAccessPdf,url'
     )
     with urlopen(Request(url, headers=headers), timeout=20) as response:
         data = json.load(response)
     if not isinstance(data, dict):
+        return None
+    ext_ids = data.get('externalIds') if isinstance(data.get('externalIds'), dict) else {}
+    s2_doi = _normalize_doi(ext_ids.get('DOI') or data.get('doi') or '')
+    if not s2_doi or s2_doi != clean_doi:
         return None
     oa_pdf = data.get('openAccessPdf') if isinstance(data.get('openAccessPdf'), dict) else {}
     pdf_u = _valid_http_url(oa_pdf.get('url'))
@@ -244,6 +247,9 @@ def live_europe_pmc_oa(doi: str) -> dict | None:
     results = ((data.get('resultList') or {}).get('result') or []) if isinstance(data, dict) else []
     for item in results:
         if not isinstance(item, dict) or str(item.get('isOpenAccess') or '').upper() != 'Y':
+            continue
+        epmc_doi = _normalize_doi(item.get('doi') or '')
+        if not epmc_doi or epmc_doi != clean_doi:
             continue
         ft_list = ((item.get('fullTextUrlList') or {}).get('fullTextUrl') or [])
         pdf_u = None
@@ -346,6 +352,23 @@ def resolve_oa(
         except Exception as exc:
             unpaywall_err = f"{type(exc).__name__}: {exc}"
             rec = None
+        if isinstance(rec, dict):
+            rec_doi = _normalize_doi(rec.get('doi') or '')
+            if ('doi' in rec or rec_doi) and rec_doi != clean_doi:
+                unpaywall_err = f'record DOI mismatch or missing identity: requested {clean_doi}, got {rec_doi!r}'
+                if not fallback_openalex:
+                    return 1, {
+                        'doi': clean_doi,
+                        'identifier': identifier_norm,
+                        'status': 'failed',
+                        'mode': 'unpaywall-live',
+                        'is_oa': False,
+                        'oa_url': None,
+                        'location': None,
+                        'error': unpaywall_err,
+                        'mismatch': True,
+                    }
+                rec = None
         if isinstance(rec, dict):
             loc = pick_oa_location(rec)
             is_oa = bool(rec.get('is_oa') and loc is not None)

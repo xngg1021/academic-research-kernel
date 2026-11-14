@@ -12,6 +12,7 @@
 """
 from __future__ import annotations
 
+from decimal import Decimal, localcontext
 import math
 from dataclasses import dataclass, field
 
@@ -150,6 +151,58 @@ def _scaled_inverse_weights(v_arr: np.ndarray) -> tuple[np.ndarray, float]:
     return w_rel, v_min
 
 
+def _prefix_suffix_complements(p_norm: np.ndarray) -> np.ndarray:
+    """Compute sum_{j != i} p_norm[j] in O(k) via non-negative prefix + suffix sums (zero subtraction cancellation)."""
+    n = int(p_norm.size)
+    if n <= 1:
+        return np.zeros(n, dtype=float)
+    pref = np.empty(n, dtype=float)
+    suff = np.empty(n, dtype=float)
+    pref[0] = 0.0
+    for i in range(1, n):
+        pref[i] = pref[i - 1] + float(p_norm[i - 1])
+    suff[n - 1] = 0.0
+    for i in range(n - 2, -1, -1):
+        suff[i] = suff[i + 1] + float(p_norm[i + 1])
+    return pref + suff
+
+
+def _heterogeneity_decimal(y: np.ndarray, v: np.ndarray) -> tuple[float, int, float, float]:
+    """Exact high-precision Decimal fallback when variance dynamic range exceeds IEEE-754 float64 (~700 orders of magnitude)."""
+    n = int(y.size)
+    df = n - 1
+    if df <= 0:
+        return 0.0, 0, 0.0, 0.0
+    with localcontext() as ctx:
+        ctx.prec = 900
+        dy = [Decimal(repr(float(val))) for val in y]
+        dv = [Decimal(repr(float(val))) for val in v]
+        dw = [Decimal(1) / val for val in dv]
+        w_sum = sum(dw, Decimal(0))
+        theta_f = sum((w * yv for w, yv in zip(dw, dy)), Decimal(0)) / w_sum
+        q_dec = sum((w * (yv - theta_f) * (yv - theta_f) for w, yv in zip(dw, dy)), Decimal(0))
+        dp = [w / w_sum for w in dw]
+        pref = [Decimal(0)] * n
+        suff = [Decimal(0)] * n
+        for i in range(1, n):
+            pref[i] = pref[i - 1] + dp[i - 1]
+        for i in range(n - 2, -1, -1):
+            suff[i] = suff[i + 1] + dp[i + 1]
+        c_dec = sum((dw[i] * (pref[i] + suff[i]) for i in range(n)), Decimal(0))
+        df_dec = Decimal(df)
+        i2_dec = max(Decimal(0), (q_dec - df_dec) / q_dec) if q_dec > 0 else Decimal(0)
+        tau2_dec = max(Decimal(0), (q_dec - df_dec) / c_dec) if c_dec > 0 else Decimal(0)
+        try:
+            q_f = float(q_dec)
+            i2_f = float(i2_dec)
+            tau2_f = float(tau2_dec)
+        except OverflowError as exc:
+            raise ValueError("Heterogeneity statistics overflowed float64 range") from exc
+    if not (math.isfinite(q_f) and math.isfinite(i2_f) and math.isfinite(tau2_f)):
+        raise ValueError("Heterogeneity statistics overflowed float64 range")
+    return max(0.0, q_f), df, max(0.0, i2_f), max(0.0, tau2_f)
+
+
 def heterogeneity(yi, vi) -> tuple[float, int, float, float]:
     """Cochran's Q、自由度、I²(0–1)与 DL 法 τ²。
 
@@ -158,30 +211,39 @@ def heterogeneity(yi, vi) -> tuple[float, int, float, float]:
     τ² = max(0, (Q - df) / C),C = Σw - Σw²/Σw(DerSimonian–Laird)。
     """
     y, v = _arrays(yi, vi)
+    if y.size <= 1:
+        return 0.0, 0, 0.0, 0.0
     w_rel, v_min = _scaled_inverse_weights(v)
-    w_rel_sum = float(np.sum(w_rel))
+    if np.any(w_rel == 0.0) or v_min < 1e-290:
+        return _heterogeneity_decimal(y, v)
+    w_rel_sum = float(math.fsum(w_rel))
     p_norm = w_rel / w_rel_sum
-    theta_f = float(np.sum(p_norm * y))
-    if not math.isfinite(theta_f):
-        raise ValueError("Weighted fixed-effect mean overflowed float64")
-    # Q = sum(((y_i - theta_f) / sqrt(v_i))^2) avoids premature squaring overflow
+    # Center around y[0] before weighted residual computation so equal/near-equal effects with tiny v do not suffer rounding amplification
     with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
-        z_resid = (y - theta_f) / np.sqrt(v)
-        q_raw = float(np.sum(z_resid * z_resid))
+        y_centered = y - float(y[0])
+    if not np.all(np.isfinite(y_centered)):
+        return _heterogeneity_decimal(y, v)
+    theta_centered = float(math.fsum(float(pn) * float(yc) for pn, yc in zip(p_norm, y_centered)))
+    if not math.isfinite(theta_centered):
+        return _heterogeneity_decimal(y, v)
+    # Q = sum(((y_centered_i - theta_centered) / sqrt(v_i))^2) avoids premature squaring overflow and absolute-mean rounding error
+    with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
+        z_resid = (y_centered - theta_centered) / np.sqrt(v)
+        q_raw = float(math.fsum(float(zr) * float(zr) for zr in z_resid))
     if not math.isfinite(q_raw):
-        raise ValueError("Cochran's Q overflowed float64 range for extreme study variances")
+        return _heterogeneity_decimal(y, v)
     q = max(0.0, q_raw)
     df = y.size - 1
     i2 = max(0.0, (q - df) / q) if q > 0 else 0.0
-    # Positive complement (1 - p_i) = sum_{j != i} p_j prevents catastrophic cancellation when one study dominates
-    if p_norm.size <= 128:
-        comp = np.array([float(np.sum(np.delete(p_norm, idx))) for idx in range(p_norm.size)], dtype=float)
-    else:
-        comp = np.maximum(0.0, 1.0 - p_norm)
-    c_rel = float(np.sum(w_rel * comp))
+    comp = _prefix_suffix_complements(p_norm)
+    c_rel = float(math.fsum(float(wr) * float(cp) for wr, cp in zip(w_rel, comp)))
+    if df > 0 and c_rel <= 0.0:
+        return _heterogeneity_decimal(y, v)
+    if q > df and ((q - df) * v_min) == 0.0:
+        return _heterogeneity_decimal(y, v)
     tau2 = max(0.0, ((q - df) * v_min) / c_rel) if (c_rel > 0 and df > 0) else 0.0
     if not math.isfinite(tau2):
-        raise ValueError("DerSimonian-Laird tau2 is non-finite")
+        return _heterogeneity_decimal(y, v)
     return q, df, i2, tau2
 
 
@@ -189,18 +251,44 @@ def _pool(yi, vi, model: str) -> PoolResult:
     y, v = _arrays(yi, vi)
     q, df, i2, tau2 = heterogeneity(y, v)
     extra = tau2 if model == 'random' else 0.0
-    v_eff = v + extra
-    w_rel, v_min = _scaled_inverse_weights(v_eff)
-    w_rel_sum = float(np.sum(w_rel))
-    norm_weights = w_rel / w_rel_sum
-    est = float(np.sum(norm_weights * y))
-    se = math.sqrt(v_min / w_rel_sum)
-    if not (math.isfinite(est) and math.isfinite(se)):
-        raise ValueError("Pooled meta-analysis estimate or standard error is non-finite")
+    if extra > 0.0 and np.any((v + extra) == extra) and np.any(v < extra * 1e-16):
+        # High-precision pooling when v_i + tau2 suffers float64 absorption on ultra-small v_i
+        with localcontext() as ctx:
+            ctx.prec = 900
+            dtau2 = Decimal(repr(float(extra)))
+            dy = [Decimal(repr(float(val))) for val in y]
+            dv = [Decimal(repr(float(val))) + dtau2 for val in v]
+            dw = [Decimal(1) / val for val in dv]
+            w_sum = sum(dw, Decimal(0))
+            norm_weights_list = [float(w / w_sum) for w in dw]
+            est = float(sum((w * yv for w, yv in zip(dw, dy)), Decimal(0)) / w_sum)
+            se = float((Decimal(1) / w_sum).sqrt())
+    else:
+        v_eff = v + extra
+        w_rel, v_min = _scaled_inverse_weights(v_eff)
+        if np.any(w_rel == 0.0):
+            with localcontext() as ctx:
+                ctx.prec = 900
+                dtau2 = Decimal(repr(float(extra)))
+                dy = [Decimal(repr(float(val))) for val in y]
+                dv = [Decimal(repr(float(val))) + dtau2 for val in v]
+                dw = [Decimal(1) / val for val in dv]
+                w_sum = sum(dw, Decimal(0))
+                norm_weights_list = [float(w / w_sum) for w in dw]
+                est = float(sum((w * yv for w, yv in zip(dw, dy)), Decimal(0)) / w_sum)
+                se = float((Decimal(1) / w_sum).sqrt())
+        else:
+            w_rel_sum = float(math.fsum(w_rel))
+            norm_weights = w_rel / w_rel_sum
+            norm_weights_list = norm_weights.tolist()
+            est = float(math.fsum(float(nw) * float(yv) for nw, yv in zip(norm_weights, y)))
+            se = math.sqrt(v_min) / math.sqrt(w_rel_sum)
+    if not (math.isfinite(est) and math.isfinite(se) and se > 0.0):
+        raise ValueError("Pooled meta-analysis estimate or standard error is non-finite or underflowed")
     z = stats.norm.ppf(0.975)
     return PoolResult(estimate=est, se=se, ci_low=est - z * se, ci_high=est + z * se,
                       q=q, df=df, i2=i2, tau2=tau2, k=y.size, model=model,
-                      weights=norm_weights.tolist())
+                      weights=norm_weights_list)
 
 
 def pool_fixed(yi, vi) -> PoolResult:
@@ -381,8 +469,46 @@ def subgroup_analysis(yi, vi, groups) -> dict:
     }
 
 
+def _wls_fit_decimal(
+    y: np.ndarray,
+    x: np.ndarray,
+    v: np.ndarray,
+    tau2_add: float = 0.0,
+    df_resid: int | None = None,
+) -> tuple[float, float, float, float, float, float]:
+    """High-precision WLS fit returning (intercept, se_intercept, slope, se_slope, q_resid, tau2_resid_est)."""
+    with localcontext() as ctx:
+        ctx.prec = 900
+        dtau2 = Decimal(repr(float(tau2_add)))
+        dy = [Decimal(repr(float(val))) for val in y]
+        dx = [Decimal(repr(float(val))) for val in x]
+        dw = [Decimal(1) / (Decimal(repr(float(val))) + dtau2) for val in v]
+        w_sum = sum(dw, Decimal(0))
+        x_bar = sum((w * xv for w, xv in zip(dw, dx)), Decimal(0)) / w_sum
+        y_bar = sum((w * yv for w, yv in zip(dw, dy)), Decimal(0)) / w_sum
+        ddx = [xv - x_bar for xv in dx]
+        s_xx = sum((w * d * d for w, d in zip(dw, ddx)), Decimal(0))
+        if s_xx <= 0:
+            raise ValueError("Moderator design matrix is numerically singular under study weights")
+        s_xy = sum((w * d * (yv - y_bar) for w, d, yv in zip(dw, ddx, dy)), Decimal(0))
+        slope_d = s_xy / s_xx
+        icp_d = y_bar - slope_d * x_bar
+        se_sl_d = (Decimal(1) / s_xx).sqrt()
+        se_ic_d = ((Decimal(1) / w_sum) + (x_bar * x_bar) / s_xx).sqrt()
+        q_d = max(Decimal(0), sum((w * (yv - (icp_d + slope_d * xv)) ** 2 for w, xv, yv in zip(dw, dx, dy)), Decimal(0)))
+        # trace(P) = sum_i w_i * (1 - w_i / w_sum - w_i * d_i^2 / s_xx)
+        tr_p_d = sum((w * (Decimal(1) - (w / w_sum) - (w * d * d / s_xx)) for w, d in zip(dw, ddx)), Decimal(0))
+        if df_resid is not None and tr_p_d > Decimal(0) and q_d > Decimal(df_resid):
+            tau2_est_d = (q_d - Decimal(df_resid)) / tr_p_d
+        else:
+            tau2_est_d = Decimal(0)
+        return float(icp_d), float(se_ic_d), float(slope_d), float(se_sl_d), max(0.0, float(q_d)), max(0.0, float(tau2_est_d))
+
+
 def meta_regression(yi, vi, moderators, model: str = "random") -> dict:
-    """Univariate weighted least squares (WLS) meta-regression over a continuous study-level moderator."""
+    """Univariate weighted least squares (WLS) meta-regression with generalized DerSimonian-Laird residual tau^2."""
+    if model not in ("random", "fixed"):
+        raise ValueError(f"Unsupported meta_regression model {model!r}; expected 'random' or 'fixed'")
     y, v = _arrays(yi, vi)
     x = np.asarray(moderators, dtype=float)
     if x.ndim != 1 or x.size != y.size:
@@ -394,28 +520,21 @@ def meta_regression(yi, vi, moderators, model: str = "random") -> dict:
     if float(np.sum((x - x.mean()) ** 2)) == 0.0:
         raise ValueError("meta_regression requires non-constant moderator values")
 
-    tau2 = heterogeneity(y, v)[3] if model == "random" else 0.0
-    eff_v = v + tau2
-    w_rel, v_min = _scaled_inverse_weights(eff_v)
-    w_rel_sum = float(np.sum(w_rel))
-    norm_w = w_rel / w_rel_sum
-    # Exact WLS parameter estimates (scale-invariant) and asymptotic inverse-variance SEs
-    x_bar = float(np.dot(norm_w, x))
-    y_bar = float(np.dot(norm_w, y))
-    dx = x - x_bar
-    s_xx_norm = float(np.dot(norm_w, dx * dx))
-    slope = float(np.dot(norm_w, dx * (y - y_bar)) / s_xx_norm)
-    intercept = float(y_bar - slope * x_bar)
+    df_resid = int(y.size - 2)
+    # Step 1: Fit null fixed-effects regression under H0: tau^2_resid = 0 using sampling variances v_i (ratio evaluated in Decimal)
+    icp0, se_icp0, sl0, se_sl0, q_e, tau2_dl = _wls_fit_decimal(y, x, v, tau2_add=0.0, df_resid=df_resid)
+    tau2 = tau2_dl if model == "random" else 0.0
 
-    s_r = math.sqrt(v_min)
-    denom = math.sqrt(s_xx_norm * w_rel_sum)
-    se_slope = s_r / denom
-    se_intercept = s_r * math.sqrt((1.0 / w_rel_sum) + (x_bar * x_bar) / (s_xx_norm * w_rel_sum))
+    # Step 2: Refit WLS with v_i + tau^2_resid when tau^2_resid > 0
+    if tau2 > 0.0:
+        intercept, se_intercept, slope, se_slope, _, _ = _wls_fit_decimal(y, x, v, tau2_add=tau2)
+    else:
+        intercept, se_intercept, slope, se_slope = icp0, se_icp0, sl0, se_sl0
+
+    if not all(math.isfinite(val) for val in (tau2, intercept, se_intercept, slope, se_slope, q_e)) or se_slope <= 0.0:
+        raise ValueError("meta_regression encountered non-finite or degenerate standard error")
     z_slope = slope / se_slope
     p_slope = 2.0 * float(stats.norm.sf(abs(z_slope)))
-    resid = y - (intercept + slope * x)
-    q_resid = float(np.sum(((resid / s_r) ** 2) * w_rel))
-    df_resid = int(y.size - 2)
     return {
         "model": model,
         "k": int(y.size),
@@ -426,7 +545,7 @@ def meta_regression(yi, vi, moderators, model: str = "random") -> dict:
         "se_slope": se_slope,
         "z_slope": z_slope,
         "p_slope": p_slope,
-        "q_residual": q_resid,
+        "q_residual": q_e,
         "df_residual": df_resid,
-        "p_residual": float(stats.chi2.sf(q_resid, df_resid)),
+        "p_residual": float(stats.chi2.sf(q_e, df_resid)),
     }

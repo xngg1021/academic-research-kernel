@@ -1130,7 +1130,7 @@ def finish(project: str | Path, candidate_path: str | Path) -> dict:
 def compare(left: str | Path, right: str | Path, analysis_path: str | Path | None = None, output: str | Path | None = None) -> dict:
     """Validate the Agent's explicit alignment and render a two-paper report."""
     if analysis_path is None:
-        raise ValueError("Comparison needs a semantic producer: read both completed projects with the paper-research skill and supply --analysis")
+        raise ValueError("Comparison needs a semantic producer: read both completed projects with the audit-paper skill and supply --analysis")
     roots = [Path(left).resolve(), Path(right).resolve()]
     latest = [_json(root / "latest.json") for root in roots]
     runs = [Path(receipt["run_directory"]) for receipt in latest]

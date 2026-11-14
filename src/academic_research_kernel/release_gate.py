@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
+import configparser
+import csv
 from email.parser import BytesParser
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -140,6 +144,110 @@ def validate_target(
     }
 
 
+def _load_pyproject(source_root: Path) -> dict[str, object]:
+    raw = (source_root / "pyproject.toml").read_bytes()
+    if sys.version_info >= (3, 11):
+        import tomllib
+
+        return tomllib.loads(raw.decode("utf-8"))
+    import tomli  # type: ignore[import-not-found]
+
+    return tomli.loads(raw.decode("utf-8"))
+
+
+def _verify_wheel_dist_info(
+    files: dict[str, bytes],
+    dist_info_prefix: str,
+    version: str,
+    *,
+    source_root: Path | None = None,
+) -> None:
+    meta_key = f"{dist_info_prefix}METADATA"
+    wheel_key = f"{dist_info_prefix}WHEEL"
+    ep_key = f"{dist_info_prefix}entry_points.txt"
+    rec_key = f"{dist_info_prefix}RECORD"
+    for req_k in (meta_key, wheel_key, ep_key, rec_key):
+        require(req_k in files, f"wheel missing required dist-info file: {req_k}")
+
+    parsed = BytesParser().parsebytes(files[meta_key])
+    require(parsed.get("Name") == PACKAGE and parsed.get("Version") == version, "wheel METADATA Name/Version mismatch")
+    lic_expr = (parsed.get("License-Expression") or parsed.get("License") or "").strip()
+    require(lic_expr == "LicenseRef-Source-Lineage-1.0", f"wheel METADATA license mismatch: {lic_expr!r}")
+
+    cp = configparser.ConfigParser()
+    cp.read_string(files[ep_key].decode("utf-8"))
+    require(cp.has_section("console_scripts"), "wheel entry_points.txt missing [console_scripts]")
+    actual_scripts = dict(cp.items("console_scripts"))
+    require(
+        actual_scripts.get("academic-research-kernel") == "academic_research_kernel.cli:main",
+        f"wheel console_scripts mismatch: {actual_scripts!r}",
+    )
+
+    if source_root is not None and (source_root / "pyproject.toml").is_file():
+        pyproj = _load_pyproject(source_root)
+        proj = pyproj.get("project") if isinstance(pyproj.get("project"), dict) else {}
+        exp_scripts = proj.get("scripts") if isinstance(proj.get("scripts"), dict) else {}
+        require(actual_scripts == exp_scripts, f"wheel entry_points.txt {actual_scripts!r} != pyproject scripts {exp_scripts!r}")
+
+        def _norm_spec_clauses(spec_s: str) -> str:
+            clauses = [re.sub(r"\s+", "", c).lower() for c in spec_s.split(",") if c.strip()]
+            return ",".join(sorted(clauses))
+
+        exp_req_py = _norm_spec_clauses(str(proj.get("requires-python") or ""))
+        act_req_py = _norm_spec_clauses(str(parsed.get("Requires-Python") or ""))
+        if exp_req_py:
+            require(act_req_py == exp_req_py, f"wheel Requires-Python {act_req_py!r} != pyproject {exp_req_py!r}")
+
+        def _norm_req(r_s: str) -> str:
+            base, sep, marker = r_s.partition(";")
+            m_pkg = re.match(r"^\s*([A-Za-z0-9_.\-]+(?:\[[^\]]*\])?)\s*(.*)$", base)
+            if not m_pkg:
+                return re.sub(r"\s+", "", r_s).lower()
+            pkg_part = re.sub(r"[-_.]+", "-", m_pkg.group(1).strip().lower())
+            spec_part = _norm_spec_clauses(m_pkg.group(2))
+            marker_part = (";" + re.sub(r"\s+", "", marker).lower()) if sep and marker.strip() else ""
+            return f"{pkg_part}{spec_part}{marker_part}"
+
+        req_dists = [_norm_req(str(r)) for r in (parsed.get_all("Requires-Dist") or []) if "; extra ==" not in str(r) and ";extra==" not in re.sub(r"\s+", "", str(r)).lower()]
+        exp_deps = [_norm_req(str(d)) for d in (proj.get("dependencies") or [])]
+        require(
+            sorted(req_dists) == sorted(exp_deps),
+            f"wheel core Requires-Dist {sorted(req_dists)!r} != pyproject dependencies {sorted(exp_deps)!r}",
+        )
+
+        exp_lic_rels = [str(lf).replace("\\", "/").lstrip("./") for lf in (proj.get("license-files") or [])]
+        if exp_lic_rels:
+            lic_prefix = f"{dist_info_prefix}licenses/"
+            act_lic_files = {
+                k[len(lic_prefix):]: v
+                for k, v in files.items()
+                if k.startswith(lic_prefix)
+            }
+            require(
+                set(act_lic_files) == set(exp_lic_rels),
+                f"wheel dist-info/licenses set {sorted(act_lic_files)!r} != pyproject license-files {sorted(exp_lic_rels)!r}",
+            )
+            for l_rel in exp_lic_rels:
+                exp_lb = (source_root / l_rel).read_bytes()
+                require(act_lic_files[l_rel] == exp_lb, f"wheel license file bytes mismatch on {l_rel}")
+
+    # Verify RECORD integrity across all wheel files
+    seen_rec: set[str] = set()
+    reader = csv.reader(io.StringIO(files[rec_key].decode("utf-8")))
+    for row in reader:
+        require(len(row) == 3, f"malformed wheel RECORD row: {row!r}")
+        r_name, r_hash, r_size = row
+        require(r_name in files and r_name not in seen_rec, f"invalid or duplicate wheel RECORD entry: {r_name!r}")
+        seen_rec.add(r_name)
+        if r_name == rec_key:
+            require(r_hash == "" and r_size == "", "RECORD self-entry must have empty hash and size")
+        else:
+            b = files[r_name]
+            exp_h = "sha256=" + base64.urlsafe_b64encode(hashlib.sha256(b).digest()).decode("ascii").rstrip("=")
+            require(r_hash == exp_h and r_size == str(len(b)), f"wheel RECORD digest/size mismatch on {r_name}")
+    require(seen_rec == set(files), "wheel RECORD does not cover exact archive file set")
+
+
 def inspect_artifact(path: Path, version: str, *, source_root: Path | None = None) -> dict[str, object]:
     validate_version_tag(version, f"v{version}")
     require(path.name in package_filenames(version), f"unexpected package filename: {path.name}")
@@ -158,12 +266,11 @@ def inspect_artifact(path: Path, version: str, *, source_root: Path | None = Non
             )
             files = {i.filename: zf.read(i.filename) for i in infos if not i.filename.endswith("/")}
         dist_info_prefix = f"{DIST_PREFIX}-{version}.dist-info/"
-        meta_key = f"{dist_info_prefix}METADATA"
-        require(meta_key in files, f"wheel missing {meta_key}")
-        parsed = BytesParser().parsebytes(files[meta_key])
-        require(parsed.get("Name") == PACKAGE and parsed.get("Version") == version, "wheel METADATA Name/Version mismatch")
+        _verify_wheel_dist_info(files, dist_info_prefix, version, source_root=source_root)
         ver_key = "academic_research_kernel/_version.py"
         require(ver_key in files and _read_literal_version(files[ver_key].decode("utf-8")) == version, "wheel _version.py mismatch")
+        for core_mod in ("__init__.py", "__main__.py", "cli.py", "mcp_server.py", "state_db.py"):
+            require(f"academic_research_kernel/{core_mod}" in files, f"wheel missing core module {core_mod}")
         schema_files = [k for k in files if k.startswith("academic_research_kernel/schemas/") and k.endswith(".schema.json")]
         require(len(schema_files) == 26, f"wheel must bundle all 26 schemas, found {len(schema_files)}")
         require(
@@ -201,16 +308,56 @@ def inspect_artifact(path: Path, version: str, *, source_root: Path | None = Non
         require(pkg_info_key in files, f"sdist missing {pkg_info_key}")
         parsed = BytesParser().parsebytes(files[pkg_info_key])
         require(parsed.get("Name") == PACKAGE and parsed.get("Version") == version, "sdist PKG-INFO Name/Version mismatch")
-        for req_rel in ("pyproject.toml", "server.json", "plugin.json", "mcp.json", "SLL-APPLICATION.json", "CHANGELOG.md", "uv.lock"):
-            require(f"{prefix}{req_rel}" in files, f"sdist missing required reproducible asset: {req_rel}")
+        for req_rel in (
+            "pyproject.toml",
+            "README.md",
+            "LICENSE",
+            "LICENSES/MIT-pre-SLL.txt",
+            "server.json",
+            "plugin.json",
+            "mcp.json",
+            "SLL-APPLICATION.json",
+            "CHANGELOG.md",
+            "uv.lock",
+            "src/academic_research_kernel/__init__.py",
+            "src/academic_research_kernel/__main__.py",
+            "src/academic_research_kernel/_version.py",
+            "src/academic_research_kernel/cli.py",
+            "src/academic_research_kernel/mcp_server.py",
+            "src/academic_research_kernel/state_db.py",
+        ):
+            require(f"{prefix}{req_rel}" in files, f"sdist missing required asset or source module: {req_rel}")
+        sdist_ver = _read_literal_version(files[f"{prefix}src/academic_research_kernel/_version.py"].decode("utf-8"))
+        require(sdist_ver == version, "sdist _version.py mismatch")
+        sdist_schemas = [
+            k for k in files if k.startswith(f"{prefix}src/academic_research_kernel/schemas/") and k.endswith(".schema.json")
+        ]
+        require(len(sdist_schemas) == 26, f"sdist must include all 26 schemas, found {len(sdist_schemas)}")
+        require(
+            any(k.startswith(f"{prefix}src/academic_research_kernel/portable_skills/") and k.endswith("/SKILL.md") for k in files),
+            "sdist missing portable SKILL.md",
+        )
         if source_root is not None:
+            src_pkg = source_root / "src"
+            expected_src_rels = {
+                "src/" + p.relative_to(src_pkg).as_posix()
+                for p in src_pkg.rglob("*")
+                if p.is_file() and "__pycache__" not in p.parts and not p.name.endswith(".pyc")
+            }
+            actual_rels = set()
             for member_name, member_bytes in files.items():
                 require(member_name.startswith(prefix), f"unexpected top-level sdist member: {member_name}")
                 rel_s = member_name[len(prefix) :]
                 if rel_s == "PKG-INFO":
                     continue
+                actual_rels.add(rel_s)
                 src_fp = safe_path(source_root / rel_s, root=source_root, must_exist=True)
                 require(src_fp.read_bytes() == member_bytes, f"sdist member bytes differ from tagged source: {rel_s}")
+            actual_src_rels = {r for r in actual_rels if r.startswith("src/")}
+            require(
+                actual_src_rels == expected_src_rels,
+                f"sdist src/ member set differs from source tree (missing={sorted(expected_src_rels - actual_src_rels)[:5]})",
+            )
 
     return {
         "filename": path.name,
@@ -457,26 +604,91 @@ def run_command_smoke(cmd_prefix: list[str], expected_version: str) -> dict[str,
     return {"status": "ok", "version": expected_version, "mcp_tools": 24}
 
 
-def run_package_acceptance(dist_dir: Path) -> dict[str, object]:
+def _venv_console_script(venv_dir: Path) -> Path:
+    if os.name == "nt":
+        for cand in ("Scripts/academic-research-kernel.exe", "Scripts/academic-research-kernel.cmd", "Scripts/academic-research-kernel"):
+            p = venv_dir / cand
+            if p.is_file():
+                return p
+        return venv_dir / "Scripts/academic-research-kernel.exe"
+    return venv_dir / "bin/academic-research-kernel"
+
+
+def _build_wheel_from_sdist(sdist_path: Path, out_dir: Path) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    uv_bin = shutil.which("uv")
+    if uv_bin:
+        r = subprocess.run(
+            [uv_bin, "build", "--wheel", "--no-create-gitignore", "--out-dir", str(out_dir), str(sdist_path)],
+            env=_scrubbed_env(),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        built = sorted(out_dir.glob("*.whl"))
+        if r.returncode == 0 and len(built) == 1:
+            return built[0]
+    # Fallback: use current interpreter's pip wheel --no-deps (--no-build-isolation first when hatchling is present)
+    for extra_flags in (["--no-deps", "--no-build-isolation"], ["--no-deps"]):
+        for old_w in out_dir.glob("*.whl"):
+            old_w.unlink()
+        r_pip = subprocess.run(
+            [sys.executable, "-m", "pip", "wheel", "--quiet", "--disable-pip-version-check", *extra_flags, str(sdist_path), "--wheel-dir", str(out_dir)],
+            env=_scrubbed_env(),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        built = sorted(out_dir.glob("*.whl"))
+        if r_pip.returncode == 0 and len(built) == 1:
+            return built[0]
+    raise ValueError(f"Failed to build wheel from sdist {sdist_path}")
+
+
+def run_package_acceptance(dist_dir: Path, *, source_root: Path | None = None) -> dict[str, object]:
     wheels = sorted(dist_dir.glob("*.whl"))
     sdists = sorted(dist_dir.glob("*.tar.gz"))
     require(len(wheels) == 1 and len(sdists) == 1, f"dist directory {dist_dir} must contain exactly 1 wheel and 1 sdist")
     m = re.match(rf"^{DIST_PREFIX}-(\d+\.\d+\.\d+)-py3-none-any\.whl$", wheels[0].name)
     require(m is not None, f"cannot parse version from wheel {wheels[0].name}")
     version = m.group(1)
-    inspect_artifact(wheels[0], version)
-    inspect_artifact(sdists[0], version)
+    eff_root = source_root
+    if eff_root is None and (Path.cwd() / "pyproject.toml").is_file() and (Path.cwd() / "src" / "academic_research_kernel").is_dir():
+        eff_root = Path.cwd()
+    inspect_artifact(wheels[0], version, source_root=eff_root)
+    inspect_artifact(sdists[0], version, source_root=eff_root)
 
     with tempfile.TemporaryDirectory() as td:
-        venv_dir = Path(td) / "isolated-venv"
-        venv.EnvBuilder(with_pip=True).create(venv_dir)
-        py_bin = venv_dir / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        tmp = Path(td)
+        # 1. Isolated venv A: install published wheel and verify BOTH console script AND python -m
+        venv_whl = tmp / "isolated-venv-wheel"
+        venv.EnvBuilder(with_pip=True).create(venv_whl)
+        py_whl = venv_whl / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
         subprocess.run(
-            [str(py_bin), "-m", "pip", "install", "--quiet", "--disable-pip-version-check", str(wheels[0])],
+            [str(py_whl), "-m", "pip", "install", "--quiet", "--disable-pip-version-check", str(wheels[0])],
             env=_scrubbed_env(),
             check=True,
         )
-        return run_command_smoke([str(py_bin), "-I", "-m", "academic_research_kernel"], version)
+        cli_whl = _venv_console_script(venv_whl)
+        require(cli_whl.is_file(), f"installed wheel did not create console script {cli_whl}")
+        res_whl = run_command_smoke([str(cli_whl)], version)
+        run_command_smoke([str(py_whl), "-I", "-m", "academic_research_kernel"], version)
+
+        # 2. Isolated venv B: build wheel from published sdist, inspect it, install it, and verify console script
+        sdist_whl = _build_wheel_from_sdist(sdists[0], tmp / "sdist-built-wheel")
+        inspect_artifact(sdist_whl, version, source_root=eff_root)
+        venv_sd = tmp / "isolated-venv-sdist"
+        venv.EnvBuilder(with_pip=True).create(venv_sd)
+        py_sd = venv_sd / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        subprocess.run(
+            [str(py_sd), "-m", "pip", "install", "--quiet", "--disable-pip-version-check", str(sdist_whl)],
+            env=_scrubbed_env(),
+            check=True,
+        )
+        cli_sd = _venv_console_script(venv_sd)
+        require(cli_sd.is_file(), f"sdist-built wheel did not create console script {cli_sd}")
+        run_command_smoke([str(cli_sd)], version)
+        return res_whl
 
 
 def _write_github_outputs(path: Path | None, values: dict[str, object]) -> None:

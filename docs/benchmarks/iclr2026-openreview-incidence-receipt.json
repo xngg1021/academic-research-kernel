@@ -1,7 +1,13 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "study_id": "iclr2026-openreview-5family-incidence-v1",
-  "description": "De-identified paper-level incidence of the 5 deterministic defect families in official ICLR 2026 peer-review Weaknesses and Questions texts. No individual paper IDs, titles, or author identities are stored.",
+  "measurement_scope": "lexical_keyword_screening_mention_rate",
+  "description": "De-identified paper-level lexical keyword-screening mention rates across 5 topic families in official ICLR 2026 peer-review Weaknesses and Questions fields. Because regex matching is polarity-blind (e.g. 'confidence intervals are correctly reported' or 'reproducibility is excellent' also match), these rates measure topic-term mention/screening prevalence inside Weaknesses/Questions rather than manually adjudicated defect ground truth.",
+  "reproduction_command": "python tools/benchmarks/run_peer_review_and_incidence_benchmarks.py --mirror-dir <dir> --verify-iclr2026-incidence",
+  "known_limitations": [
+    "Lexical regexes match topic phrases without sentiment/negation parsing; positive or neutral mentions inside Weaknesses/Questions (such as praising reproducibility or comprehensive limitations) are counted alongside critiques.",
+    "Join denominator (19,473 scored manuscripts, 75,769 reviews) requires both a non-empty review list in iclr2026_stats.jsonl and a matching forum ID in iclr2026.json."
+  ],
   "methodology": {
     "unit_of_analysis": "scored_manuscript",
     "text_fields_concatenated": [
@@ -21,13 +27,19 @@
   },
   "upstream_sources": {
     "metadata_snapshot": {
-      "source": "papercopilot/paperlists (iclr2026.json)",
+      "source": "papercopilot/paperlists (iclr/iclr2026.json)",
+      "repository": "https://github.com/papercopilot/paperlists",
+      "commit": "181a85021c63ab26745c42ed70a9d9ea7b57ad7e",
+      "frozen_url": "https://github.com/papercopilot/paperlists/blob/181a85021c63ab26745c42ed70a9d9ea7b57ad7e/iclr/iclr2026.json",
       "total_records": 19814,
       "sha256": "fc6f5e5b6ba0fb28bec691a8b8d7a922e9d7bb1615209695ad79fafe62a75d4a",
       "size_bytes": 88818779
     },
     "review_text_corpus": {
-      "source": "insomnia7/iclr2026_stats (iclr2026_stats.jsonl)",
+      "source": "HuggingFace datasets/insomnia7/iclr2026_stats (iclr2026_stats.jsonl)",
+      "repository": "https://huggingface.co/datasets/insomnia7/iclr2026_stats",
+      "commit": "50507ab355c3442f7f4dd2a3df0e18aee8e0edbc",
+      "frozen_url": "https://huggingface.co/datasets/insomnia7/iclr2026_stats/blob/50507ab355c3442f7f4dd2a3df0e18aee8e0edbc/iclr2026_stats.jsonl",
       "total_rows": 19506,
       "scored_joined_manuscripts": 19473,
       "official_reviews": 75769,

@@ -25,7 +25,9 @@ MAX_TOTAL_BYTES = 20 * 1024 * 1024  # 20 MiB aggregate budget across TeX + Bib
 
 _COMMENT_RE = re.compile(r"(?<!\\)%[^\n]*")
 _ARK_CLAIM_RE = re.compile(r"(?<!\\)%\s*ark:claim=([^\s%]+)")
-_INPUT_RE = re.compile(r"\\(?:input|include)\b(?:\s*\{([^{}]+)\}|\s+([^\s\\{}%]+))")
+_INPUT_RE = re.compile(
+    r"\\(?:input|include)(?![A-Za-z@])(?:\s*\{([^{}]+)\}|\s*\"([^\"]+)\"|\s*([^\s\\{}%\"]+))"
+)
 _VIRTUAL_TEX_INCLUDES = frozenset({"glyphtounicode", "glyphtounicode-cmex", "glyphtounicode-cmr"})
 _DOC_CLASS_RE = re.compile(r"\\documentclass(?:\s*\[([^\]]*)\])?\s*\{([^{}]+)\}")
 _USEPKG_RE = re.compile(r"\\usepackage(?:\s*\[([^\]]*)\])?\s*\{([^{}]+)\}")
@@ -295,7 +297,7 @@ def collect_tex_tree(
         cleaned = strip_tex_comments(raw_txt)
         ordered.append((checked, raw_txt, cleaned))
         for m in _INPUT_RE.finditer(cleaned):
-            rel = (m.group(1) or m.group(2) or "").strip()
+            rel = (m.group(1) or m.group(2) or m.group(3) or "").strip()
             if not rel:
                 continue
             ln = _line_of(cleaned, m.start())
@@ -487,18 +489,26 @@ def _check_pdf_page_limit(pdf_path: str | Path, max_pages: int) -> list[dict[str
     total_pages = int(res.get("page_count") or len(pages))
     body_pages = total_pages
     ref_pat = re.compile(r"(?:^|\n)\s*(?:\d+\.?\s+)?(?:references|bibliography)\s*(?:\n|$)", re.IGNORECASE)
+    running_hdr_pat = re.compile(
+        r"^(?:page\s*\d+(?:\s*(?:/|of)\s*\d+)?"
+        r"|under\s+review\s+as\s+a\s+conference\s+paper\b.*"
+        r"|published\s+as\s+a\s+conference\s+paper\b.*"
+        r"|anonymous\s+authors?"
+        r"|preprint\.?\s*under\s+review.*)$",
+        re.IGNORECASE,
+    )
     for idx, txt in enumerate(pages):
         m_ref = ref_pat.search(txt or "")
         if m_ref:
             prefix = (txt or "")[: m_ref.start()].strip()
-            # Ignore running header / page number lines; if substantive body prose precedes References on the same page,
-            # that shared page still counts toward main-body page budget (idx + 1).
             non_trivial_lines = [
                 ln.strip()
                 for ln in prefix.splitlines()
-                if ln.strip() and not re.fullmatch(r"[\d\s\-–—.|/]+", ln.strip())
+                if ln.strip()
+                and not re.fullmatch(r"[\d\s\-–—.|/]+", ln.strip())
+                and not running_hdr_pat.fullmatch(ln.strip())
             ]
-            if len(non_trivial_lines) >= 2 or len(re.findall(r"[A-Za-z]{2,}", prefix)) >= 6:
+            if non_trivial_lines:
                 body_pages = idx + 1
             else:
                 body_pages = idx
@@ -514,6 +524,144 @@ def _check_pdf_page_limit(pdf_path: str | Path, max_pages: int) -> list[dict[str
     return []
 
 
+_UNIT_ALIASES: Mapping[str, str] = {
+    "%": "%",
+    "percent": "%",
+    "percentage": "%",
+    "pp": "pp",
+    "ms": "ms",
+    "millisecond": "ms",
+    "milliseconds": "ms",
+    "us": "us",
+    "μs": "us",
+    "microsecond": "us",
+    "microseconds": "us",
+    "ns": "ns",
+    "nanosecond": "ns",
+    "nanoseconds": "ns",
+    "s": "s",
+    "sec": "s",
+    "secs": "s",
+    "second": "s",
+    "seconds": "s",
+    "min": "min",
+    "mins": "min",
+    "minute": "min",
+    "minutes": "min",
+    "h": "h",
+    "hr": "h",
+    "hrs": "h",
+    "hour": "h",
+    "hours": "h",
+    "hz": "hz",
+    "khz": "khz",
+    "mhz": "mhz",
+    "ghz": "ghz",
+    "b": "b",
+    "kb": "kb",
+    "mb": "mb",
+    "gb": "gb",
+    "tb": "tb",
+    "kib": "kib",
+    "mib": "mib",
+    "gib": "gib",
+    "x": "x",
+    "×": "x",
+    "times": "x",
+    "db": "db",
+    "unit": "units",
+    "units": "units",
+}
+_UP_POLARITY_WORDS = frozenset({
+    "increase", "increases", "increased", "increasing",
+    "improve", "improves", "improved", "improving", "improvement",
+    "gain", "gains", "higher", "faster", "larger", "greater",
+    "boost", "boosts", "boosted", "outperform", "outperforms", "outperformed",
+    "rise", "rises", "rose", "positive", "accelerate", "accelerates",
+})
+_DOWN_POLARITY_WORDS = frozenset({
+    "decrease", "decreases", "decreased", "decreasing",
+    "reduce", "reduces", "reduced", "reducing", "reduction",
+    "drop", "drops", "dropped", "lower", "slower", "smaller", "fewer",
+    "worse", "worsen", "worsens", "worsened", "decline", "declines", "declined",
+    "negative", "degrade", "degrades", "degraded",
+})
+_NEGATION_WORDS = frozenset({"not", "no", "never", "neither", "without", "fail", "fails", "failed"})
+_SIGNED_QTY_RE = re.compile(
+    r"(?<![A-Za-z0-9.])([+\-−]?)\s*(\d+(?:\.\d+)?)\s*(%|×|[A-Za-zμ]+)?",
+)
+
+
+def _normalize_statement_for_ceg(text: str) -> str:
+    s = text.replace(r"\%", "%").replace(r"\times", "×").replace(r"\pm", "±")
+    s = re.sub(r"\$\s*([+\-−])\s*\$", r"\1", s)
+    s = s.replace("$", " ")
+    s = re.sub(r"\\(?:textbf|textit|emph|mathrm|mathbf|text)\s*\{([^{}]*)\}", r"\1", s)
+    s = s.replace("−", "-")
+    return " ".join(s.split())
+
+
+def _extract_signed_quantities(text: str) -> list[tuple[bool, str, str]]:
+    norm = _normalize_statement_for_ceg(text)
+    out: list[tuple[bool, str, str]] = []
+    for m in _SIGNED_QTY_RE.finditer(norm):
+        raw_sign, num_s, raw_unit = m.group(1) or "", m.group(2), (m.group(3) or "").strip()
+        is_neg = raw_sign in ("-", "−")
+        unit_low = " ".join(raw_unit.lower().split())
+        canon_unit = _UNIT_ALIASES.get(unit_low, unit_low)
+        out.append((is_neg, num_s, canon_unit))
+    return out
+
+
+def _canonicalize_statement_for_binding(text: str) -> str:
+    s = _normalize_statement_for_ceg(text)
+    s = re.sub(r"\\[A-Za-z]+\*?\s*\{([^{}]*)\}", r"\1", s)
+    s = re.sub(r"\$([^$]*)\$", r"\1", s)
+    s = s.replace("{", "").replace("}", "").replace("\\", "")
+    s = s.lower().strip()
+    # Canonicalize standard unit aliases attached to numbers
+    for u_raw, u_canon in sorted(_UNIT_ALIASES.items(), key=lambda kv: -len(kv[0])):
+        if u_raw and u_canon:
+            s = re.sub(rf"(\d)\s*{re.escape(u_raw)}(?![a-z])", rf"\1 {u_canon}", s)
+    s = re.sub(r"[.\s]+$", "", s)
+    return " ".join(s.split())
+
+
+def _statement_diverges_from_claim(claim_txt: str, manuscript_line: str, *, strict: bool = False) -> bool:
+    c_canon = _canonicalize_statement_for_binding(claim_txt)
+    m_canon = _canonicalize_statement_for_binding(manuscript_line)
+    if strict:
+        return c_canon != m_canon
+
+    c_norm = _normalize_statement_for_ceg(claim_txt)
+    m_norm = _normalize_statement_for_ceg(manuscript_line)
+
+    c_qtys = _extract_signed_quantities(c_norm)
+    m_qtys = _extract_signed_quantities(m_norm)
+    if m_qtys != c_qtys:
+        return True
+
+    # Clause-by-clause polarity & metric alignment so swapped multi-clause statements diverge
+    c_clauses = [cl.strip() for cl in re.split(r"[;；]|\bwhile\b|\bwhereas\b", c_canon) if cl.strip()]
+    m_clauses = [cl.strip() for cl in re.split(r"[;；]|\bwhile\b|\bwhereas\b", m_canon) if cl.strip()]
+    if len(c_clauses) != len(m_clauses):
+        return True
+    for cc, mc in zip(c_clauses, m_clauses):
+        ct = set(re.findall(r"[a-z]+", cc))
+        mt = set(re.findall(r"[a-z]+", mc))
+        if (bool(ct & _UP_POLARITY_WORDS) != bool(mt & _UP_POLARITY_WORDS)) or (
+            bool(ct & _DOWN_POLARITY_WORDS) != bool(mt & _DOWN_POLARITY_WORDS)
+        ):
+            return True
+        if bool(ct & _NEGATION_WORDS) != bool(mt & _NEGATION_WORDS):
+            return True
+        c_content = {w for w in ct if len(w) >= 4} - _UP_POLARITY_WORDS - _DOWN_POLARITY_WORDS
+        m_content = {w for w in mt if len(w) >= 4} - _UP_POLARITY_WORDS - _DOWN_POLARITY_WORDS
+        if c_content != m_content:
+            return True
+    return False
+
+
 def lint_manuscript(
     entry_tex: str | Path | None = None,
     venue: Optional[str] = "iclr",
@@ -527,10 +675,18 @@ def lint_manuscript(
     ceg_path: str | Path | None = None,
     require_ceg_binding: bool = False,
     check_academic_style: bool = False,
+    workspace_root: str | Path | None = None,
 ) -> Mapping[str, Any]:
     target_tex = tex_path if tex_path is not None else entry_tex
     if target_tex is None:
         raise ValueError("lint_manuscript requires entry_tex / tex_path")
+    if workspace_root is not None:
+        ws_p = safe_path(workspace_root, must_exist=True)
+        target_tex = safe_path(target_tex, root=ws_p, must_exist=True)
+        if pdf_path is not None:
+            pdf_path = safe_path(pdf_path, root=ws_p, must_exist=True)
+        if ceg_path is not None:
+            ceg_path = safe_path(ceg_path, root=ws_p, must_exist=True)
 
     specs_doc = load_venue_specs(specs_path)
     venues = specs_doc.get("venues", {})
@@ -619,9 +775,9 @@ def lint_manuscript(
                     "line": _line_of(cleaned, m_fc.start()),
                     "detail": f"Final-copy macro {m_fc.group(0)} active under double-blind review",
                 })
-            from .double_blind_sanitizer import _is_strictly_anonymous_tex_body
+            from .double_blind_sanitizer import _extract_balanced_braces, _is_strictly_anonymous_tex_body
 
-            for ln_no, auth_body in _extract_braced_blocks(cleaned, "author"):
+            for ln_no, auth_body in _extract_balanced_braces(raw_txt):
                 compact_auth = " ".join(auth_body.split())
                 if compact_auth and not _is_strictly_anonymous_tex_body(auth_body):
                     findings.append({
@@ -629,7 +785,7 @@ def lint_manuscript(
                         "severity": "error",
                         "file": rel_name,
                         "line": ln_no,
-                        "detail": "Explicit non-anonymous \\author{...} block under double-blind review",
+                        "detail": "Explicit non-anonymous author/affiliation macro block under double-blind review",
                     })
             for ln_no, _ in _extract_braced_blocks(cleaned, "thanks"):
                 findings.append({
@@ -869,8 +1025,6 @@ def lint_manuscript(
                     "detail": "; ".join(str(e) for e in ceg_rep["semantic_errors"][:5]),
                 })
             for rel_name, ln_no, cline, tags_here in tagged_lines:
-                line_nums = set(re.findall(r"\d+(?:\.\d+)?", cline))
-                line_words = {w.lower() for w in re.findall(r"[A-Za-z]{4,}", cline)}
                 for bc in tags_here:
                     anc = anchor_by_id.get(bc)
                     st = anc["anchor_status"] if anc is not None else None
@@ -884,11 +1038,7 @@ def lint_manuscript(
                         })
                         continue
                     claim_txt = str(anc.get("normalized_text") or "")
-                    claim_nums = set(re.findall(r"\d+(?:\.\d+)?", claim_txt))
-                    claim_words = {w.lower() for w in re.findall(r"[A-Za-z]{4,}", claim_txt)}
-                    nums_conflict = bool(line_nums and not line_nums.issubset(claim_nums))
-                    words_disjoint = bool(line_words and claim_words and not (line_words & claim_words))
-                    if nums_conflict or words_disjoint:
+                    if _statement_diverges_from_claim(claim_txt, cline, strict=bool(require_ceg_binding)):
                         findings.append({
                             "code": "CEG_CLAIM_TEXT_MISMATCH",
                             "severity": "error" if require_ceg_binding else "warning",
@@ -918,4 +1068,5 @@ def lint_manuscript(
         "bib_count": len(bib_keys),
         "error_count": len(errors),
         "findings": findings,
+        "hits": findings,
     })
