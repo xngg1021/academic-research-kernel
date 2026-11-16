@@ -4,44 +4,34 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-**Deterministic scholarly verification, peer-review forensics, and LaTeX submission gates for researchers and AI agents.**
+**Standalone scholarly verification, LaTeX submission gates, and transactional evidence state (`CLI` + `MCP` + `7` Agent Skills).**
 
-Large language models read and summarize papers fluently, yet fail predictably on tasks that require exact arithmetic or external ground truth: they repeat miscalculated $p$-values, overlook rounding-impossible percentages, cite retracted or hallucinated DOIs, miss residual author metadata in double-blind PDFs, and lose track of which table row backs which manuscript claim.
+Large language models summarize papers fluently yet fail predictably on exact arithmetic and external ground truth: they repeat miscalculated $p$-values, miss rounding-impossible percentages, cite retracted or fabricated DOIs, leave author metadata inside double-blind PDFs, and lose track of which source table backs which claim.
 
-`academic-research-kernel` (`3.0.0`) separates semantic reading from deterministic verification. Your model or researcher handles reading and synthesis; a single stdlib-first Python package (`src/academic_research_kernel/`) backed by `SQLite STRICT + WAL` handles statistical recomputation, Crossref/OpenAlex/Unpaywall verification, offline OpenReview forensics, meta-analysis pooling, and multi-file LaTeX/PDF pre-submission gates.
+`academic-research-kernel` (`3.0.0`) separates semantic reading from deterministic checks. Run it directly from your terminal or wire it into any MCP / `SKILL.md` agent workflow:
 
-Author: Junfu Shi (SJF, `xngg1021`). License: [Source Lineage License 1.0](LICENSE). Architecture details: [docs/kernel-architecture.md](docs/kernel-architecture.md).
+```bash
+uv tool install "academic-research-kernel[research]==3.0.0"
+academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
+# -> {"input": "10.1038/nature14539", "type": "doi", "normalized": "10.1038/nature14539", "canonical_id": "doi:10.1038/nature14539"}
+```
 
----
+> **Empirical case study included**: Reproducible SHA-256 receipts across **four AI conference series and five frozen public snapshots** (`74,637` primary-cohort submissions across `75,574` raw mirror submissions, `248,174` official reviews; see [Section 4](#4-case-study-openreview-snapshots-across-four-ai-conference-series-20252027) and [peer-review-forensics-2025-2027-v1.json](docs/benchmarks/peer-review-forensics-2025-2027-v1.json)).
 
-## 1. Empirical Evidence: Peer-Review Forensics Across Five Major AI Venues (2025–2027)
-
-Why pair every paper audit and submission workflow with deterministic verification? Running `academic-research-kernel openreview-audit --venue-summary` across frozen public OpenReview metadata mirrors (`75,574` unique public submissions, `73,226` positively scored papers, and `251,800` positive official reviews across five major AI conference snapshots from `papercopilot/paperlists@181a85021c63ab26745c42ed70a9d9ea7b57ad7e`; SHA-256 receipts and reproduction script in [docs/benchmarks/peer-review-forensics-2025-2027-v1.json](docs/benchmarks/peer-review-forensics-2025-2027-v1.json)) highlights three descriptive empirical patterns:
-
-| Venue & Frozen Public Mirror (`181a8502`) | Scored Papers ($N$) | Positive Reviews | Paper Mean Score (Scale) | Review Words Median (`conf=2` vs `conf=4`) | Unanimous Identical-Score Rate |
-| --- | ---: | ---: | --- | --- | ---: |
-| **ICLR 2026** (`19,813` unique submissions; `1,319` `rating=0` isolated) | 19,454 | 74,540 | `4.26` (2–10 even) | `391` (`328` vs `409`) | **8.13%** (`1,578 / 19,412`) |
-| **ICLR 2027** (`2026-11-12` rebuttal window, `42,790` total) | 40,801 | 126,369 | `2.06` (1–4 int; `57.4%` at `2`) | `429` (`405` vs `451`) | **23.90%** (`9,752 / 40,801`) |
-| **ICML 2026** (accepted public; `398` LLM-policy violators sanctioned) | 6,341 | 24,378 | `4.15` (1–5 rec.) | `345` (`298` vs `364`) | **16.53%** (`1,048 / 6,341`) |
-| **NeurIPS 2025** (accepted public; 2026 reached `30,709` submissions) | 6,212 | 24,927 | `4.36` (1–6 rating) | `382` (`324` vs `402`) | **13.60%** (`845 / 6,212`) |
-| **COLM 2025** (accepted public; word-count fields absent in mirror) | 418 | 1,586 | `6.50` (1–10 rating) | `—` (not in mirror) | **7.89%** (`33 / 418`) |
-
-1. **Score compression & unanimous convergence**: When ICLR compressed its rating scale from five even integers (`2, 4, 6, 8, 10`) to four integers (`1–4`) under a `42,790`-paper submission surge (`ICLR 2027`), `57.36%` of all `126,369` reviews landed on score `2`, and the share of multi-reviewer papers receiving **identical scores from every reviewer** nearly tripled from **`8.13%`** (`1,578 / 19,412` in `ICLR 2026`) to **`23.90%`** (`9,752 / 40,801` in `ICLR 2027`). Note that rating-scale cardinality, review stage, and accepted-only public filtering directly affect identical-score base rates.
-2. **Self-reported confidence & review length**: Across all four mirrors that record review word counts, self-reported `confidence = 2` reviews are shorter than `confidence = 4` reviews (`328` vs `409` words in `ICLR 2026`, `298` vs `364` in `ICML 2026`, `324` vs `402` in `NeurIPS 2025`), while narrowing in `ICLR 2027` (`405` vs `451` words). Self-reported confidence and word counts are descriptive metadata rather than standalone proof of LLM-generated reviewing; separately, ICML 2026's program chairs officially sanctioned `398` reciprocal-review LLM-policy violators (`497` desk rejections).
-3. **High topic-screening mention rate in peer reviews & verified benchmark accuracy**: Across `19,473` joined scored `ICLR 2026` submissions and `75,769` official reviews ([iclr2026-openreview-incidence-receipt.json](docs/benchmarks/iclr2026-openreview-incidence-receipt.json), verified against `insomnia7/iclr2026_stats@50507ab3`), lexical topic-screening regexes over `Weaknesses` and `Questions` fields match at least one of the five deterministic check families (dispersion/error bars, format/section/page rules, table/ablation consistency, baseline/citation coverage, or reproducibility/code) in **`48.2%`** of Oral papers, **`54.0%`** of Poster papers, **`59.8%`** of Rejected papers, and **`63.6%`** of Desk-Rejected papers (`59.0%` overall; polarity-blind keyword screening counts topic mentions and requires deterministic/human adjudication). On the 30-item real-world audit benchmark ([real-world-audit-benchmark-v1.json](docs/benchmarks/real-world-audit-benchmark-v1.json), `v3.0.0`: `16` frozen-snapshot bibliographic/retraction items + `12` published Nuijten/Bakker statistical examples/observations + `2` repository gate cases), the kernel achieves `TP = 10, TN = 6, FP = 0, FN = 0` on offline bibliographic/retraction classification and `TP = 8, TN = 5, FP = 1, FN = 0` on statistical & gate checks.
+Author: Junfu Shi (SJF, `xngg1021`). License: [Source Lineage License 1.0](LICENSE). Architecture: [docs/kernel-architecture.md](docs/kernel-architecture.md).
 
 ---
 
-## 2. Two-Minute Quick Start: Three Ways to Use
+## 1. Two-Minute Quick Start: Three Entry Modes & Dependencies
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then pick the entry mode that matches your workflow (Python `3.10`–`3.14`, `~25 ms` CLI cold start):
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then choose how you want to invoke the kernel (Python `3.10`–`3.14`, `~25 ms` CLI cold start):
 
-### Mode A: Direct Command-Line Tool (Human Researchers & Shell Scripts)
+### Mode A: Direct Command-Line Tool (Human Researchers, CI & Shell Scripts)
 
 ```bash
 uv tool install "academic-research-kernel[research]==3.0.0"
 academic-research-kernel doctor
-academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
+academic-research-kernel lint-submission ./manuscript/main.tex --venue iclr --phase submission
 ```
 
 ### Mode B: Universal stdio MCP Server (Claude Code, Codex, Cursor, Gemini CLI)
@@ -67,48 +57,57 @@ hermes plugins enable academic-skills
 academic-research-kernel research skill --output ./audit-paper
 ```
 
+**Dependency layout**: State management (`SQLite STRICT + WAL`), CLI dispatch, and MCP protocol control use Python's standard library, importing declared scientific and schema packages (`jsonschema`, `numpy`, `scipy`, `statsmodels`) lazily on demand. The `[research]` extra installs `pypdf==7.0.0` and `fonttools==4.65.0` for isolated subprocess PDF text/metadata scanning; details in [docs/distribution-release.md](docs/distribution-release.md).
+
 ---
 
-## 3. Seven First-Principles Skills (Consolidating All 14 Legacy `v2.x` Skills)
+## 2. Seven Workflow Skills & Task Routing
 
-In `v3.0.0`, all `14` legacy `v2.4.2` skill directories were consolidated from first principles into **seven self-explanatory workflow skills** so both human researchers and agents know immediately which workflow to load:
+`v3.0.0` consolidates all `14` legacy `v2.4.2` skill directories into **seven task-oriented skills**:
 
-| Skill Directory | Plain-English Purpose | Key CLI Commands & MCP Tools |
+| Skill Directory | Concrete Task & Scope Boundary | Key CLI Commands & MCP Tools |
 | --- | --- | --- |
-| [`skills/audit-paper`](skills/audit-paper/SKILL.md) | Audit single/paired papers, recompute stats/tables, adjudicate reproducibility, and manage CEG & decision ledgers | `research`, `table-forensics`, `repro-checklist`, `ledger`, `academic_recompute_statistics` |
-| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | Verify DOIs/updates, monitor retractions & new papers, merge corpora, and locate OA PDFs (`arXiv` + 4-service DOI chain) | `verify-work`, `retraction-watch`, `literature-watch`, `collect-corpus`, `locate-oa` |
-| [`skills/audit-peer-review`](skills/audit-peer-review/SKILL.md) | Audit OpenReview venue mirrors, forum scores, and local/remote companion code repos | `openreview-audit`, `repo-forensics --github-repo`, `academic_openreview_audit` |
-| [`skills/meta-analysis`](skills/meta-analysis/SKILL.md) | Pool fixed/random effects, run subgroup $Q_{\text{between}}$ & WLS meta-regression, build citation graphs & matrices | `meta-analyze`, `bibliography`, `academic_meta_analyze` |
-| [`skills/check-submission`](skills/check-submission/SKILL.md) | Scaffold venue workspaces, render receipt/comparison tables, and gate TeX/PDF double-blind submissions | `lint-submission`, `sanitize-submission`, `generate-table`, `check-venue` |
-| [`skills/cross-review`](skills/cross-review/SKILL.md) | Run multi-model blind review, deterministic graph clustering, anonymous challenge, and minority-evidence protection | `cross-review`, `academic_cross_review` |
-| [`skills/compute-math`](skills/compute-math/SKILL.md) | Probe CPU/GPU & BLAS/thread environments, emit `ComputeReceipt`, and route multi-domain math tasks | `compute-probe`, `academic_scfabric_hardware_probe` |
+| [`skills/audit-paper`](skills/audit-paper/SKILL.md) | Check statistics, tables, source locators, and reproducibility checklists in an external/paired paper (emits item-level checks, not blanket truth verdicts) | `research`, `table-forensics`, `repro-checklist`, `ledger`, `academic_recompute_statistics` |
+| [`skills/verify-citations`](skills/verify-citations/SKILL.md) | Verify DOIs/metadata, monitor Crossref/OpenAlex retractions in SQLite, merge corpora, and locate legal OA PDFs (existence $\neq$ claim support) | `verify-work`, `retraction-watch`, `literature-watch`, `collect-corpus`, `locate-oa` |
+| [`skills/audit-peer-review`](skills/audit-peer-review/SKILL.md) | Analyze offline OpenReview score/length/unanimity distributions and companion repos (descriptive forensics, not AI-authorship proof) | `openreview-audit`, `repo-forensics --github-repo`, `academic_openreview_audit` |
+| [`skills/meta-analysis`](skills/meta-analysis/SKILL.md) | Pool fixed/random effects (`DL`), run subgroup $Q_{\text{between}}$ & WLS meta-regression, Egger/trim-and-fill, and build citation matrices | `meta-analyze`, `bibliography`, `academic_meta_analyze` |
+| [`skills/check-submission`](skills/check-submission/SKILL.md) | Gate **your own draft** before submission: multi-file LaTeX, venue limits, double-blind PDF/source anonymity, `CEG` anchors, and `booktabs` tables | `lint-submission`, `sanitize-submission`, `generate-table`, `check-venue` |
+| [`skills/cross-review`](skills/cross-review/SKILL.md) | Coordinate **live multi-model** blind review, anonymous `Proposal-N` challenge, and minority-protected synthesis under a strict single-line verdict grammar | `cross-review`, `academic_cross_review` |
+| [`skills/compute-math`](skills/compute-math/SKILL.md) | Probe CPU/GPU/BLAS/thread environments, emit schema-validated `ComputeReceipt`, and route tasks to installed scientific Python packages | `compute-probe`, `academic_scfabric_hardware_probe` |
+
+### Quick Disambiguation: Which Review/Check Skill Do I Need?
+
+| Object in Hand | Entry Skill | Primary Output |
+| --- | --- | --- |
+| An external paper you want to audit | `audit-paper` | Locator-bound statistical, table, and reproducibility check results |
+| Your own manuscript draft before submission | `check-submission` | Format, page-limit, anonymity, and `CEG` grounding gate report |
+| Published OpenReview conference records | `audit-peer-review` | Cohort score/word-count distributions and screening statistics |
+| A claim/spec needing live multi-model review | `cross-review` | Clustered findings and SHA-bound challenge synthesis receipt |
+
+**How `academic-research-kernel` fits alongside peer open-source tools**: Broad domain skill collections (such as `Scientific Agent Skills`) and discovery/RAG systems (`AI-Scientist`, `PaperQA`) focus on literature synthesis and draft generation, while specialized verifiers focus on single axes such as multi-provider bibliography GUI/CLI validation (`RefChecker`, evaluated on benchmarks like `HALLMARK`), APA test-statistic rounding (`statcheck`), or Claude-Code/Codex reviewer workflows (`Anti-Autoresearch`). `academic-research-kernel` focuses on a **host-neutral CLI/MCP verification & SQLite state kernel** that links **author-side multi-file LaTeX/anonymity submission gates** and **auditor-side statistical, retraction, meta-analysis, and OpenReview snapshot receipts** under a single transactional schema contract.
 
 ---
 
-## 4. End-to-End Workflows: Auditing External Papers vs. Checking Your Own Manuscript
+## 3. End-to-End Workflows, Verified Scope & Known Limits
 
-### Workflow 1: Audit an External Paper, Peer-Review Mirror, or Meta-Analysis
+### Workflow A: Audit an External Paper, Citation List, or Meta-Analysis
 
 ```bash
-# 1. Prepare a PDF/LaTeX bundle, validate extracted stats, and audit table conservation
+# 1. Prepare a PDF/LaTeX bundle, validate extracted stats, and check table partition conservation
 academic-research-kernel research prepare ./paper.pdf --project ./paper-state
 academic-research-kernel research finish --project ./paper-state --candidate ./candidate.json
 academic-research-kernel table-forensics --input ./table-spec.json
 
-# 2. Audit an OpenReview mirror (ICLR / ICML / NeurIPS / COLM) without hitting live Cloudflare 403s
-academic-research-kernel openreview-audit --venue-summary ./iclr2027.json
-academic-research-kernel repo-forensics ./companion-repo
-
-# 3. Verify citations, locate legal Open Access full text, and monitor retractions in SQLite
-academic-research-kernel verify-work "10.1038/nature14539"
+# 2. Verify citations, locate legal Open Access full text, and monitor retractions in SQLite
+academic-research-kernel verify-work "10.1038/nature14539" --check-updates
 academic-research-kernel locate-oa "10.1038/nature14539" --email "you@example.edu" --fallback-openalex
 academic-research-kernel retraction-watch --dois "10.1038/nature14539" --state-db ./watch.sqlite3 --live
 
-# 4. Pool multi-study effect sizes (fixed & DerSimonian-Laird random effects + Q / I^2 / tau^2 + Egger + trim-and-fill)
+# 3. Pool multi-study effect sizes (fixed & DerSimonian-Laird random effects + Q / I^2 / tau^2 + Egger + trim-and-fill)
 academic-research-kernel meta-analyze --input ./studies.json
 ```
 
-### Workflow 2: Pre-Submission Gate for Your Own LaTeX & PDF Manuscript
+### Workflow B: Pre-Submission Gate for Your Own LaTeX & PDF Manuscript
 
 ```bash
 # 1. Inspect venue rules (ICLR, NeurIPS, ICML, ACL, etc.) or export verified CEG claim anchors
@@ -121,30 +120,43 @@ academic-research-kernel generate-table ./results-receipt.json --caption "Main R
 # 3. Scan multi-file TeX, BibTeX, and compiled PDF (/Info + XMP streams in isolated worker) for anonymity leaks
 academic-research-kernel sanitize-submission ./submission-dir --forbidden-token "Alice Smith"
 
-# 4. Run full pre-submission gate (root/nested \input, declared .bib scope, shared-page body limit, CEG claim binding)
+# 4. Run full pre-submission gate (nested \input/\subfile/\import, declared .bib scope, shared-page limit, CEG binding)
 academic-research-kernel lint-submission ./submission-dir/main.tex \
   --venue iclr --phase submission --pdf ./submission-dir/main.pdf \
   --ceg ./ceg.json --require-ceg-binding --check-academic-style
 ```
 
----
-
-## 5. Architecture, Security Guardrails & External Data Limits
-
-1. **Pure-stdlib `SQLite STRICT + WAL` kernel (`state_db.py`, `_stdlib.py`)**: Replaces 40+ legacy JSON-file wrappers and custom lockfiles (`32,167 -> ~16,000` non-test Python LOC) with transactional `STRICT` tables, `SAVEPOINT` batch rollback, `application_id = 0x41524B33` / `user_version = 4` identity and schema-migration guards, mandatory schema binding across all `26` formal artifact kinds, cycle-checked provenance graphs, and dual-sequence (`applied_seq` + `confirmed_seq`) retraction state.
-2. **Untrusted PDF & network isolation (`research/sources.py`, `double_blind_sanitizer.py`)**: Every PDF read (`research prepare`, `lint-submission`, `sanitize-submission`) executes inside an isolated `python -I -c` worker subprocess with wall-clock timeouts and bounded pipes (`pypdf==7.0.0`). Outbound HTTP (`controlled_urlopen`) disables ambient proxies, pins resolved public DNS addresses to block DNS-rebinding TOCTOU attacks, and enforces strict byte budgets. MCP `academic_double_blind_sanitize` redacts matched strings (`matched="[REDACTED]"`) so sensitive author identifiers never echo back into third-party logs.
-3. **External API etiquette**: `doctor` never makes network calls. `OpenAlex` supports anonymous first-page queries (`OPENALEX_API_KEY` recommended for higher quotas and cursor pagination); `Crossref` provides public metadata and `update-to` retraction notices; `Unpaywall` requires a contact email via `--email` or `UNPAYWALL_EMAIL` (with `--fallback-openalex` available when unset).
+**Development regression summary & known limitations**:
+- On the 30-case offline development regression suite ([real-world-audit-benchmark-v1.json](docs/benchmarks/real-world-audit-benchmark-v1.json): `16` frozen-snapshot DOI/retraction cases + `12` published Nuijten/Bakker statistical cases + `2` repository gate cases), `v3.0.0` replays `TP = 10, TN = 6, FP = 0, FN = 0` on bibliographic/retraction checks and `TP = 8, TN = 5, FP = 1, FN = 0` (`TP = 18, TN = 11, FP = 1, FN = 0` overall).
+- **Disclosed rounding limitation (`S14`)**: `recompute.py` currently evaluates exact reported test statistics against reported $p$-value rounding intervals rather than intervalizing coarse 1-decimal test statistics (`t(15) = 2.3, p = .033` yields the single disclosed `FP`), so numerical flags require human verification of input rounding before claiming a manuscript error. In double-blind checks, generic third-party repository URLs emit review `warning` items rather than hard blocks unless paired with `--forbidden-token` or explicit self-repository phrasing.
 
 ---
 
-## 6. Upgrading to `3.0.0`, Local QA & License
+## 4. Case Study: OpenReview Snapshots Across Four AI Conference Series (2025–2027)
 
-### Key `2.4.x -> 3.0.0` Changes
+Running [run_peer_review_and_incidence_benchmarks.py](tools/benchmarks/run_peer_review_and_incidence_benchmarks.py) over frozen `papercopilot/paperlists@181a85021c63ab26745c42ed70a9d9ea7b57ad7e` metadata mirrors (`74,637` unique submissions in explicit primary cohorts across `75,574` total mirror submissions, `72,289` scored papers, and `248,174` positive official reviews; full SHA-256 receipt and excluded-track breakdowns in [peer-review-forensics-2025-2027-v1.json](docs/benchmarks/peer-review-forensics-2025-2027-v1.json)) surfaces three descriptive snapshot patterns:
 
-- **Single package entrypoint**: Legacy `scripts/*.py` wrappers were folded into `academic_research_kernel` (`academic-research-kernel mcp` replaces `python scripts/mcp_server.py`; `python -m academic_research_kernel.release_gate` replaces `scripts/verify_release_assets.py` and `scripts/package_acceptance.py`). Both legacy CLI subcommand names (`verify-source`, `pre-submission-lint`, `sanitize-blind`, `receipt-to-latex`, `venue-template`) and the streamlined `3.0.0` aliases (`verify-work`, `lint-submission`, `sanitize-submission`, `generate-table`, `check-venue`) are supported.
-- **SQLite watch state migration**: Import legacy `v2.4.x` JSON watch files once via `academic-research-kernel retraction-watch --import-legacy-json old-watch.json --state-db watch.sqlite3`. Full changelog: [CHANGELOG.md](CHANGELOG.md).
+| Snapshot & Explicit Primary Cohort (`181a8502`) | Scored Papers ($N$) | Positive Reviews (Mean / Paper) | Paper Mean Score (Valid Scale) | Review Words Median (`conf=2` vs `conf=4`) | Unanimous Rate (`i.i.d.` Marginal Baseline) |
+| --- | ---: | ---: | --- | --- | ---: |
+| **ICLR 2026** (all public; `19,813` unique; `1,319` `rating=0` isolated) | 19,454 | 74,540 (`3.83`) | `4.26` (`2,4,6,8,10`) | `391` (`328` vs `409`) | **8.13%** (`1,578/19,412`; base `5.07%`) |
+| **ICLR 2027** (`2026-11-12` rebuttal snapshot; `42,790` total) | 40,801 | 126,369 (`3.10`) | `2.06` (`1–4` int; `57.4%` at `2`) | `429` (`405` vs `451`) | **23.90%** (`9,752/40,801`; base `19.80%`) |
+| **ICML 2026** (`main` accepted public; `334` ratings of `6`) | 6,341 | 24,378 (`3.84`) | `4.15` (`1–6` int rec.) | `345` (`298` vs `364`) | **16.53%** (`1,048/6,341`; base `12.35%`) |
+| **NeurIPS 2025** (`main` Oral/Spotlight/Poster; raw mirror `6,212`*) | 5,275 | 21,301 (`4.04`) | `4.34` (`1–6` int rating) | `389` (`330.5` vs `409.5`) | **14.01%** (`739/5,275`; base `8.97%`) |
+| **COLM 2025** (`main` Poster accepted; word counts absent in mirror) | 418 | 1,586 (`3.79`) | `6.50` (`1–10` int rating) | `—` (not in mirror) | **7.89%** (`33/418`; base `5.46%`) |
 
-### Local Verification & Isolated Package Acceptance
+*\*Cohort transparency*: The raw `nips/nips2025.json` mirror (`6,212` records) mixes `main` (`5,526`, including `251` opted-in public `Reject`), `Datasets & Benchmarks` (`591`, including `94` `Reject`), and `Position` (`95`, including `55` `Reject` and all `125` ratings `> 6` across `74` Position papers); all `937` non-primary records are preserved in `mirror_cohort_breakdown` inside the receipt rather than dropped silently.
+
+1. **Scale compression, reviewer-count shift & unanimity**: In `ICLR 2027` (`42,790` submissions), compressing the scale to `1–4` (`57.36%` at score `2`) alongside a lower mean review count per scored paper (`3.10`, modal `3`, vs. `3.83`, modal `4` in `ICLR 2026`) raises the empirical-marginal independent-sampling unanimity baseline $\sum_k p_k^m$ from **`5.07%`** to **`19.80%`**, accounting mechanically for most of the observed jump from **`8.13%`** to **`23.90%`**. Unanimous-score rates are structural snapshot indicators and must not be equated with AI-reviewing or collusion rates.
+2. **Self-reported confidence & review length**: Across all four snapshots with word counts, self-reported `confidence = 2` reviews have lower median word counts than `confidence = 4` reviews (`328` vs `409` in `ICLR 2026`, `298` vs `364` in `ICML 2026`, `330.5` vs `409.5` in `NeurIPS 2025` `main` accepted, and `405` vs `451` in `ICLR 2027`). Separately, `ICML 2026` program chairs officially sanctioned `398` reciprocal-review LLM-policy violators (`497` desk rejections).
+3. **Polarity-blind topic-mention screening (`ICLR 2026`)**: Across `19,473` joined scored `ICLR 2026` submissions and `75,769` official reviews ([iclr2026-openreview-incidence-receipt.json](docs/benchmarks/iclr2026-openreview-incidence-receipt.json), verified against `insomnia7/iclr2026_stats@50507ab3`), regex topic screening over `Weaknesses` and `Questions` matches at least one of five check families in **`48.2%`** of Oral, **`54.0%`** of Poster, **`59.8%`** of Rejected, and **`63.6%`** of Desk-Rejected papers (`59.0%` overall; measures topic-term mention prevalence rather than confirmed defect rate).
+
+---
+
+## 5. Architecture, Security Guardrails, Local QA & License
+
+1. **Transactional `SQLite STRICT + WAL` state (`state_db.py`, `_stdlib.py`, `mcp_server.py`)**: Replaces legacy multi-file JSON lockfiles with foreign-keyed `STRICT` tables, `SAVEPOINT` atomic batches, `application_id = 0x41524B33` / `user_version = 4` migration guards, mandatory schema validation across all `26` artifact kinds, single-claim outer binding target verification on `quantitative_audit` / `evidence_receipt` ingestion, cycle-checked provenance graphs, and dual-sequence (`applied_seq` + `confirmed_seq`) retraction state.
+2. **Untrusted PDF & network isolation (`research/sources.py`, `double_blind_sanitizer.py`)**: Every PDF read executes inside a bounded `python -I -c` worker subprocess (`pypdf==7.0.0`, `fonttools==4.65.0`). Outbound HTTP (`controlled_urlopen`) disables ambient proxies, pins resolved public DNS addresses to block DNS-rebinding TOCTOU attacks, and enforces byte caps. MCP `academic_double_blind_sanitize` redacts matched strings (`matched="[REDACTED]"`).
+3. **External API etiquette & local QA gates**: `doctor` never makes network calls (`OPENALEX_API_KEY` optional for higher quotas; `Unpaywall` uses `--email` / `UNPAYWALL_EMAIL` or `--fallback-openalex`). Legacy `2.4.x` CLI aliases remain supported (`retraction-watch --import-legacy-json old-watch.json --state-db watch.sqlite3` migrates watch files; see [CHANGELOG.md](CHANGELOG.md)).
 
 ```bash
 uv lock --check

@@ -13,7 +13,7 @@ metadata:
 
 # Audit Peer Review (`audit-peer-review`)
 
-Peer-review score distribution analysis, machine-review anomaly forensics, single-paper forum inspection, and local/remote companion repository forensics via `academic-research-kernel` (`3.0.0`).
+Analyze published OpenReview score/word-count/unanimity distributions, inspect single-forum official reviews vs. meta-reviews, and inventory companion code repositories via `academic-research-kernel` (`3.0.0`); outputs descriptive snapshot statistics and screening cues rather than adjudicating review fairness or AI authorship.
 
 ## When to Use
 
@@ -44,7 +44,7 @@ academic-research-kernel repo-forensics --tree-json ./repo-tree.json
 
 ## Supported Venue Schemas
 
-- **ICLR (2024–2027+)**: `rating` (10-point or 2027 4-point scale), `confidence`, `soundness`, `presentation`, `contribution`, 2027 `informativeness`, `wc_review`, and `replies_avg`.
-- **ICML (2025–2026+)**: `recommendation` (5-point scale), `confidence`, `wc_review`, and `replies_avg`.
-- **NeurIPS (2024–2026+)**: `rating` (6-point scale), `confidence`, `clarity`, `quality`, `significance`, `originality`, `wc_strengths_and_weaknesses`, and `wc_limitations`.
+- **ICLR (2024–2027+)**: `rating` (`2, 4, 6, 8, 10` even scale or 2027 `1–4` integer scale), `confidence`, `soundness`, `presentation`, `contribution`, 2027 `informativeness`, `wc_review`, and `replies_avg`.
+- **ICML (2025–2026+)**: `recommendation` (`1–6` integer scale in ICML 2026), `confidence`, `wc_review`, and `replies_avg`.
+- **NeurIPS (2024–2026+)**: `rating` (`1–6` main-track scale; stratify multi-track mirrors such as `Datasets & Benchmarks` and `Position` plus opted-in public `Reject` records explicitly before cross-venue comparison), `confidence`, `clarity`, `quality`, `significance`, `originality`, `wc_strengths_and_weaknesses`, and `wc_limitations`.
 - **COLM**: `rating` (10-point scale), `confidence`, `soundness`, `excitement`, `wc_review`, and `replies_avg`.

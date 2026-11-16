@@ -28,6 +28,12 @@ _ARK_CLAIM_RE = re.compile(r"(?<!\\)%\s*ark:claim=([^\s%]+)")
 _INPUT_RE = re.compile(
     r"\\(?:input|include)(?![A-Za-z@])(?:\s*\{([^{}]+)\}|\s*\"([^\"]+)\"|\s*([^\s\\{}%\"]+))"
 )
+_ASSET_INPUT_RE = re.compile(
+    r"\\(?:verbatiminput|lstinputlisting|includegraphics|includepdf)\*?\s*(?:\[[^\]]*\]\s*)*\{([^{}]+)\}"
+    r"|\\inputminted\*?\s*(?:\[[^\]]*\]\s*)*\{[^{}]+\}\s*\{([^{}]+)\}"
+)
+_SUBFILE_RE = re.compile(r"\\subfile\*?\s*(?:\[[^\]]*\]\s*)*\{([^{}]+)\}")
+_IMPORT_PKG_RE = re.compile(r"\\(?:sub)?import\*?\s*\{([^{}]+)\}\s*\{([^{}]+)\}")
 _VIRTUAL_TEX_INCLUDES = frozenset({"glyphtounicode", "glyphtounicode-cmex", "glyphtounicode-cmr"})
 _DOC_CLASS_RE = re.compile(r"\\documentclass(?:\s*\[([^\]]*)\])?\s*\{([^{}]+)\}")
 _USEPKG_RE = re.compile(r"\\usepackage(?:\s*\[([^\]]*)\])?\s*\{([^{}]+)\}")
@@ -310,6 +316,60 @@ def collect_tex_tree(
             if not cand.exists() and Path(rel).name.lower() in _VIRTUAL_TEX_INCLUDES and Path(rel).parent == Path("."):
                 continue
             _walk(cand, depth + 1, checked, ln)
+        for m_sub in _SUBFILE_RE.finditer(cleaned):
+            rel_sf = (m_sub.group(1) or "").strip()
+            if not rel_sf:
+                continue
+            ln_sf = _line_of(cleaned, m_sub.start())
+            rel_sf_tex = rel_sf if Path(rel_sf).suffix.lower() == ".tex" else f"{rel_sf}.tex"
+            cand_sf_r = root / rel_sf_tex
+            cand_sf_l = checked.parent / rel_sf_tex
+            cand_sf = cand_sf_l if (not cand_sf_r.exists() and cand_sf_l.exists()) else cand_sf_r
+            _walk(cand_sf, depth + 1, checked, ln_sf)
+        for m_asset in _ASSET_INPUT_RE.finditer(cleaned):
+            rel_a = (m_asset.group(1) or m_asset.group(2) or "").strip()
+            if not rel_a:
+                continue
+            ln_a = _line_of(cleaned, m_asset.start())
+            rel_file = checked.relative_to(root).as_posix()
+            if Path(rel_a).is_absolute():
+                findings.append({
+                    "code": "UNSAFE_INCLUDE_PATH",
+                    "severity": "error",
+                    "file": rel_file,
+                    "line": ln_a,
+                    "detail": f"Absolute asset/listing include path {rel_a!r} escapes manuscript root",
+                })
+                continue
+            cand_ra = root / rel_a
+            cand_la = checked.parent / rel_a
+            cand_a = cand_la if (not cand_ra.exists() and cand_la.exists()) else cand_ra
+            try:
+                safe_path(cand_a, root=root)
+            except ValueError as exc:
+                findings.append({
+                    "code": "UNSAFE_INCLUDE_PATH",
+                    "severity": "error",
+                    "file": rel_file,
+                    "line": ln_a,
+                    "detail": str(exc),
+                })
+        for m_imp in _IMPORT_PKG_RE.finditer(cleaned):
+            imp_dir, imp_file = m_imp.group(1).strip(), m_imp.group(2).strip()
+            ln_i = _line_of(cleaned, m_imp.start())
+            rel_file = checked.relative_to(root).as_posix()
+            if Path(imp_dir).is_absolute() or Path(imp_file).is_absolute():
+                findings.append({
+                    "code": "UNSAFE_INCLUDE_PATH",
+                    "severity": "error",
+                    "file": rel_file,
+                    "line": ln_i,
+                    "detail": f"Absolute \\import path ({imp_dir!r}, {imp_file!r}) escapes manuscript root",
+                })
+                continue
+            imp_tex = imp_file if Path(imp_file).suffix.lower() == ".tex" else f"{imp_file}.tex"
+            cand_imp = (checked.parent / imp_dir / imp_tex) if m_imp.group(0).startswith(r"\sub") else (root / imp_dir / imp_tex)
+            _walk(cand_imp, depth + 1, checked, ln_i)
         active_stack.discard(checked)
 
     _walk(entry, 0, None, 1)
@@ -592,13 +652,65 @@ _SIGNED_QTY_RE = re.compile(
 )
 
 
-def _normalize_statement_for_ceg(text: str) -> str:
+_NON_SEMANTIC_TEX_TAG_RE = re.compile(
+    r"\\(?:cite[a-zA-Z*]*|[cC]?ref|autoref|eqref|pageref|label|index)\*?\s*(?:\[[^\]]*\]\s*)*\{[^{}]*\}"
+)
+_CLAUSE_STOPWORDS = frozenset({
+    "the", "a", "an", "is", "are", "was", "were", "that", "this", "and",
+})
+_FORMATTING_MACRO_RE = re.compile(
+    r"\\(?:textbf|textit|emph|texttt|textrm|textsf|textsc|textup|textnormal|text|mbox|hbox|"
+    r"mathrm|mathbf|mathit|mathsf|mathtt|underline|uline|small|large|normalsize)\*?"
+    r"\s*(?:\[[^\]]*\]\s*)*\{([^{}]*)\}"
+)
+
+
+def _strip_tex_markup_preserving_semantics(text: str) -> str:
     s = text.replace(r"\%", "%").replace(r"\times", "×").replace(r"\pm", "±")
+    # Preserve TeX & Unicode relational/approximation operators before macro and '~' spacing stripping
+    for tex_rel, canon_rel in (
+        (r"\leq", " <= "),
+        (r"\le", " <= "),
+        (r"\geq", " >= "),
+        (r"\ge", " >= "),
+        (r"\neq", " != "),
+        (r"\ne", " != "),
+        (r"\lt", " < "),
+        (r"\gt", " > "),
+        (r"\approx", " op_approx "),
+        (r"\simeq", " op_approx "),
+        (r"\sim", " op_approx "),
+    ):
+        s = re.sub(rf"{re.escape(tex_rel)}(?![A-Za-z])", canon_rel, s)
+    s = s.replace("≤", " <= ").replace("≥", " >= ").replace("≠", " != ").replace("≈", " op_approx ")
+    # Strip citation, cross-reference, and label tags completely (do NOT splice bibkeys into prose)
+    while True:
+        nxt = _NON_SEMANTIC_TEX_TAG_RE.sub(" ", s)
+        if nxt == s:
+            break
+        s = nxt
+    s = re.sub(r"\(\s*\)|\[\s*\]", " ", s)
+    # Expand TeX spacing escapes (\, \; \: \! \~ \quad \qquad) before unwrapping formatting macros
+    s = re.sub(r"\\(?:[,;:! ]|quad\b|qquad\b)", " ", s)
+    s = s.replace("~", " ")
     s = re.sub(r"\$\s*([+\-−])\s*\$", r"\1", s)
     s = s.replace("$", " ")
-    s = re.sub(r"\\(?:textbf|textit|emph|mathrm|mathbf|text)\s*\{([^{}]*)\}", r"\1", s)
+    # Unwrap ONLY explicit typography/font macros; preserve semantic math operators (\sqrt{40}, \frac{1}{2}, \log{x})
+    while True:
+        nxt = _FORMATTING_MACRO_RE.sub(r"\1", s)
+        if nxt == s:
+            break
+        s = nxt
+    # Render remaining TeX control words as explicit operator tokens (\sqrt{40} -> op_sqrt(40)) so they never collapse to bare 40
+    s = re.sub(r"\\([A-Za-z]+)\*?\s*\{([^{}]*)\}", r" op_\1(\2) ", s)
+    s = re.sub(r"\\([A-Za-z]+)\*?", r" op_\1 ", s)
+    s = s.replace("{", "").replace("}", "").replace("\\", "")
     s = s.replace("−", "-")
     return " ".join(s.split())
+
+
+def _normalize_statement_for_ceg(text: str) -> str:
+    return _strip_tex_markup_preserving_semantics(text)
 
 
 def _extract_signed_quantities(text: str) -> list[tuple[bool, str, str]]:
@@ -614,12 +726,8 @@ def _extract_signed_quantities(text: str) -> list[tuple[bool, str, str]]:
 
 
 def _canonicalize_statement_for_binding(text: str) -> str:
-    s = _normalize_statement_for_ceg(text)
-    s = re.sub(r"\\[A-Za-z]+\*?\s*\{([^{}]*)\}", r"\1", s)
-    s = re.sub(r"\$([^$]*)\$", r"\1", s)
-    s = s.replace("{", "").replace("}", "").replace("\\", "")
-    s = s.lower().strip()
-    # Canonicalize standard unit aliases attached to numbers
+    s = _strip_tex_markup_preserving_semantics(text).lower().strip()
+    # Canonicalize standard unit aliases attached to numbers (both '40ms' and '40 milliseconds' -> '40 millisecond')
     for u_raw, u_canon in sorted(_UNIT_ALIASES.items(), key=lambda kv: -len(kv[0])):
         if u_raw and u_canon:
             s = re.sub(rf"(\d)\s*{re.escape(u_raw)}(?![a-z])", rf"\1 {u_canon}", s)
@@ -641,23 +749,34 @@ def _statement_diverges_from_claim(claim_txt: str, manuscript_line: str, *, stri
     if m_qtys != c_qtys:
         return True
 
-    # Clause-by-clause polarity & metric alignment so swapped multi-clause statements diverge
+    # Clause-by-clause polarity & ordered entity/role alignment so swapped subjects/objects (Drug A vs Drug B) diverge
     c_clauses = [cl.strip() for cl in re.split(r"[;；]|\bwhile\b|\bwhereas\b", c_canon) if cl.strip()]
     m_clauses = [cl.strip() for cl in re.split(r"[;；]|\bwhile\b|\bwhereas\b", m_canon) if cl.strip()]
     if len(c_clauses) != len(m_clauses):
         return True
+    def _canon_pol_token(tok: str) -> str:
+        if tok in _UP_POLARITY_WORDS:
+            return "+UP+"
+        if tok in _DOWN_POLARITY_WORDS:
+            return "+DOWN+"
+        if tok in _NEGATION_WORDS:
+            return "+NEG+"
+        return tok
+
     for cc, mc in zip(c_clauses, m_clauses):
-        ct = set(re.findall(r"[a-z]+", cc))
-        mt = set(re.findall(r"[a-z]+", mc))
+        c_words = re.findall(r"(?:op_[a-z0-9_]+\([^()]*\)|<=|>=|!=|[<>~=]|[a-z0-9%×_]+)", cc)
+        m_words = re.findall(r"(?:op_[a-z0-9_]+\([^()]*\)|<=|>=|!=|[<>~=]|[a-z0-9%×_]+)", mc)
+        ct = set(c_words)
+        mt = set(m_words)
         if (bool(ct & _UP_POLARITY_WORDS) != bool(mt & _UP_POLARITY_WORDS)) or (
             bool(ct & _DOWN_POLARITY_WORDS) != bool(mt & _DOWN_POLARITY_WORDS)
         ):
             return True
         if bool(ct & _NEGATION_WORDS) != bool(mt & _NEGATION_WORDS):
             return True
-        c_content = {w for w in ct if len(w) >= 4} - _UP_POLARITY_WORDS - _DOWN_POLARITY_WORDS
-        m_content = {w for w in mt if len(w) >= 4} - _UP_POLARITY_WORDS - _DOWN_POLARITY_WORDS
-        if c_content != m_content:
+        c_seq = [_canon_pol_token(w) for w in c_words if w not in _CLAUSE_STOPWORDS]
+        m_seq = [_canon_pol_token(w) for w in m_words if w not in _CLAUSE_STOPWORDS]
+        if c_seq != m_seq:
             return True
     return False
 
@@ -775,7 +894,11 @@ def lint_manuscript(
                     "line": _line_of(cleaned, m_fc.start()),
                     "detail": f"Final-copy macro {m_fc.group(0)} active under double-blind review",
                 })
-            from .double_blind_sanitizer import _extract_balanced_braces, _is_strictly_anonymous_tex_body
+            from .double_blind_sanitizer import (
+                SELF_OWNED_URL_CUE_RE,
+                _extract_balanced_braces,
+                _is_strictly_anonymous_tex_body,
+            )
 
             for ln_no, auth_body in _extract_balanced_braces(raw_txt):
                 compact_auth = " ".join(auth_body.split())
@@ -813,14 +936,22 @@ def lint_manuscript(
                     "line": _line_of(cleaned, m_fund.start()),
                     "detail": "Explicit grant/funding disclosure detected under double-blind submission",
                 })
-            m_url = _NON_ANON_HOST_RE.search(cleaned)
-            if m_url:
+            for m_url in _NON_ANON_HOST_RE.finditer(cleaned):
+                ln_url = _line_of(cleaned, m_url.start())
+                line_start = cleaned.rfind("\n", 0, m_url.start()) + 1
+                line_end = cleaned.find("\n", m_url.end())
+                url_line = cleaned[line_start:] if line_end == -1 else cleaned[line_start:line_end]
+                is_self_url = SELF_OWNED_URL_CUE_RE.search(url_line) is not None
                 findings.append({
                     "code": "BLIND_URL_LEAK",
-                    "severity": "error",
+                    "severity": "error" if is_self_url else "warning",
                     "file": rel_name,
-                    "line": _line_of(cleaned, m_url.start()),
-                    "detail": "Non-anonymous repository URL detected under double-blind submission",
+                    "line": ln_url,
+                    "detail": (
+                        "Author-associated repository URL detected under double-blind submission"
+                        if is_self_url
+                        else "Public repository URL detected under double-blind submission; verify it does not identify the authors"
+                    ),
                 })
 
         m_lay = _FORBIDDEN_LAYOUT_RE.search(cleaned)

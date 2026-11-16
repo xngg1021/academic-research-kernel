@@ -13,7 +13,7 @@ metadata:
 
 # Audit Paper (`audit-paper`)
 
-Deterministic single-paper and two-paper audit workflow backed by `academic-research-kernel` (`3.0.0`). Consolidates `paper-research`, `quantitative-paper-audit`, `research-reproducibility`, `research-object-identity`, `claim-evidence-graph`, and `decision-ledger` into one unified CLI and MCP surface.
+Check reported statistics, tables, source locators, and reproducibility checklists inside an external or paired paper via `academic-research-kernel` (`3.0.0`), outputting concrete item-level checks and SQLite evidence bindings rather than a blanket verdict on whole-paper truth. Consolidates `paper-research`, `quantitative-paper-audit`, `research-reproducibility`, `research-object-identity`, `claim-evidence-graph`, and `decision-ledger`.
 
 ## When to Use
 

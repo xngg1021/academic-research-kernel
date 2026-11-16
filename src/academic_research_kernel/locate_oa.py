@@ -170,13 +170,26 @@ def _utf8_stdio() -> None:
 
 def _build_openalex_report(doi: str, oa_work: dict, mode: str) -> tuple[int, dict]:
     if not isinstance(oa_work, dict):
-        return 1, {'doi': doi, 'status': 'failed', 'error': 'ValueError: OpenAlex record must be a JSON object'}
-    rec_doi = _normalize_doi(oa_work.get('doi') or '')
-    if rec_doi and rec_doi != doi:
         return 1, {
             'doi': doi,
             'status': 'failed',
-            'error': f'record DOI mismatch: requested {doi}, got {rec_doi}',
+            'mode': mode,
+            'is_oa': False,
+            'oa_url': None,
+            'location': None,
+            'error': 'ValueError: OpenAlex record must be a JSON object',
+        }
+    rec_doi = _normalize_doi(oa_work.get('doi') or '')
+    if not rec_doi or rec_doi != doi:
+        return 1, {
+            'doi': doi,
+            'identifier': {'type': 'doi', 'value': doi, 'normalized': doi},
+            'status': 'failed',
+            'mode': mode,
+            'is_oa': False,
+            'oa_url': None,
+            'location': None,
+            'error': f'record DOI mismatch or missing identity: requested {doi}, got {rec_doi!r}',
             'mismatch': True,
         }
     locations = pick_openalex_oa_locations(oa_work)
@@ -354,7 +367,7 @@ def resolve_oa(
             rec = None
         if isinstance(rec, dict):
             rec_doi = _normalize_doi(rec.get('doi') or '')
-            if ('doi' in rec or rec_doi) and rec_doi != clean_doi:
+            if not rec_doi or rec_doi != clean_doi:
                 unpaywall_err = f'record DOI mismatch or missing identity: requested {clean_doi}, got {rec_doi!r}'
                 if not fallback_openalex:
                     return 1, {

@@ -30,6 +30,13 @@ GITHUB_URL_RE = re.compile(
     r"(?:https?://|git@)?(?:www\.|raw\.|gist\.)?github(?:usercontent)?\.com[:/][A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",
     re.I,
 )
+SELF_OWNED_URL_CUE_RE = re.compile(
+    r"\b(?:our\s+(?:code|repo|repository|implementation|package|project|library|artifact|data|dataset|benchmark|model|framework|system|tool|supplement|scripts?)"
+    r"|we\s+(?:release|provide|open[- ]source|publish|host|maintain)\b"
+    r"|(?:code|implementation|repository|artifact)\s+(?:is\s+)?(?:available|released|hosted)\s+at\b"
+    r"|source\s+code\s*[:=])",
+    re.I,
+)
 ORCID_RE = re.compile(r"\b000[0-9]-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]\b")
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@(?!example\.)[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 WIN_PATH_RE = re.compile(r"(?i)(?:\b[A-Z]:|/mnt/[a-z])[/\\]+Users[/\\]+(?!<|Public\b|Default\b)[\w.-]+")
@@ -120,6 +127,13 @@ def _match_forbidden_token(tok: str, text_line: str) -> bool:
     return tok.lower() in text_line.lower()
 
 
+def _is_author_linked_repo_url(url_str: str, line_text: str, tokens: list[str]) -> bool:
+    for tok in tokens:
+        if _match_forbidden_token(tok, url_str):
+            return True
+    return SELF_OWNED_URL_CUE_RE.search(line_text) is not None
+
+
 def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | None = None) -> list[dict]:
     findings = []
     tokens = [t.strip() for t in (forbidden_tokens or []) if t and t.strip()]
@@ -130,6 +144,7 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                 "file": rel_path,
                 "line": 0,
                 "kind": "forbidden_token_in_path",
+                "severity": "error",
                 "matched": tok,
             })
 
@@ -140,16 +155,19 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                     "file": rel_path,
                     "line": line_no,
                     "kind": "forbidden_token",
+                    "severity": "error",
                     "matched": tok,
                 })
         for m in GITHUB_URL_RE.finditer(line):
             u_low = m.group(0).lower()
-            if any(w in u_low for w in ("github.com/iclr/", "github.com/acl-org/", "github.com/neurips/")):
+            if any(w in u_low for w in ("github.com/iclr/", "github.com/acl-org/", "github.com/neurips/", "github.com/anonymous/")):
                 continue
+            is_self = _is_author_linked_repo_url(m.group(0), line, tokens)
             findings.append({
                 "file": rel_path,
                 "line": line_no,
-                "kind": "non_anonymous_github_url",
+                "kind": "non_anonymous_github_url" if is_self else "public_repo_url_review",
+                "severity": "error" if is_self else "warning",
                 "matched": m.group(0),
             })
         for m in ORCID_RE.finditer(line):
@@ -157,6 +175,7 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                 "file": rel_path,
                 "line": line_no,
                 "kind": "orcid_identifier",
+                "severity": "error",
                 "matched": m.group(0),
             })
         for m in EMAIL_RE.finditer(line):
@@ -164,6 +183,7 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                 "file": rel_path,
                 "line": line_no,
                 "kind": "email_address",
+                "severity": "error",
                 "matched": m.group(0),
             })
         for m in WIN_PATH_RE.finditer(line):
@@ -171,6 +191,7 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                 "file": rel_path,
                 "line": line_no,
                 "kind": "local_user_path",
+                "severity": "error",
                 "matched": m.group(0),
             })
         for m in UNIX_PATH_RE.finditer(line):
@@ -178,6 +199,7 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                 "file": rel_path,
                 "line": line_no,
                 "kind": "local_user_path",
+                "severity": "error",
                 "matched": m.group(0),
             })
 
@@ -189,6 +211,7 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                     "file": rel_path,
                     "line": line_no,
                     "kind": "non_anonymous_latex_author",
+                    "severity": "error",
                     "matched": compact[:100],
                 })
     return findings
@@ -349,7 +372,9 @@ def scan_target(target: Path, forbidden_tokens: list[str] | None = None, *, root
             "unsupported_files": [raw_target.name],
             "skipped_symlinks": [raw_target.name],
             "leak_count": 0,
+            "warning_count": 0,
             "findings": [],
+            "warnings": [],
         }
     target = raw_target.resolve()
     files: list[Path] = []
@@ -433,7 +458,9 @@ def scan_target(target: Path, forbidden_tokens: list[str] | None = None, *, root
             unsupported_files.append(rel)
 
     total_scanned = len(files) + scanned_pdf_count
-    if all_findings:
+    hard_findings = [f for f in all_findings if f.get("severity", "error") != "warning"]
+    advisory_warnings = [f for f in all_findings if f.get("severity") == "warning"]
+    if hard_findings:
         status = "leaks_detected"
     elif total_scanned == 0 or unsupported_files:
         status = "incomplete"
@@ -445,6 +472,8 @@ def scan_target(target: Path, forbidden_tokens: list[str] | None = None, *, root
         "files_scanned": total_scanned,
         "unsupported_files": unsupported_files,
         "skipped_symlinks": skipped_symlinks,
-        "leak_count": len(all_findings),
-        "findings": all_findings,
+        "leak_count": len(hard_findings),
+        "warning_count": len(advisory_warnings),
+        "findings": hard_findings,
+        "warnings": advisory_warnings,
     }

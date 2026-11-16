@@ -1,15 +1,16 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "study_id": "iclr2026-openreview-5family-incidence-v1",
   "measurement_scope": "lexical_keyword_screening_mention_rate",
   "description": "De-identified paper-level lexical keyword-screening mention rates across 5 topic families in official ICLR 2026 peer-review Weaknesses and Questions fields. Because regex matching is polarity-blind (e.g. 'confidence intervals are correctly reported' or 'reproducibility is excellent' also match), these rates measure topic-term mention/screening prevalence inside Weaknesses/Questions rather than manually adjudicated defect ground truth.",
   "reproduction_command": "python tools/benchmarks/run_peer_review_and_incidence_benchmarks.py --mirror-dir <dir> --verify-iclr2026-incidence",
   "known_limitations": [
     "Lexical regexes match topic phrases without sentiment/negation parsing; positive or neutral mentions inside Weaknesses/Questions (such as praising reproducibility or comprehensive limitations) are counted alongside critiques.",
-    "Join denominator (19,473 scored manuscripts, 75,769 reviews) requires both a non-empty review list in iclr2026_stats.jsonl and a matching forum ID in iclr2026.json."
+    "Join denominator (19,473 scored manuscripts, 75,769 reviews) requires both a non-empty review list in iclr2026_stats.jsonl and a matching forum ID in iclr2026.json (with ConditionalOral -> Oral, ConditionalPoster -> Poster, Reject -> Rejected, Withdraw -> Withdrawn)."
   ],
   "methodology": {
     "unit_of_analysis": "scored_manuscript",
+    "status_normalization": "ConditionalOral -> Oral; ConditionalPoster -> Poster; Reject -> Rejected; Withdraw -> Withdrawn",
     "text_fields_concatenated": [
       "reviews[*].weaknesses",
       "reviews[*].questions"
@@ -32,6 +33,7 @@
       "commit": "181a85021c63ab26745c42ed70a9d9ea7b57ad7e",
       "frozen_url": "https://github.com/papercopilot/paperlists/blob/181a85021c63ab26745c42ed70a9d9ea7b57ad7e/iclr/iclr2026.json",
       "total_records": 19814,
+      "unique_records": 19813,
       "sha256": "fc6f5e5b6ba0fb28bec691a8b8d7a922e9d7bb1615209695ad79fafe62a75d4a",
       "size_bytes": 88818779
     },
@@ -141,7 +143,7 @@
         "pct": 23.4
       },
       "hit_format": {
-        "k": 2257,
+        "k": 2256,
         "pct": 26.7
       },
       "hit_table_quant": {
@@ -201,7 +203,7 @@
         "pct": 22.3
       },
       "hit_format": {
-        "k": 4946,
+        "k": 4945,
         "pct": 26.3
       },
       "hit_table_quant": {
@@ -261,7 +263,7 @@
         "pct": 22.3
       },
       "hit_format": {
-        "k": 5134,
+        "k": 5133,
         "pct": 26.4
       },
       "hit_table_quant": {
@@ -321,7 +323,7 @@
         "pct": 21.9
       },
       "hit_format": {
-        "k": 3995,
+        "k": 3994,
         "pct": 25.7
       },
       "hit_table_quant": {
@@ -444,8 +446,8 @@
           "pct": 23.8
         },
         "hit_format": {
-          "k": 1109,
-          "pct": 26.1
+          "k": 1108,
+          "pct": 26.0
         },
         "hit_table_quant": {
           "k": 435,
@@ -504,7 +506,7 @@
           "pct": 23.0
         },
         "hit_format": {
-          "k": 2465,
+          "k": 2464,
           "pct": 26.1
         },
         "hit_table_quant": {
@@ -564,7 +566,7 @@
           "pct": 23.0
         },
         "hit_format": {
-          "k": 2549,
+          "k": 2548,
           "pct": 26.1
         },
         "hit_table_quant": {
@@ -624,7 +626,7 @@
           "pct": 23.0
         },
         "hit_format": {
-          "k": 1965,
+          "k": 1964,
           "pct": 25.3
         },
         "hit_table_quant": {
@@ -973,5 +975,6 @@
         }
       }
     }
-  }
+  },
+  "receipt_sha256": "2c3a0e517607867c552ac690e4779033df844a05c50d5f58125436a028637f6f"
 }

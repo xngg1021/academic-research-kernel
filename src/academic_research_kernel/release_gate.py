@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request
 import venv
@@ -145,6 +146,7 @@ def validate_target(
 
 
 def _load_pyproject(source_root: Path) -> dict[str, object]:
+    source_root = safe_path(source_root, must_exist=True)
     raw = (source_root / "pyproject.toml").read_bytes()
     if sys.version_info >= (3, 11):
         import tomllib
@@ -153,6 +155,127 @@ def _load_pyproject(source_root: Path) -> dict[str, object]:
     import tomli  # type: ignore[import-not-found]
 
     return tomli.loads(raw.decode("utf-8"))
+
+
+def _norm_spec_clauses(spec_s: str) -> str:
+    clauses: list[str] = []
+    for raw_c in spec_s.split(","):
+        c = re.sub(r"\s+", "", raw_c).lower()
+        if not c:
+            continue
+        # Canonicalize trailing .0 segments only on inequality specifiers if needed? Keep exact PEP 440 tokens sorted.
+        clauses.append(c)
+    return ",".join(sorted(clauses))
+
+
+def _norm_req_base(r_s: str) -> str:
+    base, sep, marker = r_s.partition(";")
+    m_pkg = re.match(r"^\s*([A-Za-z0-9_.\-]+(?:\[[^\]]*\])?)\s*(.*)$", base)
+    if not m_pkg:
+        return re.sub(r"\s+", "", r_s).lower()
+    pkg_raw = m_pkg.group(1).strip().lower()
+    if "[" in pkg_raw and pkg_raw.endswith("]"):
+        p_name, p_ext = pkg_raw[:-1].split("[", 1)
+        ext_norm = ",".join(sorted(re.sub(r"[-_.]+", "-", x.strip()) for x in p_ext.split(",") if x.strip()))
+        pkg_part = f"{re.sub(r'[-_.]+', '-', p_name)}[{ext_norm}]"
+    else:
+        pkg_part = re.sub(r"[-_.]+", "-", pkg_raw)
+    spec_part = _norm_spec_clauses(m_pkg.group(2))
+    marker_part = (";" + re.sub(r"\s+", "", marker).lower().replace('"', "'")) if sep and marker.strip() else ""
+    return f"{pkg_part}{spec_part}{marker_part}"
+
+
+def _verify_parsed_pkg_metadata(parsed: Any, proj: dict[str, Any], *, label: str) -> None:
+    exp_req_py = _norm_spec_clauses(str(proj.get("requires-python") or ""))
+    act_req_py = _norm_spec_clauses(str(parsed.get("Requires-Python") or ""))
+    if exp_req_py:
+        require(act_req_py == exp_req_py, f"{label} Requires-Python {act_req_py!r} != pyproject {exp_req_py!r}")
+
+    opt_deps = proj.get("optional-dependencies") if isinstance(proj.get("optional-dependencies"), dict) else {}
+    exp_extras = {re.sub(r"[-_.]+", "-", str(k).strip().lower()) for k in opt_deps}
+    act_provides = {re.sub(r"[-_.]+", "-", str(x).strip().lower()) for x in (parsed.get_all("Provides-Extra") or []) if str(x).strip()}
+    require(
+        act_provides == exp_extras,
+        f"{label} Provides-Extra {sorted(act_provides)!r} != pyproject optional-dependencies {sorted(exp_extras)!r}",
+    )
+
+    act_core: list[str] = []
+    act_by_extra: dict[str, list[str]] = {ext: [] for ext in exp_extras}
+    for raw_r in (parsed.get_all("Requires-Dist") or []):
+        r_str = str(raw_r)
+        base, sep, marker = r_str.partition(";")
+        marker_clean = marker.strip() if sep else ""
+        if marker_clean:
+            m_ext_end = re.fullmatch(
+                r"""(?:(?:\(\s*(.+?)\s*\)|(.+?))\s+and\s+)?extra\s*==\s*['"]([A-Za-z0-9_.\-]+)['"]""",
+                marker_clean,
+                flags=re.I,
+            )
+            m_ext_start = (
+                None
+                if m_ext_end is not None
+                else re.fullmatch(
+                    r"""extra\s*==\s*['"]([A-Za-z0-9_.\-]+)['"]\s+and\s+(?:\(\s*(.+?)\s*\)|(.+?))""",
+                    marker_clean,
+                    flags=re.I,
+                )
+            )
+            if m_ext_end is not None or m_ext_start is not None:
+                if m_ext_end is not None:
+                    sub_marker = m_ext_end.group(1) or m_ext_end.group(2)
+                    ext_raw = m_ext_end.group(3)
+                else:
+                    assert m_ext_start is not None
+                    ext_raw = m_ext_start.group(1)
+                    sub_marker = m_ext_start.group(2) or m_ext_start.group(3)
+                ext_key = re.sub(r"[-_.]+", "-", ext_raw.strip().lower())
+                require(ext_key in act_by_extra, f"{label} undeclared extra in Requires-Dist: {r_str!r}")
+                rebuilt = f"{base}; {sub_marker}" if sub_marker else base
+                act_by_extra[ext_key].append(_norm_req_base(rebuilt))
+                continue
+            require("extra" not in re.sub(r"\s+", "", marker_clean).lower(), f"{label} malformed extra marker in Requires-Dist: {r_str!r}")
+        act_core.append(_norm_req_base(r_str))
+
+    exp_core = [_norm_req_base(str(d)) for d in (proj.get("dependencies") or [])]
+    require(
+        sorted(act_core) == sorted(exp_core),
+        f"{label} core Requires-Dist {sorted(act_core)!r} != pyproject dependencies {sorted(exp_core)!r}",
+    )
+    for orig_k, dep_list in opt_deps.items():
+        ext_key = re.sub(r"[-_.]+", "-", str(orig_k).strip().lower())
+        exp_ext_reqs = [_norm_req_base(str(d)) for d in (dep_list or [])]
+        act_ext_reqs = act_by_extra.get(ext_key, [])
+        require(
+            sorted(act_ext_reqs) == sorted(exp_ext_reqs),
+            f"{label} extra[{ext_key!r}] Requires-Dist {sorted(act_ext_reqs)!r} != pyproject {sorted(exp_ext_reqs)!r}",
+        )
+
+
+def _expected_sdist_rels(source_root: Path, pyproj: dict[str, Any]) -> set[str]:
+    source_root = safe_path(source_root, must_exist=True)
+    tool_cfg = pyproj.get("tool") if isinstance(pyproj.get("tool"), dict) else {}
+    hatch_cfg = tool_cfg.get("hatch") if isinstance(tool_cfg.get("hatch"), dict) else {}
+    build_cfg = hatch_cfg.get("build") if isinstance(hatch_cfg.get("build"), dict) else {}
+    targets_cfg = build_cfg.get("targets") if isinstance(build_cfg.get("targets"), dict) else {}
+    sdist_cfg = targets_cfg.get("sdist") if isinstance(targets_cfg.get("sdist"), dict) else {}
+    only_inc = sdist_cfg.get("only-include")
+    require(isinstance(only_inc, list) and len(only_inc) > 0, "pyproject.toml missing [tool.hatch.build.targets.sdist].only-include")
+    expected: set[str] = set()
+    for raw_entry in only_inc:
+        rel_entry = str(raw_entry).replace("\\", "/").strip("/")
+        target_p = safe_path(source_root / rel_entry, root=source_root, must_exist=True)
+        if target_p.is_file():
+            expected.add(target_p.relative_to(source_root).as_posix())
+        elif target_p.is_dir():
+            for sub in target_p.rglob("*"):
+                if (
+                    sub.is_file()
+                    and "__pycache__" not in sub.parts
+                    and ".pytest_cache" not in sub.parts
+                    and not sub.name.endswith((".pyc", ".pyo"))
+                ):
+                    expected.add(sub.relative_to(source_root).as_posix())
+    return expected
 
 
 def _verify_wheel_dist_info(
@@ -174,6 +297,12 @@ def _verify_wheel_dist_info(
     lic_expr = (parsed.get("License-Expression") or parsed.get("License") or "").strip()
     require(lic_expr == "LicenseRef-Source-Lineage-1.0", f"wheel METADATA license mismatch: {lic_expr!r}")
 
+    wheel_meta = BytesParser().parsebytes(files[wheel_key])
+    wheel_tags = [str(t).strip() for t in (wheel_meta.get_all("Tag") or [])]
+    require(wheel_tags == ["py3-none-any"], f"wheel WHEEL Tag must be ['py3-none-any'], got {wheel_tags!r}")
+    root_pure = str(wheel_meta.get("Root-Is-Purelib") or "").strip().lower()
+    require(root_pure == "true", f"wheel Root-Is-Purelib must be 'true', got {root_pure!r}")
+
     cp = configparser.ConfigParser()
     cp.read_string(files[ep_key].decode("utf-8"))
     require(cp.has_section("console_scripts"), "wheel entry_points.txt missing [console_scripts]")
@@ -183,37 +312,19 @@ def _verify_wheel_dist_info(
         f"wheel console_scripts mismatch: {actual_scripts!r}",
     )
 
+    require(bool((parsed.get("Requires-Python") or "").strip()), "wheel METADATA missing Requires-Python")
+    decl_pe = {re.sub(r"[-_.]+", "-", str(x).strip().lower()) for x in (parsed.get_all("Provides-Extra") or []) if str(x).strip()}
+    for r_raw in (parsed.get_all("Requires-Dist") or []):
+        for m_pe in re.finditer(r"""extra\s*==\s*['"]([A-Za-z0-9_.\-]+)['"]""", str(r_raw), flags=re.I):
+            pe_name = re.sub(r"[-_.]+", "-", m_pe.group(1).strip().lower())
+            require(pe_name in decl_pe, f"wheel METADATA Requires-Dist references undeclared Provides-Extra {pe_name!r}")
+
     if source_root is not None and (source_root / "pyproject.toml").is_file():
         pyproj = _load_pyproject(source_root)
         proj = pyproj.get("project") if isinstance(pyproj.get("project"), dict) else {}
         exp_scripts = proj.get("scripts") if isinstance(proj.get("scripts"), dict) else {}
         require(actual_scripts == exp_scripts, f"wheel entry_points.txt {actual_scripts!r} != pyproject scripts {exp_scripts!r}")
-
-        def _norm_spec_clauses(spec_s: str) -> str:
-            clauses = [re.sub(r"\s+", "", c).lower() for c in spec_s.split(",") if c.strip()]
-            return ",".join(sorted(clauses))
-
-        exp_req_py = _norm_spec_clauses(str(proj.get("requires-python") or ""))
-        act_req_py = _norm_spec_clauses(str(parsed.get("Requires-Python") or ""))
-        if exp_req_py:
-            require(act_req_py == exp_req_py, f"wheel Requires-Python {act_req_py!r} != pyproject {exp_req_py!r}")
-
-        def _norm_req(r_s: str) -> str:
-            base, sep, marker = r_s.partition(";")
-            m_pkg = re.match(r"^\s*([A-Za-z0-9_.\-]+(?:\[[^\]]*\])?)\s*(.*)$", base)
-            if not m_pkg:
-                return re.sub(r"\s+", "", r_s).lower()
-            pkg_part = re.sub(r"[-_.]+", "-", m_pkg.group(1).strip().lower())
-            spec_part = _norm_spec_clauses(m_pkg.group(2))
-            marker_part = (";" + re.sub(r"\s+", "", marker).lower()) if sep and marker.strip() else ""
-            return f"{pkg_part}{spec_part}{marker_part}"
-
-        req_dists = [_norm_req(str(r)) for r in (parsed.get_all("Requires-Dist") or []) if "; extra ==" not in str(r) and ";extra==" not in re.sub(r"\s+", "", str(r)).lower()]
-        exp_deps = [_norm_req(str(d)) for d in (proj.get("dependencies") or [])]
-        require(
-            sorted(req_dists) == sorted(exp_deps),
-            f"wheel core Requires-Dist {sorted(req_dists)!r} != pyproject dependencies {sorted(exp_deps)!r}",
-        )
+        _verify_parsed_pkg_metadata(parsed, proj, label="wheel METADATA")
 
         exp_lic_rels = [str(lf).replace("\\", "/").lstrip("./") for lf in (proj.get("license-files") or [])]
         if exp_lic_rels:
@@ -249,6 +360,8 @@ def _verify_wheel_dist_info(
 
 
 def inspect_artifact(path: Path, version: str, *, source_root: Path | None = None) -> dict[str, object]:
+    if source_root is not None:
+        source_root = safe_path(source_root, must_exist=True)
     validate_version_tag(version, f"v{version}")
     require(path.name in package_filenames(version), f"unexpected package filename: {path.name}")
     require(path.is_file() and not path.is_symlink(), f"package must be a regular file: {path}")
@@ -308,11 +421,19 @@ def inspect_artifact(path: Path, version: str, *, source_root: Path | None = Non
         require(pkg_info_key in files, f"sdist missing {pkg_info_key}")
         parsed = BytesParser().parsebytes(files[pkg_info_key])
         require(parsed.get("Name") == PACKAGE and parsed.get("Version") == version, "sdist PKG-INFO Name/Version mismatch")
+        sdist_lic_expr = (parsed.get("License-Expression") or parsed.get("License") or "").strip()
+        require(sdist_lic_expr == "LicenseRef-Source-Lineage-1.0", f"sdist PKG-INFO license mismatch: {sdist_lic_expr!r}")
         for req_rel in (
             "pyproject.toml",
             "README.md",
+            "README.zh-CN.md",
+            "REPOSITORY-IDENTITY.md",
             "LICENSE",
+            "LICENSE-APPLICATION.md",
+            "LICENSE-HISTORY.md",
+            "SOURCE-LINEAGE.md",
             "LICENSES/MIT-pre-SLL.txt",
+            "requirements-qa.txt",
             "server.json",
             "plugin.json",
             "mcp.json",
@@ -327,23 +448,52 @@ def inspect_artifact(path: Path, version: str, *, source_root: Path | None = Non
             "src/academic_research_kernel/state_db.py",
         ):
             require(f"{prefix}{req_rel}" in files, f"sdist missing required asset or source module: {req_rel}")
+
+        # Even without source_root, validate PKG-INFO against the sdist's own pyproject.toml and require skills/ + tests/
+        try:
+            import tomllib as _tomllib
+        except ModuleNotFoundError:  # pragma: no cover - Python 3.10
+            import tomli as _tomllib  # type: ignore[import-not-found]
+        embedded_pyproj = _tomllib.loads(files[f"{prefix}pyproject.toml"].decode("utf-8"))
+        embedded_proj = embedded_pyproj.get("project") if isinstance(embedded_pyproj.get("project"), dict) else {}
+        _verify_parsed_pkg_metadata(parsed, embedded_proj, label="sdist PKG-INFO")
+
         sdist_ver = _read_literal_version(files[f"{prefix}src/academic_research_kernel/_version.py"].decode("utf-8"))
         require(sdist_ver == version, "sdist _version.py mismatch")
         sdist_schemas = [
             k for k in files if k.startswith(f"{prefix}src/academic_research_kernel/schemas/") and k.endswith(".schema.json")
         ]
         require(len(sdist_schemas) == 26, f"sdist must include all 26 schemas, found {len(sdist_schemas)}")
+        portable_skill_rels = {
+            k[len(f"{prefix}src/academic_research_kernel/portable_skills/") :]: v
+            for k, v in files.items()
+            if k.startswith(f"{prefix}src/academic_research_kernel/portable_skills/")
+        }
+        top_skill_rels = {
+            k[len(f"{prefix}skills/") :]: v
+            for k, v in files.items()
+            if k.startswith(f"{prefix}skills/")
+        }
         require(
-            any(k.startswith(f"{prefix}src/academic_research_kernel/portable_skills/") and k.endswith("/SKILL.md") for k in files),
+            any(k.endswith("/SKILL.md") for k in portable_skill_rels),
             "sdist missing portable SKILL.md",
         )
+        require(
+            set(top_skill_rels) == set(portable_skill_rels),
+            f"sdist skills/ set differs from portable_skills/ ({sorted(set(portable_skill_rels) ^ set(top_skill_rels))[:5]})",
+        )
+        for sk_rel, sk_bytes in portable_skill_rels.items():
+            require(top_skill_rels[sk_rel] == sk_bytes, f"sdist skills/{sk_rel} bytes differ from portable_skills/{sk_rel}")
+        require(
+            any(k.startswith(f"{prefix}tests/test_") and k.endswith(".py") for k in files),
+            "sdist missing tests/test_*.py suite",
+        )
+
         if source_root is not None:
-            src_pkg = source_root / "src"
-            expected_src_rels = {
-                "src/" + p.relative_to(src_pkg).as_posix()
-                for p in src_pkg.rglob("*")
-                if p.is_file() and "__pycache__" not in p.parts and not p.name.endswith(".pyc")
-            }
+            pyproj = _load_pyproject(source_root)
+            proj = pyproj.get("project") if isinstance(pyproj.get("project"), dict) else {}
+            _verify_parsed_pkg_metadata(parsed, proj, label="sdist PKG-INFO (vs source_root)")
+            expected_all_rels = _expected_sdist_rels(source_root, pyproj)
             actual_rels = set()
             for member_name, member_bytes in files.items():
                 require(member_name.startswith(prefix), f"unexpected top-level sdist member: {member_name}")
@@ -353,10 +503,11 @@ def inspect_artifact(path: Path, version: str, *, source_root: Path | None = Non
                 actual_rels.add(rel_s)
                 src_fp = safe_path(source_root / rel_s, root=source_root, must_exist=True)
                 require(src_fp.read_bytes() == member_bytes, f"sdist member bytes differ from tagged source: {rel_s}")
-            actual_src_rels = {r for r in actual_rels if r.startswith("src/")}
+            missing_rels = sorted(expected_all_rels - actual_rels)
+            extra_rels = sorted(actual_rels - expected_all_rels - {".gitignore"})
             require(
-                actual_src_rels == expected_src_rels,
-                f"sdist src/ member set differs from source tree (missing={sorted(expected_src_rels - actual_src_rels)[:5]})",
+                not missing_rels and not extra_rels,
+                f"sdist member set differs from pyproject only-include (missing={missing_rels[:5]}, extra={extra_rels[:5]})",
             )
 
     return {
@@ -645,16 +796,26 @@ def _build_wheel_from_sdist(sdist_path: Path, out_dir: Path) -> Path:
     raise ValueError(f"Failed to build wheel from sdist {sdist_path}")
 
 
-def run_package_acceptance(dist_dir: Path, *, source_root: Path | None = None) -> dict[str, object]:
+def run_package_acceptance(
+    dist_dir: Path,
+    *,
+    source_root: Path | None = None,
+    allow_unrooted: bool = False,
+) -> dict[str, object]:
     wheels = sorted(dist_dir.glob("*.whl"))
     sdists = sorted(dist_dir.glob("*.tar.gz"))
     require(len(wheels) == 1 and len(sdists) == 1, f"dist directory {dist_dir} must contain exactly 1 wheel and 1 sdist")
     m = re.match(rf"^{DIST_PREFIX}-(\d+\.\d+\.\d+)-py3-none-any\.whl$", wheels[0].name)
     require(m is not None, f"cannot parse version from wheel {wheels[0].name}")
     version = m.group(1)
-    eff_root = source_root
+    eff_root = safe_path(source_root, must_exist=True) if source_root is not None else None
     if eff_root is None and (Path.cwd() / "pyproject.toml").is_file() and (Path.cwd() / "src" / "academic_research_kernel").is_dir():
-        eff_root = Path.cwd()
+        eff_root = safe_path(Path.cwd(), must_exist=True)
+    if not allow_unrooted:
+        require(
+            eff_root is not None and (eff_root / "pyproject.toml").is_file(),
+            "run_package_acceptance requires a trusted source_root (--repo) unless allow_unrooted=True",
+        )
     inspect_artifact(wheels[0], version, source_root=eff_root)
     inspect_artifact(sdists[0], version, source_root=eff_root)
 
@@ -727,7 +888,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     if args.package_acceptance:
-        res = run_package_acceptance(args.dist)
+        res = run_package_acceptance(args.dist, source_root=args.repo)
         print(json.dumps(res))
         return 0
 

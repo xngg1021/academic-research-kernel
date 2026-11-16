@@ -91,6 +91,276 @@ def _with_db(args: Mapping[str, Any], fn: Callable[[ResearchStateDB], Any], *, r
         return thaw(fn(db))
 
 
+def _optional_auth_artifacts(
+    args: Mapping[str, Any],
+    *,
+    allow_missing_file: bool = False,
+) -> Optional[dict[str, tuple[str, str, Any]]]:
+    raw_db = args.get("db_path")
+    if raw_db is None or str(raw_db).strip() == "":
+        return None
+    if str(raw_db).strip() == ":memory:":
+        return get_session_db().extract_authoritative_artifacts()
+    if allow_missing_file:
+        root = authorized_workspace_root()
+        resolved = safe_path(str(raw_db), root=root)
+        if not resolved.is_file():
+            return None
+    return _with_db(args, lambda db: db.extract_authoritative_artifacts(), readonly=True)
+
+
+_ALLOWED_INLINE_STATE_KEYS: frozenset[str] = frozenset({
+    "ceg",
+    "ledger",
+    "objects",
+    "artifacts",
+    "receipts",
+    "uncertainties",
+    "schema_version",
+    "state_digest",
+})
+_ALLOWED_BINDING_KEYS: frozenset[str] = frozenset({
+    "claim_id",
+    "artifact_id",
+})
+_UNSUPPORTED_BINDING_HINTS: dict[str, str] = {
+    "decision_id": "use 'decision_record' or 'decision_transition' (CLI 'ledger --action record-decision') to bind decision outcomes",
+    "evidence_id": "use 'claim_evidence_add' to attach explicit evidence anchors",
+    "work_id": "use 'research_object_resolve' or 'research_state_ingest' to register canonical works",
+}
+
+
+def _resolve_bound_claim_stance(kind: str, payload: Any, bound_claim_id: Optional[str]) -> Optional[str]:
+    if bound_claim_id is None:
+        return None
+    if isinstance(payload, Mapping):
+        if kind == "quantitative_audit":
+            raw_items = payload.get("assertions") if "assertions" in payload else [payload]
+            if not isinstance(raw_items, list) or not raw_items:
+                raise ValueError("quantitative_audit assertions must be a non-empty array")
+            verdicts: list[str] = []
+            for idx, x in enumerate(raw_items):
+                if not isinstance(x, Mapping):
+                    raise ValueError(f"quantitative_audit assertion[{idx}] must be a JSON object")
+                cid_raw = x.get("claim_id")
+                if cid_raw is not None:
+                    if not isinstance(cid_raw, str) or not cid_raw.strip() or cid_raw != cid_raw.strip():
+                        raise ValueError(
+                            f"quantitative_audit assertion[{idx}].claim_id must be a non-empty, unpadded string or null"
+                        )
+                    if cid_raw != bound_claim_id:
+                        raise ValueError(
+                            f"Bound claim_id mismatch: bindings.claim_id={bound_claim_id!r} cannot bind "
+                            f"assertion[{idx}] targeting claim_id={cid_raw!r} (omit bindings.claim_id for multi-claim storage)"
+                        )
+                disc = x.get("discrepancy_detected") if type(x.get("discrepancy_detected")) is bool else None
+                cons = x.get("consistent") if type(x.get("consistent")) is bool else None
+                if disc is not None and cons is not None and disc == cons:
+                    raise ValueError(
+                        f"quantitative_audit assertion[{idx}] has contradictory discrepancy_detected={disc} and consistent={cons}"
+                    )
+                if disc is True or cons is False:
+                    verdicts.append("contradicts")
+                elif disc is False or cons is True:
+                    verdicts.append("supports")
+                else:
+                    verdicts.append("qualifies")
+            if "contradicts" in verdicts:
+                return "contradicts"
+            if verdicts and all(v == "supports" for v in verdicts):
+                return "supports"
+            return "qualifies"
+        if kind == "evidence_receipt":
+            claims = payload.get("claims")
+            if isinstance(claims, list) and claims:
+                for idx, x in enumerate(claims):
+                    if isinstance(x, Mapping):
+                        ec_id = x.get("claim_id") if x.get("claim_id") is not None else x.get("id")
+                        if ec_id is not None and str(ec_id) != bound_claim_id:
+                            raise ValueError(
+                                f"Bound claim_id mismatch: bindings.claim_id={bound_claim_id!r} cannot bind "
+                                f"evidence_receipt claims[{idx}] targeting {ec_id!r}"
+                            )
+                statuses = {str(x.get("support_status")) for x in claims if isinstance(x, Mapping)}
+                if "contradicted" in statuses:
+                    return "contradicts"
+                if statuses == {"supported"}:
+                    return "supports"
+    return "qualifies"
+
+
+def _validate_receipt_registry_map(reg: Any, *, label: str = "receipts", dec_content: Optional[Mapping[str, bytes]] = None) -> None:
+    from .state_db import validate_academic_evidence_payload, validate_lineage_receipt_semantics
+
+    if not isinstance(reg, Mapping):
+        raise ValueError(f"{label} must be a JSON object")
+    for rk, rv in reg.items():
+        if not isinstance(rk, str) or not rk.strip() or rk != rk.strip() or not isinstance(rv, Mapping) or not rv:
+            raise ValueError(f"{label}[{rk!r}] must map a non-empty key to a non-empty receipt object")
+        if rv.get("protocol") == "lineage-receipt-1.0":
+            l_errs = validate_lineage_receipt_semantics(rv, decoded_content=dec_content, strict_unknown_entities=False)
+            if l_errs:
+                raise ValueError(f"Invalid lineage receipt in {label}[{rk!r}]: {l_errs[0]}")
+        elif rv.get("schema_version") == "1.0" or "claims" in rv:
+            ae_errs = validate_academic_evidence_payload(rv)
+            if ae_errs:
+                raise ValueError(f"Invalid academic_evidence receipt in {label}[{rk!r}]: {ae_errs[0]}")
+
+
+def _validate_mcp_state_and_bindings(
+    args: Mapping[str, Any],
+    *,
+    allow_inline_state: bool,
+) -> tuple[Optional[str], Optional[str]]:
+    from .state_db import decode_content_payloads_map
+
+    dec_cp = decode_content_payloads_map(args["content_payloads"]) if args.get("content_payloads") is not None else None
+    if args.get("receipts") is not None:
+        _validate_receipt_registry_map(args["receipts"], label="receipts", dec_content=dec_cp)
+
+    state = args.get("state")
+    if state is not None:
+        if not allow_inline_state:
+            raise ValueError(
+                "Inline 'state' snapshot mutation is not supported in v3.0 SQLite mode; "
+                "use 'db_path' (or dry_run=True / research_artifact_validate)"
+            )
+        if not isinstance(state, Mapping):
+            raise ValueError("'state' must be a JSON object")
+        extra_sk = set(state.keys()) - _ALLOWED_INLINE_STATE_KEYS
+        if extra_sk:
+            raise ValueError(f"Unsupported 'state' fields: {sorted(extra_sk)!r}")
+        if state.get("receipts") is not None:
+            _validate_receipt_registry_map(state["receipts"], label="state.receipts", dec_content=dec_cp)
+        eff_receipts = args.get("receipts") if args.get("receipts") is not None else state.get("receipts")
+        if state.get("ceg") is not None:
+            from .venue_template_manager import validate_ceg_semantics
+
+            ceg_plain = thaw(state["ceg"])
+            c_errs = list(validate_schema(ceg_plain, "claim-evidence-graph.schema.json"))
+            if c_errs:
+                raise ValueError(f"Invalid state.ceg schema: {c_errs[0]}")
+            c_sem = validate_ceg_semantics(
+                ceg_plain,
+                receipts=thaw(eff_receipts) if eff_receipts is not None else None,
+                content_payloads=args.get("content_payloads"),
+            )
+            if c_sem.get("semantic_errors"):
+                sem_e = c_sem["semantic_errors"][0]
+                raise ValueError(f"Invalid state.ceg semantics: {sem_e}")
+        if state.get("ledger") is not None:
+            from .state_db import validate_decision_ledger_semantics
+
+            led_plain = thaw(state["ledger"])
+            l_errs = list(validate_schema(led_plain, "decision-ledger.schema.json"))
+            if not l_errs:
+                l_errs = validate_decision_ledger_semantics(
+                    led_plain,
+                    receipts=eff_receipts,
+                    content_payloads=args.get("content_payloads"),
+                )
+            if l_errs:
+                raise ValueError(f"Invalid state.ledger: {l_errs[0]}")
+        if state.get("uncertainties") is not None:
+            uncs = state["uncertainties"]
+            if not isinstance(uncs, list):
+                raise ValueError("state.uncertainties must be a JSON array")
+            for idx_u, u_item in enumerate(uncs):
+                if (
+                    not isinstance(u_item, Mapping)
+                    or not all(isinstance(u_item.get(fk), str) and u_item[fk].strip() for fk in ("item_id", "subject_id", "kind", "reason"))
+                    or type(u_item.get("needs_human")) is not bool
+                ):
+                    raise ValueError(f"Invalid state.uncertainties[{idx_u}] entry")
+        if state.get("objects") is not None:
+            objs = state["objects"]
+            if not isinstance(objs, Mapping):
+                raise ValueError("state.objects must be a JSON object")
+            for ok_id, ov in objs.items():
+                if (
+                    not isinstance(ok_id, str)
+                    or not ok_id.strip()
+                    or not isinstance(ov, Mapping)
+                    or ov.get("work_id") != ok_id
+                    or not isinstance(ov.get("title"), str)
+                    or not ov["title"].strip()
+                ):
+                    raise ValueError(f"Invalid state.objects[{ok_id!r}] canonical work entry")
+        if state.get("artifacts") is not None:
+            arts = state["artifacts"]
+            if not isinstance(arts, Mapping):
+                raise ValueError("state.artifacts must be a JSON object")
+            for ak_id, av in arts.items():
+                if not isinstance(ak_id, str) or not ak_id.strip() or not isinstance(av, Mapping):
+                    raise ValueError(f"Invalid state.artifacts[{ak_id!r}] entry")
+                a_kind = av.get("kind")
+                a_pay = av.get("payload")
+                if not isinstance(a_kind, str) or a_kind not in ALLOWED_ARTIFACT_KINDS or not isinstance(a_pay, Mapping):
+                    raise ValueError(f"state.artifacts[{ak_id!r}] requires valid 'kind' and 'payload' object")
+                ResearchStateDB._validate_artifact_semantics(
+                    ak_id,
+                    a_kind,
+                    a_pay,
+                    receipts=eff_receipts,
+                    content_payloads=args.get("content_payloads"),
+                )
+
+    bindings = args.get("bindings")
+    if bindings is None:
+        return None, None
+    if not isinstance(bindings, Mapping):
+        raise ValueError("'bindings' must be a JSON object")
+    extra_bk = set(bindings.keys()) - _ALLOWED_BINDING_KEYS
+    if extra_bk:
+        hints = [f"{k!r}: {_UNSUPPORTED_BINDING_HINTS[k]}" for k in sorted(extra_bk) if k in _UNSUPPORTED_BINDING_HINTS]
+        suffix = f" ({'; '.join(hints)})" if hints else ""
+        raise ValueError(
+            f"Unsupported 'bindings' fields: {sorted(extra_bk)!r}; only ['artifact_id', 'claim_id'] are applied by artifact ingestion{suffix}"
+        )
+    norm_b: dict[str, str] = {}
+    for bk, bv in bindings.items():
+        if not isinstance(bv, str) or not bv.strip() or bv != bv.strip():
+            raise ValueError(f"bindings[{bk!r}] must be a non-empty, unpadded string")
+        norm_b[str(bk)] = bv
+    if not norm_b:
+        return None, None
+
+    claim_ids: set[str] = set()
+    artifact_ids: set[str] = set()
+    if state is not None:
+        ceg_obj = state.get("ceg")
+        if isinstance(ceg_obj, Mapping):
+            claim_ids = {str(c["id"]) for c in (ceg_obj.get("claims") or ()) if isinstance(c, Mapping) and c.get("id")}
+        if isinstance(state.get("artifacts"), Mapping):
+            artifact_ids = {str(k) for k in state["artifacts"].keys()}
+    else:
+        def _collect_from_db(db: ResearchStateDB) -> None:
+            nonlocal claim_ids, artifact_ids
+            ceg_d = db.export_ceg_dict()
+            claim_ids = {str(c["id"]) for c in (ceg_d.get("claims") or ())}
+            auth_map = db.extract_authoritative_artifacts()
+            artifact_ids = set(auth_map.keys())
+
+        raw_db = args.get("db_path")
+        if raw_db is None or str(raw_db).strip() in ("", ":memory:"):
+            _collect_from_db(get_session_db())
+        else:
+            root = authorized_workspace_root()
+            resolved = safe_path(str(raw_db), root=root)
+            if resolved.is_file():
+                with ResearchStateDB(str(raw_db), readonly=True, root=root) as db_ro:
+                    _collect_from_db(db_ro)
+
+    lookup = {
+        "claim_id": claim_ids,
+        "artifact_id": artifact_ids,
+    }
+    for bk, bv in norm_b.items():
+        if bv not in lookup[bk]:
+            raise ValueError(f"Dangling binding: {bk} {bv!r} not found in target state")
+    return norm_b.get("claim_id"), norm_b.get("artifact_id")
+
+
 TOOLS: list[dict[str, Any]] = [
     {
         "name": "research_state_ingest",
@@ -108,11 +378,10 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "research_artifact_ingest",
-        "description": "Ingest a single research artifact or envelope into SQLite STRICT state.",
+        "description": "Ingest a single research artifact or v2.4 envelope into SQLite STRICT state.",
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["artifact_id", "kind", "payload"],
             "properties": {
                 "db_path": {"type": "string"},
                 "artifact_id": {"type": "string", "minLength": 1},
@@ -120,27 +389,38 @@ TOOLS: list[dict[str, Any]] = [
                 "payload": {"type": "object"},
                 "parents": {"type": "array", "items": {"type": "string"}},
                 "relation": {"type": "string"},
+                "envelope": {"type": "object"},
+                "dry_run": {"type": "boolean"},
+                "state": {"type": "object"},
+                "bindings": {"type": "object"},
+                "receipts": {"type": "object"},
+                "content_payloads": {"type": "object"},
             },
         },
     },
     {
         "name": "research_artifact_validate",
-        "description": "Validate a research artifact against canonical JSON schemas and kind invariants.",
+        "description": "Validate a research artifact or v2.4 envelope against canonical JSON schemas and kind invariants.",
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["kind", "payload"],
             "properties": {
+                "db_path": {"type": "string"},
                 "artifact_id": {"type": "string"},
                 "kind": {"type": "string"},
                 "payload": {"type": "object"},
                 "schema_name": {"type": "string"},
+                "envelope": {"type": "object"},
+                "state": {"type": "object"},
+                "bindings": {"type": "object"},
+                "receipts": {"type": "object"},
+                "content_payloads": {"type": "object"},
             },
         },
     },
     {
         "name": "research_receipt_verify",
-        "description": "Verify canonical SHA-256 digest of an artifact payload or legacy ReceiptRef against expected digest.",
+        "description": "Verify canonical SHA-256 digest and claim/lineage integrity of an artifact payload or ReceiptRef.",
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
@@ -148,6 +428,7 @@ TOOLS: list[dict[str, Any]] = [
                 "payload": {"type": "object"},
                 "expected_sha256": {"type": "string", "minLength": 64, "maxLength": 64},
                 "receipt_ref": {"type": "object"},
+                "receipt_payload": {"type": "object"},
                 "content_payloads": {"type": "object"},
             },
         },
@@ -180,7 +461,7 @@ TOOLS: list[dict[str, Any]] = [
                 "claim_id": {"type": "string", "minLength": 1},
                 "claim_text": {"type": "string", "minLength": 1},
                 "status": {"type": "string"},
-                "evidence": {"type": "array", "items": {"type": "array"}},
+                "evidence": {"type": "array", "items": {"anyOf": [{"type": "array"}, {"type": "object"}]}},
                 "depends_on": {"type": "array", "items": {"type": "string"}},
                 "relations": {"type": "array", "items": {"type": "object"}},
                 "metadata": {"type": "object"},
@@ -194,18 +475,28 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "additionalProperties": False,
             "properties": {
+                "db_path": {"type": "string"},
                 "ceg": {"type": "object"},
                 "graph": {"type": "object"},
+                "receipts": {"type": "object"},
+                "content_payloads": {"type": "object"},
             },
         },
     },
     {
         "name": "claim_evidence_trace",
-        "description": "Export or trace claim support/contestation status from SQLite state.",
+        "description": "Export or trace claim support/contestation status from SQLite state or an inline graph.",
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
-            "properties": {"db_path": {"type": "string"}, "claim_id": {"type": "string"}},
+            "properties": {
+                "db_path": {"type": "string"},
+                "claim_id": {"type": "string"},
+                "graph": {"type": "object"},
+                "ceg": {"type": "object"},
+                "receipts": {"type": "object"},
+                "content_payloads": {"type": "object"},
+            },
         },
     },
     {
@@ -252,18 +543,28 @@ TOOLS: list[dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["ledger"],
-            "properties": {"ledger": {"type": "object"}},
+            "properties": {
+                "db_path": {"type": "string"},
+                "ledger": {"type": "object"},
+                "receipts": {"type": "object"},
+                "content_payloads": {"type": "object"},
+            },
         },
     },
     {
         "name": "decision_trace",
-        "description": "Read immutable decision record and chronological event history from SQLite state.",
+        "description": "Read immutable decision record and chronological event history from SQLite state or an inline ledger.",
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
             "required": ["decision_id"],
-            "properties": {"db_path": {"type": "string"}, "decision_id": {"type": "string", "minLength": 1}},
+            "properties": {
+                "db_path": {"type": "string"},
+                "decision_id": {"type": "string", "minLength": 1},
+                "ledger": {"type": "object"},
+                "receipts": {"type": "object"},
+                "content_payloads": {"type": "object"},
+            },
         },
     },
     {
@@ -497,7 +798,22 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "findings_by_model": {"type": "object"},
                 "mode": {"type": "string", "enum": ["economy", "standard", "audit"]},
-                "challenge_replies": {"type": "object"},
+                "challenge_replies": {
+                    "type": "object",
+                    "description": "Map of challenge_id -> {'text': str, 'bundle_sha256': 64-hex, 'run_id'?: str, 'task_sha256'?: str}",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["bundle_sha256"],
+                        "properties": {
+                            "text": {"type": "string"},
+                            "reply": {"type": "string"},
+                            "bundle_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                            "run_id": {"type": "string"},
+                            "task_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                        },
+                    },
+                },
                 "base_dir": {"type": "string"},
             },
         },
@@ -560,21 +876,26 @@ def _validate_tool_arguments(name: str, arguments: Any) -> list[str]:
 
 
 def _redact_blind_scan_report(rep: Mapping[str, Any]) -> dict[str, Any]:
-    raw_findings = rep.get("findings") or []
-    public_findings: list[dict[str, Any]] = []
-    if isinstance(raw_findings, list):
-        for idx, item in enumerate(raw_findings, 1):
-            if not isinstance(item, dict):
-                continue
-            pub: dict[str, Any] = {
-                "finding_id": idx,
-                "kind": str(item.get("kind") or "leak"),
-                "matched": "[REDACTED]",
-            }
-            line_val = item.get("line")
-            if type(line_val) is int and line_val >= 0:
-                pub["line"] = line_val
-            public_findings.append(pub)
+    def _redact_list(items: Any, default_kind: str) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        if isinstance(items, list):
+            for idx, item in enumerate(items, 1):
+                if not isinstance(item, dict):
+                    continue
+                pub: dict[str, Any] = {
+                    "finding_id": idx,
+                    "kind": str(item.get("kind") or default_kind),
+                    "severity": str(item.get("severity") or ("warning" if default_kind == "warning" else "error")),
+                    "matched": "[REDACTED]",
+                }
+                line_val = item.get("line")
+                if type(line_val) is int and line_val >= 0:
+                    pub["line"] = line_val
+                out.append(pub)
+        return out
+
+    public_findings = _redact_list(rep.get("findings"), "leak")
+    public_warnings = _redact_list(rep.get("warnings"), "warning")
     unsupported = rep.get("unsupported_files") or []
     skipped = rep.get("skipped_symlinks") or []
     return {
@@ -583,7 +904,9 @@ def _redact_blind_scan_report(rep: Mapping[str, Any]) -> dict[str, Any]:
         "unsupported_file_count": len(unsupported) if isinstance(unsupported, list) else 0,
         "skipped_symlink_count": len(skipped) if isinstance(skipped, list) else 0,
         "leak_count": len(public_findings),
+        "warning_count": len(public_warnings),
         "findings": public_findings,
+        "warnings": public_warnings,
     }
 
 
@@ -773,48 +1096,247 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         )
 
     if name == "research_artifact_ingest":
+        is_dry = bool(a.get("dry_run", False))
+        bound_cid, bound_aid = _validate_mcp_state_and_bindings(a, allow_inline_state=is_dry)
+        if "envelope" in a and a["envelope"] is not None:
+            env = a["envelope"]
+            if not isinstance(env, Mapping):
+                raise ValueError("envelope must be a JSON object")
+            env_errs = validate_schema(env, "research-artifact-envelope.schema.json")
+            if env_errs:
+                raise ValueError(f"Invalid artifact envelope: {'; '.join(env_errs[:5])}")
+            env_id = str(env["artifact_id"])
+            env_kind = str(env["artifact_kind"])
+            env_sha = str(env["payload_sha256"]).lower()
+            env_pay = env["payload"]
+            comp_sha = sha256_hex(canonical_json(env_pay))
+            if comp_sha != env_sha or env_id != f"art-{comp_sha[:32]}":
+                raise ValueError("Artifact envelope payload_sha256 or artifact_id mismatch")
+            auth_dry = _optional_auth_artifacts(a, allow_missing_file=True)
+            ResearchStateDB._validate_artifact_semantics(
+                env_id,
+                env_kind,
+                env_pay,
+                env_sha,
+                authoritative_artifacts=auth_dry,
+                receipts=a.get("receipts"),
+                content_payloads=a.get("content_payloads"),
+            )
+            bound_stance_env = _resolve_bound_claim_stance(env_kind, env_pay, bound_cid)
+            if is_dry:
+                return {
+                    "valid": True,
+                    "dry_run": True,
+                    "status": "validated_dry_run",
+                    "artifact_id": env_id,
+                    "artifact_kind": env_kind,
+                    "payload_sha256": comp_sha,
+                }
+            parents_env = list(a.get("parents") or ())
+            if bound_aid and bound_aid not in parents_env and bound_aid != env_id:
+                parents_env.append(bound_aid)
+            item = {
+                "artifact_id": env_id,
+                "kind": env_kind,
+                "payload": env_pay,
+                "payload_sha256": env_sha,
+                "parents": parents_env,
+                "relation": a.get("relation", "derived_from"),
+                "receipts": a.get("receipts"),
+                "content_payloads": a.get("content_payloads"),
+            }
+
+            def _ingest_env(db: ResearchStateDB) -> dict[str, Any]:
+                with db.transaction() as conn:
+                    rec0 = db.batch_ingest([item], atomic=True)[0]
+                    if bound_cid and bound_stance_env is not None:
+                        row_c = conn.execute("SELECT claim_text FROM claims WHERE claim_id = ?", (bound_cid,)).fetchone()
+                        if row_c is None:
+                            raise ValueError(f"Dangling binding: claim_id {bound_cid!r} not found in target state")
+                        db.add_claim(bound_cid, str(row_c[0]), None, [(env_id, bound_stance_env, "")])
+                    return {"valid": True, "receipt": rec0, "state_digest": db.snapshot_digest()}
+
+            return _with_db(a, _ingest_env)
+        if not all(k in a and a[k] is not None for k in ("artifact_id", "kind", "payload")):
+            raise ValueError("research_artifact_ingest requires ('artifact_id', 'kind', 'payload') or 'envelope'")
+        auth_dry_s = _optional_auth_artifacts(a, allow_missing_file=True)
+        aid_d, k_d, _, sha_d = ResearchStateDB._validate_artifact_semantics(
+            a["artifact_id"],
+            a["kind"],
+            a["payload"],
+            authoritative_artifacts=auth_dry_s,
+            receipts=a.get("receipts"),
+            content_payloads=a.get("content_payloads"),
+        )
+        bound_stance_raw = _resolve_bound_claim_stance(k_d, a["payload"], bound_cid)
+        if is_dry:
+            return {
+                "valid": True,
+                "dry_run": True,
+                "status": "validated_dry_run",
+                "artifact_id": aid_d,
+                "artifact_kind": k_d,
+                "payload_sha256": sha_d,
+            }
+        parents_raw = list(a.get("parents") or ())
+        if bound_aid and bound_aid not in parents_raw and bound_aid != str(a["artifact_id"]):
+            parents_raw.append(bound_aid)
         item = {
             "artifact_id": a["artifact_id"],
             "kind": a["kind"],
             "payload": a["payload"],
-            "parents": a.get("parents") or (),
+            "parents": parents_raw,
             "relation": a.get("relation", "derived_from"),
+            "receipts": a.get("receipts"),
+            "content_payloads": a.get("content_payloads"),
         }
-        return _with_db(
-            a,
-            lambda db: {
-                "receipt": db.batch_ingest([item], atomic=True)[0],
-                "state_digest": db.snapshot_digest(),
-            },
-        )
+
+        def _ingest_raw(db: ResearchStateDB) -> dict[str, Any]:
+            with db.transaction() as conn:
+                rec0 = db.batch_ingest([item], atomic=True)[0]
+                if bound_cid and bound_stance_raw is not None:
+                    row_c = conn.execute("SELECT claim_text FROM claims WHERE claim_id = ?", (bound_cid,)).fetchone()
+                    if row_c is None:
+                        raise ValueError(f"Dangling binding: claim_id {bound_cid!r} not found in target state")
+                    db.add_claim(
+                        bound_cid,
+                        str(row_c[0]),
+                        None,
+                        [(str(a["artifact_id"]), bound_stance_raw, "")],
+                    )
+                return {"receipt": rec0, "state_digest": db.snapshot_digest()}
+
+        return _with_db(a, _ingest_raw)
 
     if name == "research_artifact_validate":
+        if "envelope" in a and a["envelope"] is not None:
+            env = a["envelope"]
+            if not isinstance(env, Mapping):
+                return {"valid": False, "errors": ["envelope must be a JSON object"]}
+            env_errs = list(validate_schema(env, "research-artifact-envelope.schema.json"))
+            if env_errs:
+                return {"valid": False, "errors": env_errs}
+            env_id = str(env["artifact_id"])
+            env_kind = str(env["artifact_kind"])
+            env_sha = str(env["payload_sha256"]).lower()
+            env_pay = env["payload"]
+            comp_sha = sha256_hex(canonical_json(env_pay))
+            if comp_sha != env_sha:
+                return {"valid": False, "errors": [f"Envelope payload_sha256 mismatch: expected {env_sha}, computed {comp_sha}"]}
+            if env_id != f"art-{comp_sha[:32]}":
+                return {"valid": False, "errors": [f"Envelope artifact_id {env_id!r} != expected 'art-{comp_sha[:32]}'"]}
+            try:
+                bound_cid_ve, _ = _validate_mcp_state_and_bindings(a, allow_inline_state=True)
+                auth_val_env = _optional_auth_artifacts(a)
+                ResearchStateDB._validate_artifact_semantics(
+                    env_id,
+                    env_kind,
+                    env_pay,
+                    env_sha,
+                    authoritative_artifacts=auth_val_env,
+                    receipts=a.get("receipts"),
+                    content_payloads=a.get("content_payloads"),
+                )
+                _resolve_bound_claim_stance(env_kind, env_pay, bound_cid_ve)
+                return {"valid": True, "errors": [], "artifact_id": env_id, "artifact_kind": env_kind, "payload_sha256": comp_sha}
+            except Exception as exc:
+                return {"valid": False, "errors": [str(exc)]}
+        if "kind" not in a or "payload" not in a:
+            return {"valid": False, "errors": ["research_artifact_validate requires ('kind', 'payload') or 'envelope'"]}
         kind = str(a["kind"])
         if kind not in ALLOWED_ARTIFACT_KINDS:
             return {"valid": False, "errors": [f"Unknown artifact kind: {kind!r}"]}
         schema_name = a.get("schema_name")
         if schema_name:
-            errs = validate_schema(a["payload"], str(schema_name))
-            return {"valid": len(errs) == 0, "errors": errs}
+            errs = list(validate_schema(a["payload"], str(schema_name)))
+            if errs:
+                return {"valid": False, "errors": errs}
         try:
-            ResearchStateDB._validate_artifact_semantics(a.get("artifact_id") or "probe", kind, a["payload"])
+            bound_cid_vr, _ = _validate_mcp_state_and_bindings(a, allow_inline_state=True)
+            auth_val = _optional_auth_artifacts(a)
+            ResearchStateDB._validate_artifact_semantics(
+                a.get("artifact_id") or "probe",
+                kind,
+                a["payload"],
+                authoritative_artifacts=auth_val,
+                receipts=a.get("receipts"),
+                content_payloads=a.get("content_payloads"),
+            )
+            _resolve_bound_claim_stance(kind, a["payload"], bound_cid_vr)
             return {"valid": True, "errors": []}
         except Exception as exc:
             return {"valid": False, "errors": [str(exc)]}
 
     if name == "research_receipt_verify":
-        if "receipt_ref" in a and isinstance(a["receipt_ref"], Mapping):
+        from .state_db import (
+            canonical_evidence_claim_digest,
+            decode_content_payloads_map,
+            validate_academic_evidence_payload,
+            validate_lineage_receipt_semantics,
+            validate_receipt_ref_dict,
+        )
+
+        dec_cp = decode_content_payloads_map(a["content_payloads"]) if a.get("content_payloads") is not None else None
+        if "receipt_ref" in a and a["receipt_ref"] is not None:
             rref = a["receipt_ref"]
-            cpayloads = a.get("content_payloads") if isinstance(a.get("content_payloads"), Mapping) else {}
-            rid = str(rref.get("receipt_id") or rref.get("artifact_id") or "")
-            expected = str(rref.get("receipt_digest") or rref.get("payload_sha256") or "").strip().lower()
-            target_payload = cpayloads.get(rid) if rid in cpayloads else a.get("payload")
-            if not isinstance(target_payload, Mapping) or len(expected) != 64:
-                raise ValueError("research_receipt_verify with receipt_ref requires matching content_payloads[receipt_id] (or payload) and a 64-hex digest")
-            actual = sha256_hex(canonical_json(target_payload))
-            return {"valid": actual == expected, "computed_sha256": actual, "expected_sha256": expected, "receipt_id": rid}
+            target_payload = (
+                a.get("receipt_payload")
+                if isinstance(a.get("receipt_payload"), Mapping)
+                else a.get("payload")
+            )
+            if not isinstance(rref, Mapping) or not isinstance(target_payload, Mapping):
+                raise ValueError(
+                    "research_receipt_verify with receipt_ref requires JSON objects for receipt_ref and receipt_payload (or payload)"
+                )
+            ref_errs = validate_receipt_ref_dict(rref)
+            if ref_errs:
+                return {"valid": False, "errors": ref_errs}
+            rk = rref.get("kind")
+            if rk == "academic_evidence":
+                cdig = str(rref["claim_digest"]).lower()
+                expected = str(rref["payload_sha256"]).lower()
+                actual = sha256_hex(canonical_json(target_payload))
+                errs_ae = validate_academic_evidence_payload(target_payload)
+                if actual != expected:
+                    errs_ae.append(f"AcademicEvidence payload_sha256 mismatch: expected {expected}, computed {actual}")
+                if not errs_ae:
+                    matched_c = any(
+                        isinstance(ci, Mapping) and canonical_evidence_claim_digest(ci) == cdig
+                        for ci in (target_payload.get("claims") or ())
+                    )
+                    if not matched_c:
+                        errs_ae.append(f"claim_digest {cdig} not found in receipt claims")
+                return {
+                    "valid": len(errs_ae) == 0,
+                    "errors": errs_ae,
+                    "computed_sha256": actual,
+                    "expected_sha256": expected,
+                    "claim_digest": cdig,
+                }
+            rid = str(rref["receipt_id"])
+            expected = str(rref["receipt_digest"]).lower()
+            if target_payload.get("protocol") != "lineage-receipt-1.0":
+                return {
+                    "valid": False,
+                    "errors": ["Lineage ReceiptRef requires a lineage-receipt-1.0 payload"],
+                    "expected_sha256": expected,
+                    "receipt_id": rid,
+                }
+            l_errs = validate_lineage_receipt_semantics(target_payload, decoded_content=dec_cp)
+            actual_rdig = str(target_payload.get("receipt_digest") or "").lower()
+            if target_payload.get("receipt_id") != rid:
+                l_errs.append(f"Lineage receipt_id mismatch: expected {rid!r}, got {target_payload.get('receipt_id')!r}")
+            if actual_rdig != expected:
+                l_errs.append(f"Lineage receipt_digest mismatch: expected {expected}, got {actual_rdig}")
+            return {
+                "valid": len(l_errs) == 0,
+                "errors": l_errs,
+                "computed_sha256": actual_rdig,
+                "expected_sha256": expected,
+                "receipt_id": rid,
+            }
         if not isinstance(a.get("payload"), Mapping) or not isinstance(a.get("expected_sha256"), str):
-            raise ValueError("research_receipt_verify requires 'payload' and 'expected_sha256' (or 'receipt_ref' + 'content_payloads')")
+            raise ValueError("research_receipt_verify requires 'payload' and 'expected_sha256' (or 'receipt_ref' + 'receipt_payload')")
         actual = sha256_hex(canonical_json(a["payload"]))
         expected = str(a["expected_sha256"]).strip().lower()
         return {"valid": actual == expected, "computed_sha256": actual, "expected_sha256": expected}
@@ -878,13 +1400,51 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         try:
             from .venue_template_manager import validate_ceg_semantics
 
-            sem = validate_ceg_semantics(dict(ceg_doc))
+            auth_ceg = _optional_auth_artifacts(a)
+            sem = validate_ceg_semantics(
+                dict(ceg_doc),
+                receipts=dict(a["receipts"]) if isinstance(a.get("receipts"), Mapping) else a.get("receipts"),
+                content_payloads=dict(a["content_payloads"]) if isinstance(a.get("content_payloads"), Mapping) else a.get("content_payloads"),
+                authoritative_artifacts=auth_ceg,
+            )
             errs.extend(sem["semantic_errors"])
         except Exception as exc:
             errs.append(str(exc))
         return {"valid": len(errs) == 0, "errors": errs}
 
     if name == "claim_evidence_trace":
+        inline_ceg = a.get("graph") if a.get("graph") is not None else a.get("ceg")
+        if inline_ceg is not None:
+            if not isinstance(inline_ceg, Mapping):
+                raise ValueError("graph / ceg must be a JSON object")
+            from .venue_template_manager import validate_ceg_semantics
+
+            errs_c = list(validate_schema(inline_ceg, "claim-evidence-graph.schema.json"))
+            sem_c = validate_ceg_semantics(
+                dict(inline_ceg),
+                receipts=dict(a["receipts"]) if isinstance(a.get("receipts"), Mapping) else a.get("receipts"),
+                content_payloads=dict(a["content_payloads"]) if isinstance(a.get("content_payloads"), Mapping) else a.get("content_payloads"),
+            )
+            errs_c.extend(sem_c["semantic_errors"])
+            if errs_c:
+                raise ValueError(f"Invalid ClaimEvidenceGraph: {'; '.join(errs_c[:5])}")
+            target_cid = a.get("claim_id")
+            if target_cid:
+                claims_l = inline_ceg.get("claims") or []
+                s_edges = inline_ceg.get("support_edges") or []
+                matched_cl = next((c for c in claims_l if isinstance(c, Mapping) and c.get("id") == target_cid), None)
+                if matched_cl is None:
+                    raise ValueError(f"Unknown claim_id in graph: {target_cid!r}")
+                matched_anc = next((anc for anc in sem_c["anchors"] if anc["claim_id"] == target_cid), None)
+                edges_cl = [e for e in s_edges if isinstance(e, Mapping) and e.get("claim_id") == target_cid]
+                return {
+                    "claim": matched_cl,
+                    "anchor": matched_anc,
+                    "support_edges": edges_cl,
+                    "status": matched_anc["anchor_status"] if matched_anc else "unknown",
+                }
+            return dict(inline_ceg)
+
         is_ro = bool(a.get("db_path") and str(a.get("db_path")) != ":memory:")
 
         def _trace_ceg(db: ResearchStateDB) -> dict[str, Any]:
@@ -930,12 +1490,67 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         from .state_db import validate_decision_ledger_semantics
 
         if "ledger" in a and a["ledger"] is not None:
-            errs = validate_decision_ledger_semantics(a["ledger"])
-            return {"valid": len(errs) == 0, "errors": errs}
+            raw_rec = a.get("receipts")
+            raw_cp = a.get("content_payloads")
+            try:
+                auth_dl = _optional_auth_artifacts(a)
+                errs = validate_decision_ledger_semantics(
+                    a["ledger"],
+                    receipts=raw_rec,
+                    content_payloads=raw_cp,
+                    authoritative_artifacts=auth_dl,
+                )
+            except Exception as exc:
+                errs = [str(exc)]
+            is_valid = len(errs) == 0
+            v_man = a["ledger"].get("verification_manifest") if isinstance(a["ledger"], Mapping) and isinstance(a["ledger"].get("verification_manifest"), Mapping) else {}
+            if not is_valid:
+                scope = "validation_failed"
+            elif (raw_rec is not None or auth_dl is not None) and bool(v_man):
+                scope = "payload_verified"
+            else:
+                scope = "structure_and_self_consistency_only"
+            return {
+                "valid": is_valid,
+                "errors": errs,
+                "verification_scope": scope,
+            }
         is_ro = bool(a.get("db_path") and str(a.get("db_path")) != ":memory:")
         return _with_db(a, lambda db: db.validate_decisions(), readonly=is_ro)
 
     if name == "decision_trace":
+        if "ledger" in a and a["ledger"] is not None:
+            from .state_db import validate_decision_ledger_semantics
+
+            ledger_doc = a["ledger"]
+            if not isinstance(ledger_doc, Mapping):
+                raise ValueError("ledger must be a JSON object")
+            errs_l = validate_decision_ledger_semantics(
+                ledger_doc,
+                receipts=a.get("receipts"),
+                content_payloads=a.get("content_payloads"),
+            )
+            if errs_l:
+                raise ValueError(f"Invalid DecisionLedger: {'; '.join(errs_l[:5])}")
+            did_t = str(a["decision_id"])
+            matched_d = next(
+                (d for d in (ledger_doc.get("decisions") or []) if isinstance(d, Mapping) and str(d.get("id")) == did_t),
+                None,
+            )
+            if matched_d is None:
+                raise ValueError(f"Unknown decision_id in ledger: {did_t!r}")
+            evs_d = [e for e in (ledger_doc.get("state_events") or []) if isinstance(e, Mapping) and str(e.get("decision_id")) == did_t]
+            corrs_d = [c for c in (ledger_doc.get("corrections") or []) if isinstance(c, Mapping) and str(c.get("decision_id")) == did_t]
+            bases_d = [b for b in (ledger_doc.get("bases") or []) if isinstance(b, Mapping) and str(b.get("decision_id")) == did_t]
+            unc_d = [u for u in (ledger_doc.get("uncertainties") or []) if isinstance(u, Mapping) and str(u.get("subject_id")) == did_t]
+            return {
+                "decision": matched_d,
+                "events": evs_d,
+                "corrections": corrs_d,
+                "bases": bases_d,
+                "uncertainties": unc_d,
+            }
+
         is_ro = bool(a.get("db_path") and str(a.get("db_path")) != ":memory:")
 
         def _trace_dec(db: ResearchStateDB) -> dict[str, Any]:
@@ -1106,17 +1721,17 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                     ),
                 )
             if "target_power" in a or "power_n1" not in a:
-                _run_part(
-                    "required_sample_size",
-                    lambda: out_stat.update(
-                        required_sample_size=rec_mod.required_n_ttest(
-                            a["effect_size_d"],
-                            power=a.get("target_power", 0.8),
-                            alpha=a.get("alpha", 0.05),
-                            ratio=a.get("sample_ratio", 1.0),
-                        )
-                    ),
-                )
+                def _do_req_n() -> None:
+                    rn = rec_mod.required_n_ttest(
+                        a["effect_size_d"],
+                        power=a.get("target_power", 0.8),
+                        alpha=a.get("alpha", 0.05),
+                        ratio=a.get("sample_ratio", 1.0),
+                    )
+                    out_stat["required_sample_size"] = rn
+                    out_stat["required_n"] = rn
+
+                _run_part("required_sample_size", _do_req_n)
 
         if not out_stat and not partial_errors:
             raise ValueError("No statistical parameters provided to academic_recompute_statistics")

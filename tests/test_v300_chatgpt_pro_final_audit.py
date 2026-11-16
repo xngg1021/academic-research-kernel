@@ -81,8 +81,13 @@ def test_p0_01_release_gate_rejects_wheel_missing_entrypoints_and_sdist_missing_
         f"Metadata-Version: 2.4\nName: academic-research-kernel\nVersion: {ver}\n"
         "Requires-Python: >=3.10,<3.15\n"
         "License-Expression: LicenseRef-Source-Lineage-1.0\n"
+        "Provides-Extra: qa\nProvides-Extra: research\n"
         "Requires-Dist: jsonschema>=4.23,<5\nRequires-Dist: numpy>=1.26,<3\n"
         "Requires-Dist: scipy>=1.11,<2\nRequires-Dist: statsmodels>=0.14,<0.16\n"
+        "Requires-Dist: pypdf==7.0.0; extra == 'research'\nRequires-Dist: fonttools==4.65.0; extra == 'research'\n"
+        "Requires-Dist: pytest>=8,<10; extra == 'qa'\nRequires-Dist: build>=1.2,<2; extra == 'qa'\n"
+        "Requires-Dist: twine>=6,<7; extra == 'qa'\nRequires-Dist: pyyaml>=6,<7; extra == 'qa'\n"
+        "Requires-Dist: tomli>=2,<3; (python_version < '3.11') and extra == 'qa'\n"
     ).encode("utf-8")
     whl_entries[f"{dist_info}/WHEEL"] = b"Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
     # Intentionally omit entry_points.txt and compute valid RECORD hashes for remaining files
@@ -123,7 +128,11 @@ def test_p0_01_release_gate_rejects_wheel_missing_entrypoints_and_sdist_missing_
             "server.json", "plugin.json", "mcp.json", "SLL-APPLICATION.json", "CHANGELOG.md", "uv.lock", "PKG-INFO",
         ):
             src_f = REPO_ROOT / top_name
-            payload = src_f.read_bytes() if src_f.is_file() else f"Metadata-Version: 2.4\nName: academic-research-kernel\nVersion: {ver}\n".encode("utf-8")
+            payload = (
+                src_f.read_bytes()
+                if src_f.is_file()
+                else f"Metadata-Version: 2.4\nName: academic-research-kernel\nVersion: {ver}\nLicense-Expression: LicenseRef-Source-Lineage-1.0\n".encode("utf-8")
+            )
             ti = tarfile.TarInfo(f"{prefix}/{top_name}")
             ti.size = len(payload)
             tf.addfile(ti, io.BytesIO(payload))
@@ -558,6 +567,8 @@ def test_p1_17_compute_receipt_records_effective_dtype_validates_counts_and_reje
 
 
 def test_p1_18_benchmark_receipts_bind_v300_frozen_commits_and_lexical_screening_scope() -> None:
+    if not (REPO_ROOT / "docs/benchmarks").is_dir():
+        pytest.skip("Repository-only docs/benchmarks receipt check skipped in unpacked sdist")
     peer = json.loads((REPO_ROOT / "docs/benchmarks/peer-review-forensics-2025-2027-v1.json").read_text("utf-8"))
     assert peer["kernel_version"] == "3.0.0"
     assert peer["upstream_source"]["frozen_commit"] == "181a85021c63ab26745c42ed70a9d9ea7b57ad7e"
@@ -706,17 +717,27 @@ def test_r3_sol_and_astra_second_order_hardening(tmp_path: Path, monkeypatch: py
         assert r_c["convergence_status"] != "CONVERGED"
         assert len(r_c["uncontested_contradictions"]) == 1
 
-    # 2. deliberate_inline rejects unbound cross-task plain-string replies
+    # 2. deliberate_inline explicitly rejects legacy plain-string replies and cross-task bundle_sha256
     f_old = {"a": [mk("valid")], "b": [mk("invalid")], "c": []}
     f_new = {"a": [{**mk("valid"), "target": "new.py"}], "b": [{**mk("invalid"), "target": "new.py"}], "c": []}
     old_inline = cross_review.deliberate_inline(f_old)
     assert old_inline["challenge_plan"][0]["run_id"] is not None
     assert old_inline["challenge_plan"][0]["task_sha256"] is not None
-    new_unbound = cross_review.deliberate_inline(
+    with pytest.raises(ValueError, match="envelope object"):
+        cross_review.deliberate_inline(
+            f_new,
+            challenge_replies={"C01": "[CONCEDE] Proposal-1: old verified\n[REFUTED] Proposal-2: old disproved"},  # type: ignore[arg-type]
+        )
+    new_stale_env = cross_review.deliberate_inline(
         f_new,
-        challenge_replies={"C01": "[CONCEDE] Proposal-1: old verified\n[REFUTED] Proposal-2: old disproved"},
+        challenge_replies={
+            "C01": {
+                "text": "[CONCEDE] Proposal-1: old verified\n[REFUTED] Proposal-2: old disproved",
+                "bundle_sha256": old_inline["challenge_plan"][0]["bundle_sha256"],
+            }
+        },
     )
-    assert new_unbound["synthesis"]["convergence_status"] != "CONVERGED"
+    assert new_stale_env["synthesis"]["convergence_status"] != "CONVERGED"
 
     # 3. Decision Ledger chronological interleaving + inner digest & academic_evidence binding
     body_keys = ("protocol", "verification_digest", "verification_manifest", "decisions", "bases", "forks", "state_events", "corrections", "uncertainties")

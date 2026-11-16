@@ -107,12 +107,16 @@ Anonymized challenge bundle: {bundle_path}
 Write your adjudication report to: {out_path}
 
 Do NOT inspect any other `review-*.md` or `findings-*.json` files in the directory.
-For each Proposal-N in the bundle:
-1. Verify concrete code/document evidence directly against the target material.
-2. State an explicit verdict line containing exactly one tag per proposal:
-   - `【CONCEDE】 Proposal-N: ...` when verified true;
-   - `【REFUTED】 Proposal-N: ...` when disproved by direct counterexample;
-   - `【UNRESOLVED】 Proposal-N: ...` when evidence is genuinely insufficient.
+Output ONLY a strict line-anchored verdict document:
+1. Optional first non-blank line: `# Review` (blank lines allowed).
+2. Every other non-blank line MUST be a single-line verdict for one `Proposal-N` in the bundle:
+   - Do NOT use free-form paragraphs, extra headings, blockquotes, HTML, links, or fenced code blocks.
+   - Outside inline single/double backtick code spans (`` `...` ``), do NOT use `[]()<>\\` or `【】` (wrap expressions containing parentheses or angle brackets in backticks, e.g. `` `p < 0.05` `` or `` `f(x)` ``).
+   - Anywhere on the rationale tail (even inside backticks), do NOT repeat `[CONCEDE]` / `[REFUTED]` / `[UNRESOLVED]` or the reserved word `proposal` (refer to target files by their actual names, e.g. `` `target_mod.py:7` ``):
+   - `【CONCEDE】 Proposal-N: verified at `target_mod.py:7` where `p < 0.05` fails` (or `[CONCEDE] Proposal-N: ...`) when verified true;
+   - `【REFUTED】 Proposal-N: counterexample at `target_mod.py:12` preserves `x >= 0`` (or `[REFUTED] Proposal-N: ...`) when disproved by direct counterexample;
+   - `【UNRESOLVED】 Proposal-N: insufficient evidence in supplied excerpt` (or `[UNRESOLVED] Proposal-N: ...`) when evidence is genuinely insufficient.
+Any non-verdict line, duplicate/out-of-range proposal reference, or conflicting tag invalidates the entire reply.
 """
 
 
@@ -939,9 +943,20 @@ def stage_merge(
         run_id=manifest.get("run_id"),
         task_sha256=manifest.get("task_sha256"),
     )
+    registry.setdefault("metadata", {})["challenge_plan_sha256"] = sha256_hex(canonical_json(challenges))
+    registry["metadata"]["challenge_skipped_sha256"] = sha256_hex(canonical_json(skipped))
+    registry["metadata"]["findings_sha256_by_model"] = {
+        m: sha256_hex((stream_dir / f"findings-{m}.json").read_bytes())
+        for m in models
+        if (stream_dir / f"findings-{m}.json").is_file()
+    }
     (stream_dir / "issue-registry.json").write_text(
         json.dumps(registry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    if manifest_p.is_file() and isinstance(manifest, dict):
+        manifest["registry_sha256"] = sha256_hex(canonical_json(registry))
+        manifest["challenge_plan_sha256"] = registry["metadata"]["challenge_plan_sha256"]
+        manifest_p.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (stream_dir / "challenge-plan.json").write_text(
         json.dumps(challenges, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
@@ -998,9 +1013,14 @@ def stage_challenge(
         raise ValueError("Task file SHA-256 differs from active run-manifest.json; re-run stage_plan first")
     if reg_meta.get("run_id") != exp_run_id or reg_meta.get("task_sha256") != actual_task_sha:
         raise ValueError("issue-registry.json run_id/task_sha256 disagrees with active run-manifest.json")
+    if reg_meta.get("challenge_plan_sha256") and reg_meta.get("challenge_plan_sha256") != sha256_hex(canonical_json(challenges)):
+        raise ValueError("challenge-plan.json digest disagrees with active issue-registry.json; re-run --stage merge")
     for ch_item in challenges:
         if ch_item.get("run_id") != exp_run_id or ch_item.get("task_sha256") != actual_task_sha:
             raise ValueError("challenge-plan.json run_id/task_sha256 disagrees with active task file")
+        actual_b_sha = sha256_hex(canonical_json(ch_item["bundle"]))
+        if ch_item.get("bundle_sha256") is not None and ch_item.get("bundle_sha256") != actual_b_sha:
+            raise ValueError(f"challenge-plan.json bundle_sha256 tampered on {ch_item.get('challenge_id')}")
 
     for old in list(stream_dir.glob("challenge-reply-*.md")) + list(stream_dir.glob("challenge-meta-*.json")):
         old.unlink(missing_ok=True)
@@ -1042,7 +1062,9 @@ def stage_challenge(
                 rev_id = item["reviewer"]
                 out_p = stream_dir / f"challenge-reply-{cid}-{rev_id}.md"
                 meta_p = stream_dir / f"challenge-meta-{cid}-{rev_id}.json"
-                b_sha = item.get("bundle_sha256") or sha256_hex(canonical_json(item["bundle"]))
+                b_sha = sha256_hex(canonical_json(item["bundle"]))
+                if item.get("bundle_sha256") is not None and item.get("bundle_sha256") != b_sha:
+                    raise ValueError(f"challenge-plan.json bundle_sha256 mismatch on {cid}")
                 meta_p.write_text(
                     json.dumps(
                         {
@@ -1066,17 +1088,62 @@ def stage_challenge(
 
 
 _STRICT_VERDICT_LINE_RE = re.compile(
-    r"^(?:[-*+]\s*)?(?:【\s*(CONCEDE|REFUTED|UNRESOLVED(?:\s*:[^】]*)?)\s*】|\[(CONCEDE|REFUTED|UNRESOLVED)\])\s+"
-    r"Proposal-([1-9]\d*)(?:\s*[:：\-—]\s*|\s+)(\S.*)$",
-    re.I,
+    r" {0,3}(?:[-*+] {1,4})?(?:【\s*(CONCEDE|REFUTED|UNRESOLVED(?:\s*:[^】]*)?)\s*】|\[(CONCEDE|REFUTED|UNRESOLVED)\])\s+"
+    r"Proposal-([1-9]\d*)(?:\s*[:：\-—]\s*|\s+)(\S.*)",
+    re.I | re.ASCII,
 )
+_BRACKETED_STANCE_RE = re.compile(
+    r"【\s*(?:CONCEDE|REFUTED|UNRESOLVED)(?:\s*:[^】]*)?\s*】|\[(?:CONCEDE|REFUTED|UNRESOLVED)\]",
+    re.I | re.ASCII,
+)
+_ILLEGAL_LINE_SEP_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\x85\u2028\u2029]")
+_FORBIDDEN_OUTSIDE_CODE_CHARS = frozenset("[]()<>\\【】")
+
+
+def _validate_rationale_inline(body: str) -> tuple[bool, bool, bool]:
+    """Validate single-line rationale inline code spans and detect extra tags or Proposal references."""
+    has_extra_stance = _BRACKETED_STANCE_RE.search(body) is not None
+    has_extra_proposal = re.search(r"Proposal[-\s]*\S+|\bProposal\b", body, re.I | re.ASCII) is not None
+    i = 0
+    n = len(body)
+    while i < n:
+        ch = body[i]
+        if ch == "`":
+            run = 1
+            while i + run < n and body[i + run] == "`":
+                run += 1
+            if run > 2:
+                return False, has_extra_stance, has_extra_proposal
+            j = i + run
+            closed = False
+            while j < n:
+                if body[j] == "`":
+                    c_run = 1
+                    while j + c_run < n and body[j + c_run] == "`":
+                        c_run += 1
+                    if c_run == run:
+                        if j == i + run:
+                            return False, has_extra_stance, has_extra_proposal
+                        i = j + c_run
+                        closed = True
+                        break
+                    j += c_run
+                else:
+                    j += 1
+            if not closed:
+                return False, has_extra_stance, has_extra_proposal
+        else:
+            if ch in _FORBIDDEN_OUTSIDE_CODE_CHARS:
+                return False, has_extra_stance, has_extra_proposal
+            i += 1
+    return True, has_extra_stance, has_extra_proposal
 
 
 def _parse_structured_stances(
     text: str,
     valid_pkeys: set[str],
 ) -> dict[str, Any]:
-    """Parse stance lines with strict anchored Proposal-N validation against valid_pkeys."""
+    """Parse strict line-anchored challenge verdict documents (fail-closed on any non-verdict or conflicting line)."""
     conceded: list[str] = []
     refuted: list[str] = []
     unresolved: list[str] = []
@@ -1084,61 +1151,88 @@ def _parse_structured_stances(
     invalid_refs: list[str] = []
     conflicting_line = False
     unscoped_concede_or_refute = False
-    fence_char: Optional[str] = None
-    fence_len = 0
 
-    for line in text.splitlines():
-        s = line.strip()
-        if fence_char is None:
-            m_open = re.match(r"^(`{3,}|~{3,})", s)
-            if m_open is not None:
-                tok = m_open.group(1)
-                fence_char = tok[0]
-                fence_len = len(tok)
-                continue
-        else:
-            if re.match(rf"^{re.escape(fence_char)}{{{fence_len},}}\s*$", s):
-                fence_char = None
-                fence_len = 0
-            continue
-        if not s or s.startswith(">") or re.match(r"^\|[\s\-:|]+\|$", s):
-            continue
-        is_c = bool(re.search(r"(?:【\s*CONCEDE\s*】|\[CONCEDE\])", s, re.I))
-        is_r = bool(re.search(r"(?:【\s*REFUTED\s*】|\[REFUTED\])", s, re.I))
-        is_u = bool(re.search(r"(?:【\s*UNRESOLVED|\[UNRESOLVED\])", s, re.I))
-        tag_count = int(is_c) + int(is_r) + int(is_u)
-        if tag_count == 0:
-            continue
-        if tag_count > 1:
-            conflicting_line = True
-            continue
-
-        m = _STRICT_VERDICT_LINE_RE.match(s)
-        if m is None:
-            invalid_refs.append("malformed_verdict_line")
+    if _ILLEGAL_LINE_SEP_RE.search(text):
+        invalid_refs.append("illegal_control_or_line_separator")
+        if _BRACKETED_STANCE_RE.search(text):
             unscoped_concede_or_refute = True
+        return {
+            "conceded": conceded,
+            "refuted": refuted,
+            "unresolved": unresolved,
+            "by_proposal": by_proposal,
+            "invalid_refs": invalid_refs,
+            "conflicting_line": conflicting_line,
+            "unscoped_concede_or_refute": unscoped_concede_or_refute,
+        }
+
+    saw_nonblank = False
+    for raw_line in re.split(r"\r\n|\r|\n", text):
+        if re.fullmatch(r"[ \t]*", raw_line):
             continue
-        # Reject lines mentioning multiple Proposal tokens in the body to keep 1 line = 1 Proposal verdict
-        extra_props = re.findall(r"Proposal[-\s]*\S+", m.group(4), re.I)
-        if extra_props:
-            invalid_refs.append("multiple_proposals_on_line")
+        if not saw_nonblank and re.fullmatch(r" {0,3}# Review[ \t]*", raw_line):
+            saw_nonblank = True
+            continue
+        saw_nonblank = True
+        m = _STRICT_VERDICT_LINE_RE.fullmatch(raw_line)
+        if m is None:
+            if len(_BRACKETED_STANCE_RE.findall(raw_line)) >= 2:
+                conflicting_line = True
+            elif _BRACKETED_STANCE_RE.search(raw_line):
+                unscoped_concede_or_refute = True
+            invalid_refs.append("non_verdict_line")
             continue
 
-        raw_tag = (m.group(1) or m.group(2) or "").strip().upper()
+        raw_full_tag = (m.group(1) or m.group(2) or "").strip()
+        if ":" in raw_full_tag:
+            unres_detail = raw_full_tag.split(":", 1)[1].strip()
+            if unres_detail:
+                ok_u, extra_u_st, extra_u_pr = _validate_rationale_inline(unres_detail)
+                if extra_u_st:
+                    conflicting_line = True
+                if extra_u_pr:
+                    invalid_refs.append("multiple_proposals_on_line")
+                if not ok_u:
+                    invalid_refs.append("malformed_unresolved_tag")
+                if extra_u_st or extra_u_pr or not ok_u:
+                    continue
+
+        body = m.group(4).rstrip(" \t")
+        ok_inline, extra_stance, extra_prop = _validate_rationale_inline(body)
+        if extra_stance:
+            conflicting_line = True
+        if extra_prop:
+            invalid_refs.append("multiple_proposals_on_line")
+        if not ok_inline:
+            invalid_refs.append("invalid_rationale_syntax")
+        if extra_stance or extra_prop or not ok_inline:
+            continue
+
+        raw_tag = (m.group(1) or m.group(2) or "").split(":", 1)[0].strip().upper()
         stance = "conceded" if raw_tag == "CONCEDE" else ("refuted" if raw_tag == "REFUTED" else "unresolved")
         pk = f"proposal{m.group(3)}"
         if pk not in valid_pkeys:
             invalid_refs.append(pk)
             continue
-        by_proposal.setdefault(pk, set()).add(stance)
-
-        excerpt = s[:240]
+        if pk in by_proposal:
+            if stance not in by_proposal[pk]:
+                conflicting_line = True
+            invalid_refs.append(f"duplicate_{pk}")
+            continue
+        by_proposal[pk] = {stance}
+        excerpt = raw_line.strip(" \t")[:240]
         if stance == "conceded":
             conceded.append(excerpt)
         elif stance == "refuted":
             refuted.append(excerpt)
         else:
             unresolved.append(excerpt)
+
+    if invalid_refs or conflicting_line or unscoped_concede_or_refute:
+        conceded.clear()
+        refuted.clear()
+        unresolved.clear()
+        by_proposal.clear()
 
     return {
         "conceded": conceded,
@@ -1184,6 +1278,7 @@ def synthesize_deliberation(
     skipped_challenges: list[dict[str, Any]] = (),
     base_dirs: Iterable[Path] = (),
     participants_meta: Optional[list[dict[str, Any]]] = None,
+    reply_rejections: Optional[Mapping[str, str]] = None,
 ) -> dict[str, Any]:
     missing_challenges: list[dict[str, Any]] = []
     conceded_items: list[dict[str, Any]] = []
@@ -1192,16 +1287,79 @@ def synthesize_deliberation(
     refuted_claims_by_issue: dict[str, set[int | str]] = {}
     adjudicated_contradiction_issues: set[str] = set()
 
+    reg_issues_by_id: dict[str, dict[str, Any]] = {}
+    for sec_key in ("contradictions", "singletons", "consensus"):
+        for entry in registry.get(sec_key) or []:
+            if isinstance(entry, Mapping) and entry.get("issue_id"):
+                reg_issues_by_id[str(entry["issue_id"])] = dict(entry)
+
     for item in planned_challenges:
         cid = item["challenge_id"]
         rev = item["reviewer"]
+        actual_b_sha = sha256_hex(canonical_json(item.get("bundle") or {}))
+        if item.get("bundle_sha256") is not None and item.get("bundle_sha256") != actual_b_sha:
+            raise ValueError(f"Challenge {cid} bundle_sha256 disagrees with embedded bundle payload")
+        b_props_raw = (item.get("bundle") or {}).get("proposals")
+        if not isinstance(b_props_raw, list) or not b_props_raw:
+            raise ValueError(f"Challenge {cid} bundle.proposals must be a non-empty list")
+        b_props = list(b_props_raw)
+        exp_prop_keys = {f"proposal{k}" for k in range(1, len(b_props) + 1)}
+        raw_pmap = item.get("proposal_map")
+        p_map: dict[str, int] = {}
+        if raw_pmap is not None:
+            if not isinstance(raw_pmap, Mapping) or set(raw_pmap.keys()) != exp_prop_keys:
+                raise ValueError(f"Challenge {cid} proposal_map keys must exactly match {sorted(exp_prop_keys)!r}")
+            for pk_k, pk_v in raw_pmap.items():
+                if type(pk_v) is not int or not (1 <= pk_v <= len(b_props)):
+                    raise ValueError(f"Challenge {cid} proposal_map[{pk_k!r}]={pk_v!r} out of range 1..{len(b_props)}")
+                p_map[str(pk_k)] = pk_v
+            if len(set(p_map.values())) != len(b_props):
+                raise ValueError(f"Challenge {cid} proposal_map must be a bijection onto 1..{len(b_props)}")
+
+        for b_idx, bp in enumerate(b_props, 1):
+            if not isinstance(bp, Mapping):
+                raise ValueError(f"Challenge {cid} bundle.proposals[{b_idx - 1}] must be an object")
+            exp_pk = f"proposal{b_idx}"
+            for alias_field in ("proposal_id", "source_alias"):
+                if alias_field in bp and bp[alias_field] is not None:
+                    norm_al = str(bp[alias_field]).lower().replace("-", "")
+                    if norm_al != exp_pk:
+                        raise ValueError(
+                            f"Challenge {cid} bundle proposal {alias_field}={bp[alias_field]!r} out of canonical order (expected Proposal-{b_idx})"
+                        )
+
+        iid_lookup = str(item.get("issue_id") or "")
+        if item.get("type") in ("contradiction", "singleton_audit") and not iid_lookup:
+            raise ValueError(f"Challenge {cid} of type {item.get('type')!r} missing issue_id")
+        if iid_lookup:
+            if iid_lookup not in reg_issues_by_id:
+                raise ValueError(f"Challenge {cid} references unknown issue_id {iid_lookup!r} not in active issue-registry")
+            reg_entry = reg_issues_by_id[iid_lookup]
+            if item.get("target") != reg_entry.get("target"):
+                raise ValueError(f"Challenge {cid} target {item.get('target')!r} disagrees with active issue-registry target")
+            reg_claims = list(reg_entry.get("claims") or [])
+            if not reg_claims or (item.get("type") in ("contradiction", "singleton_audit") and len(b_props) != len(reg_claims)):
+                raise ValueError(f"Challenge {cid} proposal count disagrees with issue-registry {iid_lookup!r}")
+            for b_idx, bp in enumerate(b_props, 1):
+                exp_pk = f"proposal{b_idx}"
+                orig_i = p_map[exp_pk] if exp_pk in p_map else b_idx
+                if not (1 <= orig_i <= len(reg_claims)):
+                    raise ValueError(f"Challenge {cid} proposal index {orig_i} out of range for issue-registry {iid_lookup!r}")
+                rc = reg_claims[orig_i - 1]
+                if (
+                    str(bp.get("claim") or "") != str(rc.get("claim") or "")
+                    or list(bp.get("evidence") or []) != list(rc.get("evidence") or [])
+                ):
+                    raise ValueError(f"Challenge {cid} bundle proposal disagrees with mutated issue-registry {iid_lookup!r}")
+
         if cid not in replies_by_cid:
+            rej_reason = (reply_rejections or {}).get(cid, "missing_reply")
             missing_challenges.append({
                 "challenge_id": cid,
                 "reviewer": rev,
                 "issue_id": item.get("issue_id"),
                 "target": item.get("target"),
-                "reason": "missing_reply",
+                "reason": rej_reason,
             })
             continue
         prop_map = dict(item.get("proposal_map")) if isinstance(item.get("proposal_map"), Mapping) else {}
@@ -1213,13 +1371,22 @@ def synthesize_deliberation(
         u_list = parsed["unresolved"]
         by_prop: dict[str, set[str]] = parsed["by_proposal"]
 
-        if parsed["invalid_refs"] or parsed["conflicting_line"]:
+        if (
+            parsed["invalid_refs"]
+            or parsed["conflicting_line"]
+            or parsed["unscoped_concede_or_refute"]
+            or any(len(stances) != 1 for stances in by_prop.values())
+        ):
             missing_challenges.append({
                 "challenge_id": cid,
                 "reviewer": rev,
                 "issue_id": item.get("issue_id"),
                 "target": item.get("target"),
-                "reason": "invalid_proposal_reference" if parsed["invalid_refs"] else "conflicting_stance_line",
+                "reason": (
+                    "invalid_proposal_reference"
+                    if parsed["invalid_refs"]
+                    else ("conflicting_stance_line" if parsed["conflicting_line"] else "malformed_challenge_reply")
+                ),
             })
             continue
 
@@ -1406,23 +1573,73 @@ def stage_synthesize(stream_dir: Path) -> dict[str, Any]:
     skip_p = stream_dir / "challenge-skipped.json"
     skipped = json.loads(skip_p.read_text(encoding="utf-8")) if skip_p.is_file() else []
     manifest_p = stream_dir / "run-manifest.json"
-    manifest = json.loads(manifest_p.read_text(encoding="utf-8")) if manifest_p.is_file() else {}
+    if not manifest_p.is_file():
+        raise FileNotFoundError("Missing run-manifest.json; run --stage plan and --stage merge first")
+    manifest = json.loads(manifest_p.read_text(encoding="utf-8"))
+    if (
+        not isinstance(manifest, Mapping)
+        or not isinstance(manifest.get("run_id"), str)
+        or not manifest.get("run_id")
+        or not isinstance(manifest.get("task_sha256"), str)
+        or not manifest.get("task_sha256")
+        or not isinstance(manifest.get("task_path"), str)
+        or not manifest.get("task_path").strip()
+        or not isinstance(manifest.get("registry_sha256"), str)
+        or not manifest.get("registry_sha256")
+        or not isinstance(manifest.get("challenge_plan_sha256"), str)
+        or not manifest.get("challenge_plan_sha256")
+    ):
+        raise ValueError(
+            "Malformed or incomplete run-manifest.json; require run_id, task_path, task_sha256, registry_sha256, and challenge_plan_sha256 (run --stage plan and --stage merge)"
+        )
 
     reg_meta = registry.get("metadata") or {}
-    if manifest:
-        if manifest.get("run_id") and reg_meta.get("run_id") != manifest.get("run_id"):
-            raise ValueError("Stale issue-registry.json does not match current run-manifest.json run_id; re-run --stage merge")
-        if manifest.get("task_sha256") and reg_meta.get("task_sha256") != manifest.get("task_sha256"):
-            raise ValueError("Stale issue-registry.json does not match current run-manifest.json task_sha256; re-run --stage merge")
-        if manifest.get("task_path") and Path(manifest["task_path"]).is_file():
-            live_task_sha = sha256_hex(Path(manifest["task_path"]).read_bytes())
-            if manifest.get("task_sha256") and live_task_sha != manifest.get("task_sha256"):
-                raise ValueError("Task file changed after --stage plan; re-run --stage plan and --stage merge")
+    if reg_meta.get("run_id") != manifest.get("run_id"):
+        raise ValueError("Stale issue-registry.json does not match current run-manifest.json run_id; re-run --stage merge")
+    if reg_meta.get("task_sha256") != manifest.get("task_sha256"):
+        raise ValueError("Stale issue-registry.json does not match current run-manifest.json task_sha256; re-run --stage merge")
+    if manifest["registry_sha256"] != sha256_hex(canonical_json(registry)):
+        raise ValueError("issue-registry.json modified after --stage merge; re-run --stage merge")
+    task_p_live = safe_path(str(manifest["task_path"]), must_exist=True)
+    live_task_sha = sha256_hex(task_p_live.read_bytes())
+    if live_task_sha != manifest.get("task_sha256"):
+        raise ValueError("Task file changed after --stage plan; re-run --stage plan and --stage merge")
+
+    actual_plan_sha = sha256_hex(canonical_json(planned))
+    if manifest["challenge_plan_sha256"] != actual_plan_sha or reg_meta.get("challenge_plan_sha256") != actual_plan_sha:
+        raise ValueError("Stale or tampered challenge-plan.json does not match active manifest/registry; re-run --stage merge")
+    if not isinstance(reg_meta.get("challenge_skipped_sha256"), str) or reg_meta.get("challenge_skipped_sha256") != sha256_hex(canonical_json(skipped)):
+        raise ValueError("Stale or tampered challenge-skipped.json does not match active issue-registry.json; re-run --stage merge")
+    f_shas = reg_meta.get("findings_sha256_by_model")
+    if isinstance(f_shas, Mapping):
+        for m_id, exp_f_sha in f_shas.items():
+            fp = stream_dir / f"findings-{m_id}.json"
+            if not fp.is_file() or sha256_hex(fp.read_bytes()) != exp_f_sha:
+                raise ValueError(f"findings-{m_id}.json missing or changed after --stage merge; re-run --stage merge")
+
+    exp_run_id = manifest.get("run_id") or reg_meta.get("run_id")
+    exp_task_sha = manifest.get("task_sha256") or reg_meta.get("task_sha256")
 
     replies_by_cid: dict[str, str] = {}
+    reply_rejections: dict[str, str] = {}
     for item in planned:
         cid = item["challenge_id"]
         rev = item["reviewer"]
+        if exp_run_id and item.get("run_id") != exp_run_id:
+            raise ValueError(f"Stale challenge-plan.json item {cid} run_id {item.get('run_id')!r} != active {exp_run_id!r}")
+        if exp_task_sha and item.get("task_sha256") != exp_task_sha:
+            raise ValueError(f"Stale challenge-plan.json item {cid} task_sha256 != active {exp_task_sha!r}")
+        actual_b_sha = sha256_hex(canonical_json(item["bundle"]))
+        if item.get("bundle_sha256") is not None and item.get("bundle_sha256") != actual_b_sha:
+            raise ValueError(f"Tampered challenge-plan.json bundle on {cid}: bundle_sha256 mismatch")
+        bundle_p = stream_dir / f"bundle-{cid}.json"
+        if bundle_p.is_file():
+            try:
+                disk_bundle = json.loads(bundle_p.read_text(encoding="utf-8"))
+            except Exception as exc:
+                raise ValueError(f"Malformed bundle-{cid}.json") from exc
+            if sha256_hex(canonical_json(disk_bundle)) != actual_b_sha:
+                raise ValueError(f"bundle-{cid}.json on disk disagrees with challenge-plan.json")
         rp = stream_dir / f"challenge-reply-{cid}-{rev}.md"
         meta_rp = stream_dir / f"challenge-meta-{cid}-{rev}.json"
         if not rp.is_file() or not meta_rp.is_file():
@@ -1431,16 +1648,19 @@ def stage_synthesize(stream_dir: Path) -> dict[str, Any]:
         try:
             rmeta = json.loads(meta_rp.read_text(encoding="utf-8"))
         except Exception:
+            reply_rejections[cid] = "malformed_reply_meta"
             continue
-        exp_b_sha = item.get("bundle_sha256") or sha256_hex(canonical_json(item["bundle"]))
         if (
             rmeta.get("challenge_id") != cid
             or rmeta.get("reviewer") != rev
+            or (exp_run_id and rmeta.get("run_id") != exp_run_id)
             or rmeta.get("run_id") != item.get("run_id")
+            or (exp_task_sha and rmeta.get("task_sha256") != exp_task_sha)
             or rmeta.get("task_sha256") != item.get("task_sha256")
-            or rmeta.get("bundle_sha256") != exp_b_sha
+            or rmeta.get("bundle_sha256") != actual_b_sha
             or rmeta.get("reply_sha256") != sha256_hex(reply_text)
         ):
+            reply_rejections[cid] = "stale_or_mismatched_reply_meta"
             continue
         replies_by_cid[cid] = reply_text
 
@@ -1451,6 +1671,7 @@ def stage_synthesize(stream_dir: Path) -> dict[str, Any]:
         skipped_challenges=skipped,
         base_dirs=[stream_dir, Path.cwd()],
         participants_meta=manifest.get("participants"),
+        reply_rejections=reply_rejections,
     )
 
     (stream_dir / "unresolved-ledger.json").write_text(
@@ -1523,10 +1744,17 @@ def deliberate_inline(
     findings_by_model: Mapping[str, Any],
     *,
     mode: str = "standard",
-    challenge_replies: Optional[Mapping[str, str]] = None,
+    challenge_replies: Optional[Mapping[str, Mapping[str, Any]]] = None,
     base_dir: Optional[str | Path] = None,
 ) -> dict[str, Any]:
-    """Deterministic inline MCP entry: cluster findings, plan anonymous challenges, and optionally synthesize."""
+    """Deterministic inline MCP entry: cluster findings, plan anonymous challenges, and optionally synthesize.
+
+    Two-step inline deliberation contract:
+    1. Call ``deliberate_inline(findings_by_model, mode=mode)`` to obtain ``challenge_plan``, where each item
+       carries ``challenge_id``, ``bundle``, ``bundle_sha256``, ``run_id``, and ``task_sha256``.
+    2. Call ``deliberate_inline(findings_by_model, mode=mode, challenge_replies={cid: {"text": ..., "bundle_sha256": ...}})``.
+       Legacy plain-string reply values are explicitly rejected with ``ValueError``.
+    """
     if not isinstance(findings_by_model, Mapping) or len(findings_by_model) < 2:
         raise ValueError("findings_by_model must map at least 2 distinct participant IDs to finding lists/objects")
     models = [validate_participant_id(str(k)) for k in findings_by_model.keys()]
@@ -1558,33 +1786,48 @@ def deliberate_inline(
         "derangement_pairings": [{"reviewer": r, "target": t} for r, t in derangement],
     }
     if challenge_replies is not None:
+        if not isinstance(challenge_replies, Mapping):
+            raise ValueError("challenge_replies must be a mapping of challenge_id -> {'text': str, 'bundle_sha256': 64-hex}")
         bases = [safe_path(base_dir, must_exist=True)] if base_dir else [Path.cwd()]
         verified_inline: dict[str, str] = {}
+        inline_rejections: dict[str, str] = {}
         by_cid = {c["challenge_id"]: c for c in challenges}
         for raw_cid, raw_rep in challenge_replies.items():
             cid = str(raw_cid)
+            if not isinstance(raw_rep, Mapping):
+                raise ValueError(
+                    f"challenge_replies[{cid!r}] must be an envelope object {{'text': str, 'bundle_sha256': str}}; "
+                    "legacy plain-string replies are not accepted"
+                )
+            has_text = isinstance(raw_rep.get("text"), str) or isinstance(raw_rep.get("reply"), str)
+            b_sha = raw_rep.get("bundle_sha256")
+            if not has_text or not isinstance(b_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", b_sha):
+                raise ValueError(
+                    f"challenge_replies[{cid!r}] requires string 'text' (or 'reply') and 64-char lowercase hex 'bundle_sha256'"
+                )
             ch_item = by_cid.get(cid)
             if ch_item is None:
                 continue
-            exp_b_sha = ch_item.get("bundle_sha256")
-            if isinstance(raw_rep, Mapping):
-                rep_txt = str(raw_rep.get("text") if raw_rep.get("text") is not None else raw_rep.get("reply") or "")
-                b_sha = raw_rep.get("bundle_sha256")
-                r_id = raw_rep.get("run_id")
-                t_sha = raw_rep.get("task_sha256")
-                if b_sha != exp_b_sha:
-                    continue
-                if r_id is not None and r_id != inline_run_id:
-                    continue
-                if t_sha is not None and t_sha != inline_task_sha:
-                    continue
-                verified_inline[cid] = rep_txt
-            # Unbound plain-string inline replies cannot close challenges across distinct tasks/bundles
+            exp_b_sha = sha256_hex(canonical_json(ch_item["bundle"]))
+            r_id = raw_rep.get("run_id")
+            t_sha = raw_rep.get("task_sha256")
+            if b_sha != exp_b_sha:
+                inline_rejections[cid] = "bundle_sha256_mismatch"
+                continue
+            if r_id is not None and r_id != inline_run_id:
+                inline_rejections[cid] = "run_id_mismatch"
+                continue
+            if t_sha is not None and t_sha != inline_task_sha:
+                inline_rejections[cid] = "task_sha256_mismatch"
+                continue
+            rep_txt = str(raw_rep["text"] if isinstance(raw_rep.get("text"), str) else raw_rep["reply"])
+            verified_inline[cid] = rep_txt
         out["synthesis"] = synthesize_deliberation(
             registry,
             challenges,
             verified_inline,
             skipped_challenges=skipped,
             base_dirs=bases,
+            reply_rejections=inline_rejections,
         )
     return out

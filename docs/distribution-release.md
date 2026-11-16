@@ -15,15 +15,17 @@ academic-research-kernel doctor
 
 | Dependency group | Packages & purpose |
 | --- | --- |
-| Base install | `jsonschema>=4.23,<5`, `numpy>=1.26,<3`, `scipy>=1.11,<2`, `statsmodels>=0.14,<1` (loaded lazily on statistical calls; SQLite state, CLI dispatch, and MCP handshake use Python's standard library). |
+| Base install | `jsonschema>=4.23,<5`, `numpy>=1.26,<3`, `scipy>=1.11,<2`, `statsmodels>=0.14,<0.16` (loaded lazily on statistical calls; SQLite state, CLI dispatch, and MCP handshake use Python's standard library). |
 | `[research]` | `pypdf==7.0.0` and `fonttools==4.65.0` for isolated subprocess PDF text, `/Info`, and XMP stream extraction. |
-| `[qa]` | `pytest>=8,<10`, `build>=1.2,<2`, `twine>=6,<7`, and `pyyaml>=6,<7` for test suites, strict wheel/sdist metadata checks, and skill frontmatter validation. |
+| `[qa]` | `pytest>=8,<10`, `build>=1.2,<2`, `twine>=6,<7`, `pyyaml>=6,<7`, and `tomli>=2,<3; python_version < '3.11'` for test suites, strict wheel/sdist metadata checks, and skill frontmatter validation. |
+
+> **Repository tests vs. unpacked `sdist` scope**: The source distribution (`sdist`) bundles `src/academic_research_kernel/`, `skills/`, `tests/`, and license/provenance manifests so package unit tests and `--package-acceptance` (isolated wheel + sdist-rebuilt wheel installs, CLI `doctor`, skill export, and 24-tool stdio MCP JSON-RPC round-trips) run cleanly outside the Git tree. Repository-only benchmark and workflow contract assertions that inspect `docs/benchmarks/*`, `tools/benchmarks/*`, or `.github/workflows/*` execute against a full Git checkout and skip cleanly when those non-packaged directories are absent.
 
 ---
 
 ## Deterministic Build & Release Gate (`academic_research_kernel.release_gate`)
 
-All release verification lives inside `src/academic_research_kernel/release_gate.py` (invocable on a bare Python `3.10+` standard library before third-party dependencies are installed):
+All release verification lives inside `src/academic_research_kernel/release_gate.py` (invocable on a bare Python `3.11+` standard library via `tomllib`, or Python `3.10` with `tomli` installed):
 
 ```bash
 # 1. Lock check & build sdist + wheel
@@ -50,8 +52,9 @@ For tagged GitHub Releases (`vX.Y.Z` on `main`), `.github/workflows/publish-pypi
 | Area | `v2.4.2` Legacy Surface | `v3.0.0` Behavior & Migration Contract |
 | --- | --- | --- |
 | Package & MCP server | `python scripts/mcp_server.py` (18 tools) | `academic-research-kernel mcp` (24 tools: all 18 legacy tool names preserved + 6 new tools). |
-| Statistical recompute | `target_power`, `sample_ratio`, `p_value_decimals`, `required-sample-size` | Fully supported in `academic_recompute_statistics` alongside `achieved_power_ttest` and `required_n_ttest`. |
+| Statistical recompute & table forensics | `target_power`, `sample_ratio`, `p_value_decimals`, `required-sample-size`; flat `partition_*` / `ablation_*` / `bandwidth_*` fields inside `academic_recompute_statistics` | `academic_recompute_statistics` preserves `target_power`, `sample_ratio`, `p_value_decimals`, `required-sample-size`, and emits both `required_sample_size` and legacy alias `required_n`. Table-forensics parameters (`partition`, `ablation_matrix`, `bandwidth`) are separated into the dedicated `academic_table_forensics` tool. |
 | Table rendering | `receipt-to-latex` JSON wrapper | `receipt-to-latex` emits legacy JSON (`{status, source_sha256, row_count, col_count, latex}`); `generate-table` emits raw booktabs TeX (`--format {auto,json,tex}`). |
 | Pre-submission lint | `hits` list on return dict | Returns both `findings` (canonical) and `hits` (legacy alias). |
-| State persistence | Multi-file JSON snapshots (`--state watch.json`, `research-artifact-envelope`, snapshot-dict trace) | Migrated to transactional SQLite `STRICT + WAL` (`--state-db`, `user_version = 4`). Import legacy JSON watch state once via `--import-legacy-json`; `research_receipt_verify` retains legacy `receipt_ref + content_payloads` compatibility. |
+| State persistence & legacy envelopes | Multi-file JSON snapshots (`--state watch.json`, `artifact-envelope-1.0`, `receipt_payload`, inline `graph`/`ledger` trace) | Primary store is transactional SQLite `STRICT + WAL` (`--state-db`, `user_version = 4`, auto-migrating `v3 -> v4`). Compatibility adapters remain active on `research_artifact_validate` (`envelope`), `research_artifact_ingest` (`envelope` + `dry_run`), `research_receipt_verify` (`receipt_ref` + `receipt_payload` / `content_payloads`), `claim_evidence_trace` (`graph`), and `decision_trace` (`ledger`). Import legacy JSON watch state once via `--import-legacy-json`. |
+| Inline cross-review replies | Unbound plain-string `challenge_replies` | `academic_cross_review` (`deliberate_inline`) requires two-step SHA-bound reply envelopes: `{cid: {"text": "...", "bundle_sha256": "<64-hex>"}}` matching `challenge_plan[*].bundle_sha256`, where `text` is a strict line-anchored verdict document (optional `# Review` header plus one single-line verdict per `Proposal-N`); plain-string replies or any non-verdict/fenced/quoted/conflicting lines reject the reply fail-closed. |
 | Compute probe & backend admission | Multi-file `scripts/scfabric/*` | Consolidated into `compute-probe --receipt [--measure-candidates]` and `academic_scfabric_hardware_probe` (`measure_candidates=true` runs paired numerical parity + material-gain admission; unmeasured external candidates are always marked `REFERENCE` / `unverified_external_candidate`). |

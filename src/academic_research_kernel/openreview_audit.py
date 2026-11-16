@@ -106,6 +106,32 @@ def _is_decision_note(note: dict) -> bool:
     return "decision" in inv_text or "acceptance" in inv_text
 
 
+def _is_official_review_note(note: dict) -> bool:
+    inv_text = _note_inv_text(note)
+    if inv_text:
+        if any(
+            bad in inv_text
+            for bad in (
+                "meta_review",
+                "metareview",
+                "decision",
+                "acceptance",
+                "comment",
+                "rebuttal",
+                "withdrawal",
+                "desk_reject",
+                "revision",
+                "ethics_review",
+            )
+        ):
+            return False
+        return "review" in inv_text
+    c = note.get("content") if isinstance(note.get("content"), dict) else {}
+    if any(k in c for k in ("rating", "overall_assessment", "recommendation", "confidence", "soundness")):
+        return True
+    return False
+
+
 def parse_mirror_record(rec: dict) -> dict:
     """解析 PaperCopilot OpenReview 镜像单条记录，还原完整评分、子维度与作者 Rebuttal 字数。"""
     if not isinstance(rec, dict):
@@ -134,12 +160,14 @@ def parse_mirror_record(rec: dict) -> dict:
     else:
         status = "unknown"
 
-    ratings = _parse_semi_numbers(rec.get("rating"))
+    raw_ratings = _parse_semi_numbers(rec.get("rating"))
     score_field = "rating"
-    if not ratings and rec.get("recommendation") is not None:
-        ratings = _parse_semi_numbers(rec.get("recommendation"))
-        if ratings:
+    if not raw_ratings and rec.get("recommendation") is not None:
+        raw_ratings = _parse_semi_numbers(rec.get("recommendation"))
+        if raw_ratings:
             score_field = "recommendation"
+    ratings = [x for x in raw_ratings if x > 0]
+    non_pos_count = len(raw_ratings) - len(ratings)
     confidences = _parse_semi_numbers(rec.get("confidence"))
     soundness = _parse_semi_numbers(rec.get("soundness"))
     contribution = _parse_semi_numbers(rec.get("contribution"))
@@ -191,6 +219,9 @@ def parse_mirror_record(rec: dict) -> dict:
         "status_classification": status,
         "completeness": completeness,
         "review_count": len(ratings),
+        "observed_review_notes": len(raw_ratings),
+        "non_positive_rating_anomalies": non_pos_count,
+        "raw_ratings": raw_ratings,
         "score_field": score_field,
         "ratings": ratings,
         "mean_rating": float(sum(ratings) / len(ratings)) if ratings else None,
@@ -273,7 +304,8 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
     venue = str(_unwrap(content.get("venue")) or "")
     venueid = str(_unwrap(content.get("venueid")) or "")
 
-    ratings = []
+    ratings: list[float] = []
+    raw_note_ratings: list[float] = []
     confidences = []
     soundness = []
     contribution = []
@@ -319,6 +351,9 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
                 decisions.append(rec_dec.strip())
             continue
 
+        if not _is_official_review_note(n):
+            continue
+
         rat = _unwrap(c.get("rating"))
         if rat is None:
             rat = _unwrap(c.get("overall_assessment"))
@@ -341,7 +376,9 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
             if m:
                 f_val = float(m.group(1))
                 if math.isfinite(f_val):
-                    ratings.append(f_val)
+                    raw_note_ratings.append(f_val)
+                    if f_val > 0:
+                        ratings.append(f_val)
 
         conf = _unwrap(c.get("confidence"))
         if conf is not None and not isinstance(conf, bool):
@@ -414,6 +451,9 @@ def parse_openreview_notes(payload: dict | list, forum_id: str | None = None) ->
         "status_classification": status,
         "completeness": completeness,
         "review_count": len(ratings),
+        "observed_review_notes": len(raw_note_ratings),
+        "non_positive_rating_anomalies": len(raw_note_ratings) - len(ratings),
+        "raw_ratings": raw_note_ratings,
         "ratings": ratings,
         "mean_rating": float(sum(ratings) / len(ratings)) if ratings else None,
         "confidences": confidences,
@@ -528,11 +568,11 @@ def summarize_venue_mirror(records: list[dict], topic_regex: str | None = None) 
                 wc_reviews_pos.append(wv)
                 if idx_w < len(conf_slots) and conf_slots[idx_w] is not None:
                     wc_by_conf.setdefault(int(round(conf_slots[idx_w])), []).append(wv)
-        if r.get("replies_avg") is not None and rats:
+        if r.get("replies_avg") is not None and raw_rats:
             ravg = r.get("replies_avg")
             if isinstance(ravg, list) and ravg and isinstance(ravg[0], (int, float)):
                 reply_eligible_reviews += 1
-                if float(ravg[0]) <= len(rats):
+                if float(ravg[0]) <= len(raw_rats):
                     zero_rev_reply_reviews += 1
         if topic_re:
             blob = f"{r.get('title', '')} {r.get('keywords', '')} {r.get('abstract', '')}"

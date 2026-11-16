@@ -13,7 +13,7 @@ metadata:
 
 # Scientific Computation & Hardware Probe (`compute-math`)
 
-Degradation-tolerant hardware/library capability probing, schema-validated `ComputeReceipt` benchmarking (`compute-receipt-1.0`), and multi-domain scientific computation routing via `academic-research-kernel` (`3.0.0`). Consolidates `math-computation` and `scfabric` probe/receipt contracts.
+Probe observable CPU/GPU/BLAS environments, emit schema-validated `ComputeReceipt` timing records (`compute-receipt-1.0`), and route numerical/symbolic tasks to installed scientific Python libraries via `academic-research-kernel` (`3.0.0`) (kernel CLI/MCP entrypoints perform capability probing and receipt measurement rather than acting as a standalone theorem prover or CAS). Consolidates `math-computation` and `scfabric`.
 
 ## When to Use
 

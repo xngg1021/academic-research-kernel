@@ -13,7 +13,7 @@ metadata:
 
 # Cross-Review Deliberation (`cross-review`)
 
-Harness-neutral multi-model sparse deliberation and adversarial red-teaming engine via `academic-research-kernel` (`3.0.0`). Replaces legacy `cross-review-five` with an explicit, vendor-neutral participant roster (`ReviewPanelSpec`) and both CLI and inline MCP execution.
+Coordinate **live multi-model blind review, anonymous challenge, and minority-protected synthesis** over a claim, paper, or codebase via `academic-research-kernel` (`3.0.0`) (distinct from `audit-peer-review`, which analyzes historical OpenReview conference records). Replaces legacy `cross-review-five` with a vendor-neutral participant roster (`ReviewPanelSpec`) across CLI and inline MCP.
 
 ## When to Use
 
@@ -47,7 +47,9 @@ academic-research-kernel cross-review --models "seat-a,seat-b,seat-c" --stage pa
 
 ## MCP Tools
 
-- `academic_cross_review` (alias `cross_review_deliberate`): accepts inline `findings_by_model` (and optional `challenge_replies`) from any host agent's subagents and returns schema-valid `CrossReviewIssueRegistry`, anonymized `challenge_plan`, `derangement_pairings`, and minority-protected `ReviewRunReceipt`.
+- `academic_cross_review` (alias `cross_review_deliberate`): two-step inline deliberation over `findings_by_model`.
+  1. Call `{"findings_by_model": {...}, "mode": "standard"}` to obtain `registry`, `derangement_pairings`, and anonymized `challenge_plan` (each item includes `challenge_id`, `bundle`, `bundle_sha256`, `run_id`, and `task_sha256`).
+  2. Call again with SHA-bound reply envelopes `{"findings_by_model": {...}, "challenge_replies": {"C01": {"text": "[CONCEDE] Proposal-1: verified at `target_mod.py:7` where `p < 0.05` fails\n[REFUTED] Proposal-2: counterexample at `target_mod.py:12` preserves `x >= 0`", "bundle_sha256": "<64-hex>"}}}` to synthesize a minority-protected `ReviewRunReceipt`. Strict narrow verdict grammar: optional first line `# Review`, then one single-line verdict per `Proposal-N`; outside single/double backtick code spans (`` `...` ``), characters `[]()<>\\` and `【】` are rejected (wrap expressions like `` `p < 0.05` `` or `` `f(x)` `` in backticks), and the rationale tail must not repeat `[CONCEDE]`/`[REFUTED]`/`[UNRESOLVED]` or the reserved word `proposal` even inside backticks.
 
 ## Deliberation Rules
 

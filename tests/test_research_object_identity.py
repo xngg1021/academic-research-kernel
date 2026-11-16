@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = ROOT / 'schemas' / 'research-object.schema.json'
+_TOP_SCHEMA = ROOT / 'schemas' / 'research-object.schema.json'
+SCHEMA_PATH = _TOP_SCHEMA if _TOP_SCHEMA.is_file() else (ROOT / 'src' / 'academic_research_kernel' / 'schemas' / 'research-object.schema.json')
 
 
 from academic_research_kernel import identity, interop
@@ -361,10 +362,7 @@ def test_draft_conforms_to_schema_structure():
 # ---------------------------------------------------------------------------
 
 def _schema_obj():
-    import json
-    from pathlib import Path
-    return json.loads((Path(__file__).resolve().parent.parent
-                       / 'schemas' / 'research-object.schema.json').read_text(encoding='utf-8'))
+    return json.loads(SCHEMA_PATH.read_text(encoding='utf-8'))
 
 
 def test_drafts_validate_against_real_jsonschema():

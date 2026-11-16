@@ -441,27 +441,48 @@ def subgroup_analysis(yi, vi, groups) -> dict:
     if len(unique_groups) < 2:
         raise ValueError("subgroup_analysis requires at least 2 distinct subgroups")
 
-    overall_fe = pool_fixed(y, v)
-    q_within = 0.0
     by_group: dict[str, dict] = {}
+    group_Arrays: list[tuple[np.ndarray, np.ndarray]] = []
     for g_name in unique_groups:
         mask = np.array([g == g_name for g in g_list], dtype=bool)
         yg, vg = y[mask], v[mask]
+        group_Arrays.append((yg, vg))
         fe_g = pool_fixed(yg, vg)
         re_g = pool_random(yg, vg)
-        q_within += fe_g.q
         by_group[g_name] = {
             "k": int(yg.size),
             "fixed_effect": asdict(fe_g),
             "random_effects_dl": asdict(re_g),
         }
-    q_between = max(0.0, float(overall_fe.q - q_within))
+
+    # Compute Q_within and Q_between directly in 900-digit Decimal (never by subtracting two huge float64 Q values)
+    with localcontext() as ctx:
+        ctx.prec = 900
+        y0_d = Decimal(repr(float(y[0])))
+        grp_w_and_mean: list[tuple[Decimal, Decimal]] = []
+        q_within_d = Decimal(0)
+        for yg, vg in group_Arrays:
+            dyg = [Decimal(repr(float(val))) - y0_d for val in yg]
+            dwg = [Decimal(1) / Decimal(repr(float(val))) for val in vg]
+            wg_sum = sum(dwg, Decimal(0))
+            mean_g = sum((w * d for w, d in zip(dwg, dyg)), Decimal(0)) / wg_sum
+            grp_w_and_mean.append((wg_sum, mean_g))
+            q_within_d += sum((w * (d - mean_g) ** 2 for w, d in zip(dwg, dyg)), Decimal(0))
+        w_all_d = sum((wg for wg, _ in grp_w_and_mean), Decimal(0))
+        mean_all_d = sum((wg * mg for wg, mg in grp_w_and_mean), Decimal(0)) / w_all_d
+        q_between_d = max(Decimal(0), sum((wg * (mg - mean_all_d) ** 2 for wg, mg in grp_w_and_mean), Decimal(0)))
+        q_within = max(0.0, float(q_within_d))
+        q_between = max(0.0, float(q_between_d))
+        q_total = float(q_within_d + q_between_d)
+
+    if not (math.isfinite(q_within) and math.isfinite(q_between) and math.isfinite(q_total)):
+        raise ValueError("subgroup_analysis Q-statistics overflowed float64 representation range")
     df_between = len(unique_groups) - 1
     p_between = float(stats.chi2.sf(q_between, df_between))
     return {
         "group_count": len(unique_groups),
-        "q_total": float(overall_fe.q),
-        "q_within": float(q_within),
+        "q_total": q_total,
+        "q_within": q_within,
         "q_between": q_between,
         "df_between": df_between,
         "p_between": p_between,
@@ -517,7 +538,7 @@ def meta_regression(yi, vi, moderators, model: str = "random") -> dict:
         raise ValueError("moderators must be finite numbers")
     if y.size < 3:
         raise ValueError("meta_regression requires at least 3 studies")
-    if float(np.sum((x - x.mean()) ** 2)) == 0.0:
+    if len({float(xv) for xv in x}) < 2:
         raise ValueError("meta_regression requires non-constant moderator values")
 
     df_resid = int(y.size - 2)
@@ -535,6 +556,9 @@ def meta_regression(yi, vi, moderators, model: str = "random") -> dict:
         raise ValueError("meta_regression encountered non-finite or degenerate standard error")
     z_slope = slope / se_slope
     p_slope = 2.0 * float(stats.norm.sf(abs(z_slope)))
+    p_resid = float(stats.chi2.sf(q_e, df_resid))
+    if not (math.isfinite(z_slope) and math.isfinite(p_slope) and math.isfinite(p_resid)):
+        raise ValueError("meta_regression z-statistic overflowed float64 representation range")
     return {
         "model": model,
         "k": int(y.size),
@@ -547,5 +571,5 @@ def meta_regression(yi, vi, moderators, model: str = "random") -> dict:
         "p_slope": p_slope,
         "q_residual": q_e,
         "df_residual": df_resid,
-        "p_residual": float(stats.chi2.sf(q_e, df_resid)),
+        "p_residual": p_resid,
     }

@@ -4,6 +4,7 @@ build>=1.2,<2
 pytest>=8,<10
 twine>=6,<7
 pyyaml>=6,<7
+tomli>=2,<3; python_version < '3.11'
 jsonschema>=4.23,<5
 numpy>=1.26,<3
 scipy>=1.11,<2

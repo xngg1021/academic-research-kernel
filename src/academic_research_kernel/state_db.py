@@ -106,6 +106,391 @@ ALLOWED_LINEAGE_RELATIONS: frozenset[str] = frozenset({
 ALLOWED_CLAIM_STATUSES: frozenset[str] = frozenset({"supported", "contested", "unresolved", "refuted"})
 ALLOWED_EVIDENCE_STANCES: frozenset[str] = frozenset({"supports", "contradicts", "qualifies"})
 ALLOWED_CLAIM_RELATIONS: frozenset[str] = frozenset({"depends_on", "refines", "contradicts", "corroborates", "cites"})
+ALLOWED_DECISION_VERDICTS: frozenset[str] = frozenset({"positive", "negative", "inconclusive", "unverifiable"})
+
+
+def canonical_evidence_claim_digest(claim_item: Mapping[str, Any]) -> str:
+    """Compute canonical SHA-256 digest of a claim item inside an AcademicEvidenceReceipt."""
+    payload = {
+        "claim": claim_item.get("claim", ""),
+        "evidence_type": claim_item.get("evidence_type", ""),
+        "locator": claim_item.get("locator", ""),
+        "source": claim_item.get("source", ""),
+        "support_status": claim_item.get("support_status", ""),
+    }
+    return sha256_hex(canonical_json(payload))
+
+
+_HEX64_LOWER_RE = re.compile(r"^[0-9a-f]{64}\Z")
+
+
+def validate_receipt_ref_dict(rref: Any) -> list[str]:
+    """Validate a ReceiptRef dictionary against the canonical oneOf contract."""
+    if not isinstance(rref, Mapping):
+        return ["ReceiptRef must be a JSON object"]
+    rk = rref.get("kind")
+    if rk == "lineage":
+        extra = set(rref.keys()) - {"kind", "schema_version", "receipt_id", "receipt_digest", "locator"}
+        if extra:
+            return [f"Lineage ReceiptRef contains unsupported fields: {sorted(extra)!r}"]
+        if rref.get("schema_version") != "lineage-receipt-1.0":
+            return [f"Lineage ReceiptRef requires schema_version='lineage-receipt-1.0', got {rref.get('schema_version')!r}"]
+        rid = rref.get("receipt_id")
+        rdig = rref.get("receipt_digest")
+        if not isinstance(rid, str) or not rid.strip() or rid != rid.strip():
+            return ["Lineage ReceiptRef requires non-empty receipt_id"]
+        if not isinstance(rdig, str) or not _HEX64_LOWER_RE.fullmatch(rdig):
+            return ["Lineage ReceiptRef requires lowercase 64-hex receipt_digest"]
+        if "locator" in rref and not isinstance(rref["locator"], str):
+            return ["Lineage ReceiptRef locator must be a string"]
+        return []
+    if rk == "academic_evidence":
+        extra = set(rref.keys()) - {"kind", "schema_version", "claim_digest", "payload_sha256", "locator"}
+        if extra:
+            return [f"AcademicEvidence ReceiptRef contains unsupported fields: {sorted(extra)!r}"]
+        if rref.get("schema_version") != "1.0":
+            return [f"AcademicEvidence ReceiptRef requires schema_version='1.0', got {rref.get('schema_version')!r}"]
+        cdig = rref.get("claim_digest")
+        psha = rref.get("payload_sha256")
+        if not isinstance(cdig, str) or not _HEX64_LOWER_RE.fullmatch(cdig):
+            return ["AcademicEvidence ReceiptRef requires lowercase 64-hex claim_digest"]
+        if not isinstance(psha, str) or not _HEX64_LOWER_RE.fullmatch(psha):
+            return ["AcademicEvidence ReceiptRef requires lowercase 64-hex payload_sha256"]
+        if "locator" in rref and not isinstance(rref["locator"], str):
+            return ["AcademicEvidence ReceiptRef locator must be a string"]
+        return []
+    return [f"Unsupported ReceiptRef kind: {rk!r}"]
+
+
+def validate_academic_evidence_payload(payload: Any) -> list[str]:
+    """Validate an AcademicEvidence physical receipt against legacy-academic-evidence.schema.json and inner claim digests."""
+    if not isinstance(payload, Mapping):
+        return ["AcademicEvidence payload must be a JSON object"]
+    plain = thaw(payload)
+    errs = list(validate_schema(plain, "legacy-academic-evidence.schema.json"))
+    if errs:
+        return errs
+    for idx, ci in enumerate(plain.get("claims") or ()):
+        if isinstance(ci, Mapping) and "claim_digest" in ci:
+            comp_cd = canonical_evidence_claim_digest(ci)
+            if str(ci["claim_digest"]).lower() != comp_cd:
+                errs.append(f"AcademicEvidence claims[{idx}] inner claim_digest mismatch")
+    return errs
+
+
+def decode_content_payloads_map(
+    content_payloads: Any,
+    *,
+    max_bytes: int = 10 * 1024 * 1024,
+) -> dict[str, bytes]:
+    """Decode and validate legacy MCP base64 entity content_payloads map."""
+    import base64
+    import binascii
+
+    if content_payloads is None:
+        return {}
+    if not isinstance(content_payloads, Mapping):
+        raise ValueError("content_payloads must be a dictionary mapping entity IDs to base64 strings")
+    out: dict[str, bytes] = {}
+    total = 0
+    max_enc_len = 4 * ((max_bytes + 2) // 3)
+    for eid, enc in content_payloads.items():
+        if not isinstance(eid, str) or not eid or not isinstance(enc, str):
+            raise ValueError("content_payloads must map non-empty string entity IDs to base64 strings")
+        if len(enc) > max_enc_len:
+            raise ValueError("content_payloads exceeds verification byte budget")
+        try:
+            raw_b = base64.b64decode(enc, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError(f"content_payloads[{eid!r}] is not valid base64") from exc
+        total += len(raw_b)
+        if total > max_bytes:
+            raise ValueError("content_payloads exceeds verification byte budget")
+        out[eid] = raw_b
+    return out
+
+
+def validate_lineage_receipt_semantics(
+    doc: Mapping[str, Any],
+    *,
+    decoded_content: Optional[Mapping[str, bytes]] = None,
+    strict_unknown_entities: bool = True,
+) -> list[str]:
+    """Verify structural DAG closure, status invariants, dual digests, and optional entity bytes on lineage-receipt-1.0."""
+    errs = list(validate_schema(doc, "lineage-receipt.schema.json"))
+    if errs or not isinstance(doc, Mapping):
+        return errs or ["Lineage receipt must be a JSON object"]
+
+    data = thaw(doc)
+    target_id = str(data.get("target_id") or "")
+    entities = list(data.get("entities") or [])
+    activities = list(data.get("activities") or [])
+    edges = list(data.get("edges") or [])
+    trace_steps = list(data.get("trace_steps") or [])
+    roots_decl = list(data.get("root_ancestors") or [])
+    v_status = str(data.get("verification_status") or "")
+    t_status = str(data.get("topology_status") or "")
+    c_status = str(data.get("content_verification") or "")
+    err_detail = str(data.get("error_detail") or "")
+
+    ent_by_id: dict[str, dict[str, Any]] = {}
+    for idx, ent in enumerate(entities):
+        raw_eid = ent.get("id")
+        if not isinstance(raw_eid, str) or not raw_eid.strip() or raw_eid != raw_eid.strip() or raw_eid in ent_by_id:
+            errs.append(f"Duplicate, empty, or whitespace-padded entity id at entities[{idx}]: {raw_eid!r}")
+        else:
+            ent_by_id[raw_eid] = ent
+
+    act_by_id: dict[str, dict[str, Any]] = {}
+    for idx, act in enumerate(activities):
+        raw_aid = act.get("id")
+        if not isinstance(raw_aid, str) or not raw_aid.strip() or raw_aid != raw_aid.strip() or raw_aid in act_by_id or raw_aid in ent_by_id:
+            errs.append(f"Duplicate, empty, whitespace-padded, or entity-colliding activity id at activities[{idx}]: {raw_aid!r}")
+        else:
+            act_by_id[raw_aid] = act
+
+    if errs:
+        return errs
+
+    edge_key = lambda edge: (
+        edge.get("type", ""),
+        edge.get("source_id", ""),
+        edge.get("target_id", ""),
+        edge.get("activity_id") or "",
+        canonical_json(edge.get("metadata", {})),
+    )
+    lineage_payload = {
+        "protocol": "lineage-receipt-1.0",
+        "target_id": target_id,
+        "root_ancestors": sorted(roots_decl),
+        "entities": sorted(entities, key=lambda item: item["id"]),
+        "activities": sorted(activities, key=lambda item: item["id"]),
+        "edges": sorted(edges, key=edge_key),
+        "trace_steps": trace_steps,
+    }
+    recomputed_lineage = sha256_hex(canonical_json(lineage_payload))
+    declared_lineage = str(data.get("lineage_digest") or "").lower()
+    missing_input_form = (
+        declared_lineage == "0" * 64
+        and v_status == "missing_input"
+        and t_status == "missing_input"
+        and c_status == "unchecked"
+        and not roots_decl
+        and not entities
+        and not activities
+        and not edges
+        and not trace_steps
+    )
+    exp_lineage = declared_lineage if missing_input_form else recomputed_lineage
+    if declared_lineage != exp_lineage:
+        errs.append(f"Lineage digest mismatch: declared {declared_lineage!r}, recomputed {exp_lineage!r}")
+    if data.get("content_digest") is not None and str(data["content_digest"]).lower() != exp_lineage:
+        errs.append("Lineage content_digest alias disagrees with lineage_digest")
+
+    receipt_base = {
+        "lineage_digest": exp_lineage,
+        "target_id": target_id,
+        "verification_status": v_status,
+        "topology_status": t_status,
+        "content_verification": c_status,
+        "error_detail": err_detail,
+    }
+    possible_by_mode = {
+        mode: sha256_hex(canonical_json(dict(receipt_base, check_on_disk_hashes=mode)))
+        for mode in (False, True)
+    }
+    declared_receipt = str(data.get("receipt_digest") or "").lower()
+    matching_modes = [m for m, dig in possible_by_mode.items() if dig == declared_receipt]
+    if not matching_modes:
+        errs.append("Lineage receipt_digest does not match canonical verification metadata digest")
+    if data.get("receipt_id") != f"rec-{declared_receipt[:32]}":
+        errs.append(f"Lineage receipt_id {data.get('receipt_id')!r} != expected 'rec-{declared_receipt[:32]}'")
+
+    # Structural & topological validation
+    if t_status != "missing_input" and target_id not in ent_by_id:
+        errs.append(f"Lineage target_id {target_id!r} missing from entities while topology_status={t_status!r}")
+        return errs
+
+    if t_status == "missing_input":
+        if v_status != "missing_input" or c_status != "unchecked" or roots_decl or trace_steps:
+            errs.append("missing_input topology requires verification_status='missing_input', content_verification='unchecked', and empty roots/steps")
+        return errs
+
+    parents_by_child: dict[str, set[str]] = {}
+    used_by_act: dict[str, set[str]] = {}
+    gen_by_act: dict[str, set[str]] = {}
+    endpoint_broken = False
+    self_loop = False
+    for idx, e in enumerate(edges):
+        et = str(e.get("type") or "")
+        src = str(e.get("source_id") or "")
+        tgt = str(e.get("target_id") or "")
+        act_ref = e.get("activity_id")
+        if et == "used":
+            if src not in act_by_id or tgt not in ent_by_id:
+                endpoint_broken = True
+            else:
+                parents_by_child.setdefault(src, set()).add(tgt)
+                used_by_act.setdefault(src, set()).add(tgt)
+        elif et == "generated":
+            if src not in act_by_id or tgt not in ent_by_id:
+                endpoint_broken = True
+            else:
+                parents_by_child.setdefault(tgt, set()).add(src)
+                gen_by_act.setdefault(src, set()).add(tgt)
+        elif et == "derived_from":
+            if src not in ent_by_id or tgt not in ent_by_id:
+                endpoint_broken = True
+            elif src == tgt:
+                self_loop = True
+            else:
+                parents_by_child.setdefault(src, set()).add(tgt)
+            if act_ref:
+                if str(act_ref) not in act_by_id:
+                    endpoint_broken = True
+                else:
+                    parents_by_child.setdefault(src, set()).add(str(act_ref))
+
+    for aid, act in act_by_id.items():
+        sid = act.get("script_id")
+        if sid:
+            if str(sid) not in ent_by_id or ent_by_id[str(sid)].get("type") != "code_file":
+                endpoint_broken = True
+            else:
+                parents_by_child.setdefault(aid, set()).add(str(sid))
+
+    # Global cycle detection across ALL nodes in the receipt (including disconnected components)
+    global_state: dict[str, int] = {}
+    has_global_cycle = self_loop
+    for start_n in sorted(set(ent_by_id) | set(act_by_id)):
+        if has_global_cycle:
+            break
+        if global_state.get(start_n, 0) != 0:
+            continue
+        global_state[start_n] = 1
+        g_stack: list[tuple[str, list[str], int]] = [(start_n, sorted(parents_by_child.get(start_n, ())), 0)]
+        while g_stack and not has_global_cycle:
+            cur_g, ups_g, idx_g = g_stack[-1]
+            if idx_g >= len(ups_g):
+                global_state[cur_g] = 2
+                g_stack.pop()
+                continue
+            g_stack[-1] = (cur_g, ups_g, idx_g + 1)
+            up_g = ups_g[idx_g]
+            st_g = global_state.get(up_g, 0)
+            if st_g == 1:
+                has_global_cycle = True
+                break
+            if st_g == 0:
+                global_state[up_g] = 1
+                g_stack.append((up_g, sorted(parents_by_child.get(up_g, ())), 0))
+
+    # DFS reachability & cycle check from target_id
+    state_dfs: dict[str, int] = {target_id: 1}
+    visited: set[str] = {target_id}
+    stack_dfs: list[tuple[str, list[str], int]] = [(target_id, sorted(parents_by_child.get(target_id, ())), 0)]
+    has_cycle = self_loop
+    while stack_dfs and not has_cycle:
+        cur_n, ups, idx_u = stack_dfs[-1]
+        if idx_u >= len(ups):
+            state_dfs[cur_n] = 2
+            stack_dfs.pop()
+            continue
+        stack_dfs[-1] = (cur_n, ups, idx_u + 1)
+        up = ups[idx_u]
+        st_u = state_dfs.get(up, 0)
+        if st_u == 1:
+            has_cycle = True
+            break
+        visited.add(up)
+        if st_u == 0:
+            state_dfs[up] = 1
+            stack_dfs.append((up, sorted(parents_by_child.get(up, ())), 0))
+
+    if t_status != "valid_dag":
+        if t_status == "cycle_detected" and not (has_cycle or has_global_cycle):
+            errs.append("Lineage declares topology_status='cycle_detected' on an acyclic graph")
+        elif t_status == "broken_chain" and not endpoint_broken:
+            errs.append("Lineage declares topology_status='broken_chain' without broken references")
+        if v_status != t_status:
+            errs.append(f"Invalid lineage topology {t_status!r} requires verification_status={t_status!r}, got {v_status!r}")
+        if c_status != "unchecked":
+            errs.append(f"Invalid lineage topology {t_status!r} requires content_verification='unchecked', got {c_status!r}")
+        if roots_decl or trace_steps:
+            errs.append(f"Invalid lineage topology {t_status!r} must have empty root_ancestors and trace_steps")
+    else:
+        if endpoint_broken:
+            errs.append("Lineage declares topology_status='valid_dag' despite broken entity/activity references")
+        if has_cycle or has_global_cycle:
+            errs.append("Lineage declares topology_status='valid_dag' despite cycle in lineage graph")
+        all_declared_nodes = set(ent_by_id) | set(act_by_id)
+        if all_declared_nodes - visited:
+            errs.append(f"Lineage declares disconnected nodes outside target closure: {sorted(all_declared_nodes - visited)!r}")
+        seen_ts_acts: set[str] = set()
+        for idx_ts, ts in enumerate(trace_steps, 1):
+            if not isinstance(ts, Mapping):
+                errs.append(f"trace_steps[{idx_ts - 1}] must be an object")
+                continue
+            sn = ts.get("step_number")
+            ts_aid = str(ts.get("activity_id") or "")
+            inps = list(ts.get("inputs") or [])
+            outs = list(ts.get("outputs") or [])
+            if type(sn) is not int or sn != idx_ts:
+                errs.append(f"trace_steps[{idx_ts - 1}] step_number {sn!r} != expected {idx_ts}")
+            if ts_aid not in act_by_id or ts_aid in seen_ts_acts:
+                errs.append(f"trace_steps[{idx_ts - 1}] references unknown or duplicate activity_id {ts_aid!r}")
+                continue
+            seen_ts_acts.add(ts_aid)
+            if any(x not in ent_by_id for x in inps) or any(x not in ent_by_id for x in outs):
+                errs.append(f"trace_steps[{idx_ts - 1}] inputs/outputs reference unknown entity")
+            if sorted(inps) != sorted(used_by_act.get(ts_aid, ())):
+                errs.append(f"trace_steps[{idx_ts - 1}] inputs mismatch used edges for {ts_aid!r}")
+            if sorted(outs) != sorted(gen_by_act.get(ts_aid, ())):
+                errs.append(f"trace_steps[{idx_ts - 1}] outputs mismatch generated edges for {ts_aid!r}")
+        if act_by_id and seen_ts_acts != set(act_by_id):
+            errs.append("Lineage valid_dag trace_steps must cover every declared activity")
+        if c_status == "hash_mismatch" and v_status != "hash_mismatch":
+            errs.append(f"content_verification='hash_mismatch' requires verification_status='hash_mismatch', got {v_status!r}")
+        if c_status == "missing_artifact" and v_status != "missing_artifact":
+            errs.append(f"content_verification='missing_artifact' requires verification_status='missing_artifact', got {v_status!r}")
+        if v_status == "intact" and c_status != "fully_verified":
+            errs.append(f"Lineage declares verification_status='intact' with incompatible content_verification={c_status!r}")
+        if c_status == "fully_verified" and v_status != "intact":
+            errs.append(f"Lineage declares content_verification='fully_verified' with incompatible verification_status={v_status!r}")
+        if not errs:
+            def _has_up_ent(en: str) -> bool:
+                seen_q: set[str] = set()
+                q = list(parents_by_child.get(en, ()))
+                while q:
+                    u = q.pop()
+                    if u in seen_q:
+                        continue
+                    seen_q.add(u)
+                    if u in ent_by_id and u != en:
+                        return True
+                    q.extend(parents_by_child.get(u, ()))
+                return False
+
+            closure_ents = sorted(n for n in visited if n in ent_by_id)
+            exp_roots = [] if c_status in ("hash_mismatch", "missing_artifact") else sorted(n for n in closure_ents if not _has_up_ent(n))
+            if roots_decl != exp_roots:
+                errs.append(f"Lineage root_ancestors mismatch: declared {roots_decl!r}, expected {exp_roots!r}")
+            ents_with_sha = [n for n in closure_ents if ent_by_id[n].get("sha256")]
+            if c_status == "fully_verified" and (not closure_ents or len(ents_with_sha) != len(closure_ents)):
+                errs.append("Lineage declares content_verification='fully_verified' without sha256 on all closure entities")
+
+    if decoded_content is not None:
+        for eid_c, raw_b in decoded_content.items():
+            if eid_c not in ent_by_id:
+                if strict_unknown_entities:
+                    errs.append(f"content_payloads references unknown entity_id {eid_c!r}")
+                continue
+            exp_ent_sha = str(ent_by_id[eid_c].get("sha256") or "").lower()
+            act_ent_sha = sha256_hex(raw_b)
+            if exp_ent_sha and act_ent_sha != exp_ent_sha and c_status != "hash_mismatch":
+                errs.append(f"Entity {eid_c!r} content_payloads SHA-256 mismatch: expected {exp_ent_sha}, computed {act_ent_sha}")
+
+    return errs
 
 PRUNE_REASONS: frozenset[str] = frozenset({
     "resource_exhausted",
@@ -553,6 +938,28 @@ class ResearchStateDB:
                                 END
                                 """
                             )
+                            # Backfill legacy v3 decision_events.verdict_override rows for decisions without explicit corrections
+                            legacy_overrides = conn.execute(
+                                """
+                                SELECT decision_id, new_state, reason, verdict_override
+                                FROM decision_events
+                                WHERE verdict_override IS NOT NULL
+                                  AND decision_id NOT IN (SELECT DISTINCT decision_id FROM decision_corrections)
+                                ORDER BY seq ASC
+                                """
+                            ).fetchall()
+                            for ov_row in legacy_overrides:
+                                conn.execute(
+                                    """
+                                    INSERT INTO decision_corrections (decision_id, verdict, rationale, artifact_id)
+                                    VALUES (?, ?, ?, NULL)
+                                    """,
+                                    (
+                                        str(ov_row["decision_id"]),
+                                        str(ov_row["verdict_override"]),
+                                        f"Lifecycle transition ({ov_row['new_state']}:{ov_row['reason']}) verdict override",
+                                    ),
+                                )
                             conn.execute(f"PRAGMA user_version = {ARK_SQLITE_USER_VERSION}")
                         conn.execute("COMMIT")
                     except BaseException:
@@ -692,6 +1099,10 @@ class ResearchStateDB:
         kind: Any,
         payload: Any,
         expected_sha256: Optional[str] = None,
+        *,
+        authoritative_artifacts: Optional[Mapping[str, tuple[str, str, Any]]] = None,
+        receipts: Any = None,
+        content_payloads: Any = None,
     ) -> tuple[str, str, str, str]:
         aid = _require_str_id(artifact_id, "artifact_id")
         k = _require_str_id(kind, "kind")
@@ -699,19 +1110,38 @@ class ResearchStateDB:
             raise ValueError(f"Unknown artifact kind {k!r}; allowed={sorted(ALLOWED_ARTIFACT_KINDS)}")
         pmap = _require_mapping(payload, "payload")
         plain_payload = thaw(pmap)
+        dec_cp = decode_content_payloads_map(content_payloads) if content_payloads is not None else None
         schema_file = KIND_SCHEMA_MAP.get(k)
         if schema_file is not None:
             errs = list(validate_schema(plain_payload, schema_file))
             if not errs and k == "claim_evidence_graph":
                 from .venue_template_manager import validate_ceg_semantics
 
-                errs.extend(validate_ceg_semantics(dict(plain_payload))["semantic_errors"])
+                errs.extend(
+                    validate_ceg_semantics(
+                        dict(plain_payload),
+                        receipts=receipts,
+                        content_payloads=content_payloads,
+                        authoritative_artifacts=authoritative_artifacts,
+                    )["semantic_errors"]
+                )
             elif not errs and k == "decision_ledger":
-                errs.extend(validate_decision_ledger_semantics(plain_payload))
+                errs.extend(
+                    validate_decision_ledger_semantics(
+                        plain_payload,
+                        receipts=receipts,
+                        content_payloads=content_payloads,
+                        authoritative_artifacts=authoritative_artifacts,
+                    )
+                )
+            elif not errs and k == "lineage_receipt":
+                errs.extend(validate_lineage_receipt_semantics(plain_payload, decoded_content=dec_cp))
             if errs:
                 raise ValueError(f"Schema validation failed for {k} ({aid}): {'; '.join(errs[:5])}")
-        elif k in ("computed_evidence", "table_cell", "statistic_artifact") and not plain_payload:
-            raise ValueError(f"Artifact kind {k!r} ({aid}) requires a non-empty structured payload")
+        elif k in ("computed_evidence", "table_cell", "statistic_artifact"):
+            has_concrete_val = bool(plain_payload) and any(v is not None for v in plain_payload.values())
+            if not has_concrete_val:
+                raise ValueError(f"Artifact kind {k!r} ({aid}) requires at least one non-null concrete field value")
         cjson = canonical_json(plain_payload)
         digest = sha256_hex(cjson)
         if expected_sha256 is not None:
@@ -730,8 +1160,28 @@ class ResearchStateDB:
         expected_sha256: Optional[str] = None,
         parents: Iterable[Any] = (),
         relation: Any = "derived_from",
+        receipts: Any = None,
+        content_payloads: Any = None,
     ) -> Mapping[str, Any]:
-        aid, k, cjson, digest = self._validate_artifact_semantics(artifact_id, kind, payload, expected_sha256)
+        auth_map: Optional[dict[str, tuple[str, str, Any]]] = None
+        if str(kind).strip() in ("claim_evidence_graph", "decision_ledger"):
+            auth_map = {
+                str(r["artifact_id"]): (
+                    str(r["kind"]),
+                    str(r["payload_sha256"]),
+                    json.loads(str(r["payload_json"])),
+                )
+                for r in conn.execute("SELECT artifact_id, kind, payload_sha256, payload_json FROM artifacts").fetchall()
+            }
+        aid, k, cjson, digest = self._validate_artifact_semantics(
+            artifact_id,
+            kind,
+            payload,
+            expected_sha256,
+            authoritative_artifacts=auth_map,
+            receipts=receipts,
+            content_payloads=content_payloads,
+        )
         rel = _require_str_id(relation, "relation")
         if rel not in ALLOWED_LINEAGE_RELATIONS:
             raise ValueError(f"Invalid lineage relation {rel!r}; allowed={sorted(ALLOWED_LINEAGE_RELATIONS)}")
@@ -801,9 +1251,35 @@ class ResearchStateDB:
                 )
         return freeze({"work_id": wid, "title": clean_title, "doi": norm_doi, "arxiv_id": norm_arxiv})
 
-    def register_artifact(self, artifact_id: str, kind: str, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    def extract_authoritative_artifacts(self) -> dict[str, tuple[str, str, Any]]:
+        with self._read_snapshot() as conn:
+            return {
+                str(r["artifact_id"]): (
+                    str(r["kind"]),
+                    str(r["payload_sha256"]),
+                    json.loads(str(r["payload_json"])),
+                )
+                for r in conn.execute("SELECT artifact_id, kind, payload_sha256, payload_json FROM artifacts").fetchall()
+            }
+
+    def register_artifact(
+        self,
+        artifact_id: str,
+        kind: str,
+        payload: Mapping[str, Any],
+        *,
+        receipts: Any = None,
+        content_payloads: Any = None,
+    ) -> Mapping[str, Any]:
         with self.transaction() as conn:
-            return self._admit_artifact_in_tx(conn, artifact_id, kind, payload)
+            return self._admit_artifact_in_tx(
+                conn,
+                artifact_id,
+                kind,
+                payload,
+                receipts=receipts,
+                content_payloads=content_payloads,
+            )
 
     def batch_ingest(self, items: Iterable[Mapping[str, Any]], atomic: bool = True) -> tuple[Mapping[str, Any], ...]:
         if type(atomic) is not bool:
@@ -828,6 +1304,8 @@ class ResearchStateDB:
                         expected_sha256=item.get("payload_sha256"),
                         parents=item.get("parents") or (),
                         relation=item.get("relation", "derived_from"),
+                        receipts=item.get("receipts"),
+                        content_payloads=item.get("content_payloads"),
                     )
                     conn.execute(f"RELEASE SAVEPOINT {sp}")
                     out.append(rec)
@@ -1669,25 +2147,32 @@ class ResearchStateDB:
             d_rows = conn.execute("SELECT * FROM decisions ORDER BY decision_id ASC").fetchall()
             e_rows = conn.execute("SELECT * FROM decision_events ORDER BY seq ASC").fetchall()
             c_rows = conn.execute("SELECT * FROM decision_corrections ORDER BY seq ASC").fetchall()
-            art_shas = {
-                str(r["artifact_id"]): str(r["payload_sha256"])
-                for r in conn.execute("SELECT artifact_id, payload_sha256 FROM artifacts").fetchall()
-            }
+            art_shas: dict[str, str] = {}
+            for r in conn.execute("SELECT artifact_id, kind, payload_sha256, payload_json FROM artifacts").fetchall():
+                aid_r = str(r["artifact_id"])
+                if str(r["kind"]) == "lineage_receipt":
+                    try:
+                        l_pay = json.loads(str(r["payload_json"]))
+                        art_shas[aid_r] = str(l_pay.get("receipt_digest") or r["payload_sha256"]).lower()
+                    except Exception:
+                        art_shas[aid_r] = str(r["payload_sha256"]).lower()
+                else:
+                    art_shas[aid_r] = str(r["payload_sha256"]).lower()
 
         decisions_out: list[dict[str, Any]] = []
         bases_out: list[dict[str, Any]] = []
         uncertainties_out: list[dict[str, Any]] = []
         v_manifest: dict[str, str] = {}
 
-        # Replay effective verdict across chronological outcome corrections (with legacy override fallback only if decision_corrections is empty)
+        # Replay effective verdict per decision across explicit outcome corrections and any unmigrated legacy overrides
         eff_verdict_by_dec: dict[str, str] = {str(r["decision_id"]): str(r["verdict"]) for r in d_rows}
-        if not c_rows:
-            for er in e_rows:
-                if er["verdict_override"] is not None:
-                    eff_verdict_by_dec[str(er["decision_id"])] = str(er["verdict_override"])
-        else:
-            for cr in c_rows:
-                eff_verdict_by_dec[str(cr["decision_id"])] = str(cr["verdict"])
+        decs_with_explicit_corr: set[str] = {str(cr["decision_id"]) for cr in c_rows}
+        for er in e_rows:
+            did_e = str(er["decision_id"])
+            if er["verdict_override"] is not None and did_e not in decs_with_explicit_corr:
+                eff_verdict_by_dec[did_e] = str(er["verdict_override"])
+        for cr in c_rows:
+            eff_verdict_by_dec[str(cr["decision_id"])] = str(cr["verdict"])
 
         for r in d_rows:
             did = str(r["decision_id"])
@@ -1785,7 +2270,7 @@ class ResearchStateDB:
                 ev_obj["alternative_ref"] = sup_id
             if v_over is not None:
                 ev_obj["metadata"] = {"verdict_override": v_over}
-                if not c_rows:
+                if did not in decs_with_explicit_corr:
                     override_corrs.append((did, v_over, f"Lifecycle transition ({to_st}:{rsn}) verdict override", None))
             events_out.append(ev_obj)
 
@@ -1953,8 +2438,14 @@ class ResearchStateDB:
             return sha256_hex(canonical_json(dump))
 
 
-def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
-    """Validate schema AND referential/lifecycle invariants on a decision-ledger-1.0 JSON document."""
+def validate_decision_ledger_semantics(
+    doc: Mapping[str, Any],
+    *,
+    receipts: Optional[Mapping[str, Any]] = None,
+    content_payloads: Optional[Mapping[str, Any]] = None,
+    authoritative_artifacts: Optional[Mapping[str, tuple[str, str, Any]]] = None,
+) -> list[str]:
+    """Validate schema AND referential/lifecycle/enum/receipt invariants on a decision-ledger-1.0 JSON document."""
     errs = list(validate_schema(doc, "decision-ledger-receipt.schema.json"))
     if not isinstance(doc, Mapping):
         return errs or ["Ledger must be a JSON object"]
@@ -1966,30 +2457,228 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
     corrs = doc.get("corrections")
     uncerts = doc.get("uncertainties")
     v_manifest = doc.get("verification_manifest") if isinstance(doc.get("verification_manifest"), Mapping) else {}
+    dec_content: Optional[dict[str, bytes]] = None
+    if content_payloads is not None:
+        try:
+            dec_content = decode_content_payloads_map(content_payloads)
+        except ValueError as exc:
+            errs.append(str(exc))
 
-    def _check_receipt_ref(rref: Any, ctx: str) -> bool:
-        if not isinstance(rref, Mapping):
+    ext_receipts: dict[str, Mapping[str, Any]] = {}
+    if receipts is not None:
+        if not isinstance(receipts, Mapping):
+            errs.append("receipts must be a JSON object mapping receipt keys to receipt payloads")
+        else:
+            for rk, rv in receipts.items():
+                if not isinstance(rk, str) or not rk or not isinstance(rv, Mapping):
+                    errs.append(f"receipts[{rk!r}] must map a non-empty string key to a JSON object")
+                else:
+                    ext_receipts[rk] = rv
+
+    missing_receipt_subjects = {
+        str(u.get("subject_id") or "")
+        for u in (uncerts if isinstance(uncerts, list) else ())
+        if isinstance(u, Mapping) and u.get("kind") == "missing_receipt"
+    }
+
+    def _lineage_status_usable(l_doc: Mapping[str, Any]) -> bool:
+        return (
+            l_doc.get("topology_status") == "valid_dag"
+            and l_doc.get("verification_status") not in ("hash_mismatch", "missing_artifact", "missing_input", "broken_chain", "cycle_detected")
+            and l_doc.get("content_verification") not in ("hash_mismatch", "missing_artifact")
+        )
+
+    known_content_keys: set[str] = set()
+
+    def _record_lineage_entities(l_doc: Mapping[str, Any]) -> None:
+        for ent_i in (l_doc.get("entities") or ()):
+            if isinstance(ent_i, Mapping) and isinstance(ent_i.get("id"), str) and ent_i["id"] == ent_i["id"].strip() and ent_i["id"]:
+                known_content_keys.add(ent_i["id"])
+
+    # When validating inside a ResearchStateDB transaction, every verification_manifest entry must match DB truth
+    if authoritative_artifacts is not None:
+        for m_key, m_sha in v_manifest.items():
+            mk_s = str(m_key)
+            ms_s = str(m_sha).lower()
+            if mk_s in authoritative_artifacts:
+                db_kind, db_sha, db_pay = authoritative_artifacts[mk_s]
+                if db_kind == "lineage_receipt" and isinstance(db_pay, Mapping):
+                    _record_lineage_entities(db_pay)
+                else:
+                    known_content_keys.add(mk_s)
+                exp_db_dig = (
+                    str(db_pay.get("receipt_digest") or "").lower()
+                    if (db_kind == "lineage_receipt" and isinstance(db_pay, Mapping))
+                    else db_sha.lower()
+                )
+                if exp_db_dig != ms_s:
+                    errs.append(
+                        f"verification_manifest[{mk_s!r}] digest {ms_s[:12]} disagrees with stored DB artifact digest {exp_db_dig[:12]}"
+                    )
+                elif db_kind == "lineage_receipt" and isinstance(db_pay, Mapping):
+                    l_errs_db_m = validate_lineage_receipt_semantics(
+                        db_pay, decoded_content=dec_content, strict_unknown_entities=False
+                    )
+                    if l_errs_db_m or not _lineage_status_usable(db_pay):
+                        errs.append(
+                            f"verification_manifest[{mk_s!r}] references failed or content-mismatched lineage_receipt ({db_pay.get('verification_status')!r})"
+                        )
+                elif dec_content is not None and mk_s in dec_content and sha256_hex(dec_content[mk_s]) != ms_s:
+                    errs.append(f"verification_manifest[{mk_s!r}] content_payloads SHA-256 mismatch")
+            else:
+                # Could also be an academic_evidence claim_digest backed by a stored evidence_receipt
+                matched_ae = False
+                for _, (db_kind, db_sha, db_payload) in authoritative_artifacts.items():
+                    if db_sha.lower() == ms_s and not validate_academic_evidence_payload(db_payload):
+                        if any(isinstance(ci, Mapping) and canonical_evidence_claim_digest(ci) == mk_s for ci in db_payload["claims"]):
+                            matched_ae = True
+                            break
+                if not matched_ae:
+                    errs.append(f"verification_manifest[{mk_s!r}] references unregistered artifact or unverified claim_digest in DB")
+
+    elif receipts is not None:
+        for m_key, m_sha in v_manifest.items():
+            mk_s = str(m_key)
+            ms_s = str(m_sha).lower()
+            if mk_s in ext_receipts:
+                phys_m = ext_receipts[mk_s]
+                if phys_m.get("protocol") == "lineage-receipt-1.0":
+                    _record_lineage_entities(phys_m)
+                    l_errs_m = validate_lineage_receipt_semantics(
+                        phys_m, decoded_content=dec_content, strict_unknown_entities=False
+                    )
+                    if l_errs_m or str(phys_m.get("receipt_digest") or "").lower() != ms_s or not _lineage_status_usable(phys_m):
+                        errs.append(f"verification_manifest[{mk_s!r}] lineage receipt failed verification")
+                elif phys_m.get("schema_version") == "1.0" and isinstance(phys_m.get("claims"), list):
+                    if (
+                        validate_academic_evidence_payload(phys_m)
+                        or sha256_hex(canonical_json(phys_m)) != ms_s
+                        or not any(isinstance(ci, Mapping) and canonical_evidence_claim_digest(ci) == mk_s for ci in phys_m["claims"])
+                    ):
+                        errs.append(f"verification_manifest[{mk_s!r}] academic_evidence failed verification")
+                elif sha256_hex(canonical_json(phys_m)) != ms_s:
+                    errs.append(f"verification_manifest[{mk_s!r}] artifact SHA-256 mismatch")
+                else:
+                    known_content_keys.add(mk_s)
+                    if dec_content is not None and mk_s in dec_content and sha256_hex(dec_content[mk_s]) != ms_s:
+                        errs.append(f"verification_manifest[{mk_s!r}] content_payloads SHA-256 mismatch")
+            else:
+                matched_m_ae = False
+                for _, phys_cand in ext_receipts.items():
+                    if sha256_hex(canonical_json(phys_cand)) == ms_s and not validate_academic_evidence_payload(phys_cand):
+                        if any(isinstance(ci, Mapping) and canonical_evidence_claim_digest(ci) == mk_s for ci in phys_cand["claims"]):
+                            matched_m_ae = True
+                            break
+                if not matched_m_ae:
+                    errs.append(f"verification_manifest[{mk_s!r}] missing from supplied receipts")
+
+    def _check_receipt_ref(rref: Any, ctx: str, subject_id: str = "") -> bool:
+        ref_errs = validate_receipt_ref_dict(rref)
+        if ref_errs:
+            errs.append(f"{ctx} invalid receipt_ref: {ref_errs[0]}")
             return False
         if rref.get("kind") == "lineage":
             rid = str(rref.get("receipt_id") or "")
-            rdig = str(rref.get("receipt_digest") or "")
+            rdig = str(rref.get("receipt_digest") or "").lower()
             if rid not in v_manifest:
-                errs.append(f"{ctx} lineage receipt_id {rid!r} missing from verification_manifest")
+                if subject_id not in missing_receipt_subjects:
+                    errs.append(f"{ctx} lineage receipt_id {rid!r} missing from verification_manifest")
                 return False
-            if str(v_manifest.get(rid)) != rdig:
+            if str(v_manifest.get(rid)).lower() != rdig:
                 errs.append(f"{ctx} lineage receipt_digest mismatch for {rid!r}")
                 return False
+            if authoritative_artifacts is not None:
+                if rid not in authoritative_artifacts:
+                    errs.append(f"{ctx} lineage receipt_id {rid!r} does not exist in authoritative state DB")
+                    return False
+                db_kind, db_sha, db_pay = authoritative_artifacts[rid]
+                if db_kind == "lineage_receipt" and isinstance(db_pay, Mapping):
+                    _record_lineage_entities(db_pay)
+                else:
+                    known_content_keys.add(rid)
+                exp_db_dig = (
+                    str(db_pay.get("receipt_digest") or "").lower()
+                    if (db_kind == "lineage_receipt" and isinstance(db_pay, Mapping))
+                    else db_sha.lower()
+                )
+                if exp_db_dig != rdig:
+                    errs.append(f"{ctx} lineage receipt_digest {rdig[:12]} != DB artifact digest {exp_db_dig[:12]} for {rid!r}")
+                    return False
+                if db_kind == "lineage_receipt" and isinstance(db_pay, Mapping):
+                    l_errs_db_r = validate_lineage_receipt_semantics(
+                        db_pay, decoded_content=dec_content, strict_unknown_entities=False
+                    )
+                    if l_errs_db_r or not _lineage_status_usable(db_pay):
+                        errs.append(
+                            f"{ctx} lineage_receipt {rid!r} failed verification or status={db_pay.get('verification_status')!r}"
+                        )
+                        return False
+                elif dec_content is not None and rid in dec_content and sha256_hex(dec_content[rid]) != rdig:
+                    errs.append(f"{ctx} content_payloads[{rid!r}] SHA-256 mismatch vs DB artifact")
+                    return False
+            elif receipts is not None or dec_content is not None:
+                if rid in ext_receipts:
+                    phys = ext_receipts[rid]
+                    if phys.get("protocol") == "lineage-receipt-1.0":
+                        _record_lineage_entities(phys)
+                        l_errs = validate_lineage_receipt_semantics(
+                            phys, decoded_content=dec_content, strict_unknown_entities=False
+                        )
+                        if l_errs or str(phys.get("receipt_digest") or "").lower() != rdig or not _lineage_status_usable(phys):
+                            errs.append(f"{ctx} physical lineage receipt failed verification for {rid!r}")
+                            return False
+                    elif sha256_hex(canonical_json(phys)) != rdig:
+                        errs.append(f"{ctx} physical artifact payload SHA-256 mismatch for {rid!r}")
+                        return False
+                    else:
+                        known_content_keys.add(rid)
+                        if dec_content is not None and rid in dec_content and sha256_hex(dec_content[rid]) != rdig:
+                            errs.append(f"{ctx} content_payloads[{rid!r}] SHA-256 mismatch")
+                            return False
+                elif receipts is not None and subject_id not in missing_receipt_subjects:
+                    errs.append(f"{ctx} lineage receipt_id {rid!r} missing from supplied receipts")
+                    return False
             return True
         if rref.get("kind") == "academic_evidence":
-            cdig = str(rref.get("claim_digest") or "")
-            psha = str(rref.get("payload_sha256") or "")
+            cdig = str(rref.get("claim_digest") or "").lower()
+            psha = str(rref.get("payload_sha256") or "").lower()
             if not cdig or not psha:
                 errs.append(f"{ctx} academic_evidence receipt_ref missing claim_digest or payload_sha256")
                 return False
-            if cdig not in v_manifest or str(v_manifest.get(cdig)) != psha:
-                errs.append(f"{ctx} academic_evidence claim_digest {cdig!r} not verified in verification_manifest")
+            if cdig not in v_manifest or str(v_manifest.get(cdig)).lower() != psha:
+                if subject_id not in missing_receipt_subjects:
+                    errs.append(f"{ctx} academic_evidence claim_digest {cdig!r} not verified in verification_manifest")
                 return False
+            if authoritative_artifacts is not None:
+                matched_db = False
+                for _, (_, db_sha, db_payload) in authoritative_artifacts.items():
+                    if db_sha.lower() == psha and not validate_academic_evidence_payload(db_payload):
+                        if any(isinstance(ci, Mapping) and canonical_evidence_claim_digest(ci) == cdig for ci in db_payload["claims"]):
+                            matched_db = True
+                            break
+                if not matched_db:
+                    errs.append(f"{ctx} academic_evidence ({cdig[:12]}, {psha[:12]}) not backed by any registered receipt in DB")
+                    return False
+            elif receipts is not None:
+                cand_obj = ext_receipts.get(cdig) or ext_receipts.get(psha)
+                if cand_obj is None:
+                    for v_cand in ext_receipts.values():
+                        if sha256_hex(canonical_json(v_cand)) == psha:
+                            cand_obj = v_cand
+                            break
+                if cand_obj is None:
+                    if subject_id not in missing_receipt_subjects:
+                        errs.append(f"{ctx} academic_evidence ({cdig[:12]}, {psha[:12]}) missing from supplied receipts")
+                    return False
+                if (
+                    validate_academic_evidence_payload(cand_obj)
+                    or sha256_hex(canonical_json(cand_obj)) != psha
+                    or not any(isinstance(ci, Mapping) and canonical_evidence_claim_digest(ci) == cdig for ci in (cand_obj.get("claims") or []))
+                ):
+                    errs.append(f"{ctx} physical academic_evidence payload failed verification for {cdig[:12]}")
+                    return False
             return True
+        errs.append(f"{ctx} unsupported receipt_ref kind {rref.get('kind')!r}")
         return False
 
     dec_by_id: dict[str, Mapping[str, Any]] = {}
@@ -2010,12 +2699,29 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                     errs.append(f"decisions[{idx}] normalized_title mismatch on {did!r}")
                 ek_d = str(d.get("entry_kind") or "")
                 act_d = str(d.get("decision_action") if ek_d != "negative_result" else (d.get("decision_type") or "negative_result"))
-                exp_ddig = sha256_hex(canonical_json({"id": did, "entry_kind": ek_d, "action": act_d, "title": exp_ntitle}))
-                if d.get("decision_digest") != exp_ddig:
+                exp_ddig_v3 = sha256_hex(canonical_json({"id": did, "entry_kind": ek_d, "action": act_d, "title": exp_ntitle}))
+                exp_ddig_v2 = sha256_hex(
+                    canonical_json(
+                        {
+                            "version": 1,
+                            "text": exp_ntitle,
+                            "context_work_id": d.get("context_work_id"),
+                            "locator": d.get("locator"),
+                            "decision_type": "negative_result" if ek_d == "negative_result" else act_d,
+                        }
+                    )
+                )
+                if d.get("decision_digest") not in (exp_ddig_v3, exp_ddig_v2):
                     errs.append(f"decisions[{idx}] decision_digest mismatch on {did!r}")
                 meta_d0 = d.get("metadata") if isinstance(d.get("metadata"), Mapping) else {}
-                init_v = str(meta_d0.get("initial_verdict") or meta_d0.get("verdict") or "inconclusive")
-                exp_v = str(meta_d0.get("verdict") or init_v)
+                raw_init_v = meta_d0.get("initial_verdict")
+                raw_exp_v = meta_d0.get("verdict")
+                if raw_init_v is not None and (not isinstance(raw_init_v, str) or raw_init_v not in ALLOWED_DECISION_VERDICTS):
+                    errs.append(f"decisions[{idx}] illegal metadata.initial_verdict={raw_init_v!r} on {did!r}")
+                if raw_exp_v is not None and (not isinstance(raw_exp_v, str) or raw_exp_v not in ALLOWED_DECISION_VERDICTS):
+                    errs.append(f"decisions[{idx}] illegal metadata.verdict={raw_exp_v!r} on {did!r}")
+                init_v = str(raw_init_v if raw_init_v is not None else (raw_exp_v if raw_exp_v is not None else "inconclusive"))
+                exp_v = str(raw_exp_v if raw_exp_v is not None else init_v)
                 replayed_verdict_by_id[did] = init_v
                 exported_verdict_by_id[did] = exp_v
 
@@ -2115,6 +2821,11 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                     sup_adj.setdefault(did, set()).add(alt)
             if ev.get("caused_by") is not None and str(ev.get("caused_by")) not in dec_by_id:
                 errs.append(f"state_events[{idx}] caused_by references unknown decision {ev.get('caused_by')!r}")
+            ev_meta = ev.get("metadata")
+            if isinstance(ev_meta, Mapping) and "verdict_override" in ev_meta and ev_meta["verdict_override"] is not None:
+                vo = ev_meta["verdict_override"]
+                if not isinstance(vo, str) or vo not in ALLOWED_DECISION_VERDICTS:
+                    errs.append(f"state_events[{idx}] illegal metadata.verdict_override={vo!r}")
             cur_state[did] = to_st
 
         # Check supersession cycles
@@ -2140,9 +2851,7 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                     color[nxt] = 1
                     stack.append((nxt, sorted(sup_adj.get(nxt, ())), 0))
 
-    for did in dec_by_id:
-        if did not in cur_state:
-            errs.append(f"Decision {did!r} missing genesis event in state_events")
+    missing_genesis_dids = [did for did in dec_by_id if did not in cur_state]
 
     if isinstance(corrs, list):
         seen_cseq: set[int] = set()
@@ -2162,11 +2871,37 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
                 seen_cseq.add(cseq)
                 prev_cseq = max(prev_cseq, cseq)
             verd_c = str(c.get("verdict") or "")
+            if verd_c not in ALLOWED_DECISION_VERDICTS:
+                errs.append(f"corrections[{idx}] illegal verdict={verd_c!r} on {did!r}")
             rat_c = str(c.get("rationale") or "")
             rref_c = c.get("receipt_ref")
             c_art_id = str(rref_c.get("receipt_id")) if isinstance(rref_c, Mapping) and rref_c.get("kind") == "lineage" and rref_c.get("receipt_id") else None
-            exp_odig = sha256_hex(canonical_json([did, verd_c, rat_c, c_art_id]))
-            if c.get("outcome_digest") != exp_odig:
+            exp_odig_v3 = sha256_hex(canonical_json([did, verd_c, rat_c, c_art_id]))
+            rref_tup = (
+                (
+                    str(rref_c.get("kind") or ""),
+                    str(rref_c.get("schema_version") or ""),
+                    str(rref_c.get("receipt_id") or ""),
+                    str(rref_c.get("receipt_digest") or ""),
+                    str(rref_c.get("claim_digest") or ""),
+                    str(rref_c.get("payload_sha256") or ""),
+                    str(rref_c.get("locator") or ""),
+                )
+                if isinstance(rref_c, Mapping)
+                else ()
+            )
+            exp_odig_v2 = sha256_hex(
+                canonical_json(
+                    {
+                        "version": 1,
+                        "verdict": verd_c,
+                        "rationale": nfc_compact(rat_c),
+                        "receipt": list(rref_tup),
+                        "locator": c.get("locator"),
+                    }
+                )
+            )
+            if c.get("outcome_digest") not in (exp_odig_v3, exp_odig_v2):
                 errs.append(f"corrections[{idx}] outcome_digest mismatch on {did!r}")
             if did in replayed_verdict_by_id and verd_c:
                 replayed_verdict_by_id[did] = verd_c
@@ -2176,12 +2911,10 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
         if rep_v is not None and exp_v != rep_v:
             errs.append(f"Decision {did!r} exported metadata.verdict={exp_v!r} disagrees with replayed correction outcome {rep_v!r}")
 
-    # Verify verification_digest and ledger_digest integrity
+    # Verify verification_digest and ledger_digest integrity (v3.0 + v2.4 legacy compatible)
     try:
-        exp_v_digest = sha256_hex(canonical_json(v_manifest))
-        if doc.get("verification_digest") != exp_v_digest:
-            errs.append(f"verification_digest mismatch: expected {exp_v_digest}, got {doc.get('verification_digest')!r}")
-        body = {
+        exp_v_digest_v3 = sha256_hex(canonical_json(v_manifest))
+        body_v3 = {
             "protocol": doc.get("protocol"),
             "verification_digest": doc.get("verification_digest"),
             "verification_manifest": v_manifest,
@@ -2192,10 +2925,78 @@ def validate_decision_ledger_semantics(doc: Mapping[str, Any]) -> list[str]:
             "corrections": corrs,
             "uncertainties": uncerts,
         }
-        exp_l_digest = sha256_hex(canonical_json(body))
-        if doc.get("ledger_digest") != exp_l_digest:
-            errs.append(f"ledger_digest mismatch: expected {exp_l_digest}, got {doc.get('ledger_digest')!r}")
+        exp_l_digest_v3 = sha256_hex(canonical_json(body_v3))
+        matches_v3 = doc.get("verification_digest") == exp_v_digest_v3 and doc.get("ledger_digest") == exp_l_digest_v3
+
+        def _canon_raw_v2(rec_d: Mapping[str, Any]) -> dict[str, Any]:
+            res_r: dict[str, Any] = {}
+            for k_r, v_r in rec_d.items():
+                if k_r == "metadata":
+                    if isinstance(v_r, Mapping) and len(v_r) > 0:
+                        res_r["metadata"] = dict(thaw(v_r))
+                    continue
+                if v_r is None:
+                    continue
+                if v_r == "" and k_r in ("locator", "context_work_id", "caused_by", "alternative_ref", "stop_reason", "closed_by", "reason"):
+                    continue
+                if k_r == "receipt_ref" and isinstance(v_r, Mapping):
+                    res_r["receipt_ref"] = _canon_raw_v2(v_r)
+                else:
+                    res_r[k_r] = thaw(v_r)
+            return res_r
+
+        def _canon_dec_v2(d_item: Mapping[str, Any]) -> dict[str, Any]:
+            ek_i = str(d_item.get("entry_kind") or ("negative_result" if d_item.get("decision_type") == "negative_result" else "decision"))
+            act_i = d_item.get("decision_action")
+            if act_i is None and ek_i != "negative_result":
+                act_i = d_item.get("decision_type") or "explore"
+            res_d: dict[str, Any] = {
+                "id": d_item["id"],
+                "title": d_item["title"],
+                "normalized_title": nfc_compact(str(d_item["title"])),
+                "entry_kind": ek_i,
+                "decision_digest": d_item.get("decision_digest"),
+            }
+            if act_i is not None:
+                res_d["decision_action"] = act_i
+            if d_item.get("context_work_id"):
+                res_d["context_work_id"] = d_item["context_work_id"]
+            if d_item.get("locator"):
+                res_d["locator"] = d_item["locator"]
+            meta_i = d_item.get("metadata")
+            if isinstance(meta_i, Mapping) and len(meta_i) > 0:
+                res_d["metadata"] = dict(thaw(meta_i))
+            return res_d
+
+        matches_v2 = False
+        if not matches_v3 and isinstance(decs, list) and isinstance(bases, list) and isinstance(forks, list) and isinstance(events, list) and isinstance(corrs, list):
+            payload_v2 = {
+                "protocol": doc.get("protocol"),
+                "ledger_id": doc.get("ledger_id"),
+                "decisions": sorted((_canon_dec_v2(d) for d in decs if isinstance(d, Mapping)), key=lambda x: x["id"]),
+                "bases": sorted((_canon_raw_v2(e) for e in bases if isinstance(e, Mapping)), key=lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False)),
+                "forks": sorted((_canon_raw_v2(e) for e in forks if isinstance(e, Mapping)), key=lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False)),
+                "state_events": sorted((_canon_raw_v2(e) for e in events if isinstance(e, Mapping)), key=lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False)),
+                "corrections": sorted((_canon_raw_v2(e) for e in corrs if isinstance(e, Mapping)), key=lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False)),
+            }
+            exp_l_digest_v2 = sha256_hex(canonical_json(payload_v2))
+            exp_v_digest_v2 = sha256_hex(canonical_json({"ledger_digest": exp_l_digest_v2, "receipts": v_manifest}))
+            matches_v2 = doc.get("ledger_digest") == exp_l_digest_v2 and doc.get("verification_digest") == exp_v_digest_v2
+
+        if not matches_v2:
+            for did_mg in missing_genesis_dids:
+                errs.append(f"Decision {did_mg!r} missing genesis event in state_events")
+        if not (matches_v3 or matches_v2):
+            if doc.get("verification_digest") != exp_v_digest_v3:
+                errs.append(f"verification_digest mismatch: expected {exp_v_digest_v3}, got {doc.get('verification_digest')!r}")
+            if doc.get("ledger_digest") != exp_l_digest_v3:
+                errs.append(f"ledger_digest mismatch: expected {exp_l_digest_v3}, got {doc.get('ledger_digest')!r}")
     except Exception as exc:
         errs.append(f"Digest recomputation error: {exc}")
+
+    if dec_content and (authoritative_artifacts is not None or receipts is not None):
+        unknown_cp = sorted(set(dec_content) - known_content_keys)
+        if unknown_cp:
+            errs.append(f"content_payloads references unknown entity/artifact IDs: {unknown_cp!r}")
 
     return errs

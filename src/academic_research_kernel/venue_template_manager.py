@@ -307,8 +307,14 @@ def verify_style_directory(manuscript_dir: str | Path, specs_path: str | Path | 
     return manifest
 
 
-def validate_ceg_semantics(data: Any) -> dict[str, Any]:
-    """Semantic & referential closure validator for Claim-Evidence Graphs (shared by MCP & linter)."""
+def validate_ceg_semantics(
+    data: Any,
+    *,
+    receipts: dict[str, Any] | None = None,
+    content_payloads: dict[str, Any] | None = None,
+    authoritative_artifacts: Any = None,
+) -> dict[str, Any]:
+    """Semantic, referential, and receipt-binding validator for Claim-Evidence Graphs."""
     if not isinstance(data, dict):
         raise ValueError("CEG must be a JSON object")
     ceg_root = data.get("ceg") if isinstance(data.get("ceg"), dict) else data
@@ -364,10 +370,156 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
     else:
         raise ValueError("CEG must contain a 'claims' list or object")
 
+    from ._stdlib import canonical_json as _cjson, sha256_hex as _sha256
+    from .state_db import (
+        canonical_evidence_claim_digest,
+        decode_content_payloads_map,
+        validate_academic_evidence_payload,
+        validate_lineage_receipt_semantics,
+        validate_receipt_ref_dict,
+    )
+
+    dec_content: dict[str, bytes] | None = None
+    if content_payloads is not None:
+        try:
+            dec_content = decode_content_payloads_map(content_payloads)
+        except ValueError as exc:
+            semantic_errors.append(str(exc))
+
+    ext_receipts: dict[str, dict[str, Any]] = {}
+    if receipts is not None:
+        if not isinstance(receipts, dict):
+            semantic_errors.append("receipts must be a JSON object mapping receipt keys to receipt payloads")
+        else:
+            for rk_in, rv_in in receipts.items():
+                if not isinstance(rk_in, str) or not rk_in or not isinstance(rv_in, dict):
+                    semantic_errors.append(f"receipts[{rk_in!r}] must map a non-empty string key to a JSON object")
+                else:
+                    ext_receipts[rk_in] = rv_in
+
+    missing_receipt_subjects = {
+        str(u.get("subject_id") or "")
+        for u in (ceg_root.get("uncertainties") if isinstance(ceg_root.get("uncertainties"), list) else ())
+        if isinstance(u, dict) and u.get("kind") == "missing_receipt"
+    }
+
+    def _lineage_usable(l_doc: dict[str, Any]) -> bool:
+        return (
+            l_doc.get("topology_status") == "valid_dag"
+            and l_doc.get("verification_status") not in ("hash_mismatch", "missing_artifact", "missing_input", "broken_chain", "cycle_detected")
+            and l_doc.get("content_verification") not in ("hash_mismatch", "missing_artifact")
+        )
+
+    _hex64_re = re.compile(r"^[0-9a-f]{64}\Z")
+    known_content_keys: set[str] = set()
+
+    def _record_lineage_ents_ceg(l_doc: dict[str, Any]) -> None:
+        for ent_i in (l_doc.get("entities") or ()):
+            if isinstance(ent_i, dict) and isinstance(ent_i.get("id"), str) and ent_i["id"] == ent_i["id"].strip() and ent_i["id"]:
+                known_content_keys.add(ent_i["id"])
+
+    def _verify_rref(rref: Any, ctx: str, subject_id: str = "") -> tuple[bool, bool]:
+        if rref is None:
+            return True, True
+        ref_errs = validate_receipt_ref_dict(rref)
+        if ref_errs:
+            semantic_errors.append(f"{ctx} invalid receipt_ref: {ref_errs[0]}")
+            return False, False
+        rk = rref.get("kind")
+        if rk == "lineage":
+            rid = str(rref.get("receipt_id") or "")
+            rdig = str(rref.get("receipt_digest") or "").lower()
+            if rref.get("schema_version") != "lineage-receipt-1.0" or not rid or not _hex64_re.match(rdig):
+                semantic_errors.append(f"{ctx} malformed lineage receipt_ref")
+                return False, False
+            if rref.get("claim_digest") is not None or rref.get("payload_sha256") is not None:
+                semantic_errors.append(f"{ctx} lineage receipt_ref must not carry academic_evidence fields")
+                return False, False
+            if authoritative_artifacts is not None:
+                if rid not in authoritative_artifacts:
+                    semantic_errors.append(f"{ctx} lineage receipt_id {rid!r} missing from authoritative DB")
+                    return False, False
+                db_kind, db_sha, db_pay = authoritative_artifacts[rid]
+                if db_kind == "lineage_receipt" and isinstance(db_pay, dict):
+                    _record_lineage_ents_ceg(db_pay)
+                    l_errs_db = validate_lineage_receipt_semantics(
+                        db_pay, decoded_content=dec_content, strict_unknown_entities=False
+                    )
+                    if l_errs_db or str(db_pay.get("receipt_digest") or "").lower() != rdig:
+                        semantic_errors.append(f"{ctx} lineage receipt verification failed vs DB lineage_receipt {rid!r}")
+                        return False, False
+                    if not _lineage_usable(db_pay):
+                        semantic_errors.append(f"{ctx} lineage_receipt {rid!r} has failed status {db_pay.get('verification_status')!r}")
+                        return False, False
+                else:
+                    known_content_keys.add(rid)
+                    if str(db_sha).lower() != rdig:
+                        semantic_errors.append(f"{ctx} lineage receipt_digest mismatch vs DB artifact {rid!r}")
+                        return False, False
+                    if dec_content is not None and rid in dec_content and _sha256(dec_content[rid]) != rdig:
+                        semantic_errors.append(f"{ctx} content_payloads[{rid!r}] SHA-256 mismatch vs DB artifact")
+                        return False, False
+                return True, True
+            if rid in ext_receipts:
+                phys = ext_receipts[rid]
+                if phys.get("protocol") == "lineage-receipt-1.0":
+                    _record_lineage_ents_ceg(phys)
+                    l_errs = validate_lineage_receipt_semantics(
+                        phys, decoded_content=dec_content, strict_unknown_entities=False
+                    )
+                    if l_errs or str(phys.get("receipt_digest") or "").lower() != rdig:
+                        semantic_errors.append(f"{ctx} physical lineage receipt failed verification for {rid!r}")
+                        return False, False
+                    if not _lineage_usable(phys):
+                        return True, False
+                    return True, True
+                if _sha256(_cjson(phys)) == rdig:
+                    known_content_keys.add(rid)
+                    if dec_content is not None and rid in dec_content and _sha256(dec_content[rid]) != rdig:
+                        semantic_errors.append(f"{ctx} content_payloads[{rid!r}] SHA-256 mismatch")
+                        return False, False
+                    return True, True
+                semantic_errors.append(f"{ctx} physical artifact SHA-256 mismatch for {rid!r}")
+                return False, False
+            if receipts is not None and subject_id not in missing_receipt_subjects:
+                semantic_errors.append(f"{ctx} lineage receipt_id {rid!r} missing from supplied receipts")
+                return False, False
+            return True, False
+        if rk == "academic_evidence":
+            cdig = str(rref.get("claim_digest") or "").lower()
+            psha = str(rref.get("payload_sha256") or "").lower()
+            if rref.get("schema_version") != "1.0" or not _hex64_re.match(cdig) or not _hex64_re.match(psha):
+                semantic_errors.append(f"{ctx} malformed academic_evidence receipt_ref")
+                return False, False
+            if rref.get("receipt_id") is not None or rref.get("receipt_digest") is not None:
+                semantic_errors.append(f"{ctx} academic_evidence receipt_ref must not carry lineage fields")
+                return False, False
+            if authoritative_artifacts is not None:
+                for _, (_, db_sha, db_pay) in authoritative_artifacts.items():
+                    if str(db_sha).lower() == psha and not validate_academic_evidence_payload(db_pay):
+                        if any(isinstance(ci, dict) and canonical_evidence_claim_digest(ci) == cdig for ci in db_pay["claims"]):
+                            return True, True
+                semantic_errors.append(f"{ctx} academic_evidence ({cdig[:12]}, {psha[:12]}) not backed by authoritative DB")
+                return False, False
+            for cand in (ext_receipts.get(cdig), ext_receipts.get(psha), *ext_receipts.values()):
+                if isinstance(cand, dict) and _sha256(_cjson(cand)) == psha and not validate_academic_evidence_payload(cand):
+                    if any(isinstance(ci, dict) and canonical_evidence_claim_digest(ci) == cdig for ci in cand["claims"]):
+                        return True, True
+            if cdig in ext_receipts or psha in ext_receipts:
+                semantic_errors.append(f"{ctx} physical academic_evidence payload failed verification for {cdig[:12]}")
+                return False, False
+            if receipts is not None and subject_id not in missing_receipt_subjects:
+                semantic_errors.append(f"{ctx} academic_evidence ({cdig[:12]}, {psha[:12]}) missing from supplied receipts")
+                return False, False
+            return True, False
+        semantic_errors.append(f"{ctx} unsupported receipt_ref kind {rk!r}")
+        return False, False
+
     known_evidence_ids: set[str] | None = None
+    anchor_verified_by_id: dict[str, bool] = {}
     if isinstance(raw_evidence, dict):
         known_evidence_ids = set()
-        for k in raw_evidence.keys():
+        for k, eobj in raw_evidence.items():
             ks = str(k).strip()
             if not ks:
                 semantic_errors.append("Empty evidence_anchor key")
@@ -375,6 +527,15 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 semantic_errors.append(f"Duplicate evidence_id in CEG: {ks!r}")
             else:
                 known_evidence_ids.add(ks)
+                _, c_ver = _verify_rref(eobj.get("receipt_ref") if isinstance(eobj, dict) else None, f"evidence_anchors[{ks!r}]", subject_id=ks)
+                if authoritative_artifacts is not None and isinstance(eobj, dict):
+                    emeta = eobj.get("metadata")
+                    if isinstance(emeta, dict) and emeta.get("artifact_id"):
+                        aid_ref = str(emeta["artifact_id"])
+                        if aid_ref not in authoritative_artifacts:
+                            semantic_errors.append(f"evidence_anchors[{ks!r}] metadata.artifact_id {aid_ref!r} not in authoritative DB")
+                            c_ver = False
+                anchor_verified_by_id[ks] = c_ver
     elif isinstance(raw_evidence, list):
         known_evidence_ids = set()
         for idx_e, e in enumerate(raw_evidence):
@@ -388,16 +549,30 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 semantic_errors.append(f"Duplicate evidence_id in CEG: {ks!r}")
             else:
                 known_evidence_ids.add(ks)
+                _, c_ver = _verify_rref(e.get("receipt_ref"), f"evidence_anchors[{idx_e}]", subject_id=ks)
+                if authoritative_artifacts is not None:
+                    emeta = e.get("metadata")
+                    if isinstance(emeta, dict) and emeta.get("artifact_id"):
+                        aid_ref = str(emeta["artifact_id"])
+                        if aid_ref not in authoritative_artifacts:
+                            semantic_errors.append(f"evidence_anchors[{idx_e}] metadata.artifact_id {aid_ref!r} not in authoritative DB")
+                            c_ver = False
+                anchor_verified_by_id[ks] = c_ver
 
     pos_by_claim: dict[str, list[dict[str, Any]]] = {cid: [] for cid in claims_by_id}
     neg_by_claim: dict[str, list[dict[str, Any]]] = {cid: [] for cid in claims_by_id}
     unresolved_by_claim: dict[str, int] = {cid: 0 for cid in claims_by_id}
+    unverified_rref_by_claim: dict[str, int] = {cid: 0 for cid in claims_by_id}
     dangling_edges: list[dict[str, Any]] = []
 
     if raw_edges is not None:
-        if not isinstance(raw_edges, list):
-            raise ValueError("CEG edges / support_edges must be a list")
-        for idx, edge in enumerate(raw_edges):
+        if isinstance(raw_edges, dict):
+            edge_iter: list[Any] = list(raw_edges.values())
+        elif isinstance(raw_edges, list):
+            edge_iter = raw_edges
+        else:
+            raise ValueError("CEG edges / support_edges must be a list or object")
+        for idx, edge in enumerate(edge_iter):
             if not isinstance(edge, dict):
                 raise ValueError(f"edges[{idx}] must be an object")
             cid = str(edge.get("claim_id") or edge.get("target_claim_id") or edge.get("target") or "").strip()
@@ -426,13 +601,18 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 continue
             if claim_missing:
                 continue
+            _, edge_rref_ver = _verify_rref(edge.get("receipt_ref"), f"support_edges[{idx}]", subject_id=str(edge.get("id") or cid))
+            is_rref_verified = anchor_verified_by_id.get(ev_id, True) and edge_rref_ver
             status = str(
                 edge.get("support_status")
                 if edge.get("support_status") is not None
                 else (edge.get("status") or edge.get("relation") or edge.get("polarity") or "")
             ).strip().lower()
             if status in ("supported", "supports", "support", "verified_by"):
-                pos_by_claim[cid].append(edge)
+                if is_rref_verified:
+                    pos_by_claim[cid].append(edge)
+                else:
+                    unverified_rref_by_claim[cid] += 1
             elif status in ("contradicted", "contradicts", "refuted", "refutes"):
                 neg_by_claim[cid].append(edge)
             else:
@@ -440,8 +620,13 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
 
     dep_adj: dict[str, set[str]] = {}
     contra_claim_ids: set[str] = set()
-    if isinstance(raw_relations, list):
-        for idx_r, rel in enumerate(raw_relations):
+    rel_iter: list[Any] | None = (
+        list(raw_relations.values())
+        if isinstance(raw_relations, dict)
+        else (raw_relations if isinstance(raw_relations, list) else None)
+    )
+    if rel_iter is not None:
+        for idx_r, rel in enumerate(rel_iter):
             if not isinstance(rel, dict):
                 semantic_errors.append(f"claim_relations[{idx_r}] must be an object")
                 continue
@@ -504,7 +689,7 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 color[nxt_c] = 1
                 stack_c.append((nxt_c, sorted(dep_adj.get(nxt_c, ())), 0))
 
-    # Content-addressed integrity checks on canonical claim-evidence-graph-1.0 documents
+    # Content-addressed integrity checks on canonical claim-evidence-graph-1.0 documents (v3.0 + v2.4 legacy compatible)
     if ceg_root.get("protocol") == "claim-evidence-graph-1.0":
         from ._stdlib import canonical_json, nfc_compact, sha256_hex
 
@@ -513,9 +698,19 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
             exp_nt = nfc_compact(raw_t)
             if "normalized_text" in cobj and cobj.get("normalized_text") != exp_nt:
                 semantic_errors.append(f"claim {cid!r} normalized_text disagrees with text")
-            exp_cd = sha256_hex(exp_nt)
-            if "claim_digest" in cobj and cobj.get("claim_digest") != exp_cd:
-                semantic_errors.append(f"claim {cid!r} claim_digest mismatch (expected {exp_cd})")
+            exp_cd_v3 = sha256_hex(exp_nt)
+            exp_cd_v2 = sha256_hex(
+                canonical_json(
+                    {
+                        "claim_type": cobj.get("claim_type", "empirical_finding"),
+                        "locator": cobj.get("locator") or "",
+                        "target_work_id": cobj.get("target_work_id") or "",
+                        "text": exp_nt,
+                    }
+                )
+            )
+            if "claim_digest" in cobj and cobj.get("claim_digest") not in (exp_cd_v3, exp_cd_v2):
+                semantic_errors.append(f"claim {cid!r} claim_digest mismatch (expected {exp_cd_v3})")
         if "graph_digest" in ceg_root:
             body_for_digest = {
                 "protocol": "claim-evidence-graph-1.0",
@@ -525,12 +720,19 @@ def validate_ceg_semantics(data: Any) -> dict[str, Any]:
                 "claim_relations": ceg_root.get("claim_relations"),
                 "uncertainties": ceg_root.get("uncertainties"),
             }
-            exp_gd = sha256_hex(canonical_json(body_for_digest))
-            if ceg_root.get("graph_digest") != exp_gd:
-                semantic_errors.append(f"graph_digest mismatch (expected {exp_gd}, got {ceg_root.get('graph_digest')!r})")
+            exp_gd_v3 = sha256_hex(canonical_json(body_for_digest))
+            exp_gd_v2 = sha256_hex(canonical_json(dict(body_for_digest, graph_id=ceg_root.get("graph_id"))))
+            act_gd = ceg_root.get("graph_digest")
+            if act_gd not in (exp_gd_v3, exp_gd_v2):
+                semantic_errors.append(f"graph_digest mismatch (expected {exp_gd_v3}, got {act_gd!r})")
             gid_s = str(ceg_root.get("graph_id") or "")
-            if gid_s.startswith("ceg-") and len(gid_s) == 20 and gid_s != f"ceg-{exp_gd[:16]}":
-                semantic_errors.append(f"graph_id {gid_s!r} disagrees with graph_digest prefix ceg-{exp_gd[:16]}")
+            if act_gd == exp_gd_v3 and gid_s.startswith("ceg-") and len(gid_s) == 20 and gid_s != f"ceg-{exp_gd_v3[:16]}":
+                semantic_errors.append(f"graph_id {gid_s!r} disagrees with graph_digest prefix ceg-{exp_gd_v3[:16]}")
+
+    if dec_content and (authoritative_artifacts is not None or receipts is not None):
+        unknown_cp = sorted(set(dec_content) - known_content_keys)
+        if unknown_cp:
+            semantic_errors.append(f"content_payloads references unknown entity/artifact IDs: {unknown_cp!r}")
 
     has_graph_errors = bool(semantic_errors)
     anchors: list[dict[str, Any]] = []

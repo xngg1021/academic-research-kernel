@@ -13,7 +13,7 @@ metadata:
 
 # Check Submission (`check-submission`)
 
-Pre-submission LaTeX/PDF gatekeeper, double-blind anonymity scanner, venue workspace scaffolder, Claim-Evidence Graph (`CEG`) grounding verifier, and receipt-backed `booktabs` table generator via `academic-research-kernel` (`3.0.0`). Consolidates `academic-writing`.
+Gate **your own manuscript before submission**—checking multi-file LaTeX trees, venue page/section rules, double-blind PDF/source anonymity (treating generic third-party public URLs as review warnings while blocking author-linked or `--forbidden-token` leaks), `CEG` claim bindings, and receipt-backed `booktabs` tables via `academic-research-kernel` (`3.0.0`). Consolidates `academic-writing`.
 
 ## When to Use
 

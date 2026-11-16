@@ -13,7 +13,7 @@ metadata:
 
 # Verify Citations (`verify-citations`)
 
-Citation authenticity, Crossref update/correction lookup, transactional SQLite retraction and literature monitoring, multi-layer corpus merging, and Open Access resolution (direct `arXiv` branch plus 4-service DOI fallback chain: `Unpaywall -> OpenAlex -> Semantic Scholar -> Europe PMC`) via `academic-research-kernel` (`3.0.0`). Consolidates `academic-source-verification`, `retraction-watch`, `literature-watch`, and `collect_corpus`.
+Verify bibliographic identity, DOIs, Crossref update/retraction notices, SQLite watchlists, Union-Find corpus merges, and legal Open Access PDFs (`arXiv` plus `Unpaywall -> OpenAlex -> Semantic Scholar -> Europe PMC`) via `academic-research-kernel` (`3.0.0`); confirming a cited work exists and is unretracted does not by itself verify that the cited text supports a manuscript's substantive claim. Consolidates `academic-source-verification`, `retraction-watch`, `literature-watch`, and `collect_corpus`.
 
 ## When to Use
 
