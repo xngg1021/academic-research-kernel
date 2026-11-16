@@ -26,17 +26,39 @@ EXCLUDED_DIRS = {
     ".git", ".venv", "venv", "env", "node_modules", "site-packages",
     "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
 }
-GITHUB_URL_RE = re.compile(
-    r"(?:https?://|git@)?(?:www\.|raw\.|gist\.)?github(?:usercontent)?\.com[:/][A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",
+REPO_URL_RE = re.compile(
+    r"(?:https?://|git@)?(?:www\.|raw\.|gist\.)?"
+    r"(?:github(?:usercontent)?\.com|gitlab\.com|bitbucket\.org|huggingface\.co)"
+    r"[:/][A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",
     re.I,
 )
+GITHUB_URL_RE = REPO_URL_RE
+_NEUTRAL_REPO_PREFIXES = (
+    "github.com/iclr/",
+    "github.com/acl-org/",
+    "github.com/neurips/",
+    "github.com/anonymous/",
+    "gitlab.com/anonymous/",
+    "bitbucket.org/anonymous/",
+    "huggingface.co/anonymous/",
+)
 SELF_OWNED_URL_CUE_RE = re.compile(
-    r"\b(?:our\s+(?:code|repo|repository|implementation|package|project|library|artifact|data|dataset|benchmark|model|framework|system|tool|supplement|scripts?)"
+    r"\b(?:our\s+(?:source\s+|anonymous\s+)?(?:code|repo|repository|implementation|package|project|library|artifact|data|dataset|benchmark|model|framework|system|tool|supplement|scripts?)\b"
     r"|we\s+(?:release|provide|open[- ]source|publish|host|maintain)\b"
-    r"|(?:code|implementation|repository|artifact)\s+(?:is\s+)?(?:available|released|hosted)\s+at\b"
+    r"|(?:code|implementation|repository|artifact)\s+(?:is\s+)?(?:available|released|hosted)\b"
     r"|source\s+code\s*[:=])",
     re.I,
 )
+_BLOCK_BREAK_RE = re.compile(
+    r"\n[ \t]*\n|\\(?:par|(?:sub)*section\*?|paragraph\*?|item|begin|end)\b"
+)
+_ABBREV_DOT_RE = re.compile(
+    r"\b(?:e\.g|i\.e|et\s+al|cf|vs|fig|figs|tab|tabs|sec|secs|eq|eqs)\.",
+    re.I,
+)
+_SENT_END_RE = re.compile(r"[.!?;](?=\s|$)")
+_INLINE_URL_MASK_RE = re.compile(r"https?://[^\s{}]+", re.I)
+_TEX_LINK_OR_FN_CMD_RE = re.compile(r"\\(href|url|footnote|footnotetext|footnotemark)\b")
 ORCID_RE = re.compile(r"\b000[0-9]-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]\b")
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@(?!example\.)[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 WIN_PATH_RE = re.compile(r"(?i)(?:\b[A-Z]:|/mnt/[a-z])[/\\]+Users[/\\]+(?!<|Public\b|Default\b)[\w.-]+")
@@ -127,16 +149,211 @@ def _match_forbidden_token(tok: str, text_line: str) -> bool:
     return tok.lower() in text_line.lower()
 
 
-def _is_author_linked_repo_url(url_str: str, line_text: str, tokens: list[str]) -> bool:
-    for tok in tokens:
-        if _match_forbidden_token(tok, url_str):
-            return True
-    return SELF_OWNED_URL_CUE_RE.search(line_text) is not None
+def _skip_ws(text: str, pos: int) -> int:
+    n = len(text)
+    while pos < n and text[pos].isspace():
+        pos += 1
+    return pos
+
+
+def _read_optional_bracket_arg(text: str, pos: int) -> tuple[str | None, int]:
+    p = _skip_ws(text, pos)
+    n = len(text)
+    if p >= n or text[p] != "[":
+        return None, pos
+    depth = 1
+    p += 1
+    start = p
+    while p < n and depth > 0:
+        ch = text[p]
+        if ch == "\\":
+            p += 2
+            continue
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth -= 1
+        p += 1
+    if depth != 0:
+        return None, pos
+    return text[start : p - 1].strip(), p
+
+
+def _read_brace_group(text: str, pos: int) -> tuple[int, int, int] | None:
+    p = _skip_ws(text, pos)
+    n = len(text)
+    if p >= n or text[p] != "{":
+        return None
+    depth = 1
+    p += 1
+    start = p
+    while p < n and depth > 0:
+        ch = text[p]
+        if ch == "\\":
+            p += 2
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        p += 1
+    if depth != 0:
+        return None
+    return start, p - 1, p
+
+
+def _enclosing_sentence(text: str, span_start: int, span_end: int) -> str:
+    p_start = 0
+    for m in _BLOCK_BREAK_RE.finditer(text):
+        if m.end() <= span_start:
+            p_start = m.end()
+        else:
+            break
+    m_after = _BLOCK_BREAK_RE.search(text, span_end)
+    p_end = m_after.start() if m_after is not None else len(text)
+    para = text[p_start:p_end]
+    if not para:
+        return ""
+    r_start = max(0, min(len(para), span_start - p_start))
+    r_end = max(r_start, min(len(para), span_end - p_start))
+
+    masked = list(para)
+    for idx in range(r_start, r_end):
+        masked[idx] = "x"
+    for m_u in _INLINE_URL_MASK_RE.finditer(para):
+        for idx in range(m_u.start(), m_u.end()):
+            masked[idx] = "x"
+    for m_u2 in REPO_URL_RE.finditer(para):
+        for idx in range(m_u2.start(), m_u2.end()):
+            masked[idx] = "x"
+    for m_cmd in _TEX_LINK_OR_FN_CMD_RE.finditer(para):
+        _, p_cur = _read_optional_bracket_arg(para, m_cmd.end())
+        g1 = _read_brace_group(para, p_cur)
+        if g1 is not None:
+            end_g = g1[2]
+            if m_cmd.group(1) == "href":
+                g2 = _read_brace_group(para, end_g)
+                if g2 is not None:
+                    end_g = g2[2]
+            for idx in range(m_cmd.start(), end_g):
+                masked[idx] = "x"
+    for m_ab in _ABBREV_DOT_RE.finditer(para):
+        masked[m_ab.end() - 1] = " "
+
+    masked_str = "".join(masked)
+    s_start = 0
+    for m_se in _SENT_END_RE.finditer(masked_str):
+        if m_se.start() < r_start:
+            s_start = m_se.end()
+        else:
+            break
+    m_next = _SENT_END_RE.search(masked_str, r_end)
+    s_end = m_next.end() if m_next is not None else len(para)
+    return " ".join(para[s_start:s_end].split())
+
+
+def scan_repository_urls(
+    text: str,
+    *,
+    is_tex: bool,
+    forbidden_tokens: list[str] | None = None,
+    already_masked_tex: bool = False,
+) -> list[dict[str, Any]]:
+    """Bounded repository-URL scanner shared by double_blind_sanitizer and pre_submission_linter."""
+    tokens = [t.strip() for t in (forbidden_tokens or []) if t and t.strip()]
+    work = text if (not is_tex or already_masked_tex) else _strip_tex_comments(text)
+
+    # Record TeX construct spans: (span_start, span_end, extra_contexts, include_local_body_sentence)
+    tex_spans: list[tuple[int, int, list[str], bool]] = []
+    if is_tex:
+        numbered_marks: dict[str, str] = {}
+        unnumbered_marks: list[str] = []
+        last_mark_sent: str = ""
+        for m_cmd in _TEX_LINK_OR_FN_CMD_RE.finditer(work):
+            kind_cmd = m_cmd.group(1)
+            c_start = m_cmd.start()
+            anch_start = c_start - 1 if (c_start > 0 and work[c_start - 1] in ".!?;)") else c_start
+            if kind_cmd == "footnotemark":
+                opt_k, after_opt = _read_optional_bracket_arg(work, m_cmd.end())
+                sent = _enclosing_sentence(work, anch_start, after_opt)
+                last_mark_sent = sent
+                if opt_k:
+                    numbered_marks[opt_k] = sent
+                else:
+                    unnumbered_marks.append(sent)
+            elif kind_cmd == "href":
+                g1 = _read_brace_group(work, m_cmd.end())
+                if g1 is None:
+                    continue
+                g2 = _read_brace_group(work, g1[2])
+                if g2 is None:
+                    tex_spans.append((g1[0], g1[1], [_enclosing_sentence(work, anch_start, g1[2])], False))
+                    continue
+                label_txt = " ".join(work[g2[0] : g2[1]].split())
+                outer_sent = _enclosing_sentence(work, anch_start, g2[2])
+                tex_spans.append((g1[0], g1[1], [label_txt, outer_sent], False))
+            elif kind_cmd == "url":
+                g1 = _read_brace_group(work, m_cmd.end())
+                if g1 is None:
+                    continue
+                tex_spans.append((g1[0], g1[1], [_enclosing_sentence(work, anch_start, g1[2])], False))
+            elif kind_cmd == "footnote":
+                _, after_opt = _read_optional_bracket_arg(work, m_cmd.end())
+                g1 = _read_brace_group(work, after_opt)
+                if g1 is None:
+                    continue
+                outer_sent = _enclosing_sentence(work, anch_start, g1[2])
+                tex_spans.append((g1[0], g1[1], [outer_sent], True))
+            elif kind_cmd == "footnotetext":
+                opt_k, after_opt = _read_optional_bracket_arg(work, m_cmd.end())
+                g1 = _read_brace_group(work, after_opt)
+                if g1 is None:
+                    continue
+                paired = ""
+                if opt_k and opt_k in numbered_marks:
+                    paired = numbered_marks[opt_k]
+                elif unnumbered_marks:
+                    paired = unnumbered_marks.pop(0)
+                elif last_mark_sent:
+                    paired = last_mark_sent
+                tex_spans.append((g1[0], g1[1], [paired] if paired else [], True))
+
+    hits: list[dict[str, Any]] = []
+    for m_url in REPO_URL_RE.finditer(work):
+        raw_matched = m_url.group(0)
+        trimmed = raw_matched.rstrip(".,;:!?)>]}") if not raw_matched.lower().endswith(".git") else raw_matched
+        u_end = m_url.start() + len(trimmed)
+        hit_tok = any(_match_forbidden_token(tok, trimmed) for tok in tokens)
+        u_low = trimmed.lower()
+        if not hit_tok and any(pref in u_low for pref in _NEUTRAL_REPO_PREFIXES):
+            continue
+
+        ctxs: list[str] = []
+        matched_span = False
+        if is_tex:
+            for sp_s, sp_e, extra_c, inc_body in tex_spans:
+                if sp_s <= m_url.start() and u_end <= sp_e:
+                    matched_span = True
+                    ctxs.extend(extra_c)
+                    if inc_body:
+                        ctxs.append(_enclosing_sentence(work[sp_s:sp_e], m_url.start() - sp_s, u_end - sp_s))
+        if not matched_span:
+            ctxs.append(_enclosing_sentence(work, m_url.start(), u_end))
+
+        is_self = hit_tok or any(SELF_OWNED_URL_CUE_RE.search(c) is not None for c in ctxs if c)
+        hits.append({
+            "line": work.count("\n", 0, m_url.start()) + 1,
+            "matched": trimmed,
+            "is_self": is_self,
+            "severity": "error" if is_self else "warning",
+        })
+    return hits
 
 
 def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | None = None) -> list[dict]:
     findings = []
     tokens = [t.strip() for t in (forbidden_tokens or []) if t and t.strip()]
+    is_tex_doc = rel_path.lower().endswith((".tex", ".sty", ".cls", ".bbl"))
 
     for tok in tokens:
         if _match_forbidden_token(tok, rel_path):
@@ -158,18 +375,6 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                     "severity": "error",
                     "matched": tok,
                 })
-        for m in GITHUB_URL_RE.finditer(line):
-            u_low = m.group(0).lower()
-            if any(w in u_low for w in ("github.com/iclr/", "github.com/acl-org/", "github.com/neurips/", "github.com/anonymous/")):
-                continue
-            is_self = _is_author_linked_repo_url(m.group(0), line, tokens)
-            findings.append({
-                "file": rel_path,
-                "line": line_no,
-                "kind": "non_anonymous_github_url" if is_self else "public_repo_url_review",
-                "severity": "error" if is_self else "warning",
-                "matched": m.group(0),
-            })
         for m in ORCID_RE.finditer(line):
             findings.append({
                 "file": rel_path,
@@ -203,7 +408,16 @@ def scan_text_for_leaks(text: str, rel_path: str, forbidden_tokens: list[str] | 
                 "matched": m.group(0),
             })
 
-    if rel_path.lower().endswith((".tex", ".sty", ".cls", ".bbl")):
+    for url_hit in scan_repository_urls(text, is_tex=is_tex_doc, forbidden_tokens=tokens):
+        findings.append({
+            "file": rel_path,
+            "line": url_hit["line"],
+            "kind": "non_anonymous_github_url" if url_hit["is_self"] else "public_repo_url_review",
+            "severity": url_hit["severity"],
+            "matched": url_hit["matched"],
+        })
+
+    if is_tex_doc:
         for line_no, body in _extract_balanced_braces(text):
             if not _is_strictly_anonymous_tex_body(body):
                 compact = " ".join(body.split())

@@ -784,6 +784,32 @@ CREATE TABLE IF NOT EXISTS doi_watch_commits (
 """
 
 
+def canonical_literature_watch_key(raw: Any) -> str:
+    """Canonical deduplication identity shared by live literature-watch and legacy v2.4.x JSON import."""
+    if isinstance(raw, Mapping):
+        doi = normalize_doi(str(raw.get("doi") or ""))
+        if doi:
+            return doi
+        oid = str(raw.get("id") or "").strip().lower()
+        if oid:
+            return oid
+        return re.sub(r"\s+", " ", str(raw.get("title") or "").strip().lower())
+    s = str(raw or "").strip()
+    if not s:
+        return ""
+    low = s.lower()
+    if low.startswith("doi:"):
+        return normalize_doi(s[4:])
+    if low.startswith("id:"):
+        return s[3:].strip().lower()
+    if low.startswith("title:"):
+        return re.sub(r"\s+", " ", s[6:].strip().lower())
+    nd = normalize_doi(s)
+    if nd:
+        return nd
+    return re.sub(r"\s+", " ", low)
+
+
 def _require_str_id(value: Any, field_name: str) -> str:
     if type(value) is not str:
         raise TypeError(f"{field_name} must be str, got {type(value).__name__}: {value!r}")
@@ -1971,37 +1997,109 @@ class ResearchStateDB:
             self.drain_unacked_watch_deltas(watcher, [doi])
         return res
 
-    def import_legacy_watch_json(self, watcher: str, legacy_payload: Mapping[str, Any]) -> dict[str, Any]:
+    def import_legacy_watch_json(self, watcher: str, legacy_payload: Any) -> dict[str, Any]:
         """One-time migration helper importing v2.4.x JSON watch state into SQLite STRICT tables."""
         w = _require_str_id(watcher, "watcher")
         imported = 0
-        with self.transaction():
+        unchanged = 0
+        with self.transaction() as conn:
             if w == "retraction":
-                items = legacy_payload.get("dois") or legacy_payload.get("items") or legacy_payload
-                if isinstance(items, Mapping):
-                    for raw_doi, entry in items.items():
-                        if raw_doi in ("schema_version", "updated_at", "watcher") or not isinstance(entry, Mapping):
-                            continue
-                        is_ret = entry.get("is_retracted")
-                        sigs = entry.get("signals") or []
-                        seq = self.reserve_watch_seq("retraction", str(raw_doi))
-                        st = "unknown" if is_ret is None else ("retracted" if bool(is_ret) else "not_retracted")
-                        self.commit_watch_observation("retraction", str(raw_doi), seq=seq, status=st, signals=sigs)
-                        self.drain_unacked_watch_deltas("retraction", [str(raw_doi)])
-                        imported += 1
+                if not isinstance(legacy_payload, Mapping):
+                    raise ValueError("Legacy retraction watch JSON must be a JSON object mapping DOI -> snapshot")
+                items = (
+                    legacy_payload.get("dois")
+                    if isinstance(legacy_payload.get("dois"), Mapping)
+                    else (legacy_payload.get("items") if isinstance(legacy_payload.get("items"), Mapping) else legacy_payload)
+                )
+                for raw_doi, entry in items.items():
+                    if raw_doi in ("schema_version", "updated_at", "watcher"):
+                        continue
+                    if not isinstance(entry, Mapping):
+                        raise ValueError(f"Legacy retraction entry for {raw_doi!r} must be a JSON object")
+                    norm_doi = normalize_doi(str(raw_doi))
+                    if not norm_doi:
+                        raise ValueError(f"Invalid DOI key in legacy retraction watch JSON: {raw_doi!r}")
+                    is_ret = entry.get("is_retracted")
+                    if is_ret is not None and not isinstance(is_ret, bool):
+                        raise ValueError(f"Legacy is_retracted for {raw_doi!r} must be boolean or null")
+                    has_cur = "current_observation" in entry
+                    cur_obs = entry.get("current_observation")
+                    if has_cur and cur_obs is not None and not isinstance(cur_obs, bool):
+                        raise ValueError(f"Legacy current_observation for {raw_doi!r} must be boolean or null")
+                    if has_cur and cur_obs is not None and is_ret is not None and bool(cur_obs) != bool(is_ret):
+                        raise ValueError(f"Contradictory legacy retraction snapshot for {raw_doi!r}")
+                    ver_status = str(entry.get("verification_status") or "").strip().lower()
+                    sigs = sorted({str(s).strip() for s in (entry.get("signals") or []) if str(s).strip()})
+                    trunc = bool(entry.get("truncated", False))
+
+                    is_retained_unknown = is_ret is not None and ((has_cur and cur_obs is None) or ver_status == "retained_prior")
+                    if is_retained_unknown:
+                        target_status = "unknown"
+                        target_conf: Optional[int] = 1 if bool(is_ret) else 0
+                    elif is_ret is None and (not has_cur or cur_obs is None):
+                        target_status = "unknown"
+                        target_conf = None
+                    else:
+                        eff_bool = bool(cur_obs) if (has_cur and cur_obs is not None) else bool(is_ret)
+                        target_status = "retracted" if eff_bool else "not_retracted"
+                        target_conf = 1 if eff_bool else 0
+
+                    prev = conn.execute(
+                        "SELECT current_status, confirmed_retracted, signals_json, truncated, unacked_delta_json "
+                        "FROM doi_watch_state WHERE watcher = 'retraction' AND item_key = ?",
+                        (norm_doi,),
+                    ).fetchone()
+                    if (
+                        prev is not None
+                        and str(prev["current_status"]) == target_status
+                        and prev["confirmed_retracted"] == target_conf
+                        and str(prev["signals_json"]) == canonical_json(sigs)
+                        and int(prev["truncated"]) == int(trunc)
+                        and prev["unacked_delta_json"] is None
+                    ):
+                        unchanged += 1
+                        continue
+
+                    if is_retained_unknown:
+                        seq1 = self.reserve_watch_seq("retraction", norm_doi)
+                        base_st = "retracted" if bool(is_ret) else "not_retracted"
+                        self.commit_watch_observation("retraction", norm_doi, seq=seq1, status=base_st, signals=sigs, truncated=trunc)
+                        seq2 = self.reserve_watch_seq("retraction", norm_doi)
+                        self.commit_watch_observation("retraction", norm_doi, seq=seq2, status="unknown", signals=sigs, truncated=trunc)
+                    else:
+                        seq1 = self.reserve_watch_seq("retraction", norm_doi)
+                        self.commit_watch_observation("retraction", norm_doi, seq=seq1, status=target_status, signals=sigs, truncated=trunc)
+                    self.drain_unacked_watch_deltas("retraction", [norm_doi])
+                    imported += 1
             else:
-                seen_list = legacy_payload.get("seen_ids") or legacy_payload.get("seen") or []
-                if isinstance(seen_list, Mapping):
-                    seen_list = list(seen_list.keys())
+                if isinstance(legacy_payload, (list, tuple)):
+                    seen_list: Any = legacy_payload
+                elif isinstance(legacy_payload, Mapping):
+                    if "seen_ids" not in legacy_payload and "seen" not in legacy_payload:
+                        raise ValueError("Legacy literature watch JSON object must contain 'seen_ids' or 'seen'")
+                    seen_list = legacy_payload["seen_ids"] if "seen_ids" in legacy_payload else legacy_payload["seen"]
+                    if isinstance(seen_list, Mapping):
+                        seen_list = list(seen_list.keys())
+                else:
+                    raise ValueError("Legacy literature watch JSON must be a top-level array or an object with 'seen_ids'/'seen'")
+                if not isinstance(seen_list, (list, tuple)):
+                    raise ValueError("Legacy literature seen list must be an array")
                 for raw_id in seen_list:
-                    sid = str(raw_id).strip()
+                    sid = canonical_literature_watch_key(raw_id)
                     if not sid:
+                        continue
+                    prev_lit = conn.execute(
+                        "SELECT unacked_delta_json FROM doi_watch_state WHERE watcher = ? AND item_key = ?",
+                        (w, sid),
+                    ).fetchone()
+                    if prev_lit is not None and prev_lit["unacked_delta_json"] is None:
+                        unchanged += 1
                         continue
                     seq = self.reserve_watch_seq(w, sid)
                     self.commit_watch_observation(w, sid, seq=seq, status="not_retracted", signals=["legacy_import"])
                     self.drain_unacked_watch_deltas(w, [sid])
                     imported += 1
-        return {"watcher": w, "imported_count": imported}
+        return {"watcher": w, "imported_count": imported, "unchanged_count": unchanged}
 
     def export_ceg_dict(self) -> dict[str, Any]:
         """Export complete authoritative Claim-Evidence Graph in canonical claim-evidence-graph-1.0 format."""

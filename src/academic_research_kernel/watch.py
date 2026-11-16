@@ -15,7 +15,7 @@ from urllib.request import Request
 
 from ._stdlib import freeze, normalize_doi, safe_path
 from .research.sources import controlled_urlopen
-from .state_db import ResearchStateDB
+from .state_db import ResearchStateDB, canonical_literature_watch_key
 
 OPENALEX_BASE = "https://api.openalex.org"
 CROSSREF_BASE = "https://api.crossref.org/v1"
@@ -225,7 +225,7 @@ def filter_new_literature(
             for w in works:
                 if not isinstance(w, dict):
                     continue
-                key = normalize_doi(w.get("doi") or "") or str(w.get("id") or w.get("title") or "").strip().lower()
+                key = canonical_literature_watch_key(w)
                 if not key:
                     continue
                 seq = state_db.reserve_watch_seq("literature", key)

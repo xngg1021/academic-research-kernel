@@ -936,17 +936,15 @@ def lint_manuscript(
                     "line": _line_of(cleaned, m_fund.start()),
                     "detail": "Explicit grant/funding disclosure detected under double-blind submission",
                 })
-            for m_url in _NON_ANON_HOST_RE.finditer(cleaned):
-                ln_url = _line_of(cleaned, m_url.start())
-                line_start = cleaned.rfind("\n", 0, m_url.start()) + 1
-                line_end = cleaned.find("\n", m_url.end())
-                url_line = cleaned[line_start:] if line_end == -1 else cleaned[line_start:line_end]
-                is_self_url = SELF_OWNED_URL_CUE_RE.search(url_line) is not None
+            from .double_blind_sanitizer import scan_repository_urls
+
+            for url_hit in scan_repository_urls(cleaned, is_tex=True, already_masked_tex=True):
+                is_self_url = bool(url_hit["is_self"])
                 findings.append({
                     "code": "BLIND_URL_LEAK",
-                    "severity": "error" if is_self_url else "warning",
+                    "severity": url_hit["severity"],
                     "file": rel_name,
-                    "line": ln_url,
+                    "line": url_hit["line"],
                     "detail": (
                         "Author-associated repository URL detected under double-blind submission"
                         if is_self_url

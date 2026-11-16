@@ -1403,3 +1403,167 @@ def test_v300_rc_closure_bindings_cohorts_and_blind_url_tiers(tmp_path: Path, mo
         assert nips_v["mirror_cohort_breakdown"]["ratings_above_or_outside_main_scale_in_excluded_tracks"]["rating_count"] == 125
 
     mcp_server.reset_session_db()
+
+
+def test_v300_p1_r1_and_p1_r2_final_closeout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import contextlib
+    import io
+
+    from academic_research_kernel import cli, double_blind_sanitizer, watch
+
+    monkeypatch.setenv("ARK_WORKSPACE_ROOT", str(tmp_path))
+
+    # 1. P1-R1 + P2-B + P2-C: Multiline TeX link constructs, host alignment, and sentence boundary isolation
+    cases = [
+        ("third_party_pytorch", "warning", "We use PyTorch (https://github.com/pytorch/pytorch).", []),
+        ("third_party_tensorflow", "warning", r"We use \href{https://github.com/tensorflow/tensorflow}{TensorFlow}.", []),
+        ("self_our_code_same_line", "hard", "Our code is available at https://github.com/audit-fixture-owner/experiment.", []),
+        ("self_we_release_same_line", "hard", "We release https://github.com/audit-fixture-owner/experiment.", []),
+        ("forbidden_owner", "hard", "The implementation is at https://github.com/AuditOwnerZ/experiment.", ["AuditOwnerZ"]),
+        ("self_href_single_line", "hard", r"See \href{https://github.com/audit-fixture-owner/experiment}{our repository}.", []),
+        ("self_href_multiline", "hard", "See \\href{https://github.com/audit-fixture-owner/experiment}\n{our repository}.", []),
+        ("self_sentence_wrapped", "hard", "Our code is available at\n\\url{https://github.com/audit-fixture-owner/experiment}.", []),
+        ("self_footnote_single_line", "hard", r"Our code is available\footnote{\url{https://github.com/audit-fixture-owner/experiment}}.", []),
+        ("self_footnote_after_period", "hard", r"Our code is available.\footnote{\url{https://github.com/audit-fixture-owner/experiment}}", []),
+        ("self_footnote_multiline", "hard", "Our code is available\\footnote{\n\\url{https://github.com/audit-fixture-owner/experiment}\n}.", []),
+        ("self_footnotemark_text", "hard", "Our code is available\\footnotemark.\nThe experiments use a fixed random seed.\n\\footnotetext{\\url{https://github.com/audit-fixture-owner/experiment}}", []),
+        ("anonymous_4open", "clean", "Our code is available at https://anonymous.4open.science/r/anonymous-paper-AB12/.", []),
+        ("anonymous_4open_forbidden_owner", "hard", "Our code is available at https://anonymous.4open.science/r/AuditOwnerZ-project-AB12/.", ["AuditOwnerZ"]),
+        ("self_gitlab_same_line", "hard", "Our code is available at https://gitlab.com/audit-fixture-owner/experiment.", []),
+        ("third_party_separate_sentence", "warning", "Our code uses standard tensor operations. We compare with PyTorch (https://github.com/pytorch/pytorch).", []),
+    ]
+    for cname, expected, body, forbidden in cases:
+        tex_p = tmp_path / f"{cname}.tex"
+        tex_p.write_text(
+            "\\documentclass{article}\n\\author{Anonymous Authors}\n"
+            "\\begin{document}\n\\begin{abstract}Summary.\\end{abstract}\n"
+            + body
+            + "\n\\end{document}\n",
+            encoding="utf-8",
+        )
+        scan = double_blind_sanitizer.scan_target(tex_p, forbidden_tokens=forbidden)
+        lint = thaw(pre_submission_linter.lint_manuscript(tex_p, venue=None, double_blind=True))
+        mcp_scan = mcp_server.handle_tool_call(
+            "academic_double_blind_sanitize", {"target_path": str(tex_p), "forbidden_tokens": forbidden}
+        )
+        cli_argv = ["sanitize-submission", str(tex_p)]
+        for tok in forbidden:
+            cli_argv.extend(["--forbidden-token", tok])
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli_rc = cli.main(cli_argv)
+
+        for grp in ("findings", "warnings"):
+            for item in mcp_scan.get(grp) or []:
+                assert item["matched"] == "[REDACTED]"
+
+        if expected == "warning":
+            assert scan["status"] == "clean" and scan["leak_count"] == 0 and scan["warning_count"] == 1
+            assert lint["passed"] is True and lint["error_count"] == 0
+            assert mcp_scan["status"] == "clean" and mcp_scan["warning_count"] == 1
+            assert cli_rc == 0
+        elif expected == "clean":
+            assert scan["status"] == "clean" and scan["leak_count"] == 0 and scan["warning_count"] == 0
+            assert lint["passed"] is True and lint["error_count"] == 0
+            assert mcp_scan["status"] == "clean" and mcp_scan["warning_count"] == 0
+            assert cli_rc == 0
+        else:
+            assert scan["status"] == "leaks_detected" and scan["leak_count"] >= 1
+            assert mcp_scan["status"] == "leaks_detected" and mcp_scan["leak_count"] >= 1
+            assert cli_rc == 1
+            if not forbidden:
+                assert lint["passed"] is False and lint["error_count"] >= 1
+
+    # 2. P1-R2: Legacy v2.4.x literature JSON array & canonical deduplication keys + retraction retained_prior & truncated
+    lit_arr = ["doi:10.1000/one", "id:https://openalex.org/W123", "title:known title"]
+    lit_json = tmp_path / "legacy_lit.json"
+    lit_json.write_text(json.dumps(lit_arr), encoding="utf-8")
+    lit_db = tmp_path / "lit.sqlite3"
+
+    buf_l1 = io.StringIO()
+    with contextlib.redirect_stdout(buf_l1):
+        assert cli.main(["literature-watch", "--import-legacy-json", str(lit_json), "--state-db", str(lit_db)]) == 0
+    assert json.loads(buf_l1.getvalue()) == {"watcher": "literature", "imported_count": 3, "unchanged_count": 0}
+
+    buf_l2 = io.StringIO()
+    with contextlib.redirect_stdout(buf_l2):
+        assert cli.main(["literature-watch", "--import-legacy-json", str(lit_json), "--state-db", str(lit_db)]) == 0
+    assert json.loads(buf_l2.getvalue()) == {"watcher": "literature", "imported_count": 0, "unchanged_count": 3}
+
+    same_works = [
+        {"doi": "10.1000/one", "title": "One"},
+        {"id": "https://openalex.org/W123", "title": "Two"},
+        {"title": "Known   Title"},
+    ]
+    with ResearchStateDB(lit_db) as db:
+        assert db.drain_unacked_watch_deltas("literature") == []
+        assert watch.filter_new_literature(same_works, db=db) == []
+
+    # Invalid legacy JSON shape fails cleanly without mutating pre-existing SQLite state
+    seeded_db = tmp_path / "seeded.sqlite3"
+    with ResearchStateDB(seeded_db) as db:
+        db.add_claim("c1", "Existing claim")
+        dig_before = db.snapshot_digest()
+    bad_lit_json = tmp_path / "bad_lit.json"
+    bad_lit_json.write_text(json.dumps({"unexpected": 1}), encoding="utf-8")
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        assert cli.main(["literature-watch", "--import-legacy-json", str(bad_lit_json), "--state-db", str(seeded_db)]) == 1
+        assert cli.main(["retraction-watch", "--import-legacy-json", str(lit_json), "--state-db", str(seeded_db)]) == 1
+    with ResearchStateDB(seeded_db, readonly=True) as db:
+        assert db.snapshot_digest() == dig_before
+
+    # Retraction legacy migration preserves verified_current AND retained_prior + truncated
+    ret_payload = {
+        "10.1000/known": {
+            "is_retracted": True,
+            "current_observation": True,
+            "verification_status": "verified_current",
+            "signals": ["retraction"],
+            "truncated": False,
+        },
+        "10.1000/retained": {
+            "is_retracted": True,
+            "current_observation": None,
+            "verification_status": "retained_prior",
+            "signals": ["prior retraction"],
+            "truncated": True,
+        },
+    }
+    ret_json = tmp_path / "legacy_ret.json"
+    ret_json.write_text(json.dumps(ret_payload), encoding="utf-8")
+    ret_db = tmp_path / "ret.sqlite3"
+
+    buf_r1 = io.StringIO()
+    with contextlib.redirect_stdout(buf_r1):
+        assert cli.main(["retraction-watch", "--import-legacy-json", str(ret_json), "--state-db", str(ret_db)]) == 0
+    assert json.loads(buf_r1.getvalue()) == {"watcher": "retraction", "imported_count": 2, "unchanged_count": 0}
+
+    with ResearchStateDB(ret_db) as db:
+        rows_r1 = {r["item_key"]: dict(r) for r in db._get_conn().execute("SELECT * FROM doi_watch_state ORDER BY item_key")}
+        assert db.drain_unacked_watch_deltas("retraction") == []
+    assert rows_r1["10.1000/known"]["current_status"] == "retracted"
+    assert rows_r1["10.1000/known"]["confirmed_retracted"] == 1
+    assert rows_r1["10.1000/known"]["truncated"] == 0
+    assert rows_r1["10.1000/retained"]["current_status"] == "unknown"
+    assert rows_r1["10.1000/retained"]["confirmed_retracted"] == 1
+    assert rows_r1["10.1000/retained"]["truncated"] == 1
+
+    buf_r2 = io.StringIO()
+    with contextlib.redirect_stdout(buf_r2):
+        assert cli.main(["retraction-watch", "--import-legacy-json", str(ret_json), "--state-db", str(ret_db)]) == 0
+    assert json.loads(buf_r2.getvalue()) == {"watcher": "retraction", "imported_count": 0, "unchanged_count": 2}
+    with ResearchStateDB(ret_db, readonly=True) as db:
+        rows_r2 = {r["item_key"]: dict(r) for r in db._get_conn().execute("SELECT * FROM doi_watch_state ORDER BY item_key")}
+    assert rows_r1 == rows_r2
+
+    # 3. Verify README --normalize-only output comment matches actual CLI execution
+    root_dir = Path(__file__).resolve().parents[1]
+    buf_norm = io.StringIO()
+    with contextlib.redirect_stdout(buf_norm):
+        assert cli.main(["verify-work", "10.1038/nature14539", "--normalize-only"]) == 0
+    norm_str = json.dumps(json.loads(buf_norm.getvalue()), ensure_ascii=False)
+    for rfile in ("README.md", "README.zh-CN.md"):
+        rp = root_dir / rfile
+        if rp.is_file():
+            assert f"# -> {norm_str}" in rp.read_text(encoding="utf-8")
+
+    mcp_server.reset_session_db()
