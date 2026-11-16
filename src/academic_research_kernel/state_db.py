@@ -2085,6 +2085,8 @@ class ResearchStateDB:
                 if not isinstance(seen_list, (list, tuple)):
                     raise ValueError("Legacy literature seen list must be an array")
                 for raw_id in seen_list:
+                    if not isinstance(raw_id, str):
+                        raise ValueError("Legacy literature seen entries must be strings")
                     sid = canonical_literature_watch_key(raw_id)
                     if not sid:
                         continue

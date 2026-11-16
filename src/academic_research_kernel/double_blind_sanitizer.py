@@ -50,7 +50,7 @@ SELF_OWNED_URL_CUE_RE = re.compile(
     re.I,
 )
 _BLOCK_BREAK_RE = re.compile(
-    r"\n[ \t]*\n|\\(?:par|(?:sub)*section\*?|paragraph\*?|item|begin|end)\b"
+    r"\r?\n[ \t]*\r?\n|\\(?:par|(?:sub)*section\*?|paragraph\*?|item|begin|end)\b"
 )
 _ABBREV_DOT_RE = re.compile(
     r"\b(?:e\.g|i\.e|et\s+al|cf|vs|fig|figs|tab|tabs|sec|secs|eq|eqs)\.",
@@ -273,6 +273,16 @@ def scan_repository_urls(
             kind_cmd = m_cmd.group(1)
             c_start = m_cmd.start()
             anch_start = c_start - 1 if (c_start > 0 and work[c_start - 1] in ".!?;)") else c_start
+            if kind_cmd in ("footnote", "footnotemark"):
+                p_ws = c_start
+                while p_ws > 0 and work[p_ws - 1].isspace():
+                    p_ws -= 1
+                if (
+                    p_ws > 0
+                    and work[p_ws - 1] in ".!?;)"
+                    and _BLOCK_BREAK_RE.search(work, p_ws, c_start) is None
+                ):
+                    anch_start = p_ws - 1
             if kind_cmd == "footnotemark":
                 opt_k, after_opt = _read_optional_bracket_arg(work, m_cmd.end())
                 sent = _enclosing_sentence(work, anch_start, after_opt)

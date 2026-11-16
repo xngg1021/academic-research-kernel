@@ -1425,6 +1425,11 @@ def test_v300_p1_r1_and_p1_r2_final_closeout(tmp_path: Path, monkeypatch: pytest
         ("self_sentence_wrapped", "hard", "Our code is available at\n\\url{https://github.com/audit-fixture-owner/experiment}.", []),
         ("self_footnote_single_line", "hard", r"Our code is available\footnote{\url{https://github.com/audit-fixture-owner/experiment}}.", []),
         ("self_footnote_after_period", "hard", r"Our code is available.\footnote{\url{https://github.com/audit-fixture-owner/experiment}}", []),
+        ("self_footnote_after_period_space", "hard", r"Our code is available. \footnote{\url{https://github.com/audit-fixture-owner/experiment}}", []),
+        ("self_footnote_after_period_newline", "hard", "Our code is available.\n\\footnote{\\url{https://github.com/audit-fixture-owner/experiment}}", []),
+        ("third_party_footnote_after_period", "warning", r"Our code uses standard tensor operations. We compare with PyTorch.\footnote{\url{https://github.com/pytorch/pytorch}}", []),
+        ("third_party_footnote_across_parabreak", "warning", "Our code is available.\n\n\\footnote{\\url{https://github.com/pytorch/pytorch}}", []),
+        ("self_numbered_footnotemark_after_period_space", "hard", "Our code is available. \\footnotemark[1]\nThe experiments use a fixed random seed.\n\\footnotetext[1]{\\url{https://github.com/audit-fixture-owner/experiment}}", []),
         ("self_footnote_multiline", "hard", "Our code is available\\footnote{\n\\url{https://github.com/audit-fixture-owner/experiment}\n}.", []),
         ("self_footnotemark_text", "hard", "Our code is available\\footnotemark.\nThe experiments use a fixed random seed.\n\\footnotetext{\\url{https://github.com/audit-fixture-owner/experiment}}", []),
         ("anonymous_4open", "clean", "Our code is available at https://anonymous.4open.science/r/anonymous-paper-AB12/.", []),
@@ -1498,18 +1503,38 @@ def test_v300_p1_r1_and_p1_r2_final_closeout(tmp_path: Path, monkeypatch: pytest
         assert db.drain_unacked_watch_deltas("literature") == []
         assert watch.filter_new_literature(same_works, db=db) == []
 
-    # Invalid legacy JSON shape fails cleanly without mutating pre-existing SQLite state
+    # Invalid legacy JSON shapes (including numeric/mixed array items) fail cleanly with atomic rollback
     seeded_db = tmp_path / "seeded.sqlite3"
     with ResearchStateDB(seeded_db) as db:
+        db.register_artifact("keep-source", "source", {"keep": "existing data"})
         db.add_claim("c1", "Existing claim")
         dig_before = db.snapshot_digest()
-    bad_lit_json = tmp_path / "bad_lit.json"
-    bad_lit_json.write_text(json.dumps({"unexpected": 1}), encoding="utf-8")
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        assert cli.main(["literature-watch", "--import-legacy-json", str(bad_lit_json), "--state-db", str(seeded_db)]) == 1
-        assert cli.main(["retraction-watch", "--import-legacy-json", str(lit_json), "--state-db", str(seeded_db)]) == 1
-    with ResearchStateDB(seeded_db, readonly=True) as db:
-        assert db.snapshot_digest() == dig_before
+    with contextlib.closing(sqlite3.connect(seeded_db.as_uri() + "?mode=ro", uri=True)) as ro_conn:
+        dump_before = "\n".join(ro_conn.iterdump())
+
+    invalid_migration_cases = [
+        ("literature", "null", None),
+        ("literature", "scalar", 7),
+        ("literature", "wrong_seen_ids_value_type", {"seen_ids": 7}),
+        ("literature", "unknown_wrapper_key", {"unexpected": 1}),
+        ("literature", "non_string_array_item", [42]),
+        ("literature", "valid_then_non_string", ["doi:10.1000/partial", 42]),
+        ("retraction", "null", None),
+        ("retraction", "scalar", 7),
+        ("retraction", "wrong_items_value_type", {"items": 7}),
+        ("retraction", "valid_then_bad_boolean", {"10.1000/valid": {"is_retracted": True}, "10.1000/invalid": {"is_retracted": "yes"}}),
+    ]
+    for idx_inv, (w_name, lbl_inv, bad_payload) in enumerate(invalid_migration_cases):
+        bad_p = tmp_path / f"bad_{idx_inv}_{lbl_inv}.json"
+        bad_p.write_text(json.dumps(bad_payload), encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            assert cli.main([f"{w_name}-watch", "--import-legacy-json", str(bad_p), "--state-db", str(seeded_db)]) == 1
+        with ResearchStateDB(seeded_db, readonly=True) as db:
+            assert db.snapshot_digest() == dig_before
+        with contextlib.closing(sqlite3.connect(seeded_db.as_uri() + "?mode=ro", uri=True)) as ro_conn:
+            assert "\n".join(ro_conn.iterdump()) == dump_before
+            assert list(ro_conn.execute("SELECT * FROM doi_watch_state")) == []
+            assert list(ro_conn.execute("SELECT * FROM doi_watch_commits")) == []
 
     # Retraction legacy migration preserves verified_current AND retained_prior + truncated
     ret_payload = {
