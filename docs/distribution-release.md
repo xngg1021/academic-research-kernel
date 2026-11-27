@@ -2,17 +2,14 @@
 
 ## Package & Extra Layout
 
-`academic-research-kernel` (`3.1.0` on `main`; latest published PyPI release `3.0.0`) ships as a single pure-Python wheel and reproducible source distribution (`sdist`) supporting Python `3.10`–`3.14`:
+`academic-research-kernel` (`3.1.0`) ships as a single pure-Python wheel and reproducible source distribution (`sdist`) supporting Python `3.10`–`3.14`:
 
 ```bash
-# Latest Git tag / main (v3.1.0):
-uv tool install "academic-research-kernel[research] @ git+https://github.com/xngg1021/academic-research-kernel.git@v3.1.0"
+# Core CLI + 24-tool stdio MCP server + statistical & meta-analysis engines
+uv tool install "academic-research-kernel==3.1.0"
 
-# Latest published PyPI release (3.0.0) — core CLI + 24-tool stdio MCP server:
-uv tool install "academic-research-kernel==3.0.0"
-
-# Recommended PyPI install with deterministic digital PDF parsing (pypdf==7.0.0, fonttools==4.65.0):
-uv tool install "academic-research-kernel[research]==3.0.0"
+# Recommended: include deterministic digital PDF parsing (pypdf==7.0.0, fonttools==4.65.0)
+uv tool install "academic-research-kernel[research]==3.1.0"
 academic-research-kernel doctor
 ```
 

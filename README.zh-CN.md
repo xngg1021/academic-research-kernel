@@ -8,13 +8,10 @@
 
 大语言模型擅长顺畅概括论文大意，但在需要精确算术和外部事实核对的环节经常出错：读外部论文时容易顺着原文复述算错的 $p$ 值与失衡表格，或者漏掉已撤稿文献与虚构 DOI；准备自有投稿时，仅靠自然语言提示词也拦不住双盲 PDF 元数据里的作者实名残留、多文件 LaTeX 未引用书目与版面超页。
 
-`academic-research-kernel` 当前仓库主干版本为 `3.1.0`，PyPI 当前已发布稳定版本为 `3.0.0`，将自然语言阅读与确定性检查拆开，既能在终端直接运行，也能通过 `stdio MCP` 或 `SKILL.md` 接入各类客户端：
+`academic-research-kernel` `3.1.0` 将自然语言阅读与确定性检查拆开，既能在终端直接运行，也能通过 `stdio MCP` 或 `SKILL.md` 接入各类客户端：
 
 ```bash
-# 安装仓库主干 v3.1.0：
-uv tool install "academic-research-kernel[research] @ git+https://github.com/xngg1021/academic-research-kernel.git@v3.1.0"
-# 或安装 PyPI 当前已发布版 3.0.0：
-uv tool install "academic-research-kernel[research]==3.0.0"
+uv tool install "academic-research-kernel[research]==3.1.0"
 academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
 # -> {"input": "10.1038/nature14539", "type": "doi", "value": "10.1038/nature14539", "canonical": "https://doi.org/10.1038/nature14539"}
 ```
@@ -32,7 +29,7 @@ academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
 ### 方式一：独立命令行工具，面向科研人员与持续集成脚本
 
 ```bash
-uv tool install "academic-research-kernel[research]==3.0.0"
+uv tool install "academic-research-kernel[research]==3.1.0"
 academic-research-kernel doctor
 academic-research-kernel lint-submission ./manuscript/main.tex --venue iclr --phase submission
 ```
@@ -43,10 +40,10 @@ academic-research-kernel lint-submission ./manuscript/main.tex --venue iclr --ph
 
 ```bash
 # 在 Claude Code CLI 中注册
-claude mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.0.0" academic-research-kernel mcp
+claude mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.1.0" academic-research-kernel mcp
 
 # 在 OpenAI Codex CLI 中注册
-codex mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.0.0" academic-research-kernel mcp
+codex mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.1.0" academic-research-kernel mcp
 ```
 
 ### 方式三：智能体技能包，面向 Hermes Agent 或兼容 `SKILL.md` 的客户端

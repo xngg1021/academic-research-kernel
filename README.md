@@ -8,13 +8,10 @@
 
 Large language models summarize papers fluently yet fail predictably on exact arithmetic and external ground truth: they repeat miscalculated $p$-values, miss rounding-impossible percentages, cite retracted or fabricated DOIs, leave author metadata inside double-blind PDFs, and lose track of which source table backs which claim.
 
-`academic-research-kernel` (`3.1.0` on `main`; latest published PyPI release `3.0.0`) separates semantic reading from deterministic checks. Run it directly from your terminal or wire it into any MCP / `SKILL.md` agent workflow:
+`academic-research-kernel` (`3.1.0`) separates semantic reading from deterministic checks. Run it directly from your terminal or wire it into any MCP / `SKILL.md` agent workflow:
 
 ```bash
-# Latest Git tag / main (v3.1.0):
-uv tool install "academic-research-kernel[research] @ git+https://github.com/xngg1021/academic-research-kernel.git@v3.1.0"
-# Or latest published PyPI release (3.0.0):
-uv tool install "academic-research-kernel[research]==3.0.0"
+uv tool install "academic-research-kernel[research]==3.1.0"
 academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
 # -> {"input": "10.1038/nature14539", "type": "doi", "value": "10.1038/nature14539", "canonical": "https://doi.org/10.1038/nature14539"}
 ```
@@ -32,7 +29,7 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then choo
 ### Mode A: Direct Command-Line Tool (Human Researchers, CI & Shell Scripts)
 
 ```bash
-uv tool install "academic-research-kernel[research]==3.0.0"
+uv tool install "academic-research-kernel[research]==3.1.0"
 academic-research-kernel doctor
 academic-research-kernel lint-submission ./manuscript/main.tex --venue iclr --phase submission
 ```
@@ -43,10 +40,10 @@ Exposes **24 deterministic MCP tools** over bounded-frame stdio JSON-RPC 2.0 (`2
 
 ```bash
 # Claude Code CLI
-claude mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.0.0" academic-research-kernel mcp
+claude mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.1.0" academic-research-kernel mcp
 
 # OpenAI Codex CLI
-codex mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.0.0" academic-research-kernel mcp
+codex mcp add academic-research-kernel -- uvx --from "academic-research-kernel[research]==3.1.0" academic-research-kernel mcp
 ```
 
 ### Mode C: Agent Skills (Hermes Agent or Any `SKILL.md`-Compatible Harness)
