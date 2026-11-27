@@ -1352,12 +1352,26 @@ def test_package_dependency_matrix_is_strictly_lower_triangular() -> None:
                         cand2 = f"{node.module}.{alias.name}"
                         if cand2 in mod_map and cand2 != m:
                             deps[m].add(cand2)
+            elif (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "_mod"
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+                and isinstance(node.args[0].value, str)
+            ):
+                full_dyn = f"academic_research_kernel.{node.args[0].value}"
+                if full_dyn in mod_map and full_dyn != m:
+                    deps[m].add(full_dyn)
 
-    # Include dynamic importlib routing edges declared in mcp_server._MODULE_MAP
-    for dyn_target in getattr(mcp_server, "_MODULE_MAP", {}).values():
+    # Include dynamic importlib routing edges declared in mcp_server._LAZY_ATTRS
+    for dyn_target in getattr(mcp_server, "_LAZY_ATTRS", {}).values():
         full_dyn = f"academic_research_kernel.{dyn_target}"
         if full_dyn in mod_map:
             deps["academic_research_kernel.mcp_server"].add(full_dyn)
+
+    total_edges = sum(len(vs) for vs in deps.values())
+    assert total_edges >= 70, f"Expected >= 70 static+dynamic intra-package edges, got {total_edges}"
 
     index_counter = 0
     stack: list[str] = []
@@ -1404,3 +1418,105 @@ def test_package_dependency_matrix_is_strictly_lower_triangular() -> None:
     # Verify backwards-compatible re-exports remain identical callable objects
     assert venue_template_manager.validate_ceg_semantics is state_db.validate_ceg_semantics
     assert pre_submission_linter.strip_tex_comments is double_blind_sanitizer.strip_tex_comments
+
+
+def test_stat_p_consistency_rejects_internal_float_overflow_false_zero_and_mcp_chain(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Re-audit P1 regression: extreme statistics that overflow float64 intermediates (e.g. t^2 or df1*F)
+    must return inconclusive None rather than false-zero consistent=True, and cannot enter supported CEG edges."""
+    # 1. Closed-form Cauchy counterexample: df=1, t=1e155 -> true p = 2*atan(1e-155)/pi ~ 6.366e-156 >> 1e-200
+    cauchy_res = recompute.check_stat_p_consistency("t", 1e155, 1, reported_p="1e-200", op="<")
+    assert cauchy_res["consistent"] is None
+    assert cauchy_res["confidence"] == "low"
+
+    # 2. Heavy-tailed ordinary-threshold counterexamples where true p ~ 0.70
+    heavy_t = recompute.check_stat_p_consistency("t", 1e155, 0.001, reported_p="0.001", op="<")
+    assert heavy_t["consistent"] is None
+    heavy_f = recompute.check_stat_p_consistency("f", 1e301, 1e8, 0.001, reported_p="0.001", op="<")
+    assert heavy_f["consistent"] is None
+
+    # 3. Just-inside bound (1e150) evaluates exact False, while just-above bound (1.1e150) returns inconclusive None
+    exact_edge_t = recompute.check_stat_p_consistency("t", "1e150", 1, reported_p="1e-200", op="<")
+    assert exact_edge_t["consistent"] is False
+    above_edge_t = recompute.check_stat_p_consistency("t", "1.1e150", 1, reported_p="1e-200", op="<")
+    assert above_edge_t["consistent"] is None
+
+    # 4. In-domain positive & negative controls remain exact
+    in_dom_cauchy = recompute.check_stat_p_consistency("t", 1e100, 1, reported_p="1e-200", op="<")
+    assert in_dom_cauchy["consistent"] is False
+    in_dom_true = recompute.check_stat_p_consistency("t", 50.0, 10.0, reported_p="1e-10", op="<")
+    assert in_dom_true["consistent"] is True
+    in_dom_z = recompute.check_stat_p_consistency("z", 38.70, reported_p="1e-300", op="<")
+    assert in_dom_z["consistent"] is True
+
+    # 5. End-to-end MCP -> ingest -> CEG export chain must emit 'qualified' (never 'supported') on inconclusive None
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ARK_EXECUTION_KEY_HEX", "ab" * 32)
+    db_file = "overflow_guard.sqlite3"
+    stat_out = mcp_server.handle_tool_call(
+        "academic_recompute_statistics",
+        {"db_path": db_file, "t_stat": 1e155, "df": 1, "p_value_literal": "< 1e-200"},
+    )
+    assert stat_out["consistent"] is None
+    exec_id = stat_out["execution_id"]
+
+    mcp_server.handle_tool_call(
+        "claim_evidence_add",
+        {"db_path": db_file, "claim_id": "CLM-OVERFLOW", "claim_text": "Cauchy tail claim"},
+    )
+    with pytest.raises(ValueError, match="Execution receipt tamper/mismatch"):
+        mcp_server.handle_tool_call(
+            "research_artifact_ingest",
+            {
+                "db_path": db_file,
+                "artifact_id": "results-overflow-forged",
+                "kind": "quantitative_audit",
+                "execution_id": exec_id,
+                "bindings": {"claim_id": "CLM-OVERFLOW"},
+                "payload": {"assertions": [{"claim_id": "CLM-OVERFLOW", "consistent": True, "discrepancy_detected": False}]},
+            },
+        )
+    mcp_server.handle_tool_call(
+        "research_artifact_ingest",
+        {
+            "db_path": db_file,
+            "artifact_id": "results-overflow",
+            "kind": "quantitative_audit",
+            "execution_id": exec_id,
+            "bindings": {"claim_id": "CLM-OVERFLOW"},
+        },
+    )
+    from academic_research_kernel import state_db
+
+    with state_db.ResearchStateDB(db_file) as db:
+        ceg = db.export_ceg_dict()
+    assert ceg["support_edges"][0]["support_status"] == "unverifiable"
+    assert ceg["support_edges"][0]["metadata"]["artifact_provenance_tier"] == "kernel_executed"
+    assert ceg["support_edges"][0]["metadata"]["bound_at_ingest"] is True
+
+
+def test_norm_title_preserves_relational_comparators_against_collision() -> None:
+    """Re-audit P2 regression: relational operators (<, >, <=, >=, !=, ≠, ≤, ≥) must not be stripped into identical titles."""
+    from academic_research_kernel import verify_work
+
+    t_gt = "Risk after treatment with dose > 5 mg in adults with hypertension"
+    t_lt = "Risk after treatment with dose < 5 mg in adults with hypertension"
+    assert verify_work._norm_title(t_gt) != verify_work._norm_title(t_lt)
+
+    chk = verify_work.compare_cited_metadata(
+        {"cited_title": t_gt},
+        [{"source": "crossref", "doi": "10.1000/dose", "title": t_lt}],
+        target_doi="10.1000/dose",
+    )
+    assert chk["citation_metadata_match"] is not True
+    assert chk["per_source_evaluations"]["crossref"]["details"]["title"]["exact"] is False
+
+    # Unicode vs ASCII equivalent comparators and inline JATS tags normalize cleanly
+    assert verify_work._norm_title("Dose ≥ 5 mg in <i>E. coli</i>") == verify_work._norm_title("Dose >= 5 mg in E. coli")
+
+    # Ordinary punctuation differences still normalize to exact match
+    chk_ok = verify_work.compare_cited_metadata(
+        {"cited_title": "Risk after treatment — A Randomized Trial"},
+        [{"source": "crossref", "doi": "10.1000/p", "title": "Risk, after treatment: a randomized-trial!"}],
+        target_doi="10.1000/p",
+    )
+    assert chk_ok["citation_metadata_match"] is True

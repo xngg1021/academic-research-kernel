@@ -21,10 +21,16 @@ from .research.sources import controlled_urlopen as urlopen, reject_link_or_repa
 USER_AGENT = 'academic-research-kernel/1.2'
 
 
+_INLINE_MARKUP_TAG_RE = re.compile(r'</?(?:i|b|em|strong|sub|sup|scp|span|mml:[a-z0-9_]+)\b[^>]*>', re.IGNORECASE)
+_REL_OP_MAP = {'≤': '<=', '≥': '>=', '≠': '!=', '==': '='}
+_TITLE_TOKEN_RE = re.compile(r'<=|>=|!=|==|[<>≤≥≠=]|[^\W_]+')
+
+
 def _norm_title(title) -> str:
-    r"""小写、去标点、折叠空白;保留 Unicode 字母数字 (AV-03):
-    西里尔、假名、重音字符等不丢失, 规则 [^\W_]+ 覆盖全部文字系统。"""
-    return ' '.join(re.findall(r'[^\W_]+', (title or '').lower()))
+    r"""小写、去普通标点并保留比较关系符与 Unicode 字母数字 (AV-03):
+    剥离常见内联排版标签后保留 <=/>=/!=/</>/= 语义区分，防止剂量/阈值不等号反转碰撞。"""
+    cleaned = _INLINE_MARKUP_TAG_RE.sub(' ', (title or '').lower())
+    return ' '.join(_REL_OP_MAP.get(tok, tok) for tok in _TITLE_TOKEN_RE.findall(cleaned))
 
 
 def _norm_doi(doi) -> str:

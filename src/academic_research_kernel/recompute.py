@@ -213,9 +213,11 @@ def p_from_t(t, df, reported=None):
     if reported is not None:
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     st = _require_scipy_stats()
+    in_dom = bool(_SUPPORTED_DF_MIN <= float(df) <= _SUPPORTED_DF_MAX and abs(float(t)) <= 1e150)
     p = 2.0 * st.t.sf(abs(t), df)
     return _result(reported, float(p), {'t': t, 'df': df, 'sided': 2},
-                   'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf')
+                   'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf',
+                   confidence='high' if in_dom else 'low')
 
 
 @_finite_output
@@ -227,9 +229,16 @@ def p_from_f(f, df1, df2, reported=None):
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(f >= 0, 'F 统计量须非负')
     st = _require_scipy_stats()
+    in_dom = bool(
+        _SUPPORTED_DF_MIN <= float(df1) <= _SUPPORTED_DF_MAX
+        and _SUPPORTED_DF_MIN <= float(df2) <= _SUPPORTED_DF_MAX
+        and float(f) <= 1e300
+        and float(df1) * float(f) <= 1e300
+    )
     p = st.f.sf(f, df1, df2)
     return _result(reported, float(p), {'F': f, 'df1': df1, 'df2': df2},
-                   'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf')
+                   'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf',
+                   confidence='high' if in_dom else 'low')
 
 
 @_finite_output
@@ -241,9 +250,11 @@ def p_from_chi2(chi2, df, reported=None):
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     _require(chi2 >= 0, '卡方统计量须非负')
     st = _require_scipy_stats()
+    in_dom = bool(_SUPPORTED_DF_MIN <= float(df) <= _SUPPORTED_DF_MAX and float(chi2) <= 1e300)
     p = st.chi2.sf(chi2, df)
     return _result(reported, float(p), {'chi2': chi2, 'df': df},
-                   'p = sf_chi2(chi2, df)', 'scipy.stats.chi2.sf')
+                   'p = sf_chi2(chi2, df)', 'scipy.stats.chi2.sf',
+                   confidence='high' if in_dom else 'low')
 
 
 # ---------------------------------------------------------------------------
@@ -564,6 +575,8 @@ def check_p_match(reported_p, recomputed_p, decimals=None, *, reported_literal=N
 
 _SUPPORTED_DF_MIN = 1e-6
 _SUPPORTED_DF_MAX = 1e8
+_SUPPORTED_SQ_STAT_MAX = Decimal('1e150')
+_SUPPORTED_POS_STAT_MAX = Decimal('1e300')
 
 
 @_finite_output
@@ -682,19 +695,29 @@ def check_stat_p_consistency(
         p_min_inc = bool(stat_lo_dec == stat_hi_dec)
         p_max_inc = True
 
-    p_pt_dec = _decimal(p_point, '重算点估计 p 值')
-    p_min_dec = _decimal(p_min, '重算下界 p 值')
-    p_max_dec = _decimal(p_max, '重算上界 p 值')
+    p_pt_dec = _decimal(p_point, '重算点估计 p 值') if math.isfinite(p_point) else Decimal(0)
+    p_min_dec = _decimal(p_min, '重算下界 p 值') if math.isfinite(p_min) else Decimal(0)
+    p_max_dec = _decimal(p_max, '重算上界 p 值') if math.isfinite(p_max) else Decimal(0)
+    df1_dec = Decimal(str(float(df1))) if df1 is not None else None
+
+    def _point_in_supported_domain(x_d: Decimal) -> bool:
+        if not domain_supported:
+            return False
+        if kind_norm in ('t', 'z'):
+            return x_d <= _SUPPORTED_SQ_STAT_MAX
+        if kind_norm == 'f':
+            return x_d <= _SUPPORTED_POS_STAT_MAX and df1_dec is not None and (df1_dec * x_d) <= _SUPPORTED_POS_STAT_MAX
+        return x_d <= _SUPPORTED_POS_STAT_MAX
 
     def _cmp_tail(p_val: float, p_dec: Decimal, lp_val: float, x_d: Decimal, bound_dec: Decimal):
-        """Compare finite-statistic tail p against bound_dec within the supported IEEE-754 domain."""
+        """Compare finite-statistic tail p against bound_dec within the joint non-overflow IEEE-754 domain."""
         if bound_dec > Decimal(1):
             return -1
         if bound_dec == Decimal(1):
             return 0 if x_d == Decimal(0) else -1
         if bound_dec <= Decimal(0):
             return 1
-        if not domain_supported:
+        if not _point_in_supported_domain(x_d) or not math.isfinite(p_val):
             return None
         if x_d > Decimal(0) and float(x_d) == 0.0:
             return None
