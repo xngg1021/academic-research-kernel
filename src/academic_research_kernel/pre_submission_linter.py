@@ -16,6 +16,7 @@ import re
 from typing import Any, Mapping, Optional
 
 from ._stdlib import freeze, is_link_or_reparse, safe_path
+from .double_blind_sanitizer import strip_tex_comments
 
 MAX_INCLUDE_DEPTH = 16
 MAX_TEX_FILES = 64
@@ -51,11 +52,6 @@ _BIB_ENTRY_RE = re.compile(r"@(\w+)\s*\{\s*([^,\s{}]+)\s*,", re.IGNORECASE)
 _BIB_CROSSREF_RE = re.compile(r"\b(?:crossref|xdata)\s*=\s*(?:\{([^{}]+)\}|\"([^\"]+)\")", re.IGNORECASE)
 _BIBITEM_RE = re.compile(r"\\bibitem(?:\s*\[[^\]]*\])?\s*\{([^{}]+)\}")
 _BIB_DECL_RE = re.compile(r"\\(bibliography|addbibresource)\s*(?:\[[^\]]*\]\s*)*\{([^{}]+)\}")
-_VERBATIM_ENV_RE = re.compile(
-    r"\\begin\s*\{\s*(verbatim\*?|lstlisting|minted|comment)\s*\}.*?\\end\s*\{\s*\1\s*\}",
-    re.DOTALL,
-)
-_VERB_INLINE_RE = re.compile(r"\\verb\*?([^a-zA-Z0-9\s]).*?\1")
 _FORBIDDEN_LAYOUT_RE = re.compile(
     r"\\(?:vspace\s*\{\s*-\d|baselinestretch|setlength\s*\{\s*\\(?:textwidth|textheight|topmargin|evensidemargin|oddsidemargin))"
 )
@@ -87,69 +83,6 @@ _OVERCLAIM_STYLE_RE = re.compile(
     r"\b(?:prove[sd]?\s+beyond\s+doubt|100\s*%?\s+guaranteed|universally\s+superior|eliminates?\s+all\s+errors)\b",
     re.IGNORECASE,
 )
-
-
-def _blank_preserve_newlines(match: re.Match[str]) -> str:
-    s = match.group(0)
-    return "".join("\n" if ch == "\n" else " " for ch in s)
-
-
-def strip_tex_comments(tex: str) -> str:
-    """Lexical TeX masker: masks inline \\verb, verbatim/code environments, and unescaped % comments while preserving line numbers."""
-    out_lines: list[str] = []
-    in_verbatim_env: Optional[str] = None
-    begin_verb_re = re.compile(r"\\begin\s*\{\s*(verbatim\*?|lstlisting|minted|comment)\s*\}")
-
-    for line in tex.splitlines(keepends=True):
-        nl = "\n" if line.endswith("\n") else ""
-        body = line[:-1] if nl else line
-        if in_verbatim_env is not None:
-            end_pat = re.compile(r"\\end\s*\{\s*" + re.escape(in_verbatim_env) + r"\s*\}")
-            m_end = end_pat.search(body)
-            if m_end:
-                # Blank through \end{env}, then continue scanning remainder of same line
-                rem = " " * m_end.end() + body[m_end.end() :]
-                in_verbatim_env = None
-                body = rem
-            else:
-                out_lines.append(" " * len(body) + nl)
-                continue
-
-        # Scan left-to-right on active line for \verb, \begin{verbatim}, or unescaped %
-        chars = list(body)
-        i = 0
-        n = len(chars)
-        while i < n:
-            if chars[i] == "\\":
-                # Check \verb*<delim>...<delim>
-                m_vi = _VERB_INLINE_RE.match(body, i)
-                if m_vi:
-                    for k_idx in range(m_vi.start(), m_vi.end()):
-                        chars[k_idx] = " "
-                    i = m_vi.end()
-                    continue
-                m_bv = begin_verb_re.match(body, i)
-                if m_bv:
-                    env_name = m_bv.group(1)
-                    end_pat = re.compile(r"\\end\s*\{\s*" + re.escape(env_name) + r"\s*\}")
-                    m_same = end_pat.search(body, m_bv.end())
-                    if m_same:
-                        for k_idx in range(m_bv.start(), m_same.end()):
-                            chars[k_idx] = " "
-                        i = m_same.end()
-                        continue
-                    for k_idx in range(m_bv.start(), n):
-                        chars[k_idx] = " "
-                    in_verbatim_env = env_name
-                    break
-                i += 2
-                continue
-            if chars[i] == "%":
-                chars = chars[:i]
-                break
-            i += 1
-        out_lines.append("".join(chars) + nl)
-    return "".join(out_lines)
 
 
 def _line_of(text: str, offset: int) -> int:

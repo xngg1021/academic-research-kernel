@@ -1302,3 +1302,105 @@ def test_round3_minimal_closures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         neg_out["citation_check"]["per_source_evaluations"]["crossref"]["details"]["title"]["status"]
         == "uncheckable"
     )
+
+
+def test_package_dependency_matrix_is_strictly_lower_triangular() -> None:
+    """Axiomatic Design gate: package module graph (static AST + dynamic _MODULE_MAP) has 0 cycles and 0 upper-triangular edges."""
+    import ast
+
+    from academic_research_kernel import (
+        double_blind_sanitizer,
+        mcp_server,
+        pre_submission_linter,
+        state_db,
+        venue_template_manager,
+    )
+
+    pkg_dir = Path(state_db.__file__).resolve().parent
+    mod_map: dict[str, Path] = {}
+    for py_file in sorted(pkg_dir.rglob("*.py")):
+        rel = py_file.relative_to(pkg_dir.parent).with_suffix("")
+        parts = list(rel.parts)
+        mod_name = ".".join(parts[:-1]) if parts[-1] == "__init__" else ".".join(parts)
+        mod_map[mod_name] = py_file
+
+    deps: dict[str, set[str]] = {m: set() for m in mod_map}
+    for m, py_file in mod_map.items():
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name in mod_map and alias.name != m:
+                        deps[m].add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.level and node.level > 0:
+                    cur_parts = m.split(".") if py_file.name == "__init__.py" else m.split(".")[:-1]
+                    up = node.level - 1
+                    base_parts = cur_parts[: len(cur_parts) - up] if up > 0 else cur_parts
+                    if node.module:
+                        cand = ".".join([*base_parts, node.module])
+                        if cand in mod_map and cand != m:
+                            deps[m].add(cand)
+                    for alias in node.names:
+                        cand2 = ".".join([*base_parts, *([node.module] if node.module else []), alias.name])
+                        if cand2 in mod_map and cand2 != m:
+                            deps[m].add(cand2)
+                elif node.module:
+                    if node.module in mod_map and node.module != m:
+                        deps[m].add(node.module)
+                    for alias in node.names:
+                        cand2 = f"{node.module}.{alias.name}"
+                        if cand2 in mod_map and cand2 != m:
+                            deps[m].add(cand2)
+
+    # Include dynamic importlib routing edges declared in mcp_server._MODULE_MAP
+    for dyn_target in getattr(mcp_server, "_MODULE_MAP", {}).values():
+        full_dyn = f"academic_research_kernel.{dyn_target}"
+        if full_dyn in mod_map:
+            deps["academic_research_kernel.mcp_server"].add(full_dyn)
+
+    index_counter = 0
+    stack: list[str] = []
+    on_stack: set[str] = set()
+    index: dict[str, int] = {}
+    lowlink: dict[str, int] = {}
+    sccs: list[list[str]] = []
+
+    def strongconnect(node: str) -> None:
+        nonlocal index_counter
+        index[node] = index_counter
+        lowlink[node] = index_counter
+        index_counter += 1
+        stack.append(node)
+        on_stack.add(node)
+        for succ in sorted(deps[node]):
+            if succ not in index:
+                strongconnect(succ)
+                lowlink[node] = min(lowlink[node], lowlink[succ])
+            elif succ in on_stack:
+                lowlink[node] = min(lowlink[node], index[succ])
+        if lowlink[node] == index[node]:
+            comp: list[str] = []
+            while True:
+                w = stack.pop()
+                on_stack.remove(w)
+                comp.append(w)
+                if w == node:
+                    break
+            sccs.append(comp)
+
+    for m in sorted(mod_map):
+        if m not in index:
+            strongconnect(m)
+
+    nontrivial_sccs = [comp for comp in sccs if len(comp) > 1]
+    assert nontrivial_sccs == [], f"Cyclic module SCCs detected: {nontrivial_sccs}"
+
+    topo_order = [n for comp in sccs for n in comp]
+    pos = {n: idx for idx, n in enumerate(topo_order)}
+    upper_edges = [(u, v) for u, vs in deps.items() for v in sorted(vs) if pos[u] < pos[v]]
+    assert upper_edges == [], f"Upper-triangular edges detected: {upper_edges}"
+
+    # Verify backwards-compatible re-exports remain identical callable objects
+    assert venue_template_manager.validate_ceg_semantics is state_db.validate_ceg_semantics
+    assert pre_submission_linter.strip_tex_comments is double_blind_sanitizer.strip_tex_comments

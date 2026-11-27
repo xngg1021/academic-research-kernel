@@ -333,7 +333,7 @@ def _validate_mcp_state_and_bindings(
             _validate_receipt_registry_map(state["receipts"], label="state.receipts", dec_content=dec_cp)
         eff_receipts = args.get("receipts") if args.get("receipts") is not None else state.get("receipts")
         if state.get("ceg") is not None:
-            from .venue_template_manager import validate_ceg_semantics
+            from .state_db import validate_ceg_semantics
 
             ceg_plain = thaw(state["ceg"])
             c_errs = list(validate_schema(ceg_plain, "claim-evidence-graph.schema.json"))
@@ -1579,7 +1579,7 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             return {"valid": False, "errors": ["claim_evidence_validate requires a 'ceg' (or 'graph') object or 'db_path'"]}
         errs = list(validate_schema(ceg_doc, "claim-evidence-graph.schema.json"))
         try:
-            from .venue_template_manager import validate_ceg_semantics
+            from .state_db import validate_ceg_semantics
 
             auth_ceg = _optional_auth_artifacts(a)
             sem = validate_ceg_semantics(
@@ -1598,7 +1598,7 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         if inline_ceg is not None:
             if not isinstance(inline_ceg, Mapping):
                 raise ValueError("graph / ceg must be a JSON object")
-            from .venue_template_manager import validate_ceg_semantics
+            from .state_db import validate_ceg_semantics
 
             errs_c = list(validate_schema(inline_ceg, "claim-evidence-graph.schema.json"))
             sem_c = validate_ceg_semantics(

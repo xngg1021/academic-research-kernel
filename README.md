@@ -57,7 +57,7 @@ hermes plugins enable academic-skills
 academic-research-kernel research skill --output ./audit-paper
 ```
 
-**Dependency layout**: State management (`SQLite STRICT + WAL`), CLI dispatch, and MCP protocol control use Python's standard library, importing declared scientific and schema packages (`jsonschema`, `numpy`, `scipy`, `statsmodels`) lazily on demand. The `[research]` extra installs `pypdf==7.0.0` and `fonttools==4.65.0` for isolated subprocess PDF text/metadata scanning; details in [docs/distribution-release.md](docs/distribution-release.md).
+**Dependency layout**: State management (`SQLite STRICT + WAL`), CLI dispatch, and MCP protocol control use Python's standard library, importing declared scientific and schema packages (`jsonschema`, `numpy`, `scipy`, `statsmodels`) lazily on demand. The `[research]` extra installs `pypdf==7.0.0` and `fonttools==4.65.0` for isolated subprocess PDF text/metadata scanning; details in [docs/distribution-release.md](docs/distribution-release.md). When persisting execution-bound receipts (`kernel_executions`) into a file-backed SQLite database across processes, set `ARK_EXECUTION_KEY_HEX` to a 64-character hexadecimal HMAC key (`:memory:` sessions use an ephemeral key automatically).
 
 ---
 

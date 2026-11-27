@@ -4,6 +4,19 @@
 
 ---
 
+## Unreleased (`work/v3.1-kernel-hardening`) — Execution-Bound Provenance, Three-Valued Verification & Lower-Triangular Decoupling
+
+- **Execution-bound provenance & persistent HMAC key contract (`state_db.py`, `mcp_server.py`)**:
+  - Added append-only `kernel_executions` and `artifact_execution_bindings` tables (`user_version = 4` additive schema) linking ingested artifacts and CEG support edges to HMAC-SHA256 authenticated kernel execution records (`artifact_provenance_tier = "kernel_executed"` vs `"external_unverified"`).
+  - Required an explicit 64-hex-character `ARK_EXECUTION_KEY_HEX` environment variable whenever issuing or verifying persistent execution receipts on file-backed SQLite databases, restricting ephemeral per-process keys strictly to `:memory:` sessions, and narrowed `bound_at_ingest` attribution to the ingest-created edge (`locator == ""`, matching claim and stance).
+- **Three-valued citation & numerical support-domain boundaries (`verify_work.py`, `recompute.py`)**:
+  - Classified non-exact high-Jaccard title matches (e.g., dropped negation tokens) as `"uncheckable"` (`citation_metadata_match = None`, `consistent = None`) rather than affirming semantic equivalence without exact normalized equality.
+  - Bounded statistical degrees of freedom to `[1e-6, 1e8]` and delegated tail probabilities to SciPy native `sf` and finite `logsf` with explicit precision margin guards, returning `consistent = None` (`"indeterminate_underflow"`) outside reliable IEEE-754 / SciPy domains instead of maintaining custom series expansions.
+- **Zero-cycle strictly lower-triangular package topology (`state_db.py`, `venue_template_manager.py`, `double_blind_sanitizer.py`, `pre_submission_linter.py`)**:
+  - Relocated `validate_ceg_semantics` into `state_db.py` and `strip_tex_comments` into `double_blind_sanitizer.py` while preserving identical re-exported symbols at their previous module paths, eliminating all cross-module strongly connected cycles across the 34-module package (enforced by `test_package_dependency_matrix_is_strictly_lower_triangular`).
+
+---
+
 ## 3.0.0 — 2026-11-16 Occam stdlib-first SQLite STRICT kernel, 7 workflow skills, 24 MCP tools & cross-venue peer-review forensics
 
 - **Single-package stdlib-first + SQLite `STRICT` / `WAL` architecture (`src/academic_research_kernel/`)**:

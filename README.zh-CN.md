@@ -57,7 +57,7 @@ hermes plugins enable academic-skills
 academic-research-kernel research skill --output ./audit-paper
 ```
 
-**依赖划分说明**：`SQLite STRICT + WAL` 状态库、命令行分发与 MCP 协议控制路径使用 Python 标准库实现；统计重算、荟萃分析与 JSON Schema 校验使用显式声明的 `jsonschema` 与 `numpy` 以及 `scipy` 与 `statsmodels` 依赖并按需延迟加载。可选扩展 `[research]` 安装 `pypdf==7.0.0` 与 `fonttools==4.65.0` 用于隔离子进程解析 PDF 正文与元数据，打包规范见 [docs/distribution-release.md](docs/distribution-release.md)。
+**依赖划分说明**：`SQLite STRICT + WAL` 状态库、命令行分发与 MCP 协议控制路径使用 Python 标准库实现；统计重算、荟萃分析与 JSON Schema 校验使用显式声明的 `jsonschema` 与 `numpy` 以及 `scipy` 与 `statsmodels` 依赖并按需延迟加载。可选扩展 `[research]` 安装 `pypdf==7.0.0` 与 `fonttools==4.65.0` 用于隔离子进程解析 PDF 正文与元数据，打包规范见 [docs/distribution-release.md](docs/distribution-release.md)。若需向磁盘 SQLite 文件数据库写入跨进程持久验签的执行收据 `kernel_executions`，请提前将环境变量 `ARK_EXECUTION_KEY_HEX` 设为 `64` 位十六进制密钥，纯内存 `:memory:` 会话则自动使用进程临时密钥。
 
 ---
 

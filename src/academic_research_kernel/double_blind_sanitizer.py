@@ -59,6 +59,7 @@ _ABBREV_DOT_RE = re.compile(
 _SENT_END_RE = re.compile(r"[.!?;](?=\s|$)")
 _INLINE_URL_MASK_RE = re.compile(r"https?://[^\s{}]+", re.I)
 _TEX_LINK_OR_FN_CMD_RE = re.compile(r"\\(href|url|footnote|footnotetext|footnotemark)\b")
+_VERB_INLINE_RE = re.compile(r"\\verb\*?([^a-zA-Z0-9\s]).*?\1")
 ORCID_RE = re.compile(r"\b000[0-9]-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]\b")
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@(?!example\.)[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 WIN_PATH_RE = re.compile(r"(?i)(?:\b[A-Z]:|/mnt/[a-z])[/\\]+Users[/\\]+(?!<|Public\b|Default\b)[\w.-]+")
@@ -79,11 +80,63 @@ ANONYMOUS_PLACEHOLDERS = {
 }
 
 
-def _strip_tex_comments(text: str) -> str:
-    """Delegate to the shared verbatim/verb-aware TeX lexical masker in pre_submission_linter."""
-    from .pre_submission_linter import strip_tex_comments
+def _strip_tex_comments_impl(tex: str) -> str:
+    """Lexical TeX masker: masks inline \\verb, verbatim/code environments, and unescaped % comments while preserving line numbers."""
+    out_lines: list[str] = []
+    in_verbatim_env: str | None = None
+    begin_verb_re = re.compile(r"\\begin\s*\{\s*(verbatim\*?|lstlisting|minted|comment)\s*\}")
 
-    return strip_tex_comments(text)
+    for line in tex.splitlines(keepends=True):
+        nl = "\n" if line.endswith("\n") else ""
+        body = line[:-1] if nl else line
+        if in_verbatim_env is not None:
+            end_pat = re.compile(r"\\end\s*\{\s*" + re.escape(in_verbatim_env) + r"\s*\}")
+            m_end = end_pat.search(body)
+            if m_end:
+                rem = " " * m_end.end() + body[m_end.end() :]
+                in_verbatim_env = None
+                body = rem
+            else:
+                out_lines.append(" " * len(body) + nl)
+                continue
+
+        chars = list(body)
+        i = 0
+        n = len(chars)
+        while i < n:
+            if chars[i] == "\\":
+                m_vi = _VERB_INLINE_RE.match(body, i)
+                if m_vi:
+                    for k_idx in range(m_vi.start(), m_vi.end()):
+                        chars[k_idx] = " "
+                    i = m_vi.end()
+                    continue
+                m_bv = begin_verb_re.match(body, i)
+                if m_bv:
+                    env_name = m_bv.group(1)
+                    end_pat = re.compile(r"\\end\s*\{\s*" + re.escape(env_name) + r"\s*\}")
+                    m_same = end_pat.search(body, m_bv.end())
+                    if m_same:
+                        for k_idx in range(m_bv.start(), m_same.end()):
+                            chars[k_idx] = " "
+                        i = m_same.end()
+                        continue
+                    for k_idx in range(m_bv.start(), n):
+                        chars[k_idx] = " "
+                    in_verbatim_env = env_name
+                    break
+                i += 2
+                continue
+            if chars[i] == "%":
+                chars = chars[:i]
+                break
+            i += 1
+        out_lines.append("".join(chars) + nl)
+    return "".join(out_lines)
+
+
+strip_tex_comments = _strip_tex_comments_impl
+_strip_tex_comments = strip_tex_comments
 
 
 def _extract_balanced_braces(text: str) -> list[tuple[int, str]]:
