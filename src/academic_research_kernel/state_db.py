@@ -838,12 +838,23 @@ END;
 _PROCESS_EXEC_SECRET: bytes = secrets.token_bytes(32)
 
 
-def _get_kernel_exec_secret() -> bytes:
+def _get_kernel_exec_secret(*, require_persistent: bool = False) -> bytes:
+    """Return HMAC key for kernel execution receipts.
+
+    File-backed SQLite stores require an explicit 64-hex-char ``ARK_EXECUTION_KEY_HEX`` so
+    authenticated receipts survive across process restarts; the random process key is
+    restricted strictly to ephemeral ``:memory:`` sessions.
+    """
     env_hex = (os.environ.get("ARK_EXECUTION_KEY_HEX") or "").strip()
     if env_hex:
         if len(env_hex) != 64 or not re.fullmatch(r"[0-9a-fA-F]{64}", env_hex):
             raise ValueError("ARK_EXECUTION_KEY_HEX must be exactly 64 hex characters (32 bytes)")
         return bytes.fromhex(env_hex)
+    if require_persistent:
+        raise ValueError(
+            "Persistent file-backed kernel execution receipts require ARK_EXECUTION_KEY_HEX "
+            "(64 hex characters); ephemeral keys are only permitted for :memory: sessions"
+        )
     return _PROCESS_EXEC_SECRET
 
 
@@ -873,7 +884,8 @@ def _compute_kernel_exec_hmac(
     msg = canonical_json(
         [store_scope, execution_id, tool_name, kernel_version, verification_scope, consistent, executed_at, inputs_sha256, outputs_sha256]
     ).encode("utf-8")
-    return hmac.new(_get_kernel_exec_secret(), msg, hashlib.sha256).hexdigest()
+    secret = _get_kernel_exec_secret(require_persistent=not store_scope.startswith("memory:"))
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
 
 
 def _compute_binding_hmac(
@@ -889,7 +901,8 @@ def _compute_binding_hmac(
     msg = canonical_json(
         [store_scope, artifact_id, artifact_kind, payload_sha256, execution_id, verification_scope, provenance_tier, ingest_bound_claim_id]
     ).encode("utf-8")
-    return hmac.new(_get_kernel_exec_secret(), msg, hashlib.sha256).hexdigest()
+    secret = _get_kernel_exec_secret(require_persistent=not store_scope.startswith("memory:"))
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
 
 
 def _verify_execution_row_dict(row: Mapping[str, Any], *, store_scope: str) -> dict[str, Any]:
@@ -2407,9 +2420,12 @@ class ResearchStateDB:
 
         store_scope = self._store_scope_id()
         art_kinds = {str(r["artifact_id"]): str(r["kind"]) for r in art_kind_rows}
+        bound_art_ids = {str(r["artifact_id"]) for r in bind_rows}
         art_live_shas: dict[str, Optional[str]] = {}
         for r in art_kind_rows:
             aid_r = str(r["artifact_id"])
+            if aid_r not in bound_art_ids:
+                continue
             stored_sha = str(r["payload_sha256"])
             try:
                 recomp_sha = sha256_hex(canonical_json(json.loads(str(r["payload_json"]))))
@@ -2437,11 +2453,15 @@ class ResearchStateDB:
             live_sha = art_live_shas.get(aid_b)
             ak_b = art_kinds.get(aid_b, "")
             if live_sha is not None and eid_b in verified_ke:
-                expected_bmac = _compute_binding_hmac(
-                    store_scope, aid_b, ak_b, live_sha, eid_b, vsc_b, pt_b, ibc_b
-                )
+                try:
+                    expected_bmac = _compute_binding_hmac(
+                        store_scope, aid_b, ak_b, live_sha, eid_b, vsc_b, pt_b, ibc_b
+                    )
+                except ValueError:
+                    expected_bmac = ""
                 if (
                     pt_b == "kernel_executed"
+                    and expected_bmac
                     and hmac.compare_digest(bmac, expected_bmac)
                     and verified_ke[eid_b]["verification_scope"] == vsc_b
                 ):
@@ -2451,11 +2471,14 @@ class ResearchStateDB:
                     except Exception:
                         expected_pay_sha = None
                     if expected_pay_sha is not None and live_sha == expected_pay_sha:
+                        cons_v = verified_ke[eid_b]["consistent"]
+                        ib_stance = "supports" if cons_v is True else ("contradicts" if cons_v is False else "qualifies")
                         exec_bindings[aid_b] = {
                             "execution_id": eid_b,
                             "verification_scope": vsc_b,
                             "artifact_provenance_tier": pt_b,
                             "ingest_bound_claim_id": ibc_b,
+                            "ingest_bound_stance": ib_stance,
                         }
                         continue
             tampered_binding_artifacts.add(aid_b)
@@ -2489,7 +2512,10 @@ class ResearchStateDB:
             eb = exec_bindings.get(art_s)
             if eb is not None:
                 bound_at_ingest = bool(
-                    eb["ingest_bound_claim_id"] is not None and cid_edge == eb["ingest_bound_claim_id"]
+                    eb["ingest_bound_claim_id"] is not None
+                    and cid_edge == eb["ingest_bound_claim_id"]
+                    and loc_s == ""
+                    and str(r["stance"]) == eb["ingest_bound_stance"]
                 )
                 art_tier = eb["artifact_provenance_tier"]
                 v_scope = eb["verification_scope"]

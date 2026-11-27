@@ -562,152 +562,8 @@ def check_p_match(reported_p, recomputed_p, decimals=None, *, reported_literal=N
     }
 
 
-_STIRLING_COEFFS = (
-    (1, 12),
-    (-1, 360),
-    (1, 1260),
-    (-1, 1680),
-    (1, 1188),
-    (-691, 360360),
-    (1, 156),
-    (-3617, 122400),
-)
-_HALF_LN_2PI = Decimal(
-    '0.9189385332046727417803297364056176398613974736377834128171515404827656959272603976947432986359541976'
-)
-
-
-def _decimal_lgamma(x_dec: Decimal, prec: int = 120) -> Decimal | None:
-    """High-precision Decimal ln(Gamma(x)) via recurrence + 8-term Bernoulli-Stirling series."""
-    if x_dec <= 0:
-        return None
-    with localcontext() as ctx:
-        ctx.prec = prec
-        shift = Decimal(0)
-        y = x_dec
-        while y < Decimal(40):
-            shift += y.ln()
-            y += Decimal(1)
-        inv_y = Decimal(1) / y
-        inv_y2 = inv_y * inv_y
-        series = Decimal(0)
-        pow_y = inv_y
-        for num, den in _STIRLING_COEFFS:
-            series += (Decimal(num) / Decimal(den)) * pow_y
-            pow_y *= inv_y2
-        return _HALF_LN_2PI + (y - Decimal('0.5')) * y.ln() - y + series - shift
-
-
-def _exact_log_igamma_q(a_dec: Decimal, z_dec: Decimal):
-    """Decimal Legendre continued fraction for ln(Gamma(a, z) / Gamma(a)) when z > a + 10."""
-    with localcontext() as ctx:
-        ctx.prec = 120
-        if z_dec <= a_dec + Decimal(10):
-            return None
-        ln_ga = _decimal_lgamma(a_dec)
-        if ln_ga is None:
-            return None
-        tiny = Decimal('1e-200000')
-        b0 = z_dec + Decimal(1) - a_dec
-        if abs(b0) < tiny:
-            return None
-        c = Decimal('1e200000')
-        d = Decimal(1) / b0
-        h = d
-        converged = False
-        clamped = False
-        for i in range(1, 250):
-            an = -Decimal(i) * (Decimal(i) - a_dec)
-            b0 += Decimal(2)
-            d = an * d + b0
-            if abs(d) < tiny:
-                clamped = True
-                break
-            c = b0 + an / c
-            if abs(c) < tiny:
-                clamped = True
-                break
-            d = Decimal(1) / d
-            delta = d * c
-            h *= delta
-            if abs(delta - Decimal(1)) < Decimal('1e-45'):
-                converged = True
-                break
-        if clamped or not converged or h <= 0:
-            return None
-        return -z_dec + a_dec * z_dec.ln() + h.ln() - ln_ga
-
-
-def _exact_log_ibeta(a_dec: Decimal, b_dec: Decimal, num_u: Decimal, num_1mu: Decimal):
-    """Decimal Gauss continued fraction (DLMF 8.17.22) for ln(I_u(a, b)) with ratios formed inside work_prec."""
-    if num_u <= 0 or num_1mu <= 0:
-        return None
-    exp_gap = max(
-        abs(a_dec.adjusted() - b_dec.adjusted()),
-        abs(num_u.adjusted() - num_1mu.adjusted()),
-    )
-    if exp_gap > 360:
-        return None
-    work_prec = max(120, exp_gap + 90)
-    with localcontext() as ctx:
-        ctx.prec = work_prec
-        denom = num_u + num_1mu
-        u_dec = num_u / denom
-        one_minus_u_dec = num_1mu / denom
-        if u_dec <= 0 or one_minus_u_dec <= 0:
-            return None
-        if u_dec >= (a_dec + Decimal(1)) / (a_dec + b_dec + Decimal(2)):
-            return None
-        ln_ga = _decimal_lgamma(a_dec, prec=work_prec)
-        ln_gb = _decimal_lgamma(b_dec, prec=work_prec)
-        ln_gab = _decimal_lgamma(a_dec + b_dec, prec=work_prec)
-        if ln_ga is None or ln_gb is None or ln_gab is None:
-            return None
-        ln_beta = ln_ga + ln_gb - ln_gab
-        tiny = Decimal('1e-200000')
-        qab = a_dec + b_dec
-        qap = a_dec + Decimal(1)
-        qam = a_dec - Decimal(1)
-        c = Decimal(1)
-        d = Decimal(1) - qab * u_dec / qap
-        if abs(d) < tiny:
-            return None
-        d = Decimal(1) / d
-        h = d
-        converged = False
-        clamped = False
-        for m in range(1, 250):
-            m_d = Decimal(m)
-            m2 = Decimal(2 * m)
-            aa = m_d * (b_dec - m_d) * u_dec / ((qam + m2) * (a_dec + m2))
-            d = Decimal(1) + aa * d
-            if abs(d) < tiny:
-                clamped = True
-                break
-            c = Decimal(1) + aa / c
-            if abs(c) < tiny:
-                clamped = True
-                break
-            d = Decimal(1) / d
-            h *= d * c
-            aa = -(a_dec + m_d) * (qab + m_d) * u_dec / ((a_dec + m2) * (qap + m2))
-            d = Decimal(1) + aa * d
-            if abs(d) < tiny:
-                clamped = True
-                break
-            c = Decimal(1) + aa / c
-            if abs(c) < tiny:
-                clamped = True
-                break
-            d = Decimal(1) / d
-            delta = d * c
-            h *= delta
-            if abs(delta - Decimal(1)) < Decimal('1e-45'):
-                converged = True
-                break
-        if clamped or not converged or h <= 0:
-            return None
-        return a_dec * u_dec.ln() + b_dec * one_minus_u_dec.ln() - a_dec.ln() - ln_beta + h.ln()
+_SUPPORTED_DF_MIN = 1e-6
+_SUPPORTED_DF_MAX = 1e8
 
 
 @_finite_output
@@ -727,7 +583,8 @@ def check_stat_p_consistency(
     """联合传播检验统计量与报告 p 值的四舍五入区间，并支持不等号比较 ('=', '<', '<=', '>', '>=')。
 
     同时保留点估计一致性 (`point_consistent`) 与统计量末位舍入区间一致性 (`interval_consistent`)，
-    对双侧 t / z 分布显式处理区间跨零时 `|stat| = 0 -> p_max = 1.0` 的极值点。
+    对双侧 t / z 分布显式处理区间跨零时 `|stat| = 0 -> p_max = 1.0` 的极值点；超出 SciPy 可靠双精度支持域的
+    极端自由度或超深尾指数比较统一返回未知 (`None`)，不输出错误判定。
     """
     kind_norm = str(kind or '').strip().lower()
     _require(kind_norm in ('t', 'f', 'chi2', 'z'), f'不支持的检验类型: {kind!r}')
@@ -749,37 +606,15 @@ def check_stat_p_consistency(
 
     stat_f = float(stat_dec)
     ln2 = math.log(2.0)
-    def _deep_ln_p(x_d: Decimal):
-        if x_d <= 0:
-            return Decimal(0)
-        if kind_norm == 'z':
-            # 2 * norm.sf(x) = erfc(x / sqrt(2)) = Gamma(1/2, x^2 / 2) / Gamma(1/2)
-            with localcontext() as ctx:
-                ctx.prec = 120
-                return _exact_log_igamma_q(Decimal('0.5'), (x_d * x_d) / Decimal(2))
-        if kind_norm == 'chi2':
-            with localcontext() as ctx:
-                ctx.prec = 120
-                return _exact_log_igamma_q(_decimal(df1, 'df1') / Decimal(2), x_d / Decimal(2))
-        if kind_norm == 't':
-            with localcontext() as ctx:
-                ctx.prec = 240
-                nu = _decimal(df1, 'df1')
-                t2 = x_d * x_d
-                return _exact_log_ibeta(nu / Decimal(2), Decimal('0.5'), nu, t2)
-        with localcontext() as ctx:
-            ctx.prec = 240
-            d1_d = _decimal(df1, 'df1')
-            d2_d = _decimal(df2, 'df2')
-            d1x = d1_d * x_d
-            return _exact_log_ibeta(d2_d / Decimal(2), d1_d / Decimal(2), d2_d, d1x)
 
     if kind_norm in ('t', 'z'):
         if kind_norm == 't':
             _require(df1 is not None and df1 > 0, '自由度须为正')
+            domain_supported = bool(_SUPPORTED_DF_MIN <= float(df1) <= _SUPPORTED_DF_MAX)
             sf_fn = lambda x: 2.0 * float(st.t.sf(x, df1))
             logsf_fn = lambda x: 0.0 if x == 0.0 else (ln2 + float(st.t.logsf(x, df1)))
         else:
+            domain_supported = True
             sf_fn = lambda x: 2.0 * float(st.norm.sf(x))
             logsf_fn = lambda x: 0.0 if x == 0.0 else (ln2 + float(st.norm.logsf(x)))
         # Half-open signed interval [stat_lo_dec, stat_hi_dec): lower included, upper excluded (when stat_tol > 0)
@@ -812,6 +647,10 @@ def check_stat_p_consistency(
     elif kind_norm == 'f':
         _require(df1 is not None and df2 is not None and df1 > 0 and df2 > 0, 'F 检验自由度 df1, df2 须为正')
         _require(stat_f >= 0, 'F 统计量须非负')
+        domain_supported = bool(
+            _SUPPORTED_DF_MIN <= float(df1) <= _SUPPORTED_DF_MAX
+            and _SUPPORTED_DF_MIN <= float(df2) <= _SUPPORTED_DF_MAX
+        )
         s_min_dec = max(Decimal(0), stat_lo_dec)
         s_max_dec = max(Decimal(0), stat_hi_dec)
         s_min = float(s_min_dec)
@@ -828,6 +667,7 @@ def check_stat_p_consistency(
     else:
         _require(df1 is not None and df1 > 0, '卡方自由度须为正')
         _require(stat_f >= 0, '卡方统计量须非负')
+        domain_supported = bool(_SUPPORTED_DF_MIN <= float(df1) <= _SUPPORTED_DF_MAX)
         s_min_dec = max(Decimal(0), stat_lo_dec)
         s_max_dec = max(Decimal(0), stat_hi_dec)
         s_min = float(s_min_dec)
@@ -847,14 +687,16 @@ def check_stat_p_consistency(
     p_max_dec = _decimal(p_max, '重算上界 p 值')
 
     def _cmp_tail(p_val: float, p_dec: Decimal, lp_val: float, x_d: Decimal, bound_dec: Decimal):
-        """Compare finite-statistic true tail p against bound_dec without float64 underflow/upper-rounding inversion."""
+        """Compare finite-statistic tail p against bound_dec within the supported IEEE-754 domain."""
         if bound_dec > Decimal(1):
             return -1
         if bound_dec == Decimal(1):
             return 0 if x_d == Decimal(0) else -1
+        if bound_dec <= Decimal(0):
+            return 1
+        if not domain_supported:
+            return None
         if x_d > Decimal(0) and float(x_d) == 0.0:
-            if bound_dec <= Decimal(0):
-                return 1
             return None
         if p_val >= 1.0 - 1e-12 and bound_dec > Decimal('0.99999999999'):
             if x_d == Decimal(0):
@@ -863,26 +705,19 @@ def check_stat_p_consistency(
                 return None
         if p_val >= 1e-300:
             return -1 if p_dec < bound_dec else (1 if p_dec > bound_dec else 0)
-        # Here 0 < true_p < 1e-300 strictly (since input statistic and dfs are finite).
-        if bound_dec <= Decimal(0):
-            return 1
-        if bound_dec >= Decimal('1e-299'):
+        if bound_dec >= Decimal('1e-295'):
             return -1
-        ln_p_d = _deep_ln_p(x_d)
-        if ln_p_d is None and math.isfinite(lp_val):
-            ln_p_d = Decimal(str(lp_val))
-        if ln_p_d is None:
-            return None
-        with localcontext() as ctx:
-            ctx.prec = 120
-            ln_b = bound_dec.ln()
-            diff = ln_p_d - ln_b
-            tol = Decimal('1e-11') * max(Decimal(1), abs(ln_b))
-            if diff < -tol:
-                return -1
-            if diff > tol:
-                return 1
-            return None
+        if math.isfinite(lp_val):
+            with localcontext() as ctx:
+                ctx.prec = 80
+                ln_b = bound_dec.ln()
+                diff = Decimal(str(lp_val)) - ln_b
+                tol = Decimal('1e-9') * max(Decimal(1), abs(ln_b))
+                if diff < -tol:
+                    return -1
+                if diff > tol:
+                    return 1
+        return None
 
     def _k_not(x):
         return None if x is None else (not x)

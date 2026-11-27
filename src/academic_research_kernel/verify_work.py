@@ -361,10 +361,19 @@ def compare_cited_metadata(cited: dict, works: list, *, target_doi: str | None =
             else:
                 wt_tokens = set(w_title.split())
                 jacc = (len(ct_tokens & wt_tokens) / len(ct_tokens | wt_tokens)) if (ct_tokens and wt_tokens) else 0.0
-                t_ok = bool(ct_norm == w_title or jacc >= 0.85)
-                if not t_ok:
+                if ct_norm == w_title:
+                    s_details['title'] = {'status': 'match', 'exact': True, 'jaccard': 1.0}
+                elif jacc >= 0.85:
+                    s_uncheckable.append('title')
+                    s_details['title'] = {
+                        'status': 'uncheckable',
+                        'reason': 'non_exact_high_similarity',
+                        'exact': False,
+                        'jaccard': round(jacc, 4),
+                    }
+                else:
                     s_mismatch.append('title')
-                s_details['title'] = {'status': 'match' if t_ok else 'mismatch', 'exact': ct_norm == w_title, 'jaccard': round(jacc, 4)}
+                    s_details['title'] = {'status': 'mismatch', 'exact': False, 'jaccard': round(jacc, 4)}
 
         if has_authors:
             ra_list = w.get('authors') or []

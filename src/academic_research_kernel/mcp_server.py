@@ -1279,16 +1279,6 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                 with db.transaction() as conn:
                     rec0 = db.batch_ingest([item], atomic=True)[0]
                     if exec_rec is not None:
-                        db.record_kernel_execution(
-                            str(exec_rec["execution_id"]),
-                            str(exec_rec["tool_name"]),
-                            str(exec_rec["kernel_version"]),
-                            str(exec_rec["verification_scope"]),
-                            exec_rec["consistent"],
-                            str(exec_rec["executed_at"]),
-                            exec_rec["inputs"],
-                            exec_rec["outputs"],
-                        )
                         db.bind_artifact_execution(
                             env_id,
                             str(exec_rec["execution_id"]),
@@ -1356,16 +1346,6 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             with db.transaction() as conn:
                 rec0 = db.batch_ingest([item], atomic=True)[0]
                 if exec_rec is not None:
-                    db.record_kernel_execution(
-                        str(exec_rec["execution_id"]),
-                        str(exec_rec["tool_name"]),
-                        str(exec_rec["kernel_version"]),
-                        str(exec_rec["verification_scope"]),
-                        exec_rec["consistent"],
-                        str(exec_rec["executed_at"]),
-                        exec_rec["inputs"],
-                        exec_rec["outputs"],
-                    )
                     db.bind_artifact_execution(
                         str(eff_art_id),
                         str(exec_rec["execution_id"]),

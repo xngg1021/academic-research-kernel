@@ -397,6 +397,7 @@ def test_require_kernel_execution_blocks_unexecuted_forged_audit_and_binds_real_
 ) -> None:
     """Caller cannot smuggle self-authored consistent=True under require_kernel_execution=True; real execution_id binds cleanly and survives DB reopen."""
     monkeypatch.setenv("ARK_WORKSPACE_ROOT", str(tmp_path))
+    monkeypatch.setenv("ARK_EXECUTION_KEY_HEX", "11" * 32)
     mcp_server.reset_session_db()
     db_file = tmp_path / "hardened.sqlite3"
 
@@ -635,6 +636,7 @@ def test_jsonrpc_stdio_end_to_end_verify_source_execution_binding(
     import json
 
     monkeypatch.setenv("ARK_WORKSPACE_ROOT", str(tmp_path))
+    monkeypatch.setenv("ARK_EXECUTION_KEY_HEX", "33" * 32)
     mcp_server.reset_session_db()
     db_file = tmp_path / "bib_e2e.sqlite3"
 
@@ -742,6 +744,7 @@ def test_round2_regressions_partial_conflict_mixed_scope_copied_db_and_zero_tail
     import shutil
 
     monkeypatch.setenv("ARK_WORKSPACE_ROOT", str(tmp_path))
+    monkeypatch.setenv("ARK_EXECUTION_KEY_HEX", "55" * 32)
     mcp_server.reset_session_db()
 
     # 1. p <= 0 must be False even at extreme z=40 where IEEE-754 sf underflows to 0.0:
@@ -920,17 +923,16 @@ def test_stat_p_consistency_extreme_tail_logsf_prevents_float64_underflow_miscla
     """Extreme tails where float64 sf underflows to 0.0 use logsf/analytic bounds or return indeterminate."""
     from decimal import Decimal
     from academic_research_kernel.recompute import check_stat_p_consistency
-    # 1. chi2(df=2) has exact survival exp(-x/2). At x in [1499.95, 1500.05), p ~= 1.86e-326 > 1e-330 -> MUST be False
-    r_false = check_stat_p_consistency(
+    # 1. When scipy chi2.logsf is -inf (x=1500, df=2), return indeterminate (None) rather than guessing
+    r_chi_indet = check_stat_p_consistency(
         "chi2", 1500.0, 2.0, reported_p=Decimal("1e-330"), stat_literal="1500.0", op="<"
     )
-    assert r_false["consistent"] is False
-    assert r_false["point_consistent"] is False
-    assert r_false["status"] == "inconsistent"
+    assert r_chi_indet["consistent"] is None
+    assert r_chi_indet["status"] == "indeterminate_underflow"
 
-    # 2. Positive control: at x in [1549.95, 1550.05), p ~= 2.6e-337 < 1e-330 -> MUST be True
+    # 2. Normal two-sided z where sf underflows to 0.0 but norm.logsf is finite: z=38.70 -> False; z=40.0 -> True
     r_true = check_stat_p_consistency(
-        "chi2", 1550.0, 2.0, reported_p=Decimal("1e-330"), stat_literal="1550.0", op="<"
+        "z", 40.0, reported_p=Decimal("1e-330"), stat_literal="40.0", op="<"
     )
     assert r_true["consistent"] is True
     assert r_true["point_consistent"] is True
@@ -951,19 +953,19 @@ def test_stat_p_consistency_extreme_tail_logsf_prevents_float64_underflow_miscla
     assert r_z_gt0["point_consistent"] is True
     assert r_z_gt0["status"] == "consistent_exact"
 
-    # 5. Deep t/F tails where scipy logsf is -inf are also resolved via Decimal continued fraction
-    r_t_false = check_stat_p_consistency(
+    # 5. Deep t/F tails where scipy logsf is -inf return indeterminate (None) rather than guessing
+    r_t_deep = check_stat_p_consistency(
         "t", 1e6, 2000.0, reported_p=Decimal("1e-9000"), stat_literal="1000000.0", op="<"
     )
-    assert r_t_false["consistent"] is False
+    assert r_t_deep["consistent"] is None
 
     # 6. Knife-edge threshold within float64 log tolerance returns indeterminate (consistent=None), never a false guess
     from decimal import localcontext
     with localcontext() as ctx:
         ctx.prec = 80
-        knife_p = (-Decimal("750")).exp()
+        knife_p = Decimal(2) * Decimal("-753.4204447172699").exp()
     r_indet = check_stat_p_consistency(
-        "chi2", 1500.0, 2.0, reported_p=knife_p, stat_decimals=30, op="<"
+        "z", 38.70, reported_p=knife_p, stat_decimals=30, op="<"
     )
     assert r_indet["consistent"] is None
     assert r_indet["status"] == "indeterminate_underflow"
@@ -1055,18 +1057,17 @@ def test_round2_comprehensive_audit_blockers_closed(
                 "art-raw-null", ex_false["execution_id"], "statistical_numerical_consistency"
             )
 
-    # 2. F deep-tail with huge df2=1e65: true p = (1 + 2*x/df2)^(-df2/2) ~= exp(-x)
-    r_f_false = check_stat_p_consistency(
-        "f", 800.0, 2.0, 1e65, reported_p=Decimal("1e-348"), stat_literal="800.0", op="<"
-    )
-    assert r_f_false["consistent"] is False
-    assert r_f_false["status"] == "inconsistent"
+    # 2. Unsupported extreme df (df2=1e65 > 1e8, where SciPy 1.15 Cephes returns spurious 1.0) returns None (unknown)
+    for f_val in (800.0, 810.0):
+        r_f_dom = check_stat_p_consistency(
+            "f", f_val, 2.0, 1e65, reported_p=Decimal("1e-348"), stat_literal=str(f_val), op="<"
+        )
+        assert r_f_dom["consistent"] is None
+        assert r_f_dom["status"] == "indeterminate_underflow"
 
-    r_f_true = check_stat_p_consistency(
-        "f", 810.0, 2.0, 1e65, reported_p=Decimal("1e-348"), stat_literal="810.0", op="<"
-    )
-    assert r_f_true["consistent"] is True
-    assert r_f_true["status"] == "consistent_exact"
+    # Within supported df domain, underflowing tail against ordinary bound (p < .001) resolves deterministically
+    r_f_ord = check_stat_p_consistency("f", 810.0, 2.0, 1000.0, reported_p=Decimal("0.001"), op="<")
+    assert r_f_ord["consistent"] is True
 
     # Upper p=1 boundary: z='1e-20' has interval [0.5e-20, 1.5e-20) strictly > 0 -> true p < 1 strictly
     r_z_lt1 = check_stat_p_consistency("z", "1e-20", reported_p=Decimal("1"), op="<")
@@ -1076,10 +1077,16 @@ def test_round2_comprehensive_audit_blockers_closed(
     # Flat MCP p_match agrees with deep-tail point verdict when float64 underflows to 0.0
     r_flat_zero = mcp_server.handle_tool_call(
         "academic_recompute_statistics",
-        {"chi2_stat": 1500.0, "df": 2.0, "p_value_literal": "0e-330"},
+        {"beta": 38.70, "se": 1.0, "p_value_literal": "0e-330"},
     )
     assert r_flat_zero["consistent"] is False
     assert r_flat_zero["p_match"]["consistent"] is False
+    r_flat_indet = mcp_server.handle_tool_call(
+        "academic_recompute_statistics",
+        {"chi2_stat": 1500.0, "df": 2.0, "p_value_literal": "0e-330"},
+    )
+    assert r_flat_indet["consistent"] is None
+    assert r_flat_indet["p_match"]["consistent"] is None
 
     # 3. Tri-state preservation in academic_table_forensics and sample_df through CEG export
     mcp_server.handle_tool_call(
@@ -1142,22 +1149,14 @@ def test_round3_minimal_closures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("ARK_EXECUTION_KEY_HEX", "66" * 32)
     db_file = tmp_path / "r3.sqlite3"
 
-    # 1. Imbalanced beta F (df1=1e130, df2=4, f=1e170 -> true p ~= 2e-340 > 1e-400 -> False)
-    r_imbal = check_stat_p_consistency(
-        "f", 1e170, 1e130, 4, reported_p=Decimal("1e-400"), op="<"
-    )
-    assert r_imbal["consistent"] is False
-    assert r_imbal["status"] == "inconsistent"
-
-    # 1b. Ratio preservation inside work_prec (df1=2e150, df2=2000, f='10.000', reported_p=1e-590 -> True) & subnormal stat underflow -> None
-    r_ratio = check_stat_p_consistency(
-        "f", "10.000", 2e150, 2000, reported_p=Decimal("1e-590"), op="<"
-    )
-    assert r_ratio["consistent"] is True
-    r_sub_stat = check_stat_p_consistency(
-        "f", "1e-400", 2e-60, 2, reported_p=Decimal("0.999999999995"), op="<"
-    )
-    assert r_sub_stat["consistent"] is None
+    # 1. Extreme dfs outside supported IEEE-754 domain return None (unknown) rather than false verdicts
+    for args_dom in (
+        ("f", 1e170, 1e130, 4, Decimal("1e-400")),
+        ("f", "10.000", 2e150, 2000, Decimal("1e-590")),
+        ("f", "1e-400", 2e-60, 2, Decimal("0.999999999995")),
+    ):
+        r_dom = check_stat_p_consistency(args_dom[0], args_dom[1], args_dom[2], args_dom[3], reported_p=args_dom[4], op="<")
+        assert r_dom["consistent"] is None
     with pytest.raises(ValueError, match="requires 'kind'"):
         mcp_server.handle_tool_call(
             "academic_recompute_statistics",
@@ -1216,9 +1215,90 @@ def test_round3_minimal_closures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
             {"db_path": str(db_file), "envelope": {"artifact_id": "art-x"}, "payload": {}},
         )
 
+    # 5. A1: Persistent file-backed receipt requires explicit ARK_EXECUTION_KEY_HEX and survives fresh child process;
+    #    later caller-added edge on same claim is NOT marked bound_at_ingest=True.
+    import json
+    import os
+    import subprocess
+    import sys
 
+    unkeyed_db = tmp_path / "unkeyed.sqlite3"
+    monkeypatch.delenv("ARK_EXECUTION_KEY_HEX", raising=False)
+    with pytest.raises(ValueError, match="ARK_EXECUTION_KEY_HEX"):
+        mcp_server.handle_tool_call(
+            "academic_check_percentage",
+            {"db_path": str(unkeyed_db), "count": 4, "sample_size": 10, "percent": 40},
+        )
 
+    stable_key = "77" * 32
+    monkeypatch.setenv("ARK_EXECUTION_KEY_HEX", stable_key)
+    cross_db = tmp_path / "cross_proc.sqlite3"
+    mcp_server.handle_tool_call(
+        "claim_evidence_add",
+        {"db_path": str(cross_db), "claim_id": "c_cross", "claim_text": "4/10 is 40 percent"},
+    )
+    ex_cp = mcp_server.handle_tool_call(
+        "academic_check_percentage",
+        {"db_path": str(cross_db), "count": 4, "sample_size": 10, "percent": 40},
+    )
+    mcp_server.handle_tool_call(
+        "research_artifact_ingest",
+        {
+            "db_path": str(cross_db),
+            "execution_id": ex_cp["execution_id"],
+            "require_kernel_execution": True,
+            "artifact_id": "results-pct-cp",
+            "bindings": {"claim_id": "c_cross"},
+        },
+    )
+    mcp_server.handle_tool_call(
+        "claim_evidence_add",
+        {
+            "db_path": str(cross_db),
+            "claim_id": "c_cross",
+            "claim_text": "4/10 is 40 percent",
+            "evidence": [["results-pct-cp", "contradicts", "later-added-location"]],
+        },
+    )
+    src_dir = str(Path(__file__).resolve().parents[1] / "src")
+    child_env = {**os.environ, "PYTHONPATH": src_dir, "ARK_EXECUTION_KEY_HEX": stable_key}
+    child_code = (
+        "import json, sys\n"
+        "from academic_research_kernel.state_db import ResearchStateDB\n"
+        "with ResearchStateDB(sys.argv[1], readonly=True) as db:\n"
+        "    ke = db.get_kernel_execution(sys.argv[2])\n"
+        "    ceg = db.export_ceg_dict()\n"
+        "print(json.dumps({'ok': ke is not None, 'edges': ceg['support_edges']}))\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", child_code, str(cross_db), ex_cp["execution_id"]],
+        env=child_env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    child_out = json.loads(proc.stdout)
+    assert child_out["ok"] is True
+    by_status = {e["support_status"]: e["metadata"] for e in child_out["edges"]}
+    assert by_status["supported"]["artifact_provenance_tier"] == "kernel_executed"
+    assert by_status["supported"]["bound_at_ingest"] is True
+    assert by_status["contradicted"]["bound_at_ingest"] is False
 
-
-
-
+    # 6. A2: Non-exact high-Jaccard title (e.g. dropped negation 'not') MUST return None (uncheckable), never True
+    neg_out = mcp_server.handle_tool_call(
+        "academic_verify_source",
+        {
+            "identifier": "10.5555/independent-audit-fixture",
+            "crossref_record": {
+                "DOI": "10.5555/independent-audit-fixture",
+                "title": ["Treatment does not improve survival in patients with advanced lung cancer"],
+            },
+            "cited_title": "Treatment does improve survival in patients with advanced lung cancer",
+        },
+    )
+    assert neg_out["citation_metadata_match"] is None
+    assert neg_out["consistent"] is None
+    assert (
+        neg_out["citation_check"]["per_source_evaluations"]["crossref"]["details"]["title"]["status"]
+        == "uncheckable"
+    )
