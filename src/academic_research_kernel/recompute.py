@@ -562,6 +562,435 @@ def check_p_match(reported_p, recomputed_p, decimals=None, *, reported_literal=N
     }
 
 
+_STIRLING_COEFFS = (
+    (1, 12),
+    (-1, 360),
+    (1, 1260),
+    (-1, 1680),
+    (1, 1188),
+    (-691, 360360),
+    (1, 156),
+    (-3617, 122400),
+)
+_HALF_LN_2PI = Decimal(
+    '0.9189385332046727417803297364056176398613974736377834128171515404827656959272603976947432986359541976'
+)
+
+
+def _decimal_lgamma(x_dec: Decimal, prec: int = 120) -> Decimal | None:
+    """High-precision Decimal ln(Gamma(x)) via recurrence + 8-term Bernoulli-Stirling series."""
+    if x_dec <= 0:
+        return None
+    with localcontext() as ctx:
+        ctx.prec = prec
+        shift = Decimal(0)
+        y = x_dec
+        while y < Decimal(40):
+            shift += y.ln()
+            y += Decimal(1)
+        inv_y = Decimal(1) / y
+        inv_y2 = inv_y * inv_y
+        series = Decimal(0)
+        pow_y = inv_y
+        for num, den in _STIRLING_COEFFS:
+            series += (Decimal(num) / Decimal(den)) * pow_y
+            pow_y *= inv_y2
+        return _HALF_LN_2PI + (y - Decimal('0.5')) * y.ln() - y + series - shift
+
+
+def _exact_log_igamma_q(a_dec: Decimal, z_dec: Decimal):
+    """Decimal Legendre continued fraction for ln(Gamma(a, z) / Gamma(a)) when z > a + 10."""
+    with localcontext() as ctx:
+        ctx.prec = 120
+        if z_dec <= a_dec + Decimal(10):
+            return None
+        ln_ga = _decimal_lgamma(a_dec)
+        if ln_ga is None:
+            return None
+        tiny = Decimal('1e-200000')
+        b0 = z_dec + Decimal(1) - a_dec
+        if abs(b0) < tiny:
+            return None
+        c = Decimal('1e200000')
+        d = Decimal(1) / b0
+        h = d
+        converged = False
+        clamped = False
+        for i in range(1, 250):
+            an = -Decimal(i) * (Decimal(i) - a_dec)
+            b0 += Decimal(2)
+            d = an * d + b0
+            if abs(d) < tiny:
+                clamped = True
+                break
+            c = b0 + an / c
+            if abs(c) < tiny:
+                clamped = True
+                break
+            d = Decimal(1) / d
+            delta = d * c
+            h *= delta
+            if abs(delta - Decimal(1)) < Decimal('1e-45'):
+                converged = True
+                break
+        if clamped or not converged or h <= 0:
+            return None
+        return -z_dec + a_dec * z_dec.ln() + h.ln() - ln_ga
+
+
+def _exact_log_ibeta(a_dec: Decimal, b_dec: Decimal, num_u: Decimal, num_1mu: Decimal):
+    """Decimal Gauss continued fraction (DLMF 8.17.22) for ln(I_u(a, b)) with ratios formed inside work_prec."""
+    if num_u <= 0 or num_1mu <= 0:
+        return None
+    exp_gap = max(
+        abs(a_dec.adjusted() - b_dec.adjusted()),
+        abs(num_u.adjusted() - num_1mu.adjusted()),
+    )
+    if exp_gap > 360:
+        return None
+    work_prec = max(120, exp_gap + 90)
+    with localcontext() as ctx:
+        ctx.prec = work_prec
+        denom = num_u + num_1mu
+        u_dec = num_u / denom
+        one_minus_u_dec = num_1mu / denom
+        if u_dec <= 0 or one_minus_u_dec <= 0:
+            return None
+        if u_dec >= (a_dec + Decimal(1)) / (a_dec + b_dec + Decimal(2)):
+            return None
+        ln_ga = _decimal_lgamma(a_dec, prec=work_prec)
+        ln_gb = _decimal_lgamma(b_dec, prec=work_prec)
+        ln_gab = _decimal_lgamma(a_dec + b_dec, prec=work_prec)
+        if ln_ga is None or ln_gb is None or ln_gab is None:
+            return None
+        ln_beta = ln_ga + ln_gb - ln_gab
+        tiny = Decimal('1e-200000')
+        qab = a_dec + b_dec
+        qap = a_dec + Decimal(1)
+        qam = a_dec - Decimal(1)
+        c = Decimal(1)
+        d = Decimal(1) - qab * u_dec / qap
+        if abs(d) < tiny:
+            return None
+        d = Decimal(1) / d
+        h = d
+        converged = False
+        clamped = False
+        for m in range(1, 250):
+            m_d = Decimal(m)
+            m2 = Decimal(2 * m)
+            aa = m_d * (b_dec - m_d) * u_dec / ((qam + m2) * (a_dec + m2))
+            d = Decimal(1) + aa * d
+            if abs(d) < tiny:
+                clamped = True
+                break
+            c = Decimal(1) + aa / c
+            if abs(c) < tiny:
+                clamped = True
+                break
+            d = Decimal(1) / d
+            h *= d * c
+            aa = -(a_dec + m_d) * (qab + m_d) * u_dec / ((a_dec + m2) * (qap + m2))
+            d = Decimal(1) + aa * d
+            if abs(d) < tiny:
+                clamped = True
+                break
+            c = Decimal(1) + aa / c
+            if abs(c) < tiny:
+                clamped = True
+                break
+            d = Decimal(1) / d
+            delta = d * c
+            h *= delta
+            if abs(delta - Decimal(1)) < Decimal('1e-45'):
+                converged = True
+                break
+        if clamped or not converged or h <= 0:
+            return None
+        return a_dec * u_dec.ln() + b_dec * one_minus_u_dec.ln() - a_dec.ln() - ln_beta + h.ln()
+
+
+@_finite_output
+def check_stat_p_consistency(
+    kind,
+    stat_value,
+    df1=None,
+    df2=None,
+    *,
+    reported_p,
+    reported_p_literal=None,
+    p_decimals=None,
+    stat_literal=None,
+    stat_decimals=None,
+    op='=',
+):
+    """联合传播检验统计量与报告 p 值的四舍五入区间，并支持不等号比较 ('=', '<', '<=', '>', '>=')。
+
+    同时保留点估计一致性 (`point_consistent`) 与统计量末位舍入区间一致性 (`interval_consistent`)，
+    对双侧 t / z 分布显式处理区间跨零时 `|stat| = 0 -> p_max = 1.0` 的极值点。
+    """
+    kind_norm = str(kind or '').strip().lower()
+    _require(kind_norm in ('t', 'f', 'chi2', 'z'), f'不支持的检验类型: {kind!r}')
+    op_norm = str(op or '=').strip()
+    if op_norm == '==':
+        op_norm = '='
+    _require(op_norm in ('=', '<', '<=', '>', '>='), f'不支持的比较算子: {op!r}')
+
+    _finite_inputs(df1=df1, df2=df2)
+    st = _require_scipy_stats()
+
+    stat_dec, stat_k, stat_tol, stat_lo_dec, stat_hi_dec, stat_src, stat_lit = _rounding_spec(
+        stat_value, stat_decimals, stat_literal
+    )
+    p_rep, p_k, p_tol, p_lo_dec, p_hi_dec, p_src, p_lit = _rounding_spec(
+        reported_p, p_decimals, reported_p_literal
+    )
+    _require(Decimal(0) <= p_rep <= Decimal(1), 'p 值须在 [0, 1]')
+
+    stat_f = float(stat_dec)
+    ln2 = math.log(2.0)
+    def _deep_ln_p(x_d: Decimal):
+        if x_d <= 0:
+            return Decimal(0)
+        if kind_norm == 'z':
+            # 2 * norm.sf(x) = erfc(x / sqrt(2)) = Gamma(1/2, x^2 / 2) / Gamma(1/2)
+            with localcontext() as ctx:
+                ctx.prec = 120
+                return _exact_log_igamma_q(Decimal('0.5'), (x_d * x_d) / Decimal(2))
+        if kind_norm == 'chi2':
+            with localcontext() as ctx:
+                ctx.prec = 120
+                return _exact_log_igamma_q(_decimal(df1, 'df1') / Decimal(2), x_d / Decimal(2))
+        if kind_norm == 't':
+            with localcontext() as ctx:
+                ctx.prec = 240
+                nu = _decimal(df1, 'df1')
+                t2 = x_d * x_d
+                return _exact_log_ibeta(nu / Decimal(2), Decimal('0.5'), nu, t2)
+        with localcontext() as ctx:
+            ctx.prec = 240
+            d1_d = _decimal(df1, 'df1')
+            d2_d = _decimal(df2, 'df2')
+            d1x = d1_d * x_d
+            return _exact_log_ibeta(d2_d / Decimal(2), d1_d / Decimal(2), d2_d, d1x)
+
+    if kind_norm in ('t', 'z'):
+        if kind_norm == 't':
+            _require(df1 is not None and df1 > 0, '自由度须为正')
+            sf_fn = lambda x: 2.0 * float(st.t.sf(x, df1))
+            logsf_fn = lambda x: 0.0 if x == 0.0 else (ln2 + float(st.t.logsf(x, df1)))
+        else:
+            sf_fn = lambda x: 2.0 * float(st.norm.sf(x))
+            logsf_fn = lambda x: 0.0 if x == 0.0 else (ln2 + float(st.norm.logsf(x)))
+        # Half-open signed interval [stat_lo_dec, stat_hi_dec): lower included, upper excluded (when stat_tol > 0)
+        lo_inc = True
+        hi_inc = bool(stat_lo_dec == stat_hi_dec)
+        if stat_lo_dec < 0 and stat_hi_dec > 0:
+            abs_min_dec, abs_min, abs_min_inc = Decimal(0), 0.0, True
+            if abs(stat_lo_dec) > abs(stat_hi_dec):
+                abs_max_dec, abs_max, abs_max_inc = abs(stat_lo_dec), float(abs(stat_lo_dec)), lo_inc
+            elif abs(stat_hi_dec) > abs(stat_lo_dec):
+                abs_max_dec, abs_max, abs_max_inc = abs(stat_hi_dec), float(abs(stat_hi_dec)), hi_inc
+            else:
+                abs_max_dec, abs_max, abs_max_inc = abs(stat_lo_dec), float(abs(stat_lo_dec)), bool(lo_inc or hi_inc)
+        elif stat_lo_dec >= 0:
+            abs_min_dec, abs_min, abs_min_inc = stat_lo_dec, float(stat_lo_dec), lo_inc
+            abs_max_dec, abs_max, abs_max_inc = stat_hi_dec, float(stat_hi_dec), hi_inc
+        else:
+            # Entire interval <= 0: stat_hi_dec is closer to 0 (abs_min), stat_lo_dec is farther from 0 (abs_max)
+            abs_min_dec, abs_min, abs_min_inc = abs(stat_hi_dec), float(abs(stat_hi_dec)), hi_inc
+            abs_max_dec, abs_max, abs_max_inc = abs(stat_lo_dec), float(abs(stat_lo_dec)), lo_inc
+        x_pt_dec, x_min_dec, x_max_dec = abs(stat_dec), abs_max_dec, abs_min_dec
+        p_point = sf_fn(abs(stat_f))
+        p_min = sf_fn(abs_max)
+        p_max = 1.0 if abs_min == 0.0 else sf_fn(abs_min)
+        lp_point = logsf_fn(abs(stat_f))
+        lp_min = logsf_fn(abs_max)
+        lp_max = 0.0 if abs_min == 0.0 else logsf_fn(abs_min)
+        p_min_inc = abs_max_inc
+        p_max_inc = abs_min_inc
+    elif kind_norm == 'f':
+        _require(df1 is not None and df2 is not None and df1 > 0 and df2 > 0, 'F 检验自由度 df1, df2 须为正')
+        _require(stat_f >= 0, 'F 统计量须非负')
+        s_min_dec = max(Decimal(0), stat_lo_dec)
+        s_max_dec = max(Decimal(0), stat_hi_dec)
+        s_min = float(s_min_dec)
+        s_max = float(s_max_dec)
+        x_pt_dec, x_min_dec, x_max_dec = stat_dec, s_max_dec, s_min_dec
+        p_point = float(st.f.sf(stat_f, df1, df2))
+        p_min = float(st.f.sf(s_max, df1, df2))
+        p_max = 1.0 if s_min == 0.0 else float(st.f.sf(s_min, df1, df2))
+        lp_point = 0.0 if stat_f == 0.0 else float(st.f.logsf(stat_f, df1, df2))
+        lp_min = 0.0 if s_max == 0.0 else float(st.f.logsf(s_max, df1, df2))
+        lp_max = 0.0 if s_min == 0.0 else float(st.f.logsf(s_min, df1, df2))
+        p_min_inc = bool(stat_lo_dec == stat_hi_dec)
+        p_max_inc = True
+    else:
+        _require(df1 is not None and df1 > 0, '卡方自由度须为正')
+        _require(stat_f >= 0, '卡方统计量须非负')
+        s_min_dec = max(Decimal(0), stat_lo_dec)
+        s_max_dec = max(Decimal(0), stat_hi_dec)
+        s_min = float(s_min_dec)
+        s_max = float(s_max_dec)
+        x_pt_dec, x_min_dec, x_max_dec = stat_dec, s_max_dec, s_min_dec
+        p_point = float(st.chi2.sf(stat_f, df1))
+        p_min = float(st.chi2.sf(s_max, df1))
+        p_max = 1.0 if s_min == 0.0 else float(st.chi2.sf(s_min, df1))
+        lp_point = 0.0 if stat_f == 0.0 else float(st.chi2.logsf(stat_f, df1))
+        lp_min = 0.0 if s_max == 0.0 else float(st.chi2.logsf(s_max, df1))
+        lp_max = 0.0 if s_min == 0.0 else float(st.chi2.logsf(s_min, df1))
+        p_min_inc = bool(stat_lo_dec == stat_hi_dec)
+        p_max_inc = True
+
+    p_pt_dec = _decimal(p_point, '重算点估计 p 值')
+    p_min_dec = _decimal(p_min, '重算下界 p 值')
+    p_max_dec = _decimal(p_max, '重算上界 p 值')
+
+    def _cmp_tail(p_val: float, p_dec: Decimal, lp_val: float, x_d: Decimal, bound_dec: Decimal):
+        """Compare finite-statistic true tail p against bound_dec without float64 underflow/upper-rounding inversion."""
+        if bound_dec > Decimal(1):
+            return -1
+        if bound_dec == Decimal(1):
+            return 0 if x_d == Decimal(0) else -1
+        if x_d > Decimal(0) and float(x_d) == 0.0:
+            if bound_dec <= Decimal(0):
+                return 1
+            return None
+        if p_val >= 1.0 - 1e-12 and bound_dec > Decimal('0.99999999999'):
+            if x_d == Decimal(0):
+                return 1
+            if abs(p_dec - bound_dec) <= Decimal('1e-12'):
+                return None
+        if p_val >= 1e-300:
+            return -1 if p_dec < bound_dec else (1 if p_dec > bound_dec else 0)
+        # Here 0 < true_p < 1e-300 strictly (since input statistic and dfs are finite).
+        if bound_dec <= Decimal(0):
+            return 1
+        if bound_dec >= Decimal('1e-299'):
+            return -1
+        ln_p_d = _deep_ln_p(x_d)
+        if ln_p_d is None and math.isfinite(lp_val):
+            ln_p_d = Decimal(str(lp_val))
+        if ln_p_d is None:
+            return None
+        with localcontext() as ctx:
+            ctx.prec = 120
+            ln_b = bound_dec.ln()
+            diff = ln_p_d - ln_b
+            tol = Decimal('1e-11') * max(Decimal(1), abs(ln_b))
+            if diff < -tol:
+                return -1
+            if diff > tol:
+                return 1
+            return None
+
+    def _k_not(x):
+        return None if x is None else (not x)
+
+    def _k_and(a, b):
+        if a is False or b is False:
+            return False
+        if a is True and b is True:
+            return True
+        return None
+
+    def _k_or(a, b):
+        if a is True or b is True:
+            return True
+        if a is False and b is False:
+            return False
+        return None
+
+    if op_norm == '=':
+        c_pt_lo = _cmp_tail(p_point, p_pt_dec, lp_point, x_pt_dec, p_lo_dec)
+        c_pt_hi = _cmp_tail(p_point, p_pt_dec, lp_point, x_pt_dec, p_hi_dec)
+        point_ok = _k_and(
+            None if c_pt_lo is None else (c_pt_lo >= 0),
+            None if c_pt_hi is None else (c_pt_hi < 0),
+        )
+        c_max_lo = _cmp_tail(p_max, p_max_dec, lp_max, x_max_dec, p_lo_dec)
+        c_min_hi = _cmp_tail(p_min, p_min_dec, lp_min, x_min_dec, p_hi_dec)
+        disj_l = None if c_max_lo is None else (c_max_lo < 0 or (c_max_lo == 0 and not p_max_inc))
+        disj_r = None if c_min_hi is None else (c_min_hi >= 0)
+        interval_ok = _k_not(_k_or(disj_l, disj_r))
+        all_ok = point_ok
+    elif op_norm == '<':
+        c_pt = _cmp_tail(p_point, p_pt_dec, lp_point, x_pt_dec, p_rep)
+        c_min = _cmp_tail(p_min, p_min_dec, lp_min, x_min_dec, p_rep)
+        c_max = _cmp_tail(p_max, p_max_dec, lp_max, x_max_dec, p_rep)
+        point_ok = None if c_pt is None else (c_pt < 0)
+        interval_ok = None if c_min is None else (c_min < 0)
+        all_ok = None if c_max is None else (c_max < 0 or (c_max == 0 and not p_max_inc))
+    elif op_norm == '<=':
+        c_pt = _cmp_tail(p_point, p_pt_dec, lp_point, x_pt_dec, p_rep)
+        c_min = _cmp_tail(p_min, p_min_dec, lp_min, x_min_dec, p_rep)
+        c_max = _cmp_tail(p_max, p_max_dec, lp_max, x_max_dec, p_rep)
+        point_ok = None if c_pt is None else (c_pt <= 0)
+        interval_ok = None if c_min is None else (c_min < 0 or (c_min == 0 and p_min_inc))
+        all_ok = None if c_max is None else (c_max <= 0)
+    elif op_norm == '>':
+        c_pt = _cmp_tail(p_point, p_pt_dec, lp_point, x_pt_dec, p_rep)
+        c_min = _cmp_tail(p_min, p_min_dec, lp_min, x_min_dec, p_rep)
+        c_max = _cmp_tail(p_max, p_max_dec, lp_max, x_max_dec, p_rep)
+        point_ok = None if c_pt is None else (c_pt > 0)
+        interval_ok = None if c_max is None else (c_max > 0)
+        all_ok = None if c_min is None else (c_min > 0 or (c_min == 0 and not p_min_inc))
+    else:
+        c_pt = _cmp_tail(p_point, p_pt_dec, lp_point, x_pt_dec, p_rep)
+        c_min = _cmp_tail(p_min, p_min_dec, lp_min, x_min_dec, p_rep)
+        c_max = _cmp_tail(p_max, p_max_dec, lp_max, x_max_dec, p_rep)
+        point_ok = None if c_pt is None else (c_pt >= 0)
+        interval_ok = None if c_max is None else (c_max > 0 or (c_max == 0 and p_max_inc))
+        all_ok = None if c_min is None else (c_min >= 0)
+
+    if interval_ok is None:
+        status = 'indeterminate_underflow'
+        confidence = 'low'
+    elif interval_ok is False:
+        status = 'inconsistent'
+        confidence = 'high'
+    elif point_ok is True and all_ok is True:
+        status = 'consistent_exact'
+        confidence = 'high'
+    elif point_ok is None or all_ok is None:
+        status = 'consistent_within_stat_rounding'
+        confidence = 'low'
+    else:
+        status = 'consistent_within_stat_rounding'
+        confidence = 'high'
+
+    return {
+        'consistent': interval_ok,
+        'point_consistent': point_ok,
+        'interval_consistent': interval_ok,
+        'status': status,
+        'operator': op_norm,
+        'kind': kind_norm,
+        'reported_p': float(p_rep),
+        'recomputed_p_point': float(p_point),
+        'recomputed_log_p_point': float(lp_point) if math.isfinite(lp_point) else None,
+        'recomputed_p_interval': [float(p_min), float(p_max)],
+        'recomputed_p_interval_inclusive': [bool(p_min_inc), bool(p_max_inc)],
+        'stat_rounding_interval': {
+            'lower': str(stat_lo_dec),
+            'upper': str(stat_hi_dec),
+            'decimals': int(stat_k),
+            'precision_source': stat_src,
+            'reported_literal': stat_lit,
+        },
+        'p_rounding_interval': {
+            'lower': str(p_lo_dec),
+            'upper': str(p_hi_dec),
+            'decimals': int(p_k),
+            'precision_source': p_src,
+            'reported_literal': p_lit,
+        },
+        'library': 'scipy.stats + decimal.Decimal',
+        'confidence': confidence,
+    }
+
+
+
 @_finite_output
 def check_percentage(count, percent, denominator=None, max_denominator=100000,
                      decimals=None):

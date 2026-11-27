@@ -9,9 +9,13 @@ from __future__ import annotations
 
 import collections.abc
 from contextlib import contextmanager
+import hashlib
+import hmac
 import json
+import os
 from pathlib import Path
 import re
+import secrets
 import sqlite3
 import threading
 from typing import Any, Iterable, Iterator, Mapping, Optional
@@ -781,7 +785,270 @@ CREATE TABLE IF NOT EXISTS doi_watch_commits (
     snapshot_json TEXT NOT NULL CHECK (length(snapshot_json) >= 2),
     PRIMARY KEY (watcher, item_key, seq)
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS kernel_executions (
+    execution_id TEXT PRIMARY KEY CHECK (length(trim(execution_id)) > 0),
+    tool_name TEXT NOT NULL CHECK (length(trim(tool_name)) > 0),
+    kernel_version TEXT NOT NULL CHECK (length(trim(kernel_version)) > 0),
+    verification_scope TEXT NOT NULL CHECK (length(trim(verification_scope)) > 0),
+    consistent INTEGER CHECK (consistent IN (0, 1)),
+    executed_at TEXT NOT NULL CHECK (length(trim(executed_at)) > 0),
+    inputs_json TEXT NOT NULL CHECK (length(inputs_json) >= 2),
+    inputs_sha256 TEXT NOT NULL CHECK (length(inputs_sha256) = 64 AND inputs_sha256 NOT GLOB '*[^0-9a-f]*'),
+    outputs_json TEXT NOT NULL CHECK (length(outputs_json) >= 2),
+    outputs_sha256 TEXT NOT NULL CHECK (length(outputs_sha256) = 64 AND outputs_sha256 NOT GLOB '*[^0-9a-f]*'),
+    auth_hmac TEXT NOT NULL CHECK (length(auth_hmac) = 64 AND auth_hmac NOT GLOB '*[^0-9a-f]*')
+) STRICT;
+
+CREATE TRIGGER IF NOT EXISTS trg_kernel_executions_immutable_upd
+BEFORE UPDATE ON kernel_executions
+BEGIN
+    SELECT RAISE(ABORT, 'kernel_executions table is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_kernel_executions_immutable_del
+BEFORE DELETE ON kernel_executions
+BEGIN
+    SELECT RAISE(ABORT, 'kernel_executions table is append-only');
+END;
+
+CREATE TABLE IF NOT EXISTS artifact_execution_bindings (
+    artifact_id TEXT PRIMARY KEY REFERENCES artifacts(artifact_id),
+    execution_id TEXT NOT NULL REFERENCES kernel_executions(execution_id),
+    verification_scope TEXT NOT NULL CHECK (length(trim(verification_scope)) > 0),
+    provenance_tier TEXT NOT NULL CHECK (provenance_tier IN ('kernel_executed', 'external_unverified')),
+    ingest_bound_claim_id TEXT,
+    binding_hmac TEXT NOT NULL CHECK (length(binding_hmac) = 64 AND binding_hmac NOT GLOB '*[^0-9a-f]*')
+) STRICT;
+
+CREATE TRIGGER IF NOT EXISTS trg_artifact_exec_bindings_immutable_upd
+BEFORE UPDATE ON artifact_execution_bindings
+BEGIN
+    SELECT RAISE(ABORT, 'artifact_execution_bindings table is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_artifact_exec_bindings_immutable_del
+BEFORE DELETE ON artifact_execution_bindings
+BEGIN
+    SELECT RAISE(ABORT, 'artifact_execution_bindings table is append-only');
+END;
 """
+
+
+_PROCESS_EXEC_SECRET: bytes = secrets.token_bytes(32)
+
+
+def _get_kernel_exec_secret() -> bytes:
+    env_hex = (os.environ.get("ARK_EXECUTION_KEY_HEX") or "").strip()
+    if env_hex:
+        if len(env_hex) != 64 or not re.fullmatch(r"[0-9a-fA-F]{64}", env_hex):
+            raise ValueError("ARK_EXECUTION_KEY_HEX must be exactly 64 hex characters (32 bytes)")
+        return bytes.fromhex(env_hex)
+    return _PROCESS_EXEC_SECRET
+
+
+def compute_kernel_execution_id(
+    tool_name: str,
+    kernel_version: str,
+    verification_scope: str,
+    consistent: Optional[bool],
+    executed_at: str,
+    inputs_sha256: str,
+    outputs_sha256: str,
+) -> str:
+    return f"kexec-{sha256_hex(canonical_json([tool_name, kernel_version, verification_scope, consistent, executed_at, inputs_sha256, outputs_sha256]))[:24]}"
+
+
+def _compute_kernel_exec_hmac(
+    store_scope: str,
+    execution_id: str,
+    tool_name: str,
+    kernel_version: str,
+    verification_scope: str,
+    consistent: Optional[bool],
+    executed_at: str,
+    inputs_sha256: str,
+    outputs_sha256: str,
+) -> str:
+    msg = canonical_json(
+        [store_scope, execution_id, tool_name, kernel_version, verification_scope, consistent, executed_at, inputs_sha256, outputs_sha256]
+    ).encode("utf-8")
+    return hmac.new(_get_kernel_exec_secret(), msg, hashlib.sha256).hexdigest()
+
+
+def _compute_binding_hmac(
+    store_scope: str,
+    artifact_id: str,
+    artifact_kind: str,
+    payload_sha256: str,
+    execution_id: str,
+    verification_scope: str,
+    provenance_tier: str,
+    ingest_bound_claim_id: Optional[str],
+) -> str:
+    msg = canonical_json(
+        [store_scope, artifact_id, artifact_kind, payload_sha256, execution_id, verification_scope, provenance_tier, ingest_bound_claim_id]
+    ).encode("utf-8")
+    return hmac.new(_get_kernel_exec_secret(), msg, hashlib.sha256).hexdigest()
+
+
+def _verify_execution_row_dict(row: Mapping[str, Any], *, store_scope: str) -> dict[str, Any]:
+    eid = str(row["execution_id"])
+    tname = str(row["tool_name"])
+    kver = str(row["kernel_version"])
+    vscope = str(row["verification_scope"])
+    cons_raw = row["consistent"]
+    cons: Optional[bool] = None if cons_raw is None else bool(cons_raw)
+    exec_at = str(row["executed_at"])
+    in_raw = str(row["inputs_json"])
+    out_raw = str(row["outputs_json"])
+    in_sha_stored = str(row["inputs_sha256"])
+    out_sha_stored = str(row["outputs_sha256"])
+    mac_stored = str(row["auth_hmac"])
+
+    in_obj = json.loads(in_raw)
+    out_obj = json.loads(out_raw)
+    if sha256_hex(canonical_json(in_obj)) != in_sha_stored:
+        raise ValueError(f"Tampered inputs_json digest on kernel execution {eid!r}")
+    if sha256_hex(canonical_json(out_obj)) != out_sha_stored:
+        raise ValueError(f"Tampered outputs_json digest on kernel execution {eid!r}")
+    expected_id = compute_kernel_execution_id(tname, kver, vscope, cons, exec_at, in_sha_stored, out_sha_stored)
+    if eid != expected_id:
+        raise ValueError(f"Tampered execution_id tuple on kernel execution {eid!r}")
+    expected_mac = _compute_kernel_exec_hmac(
+        store_scope, eid, tname, kver, vscope, cons, exec_at, in_sha_stored, out_sha_stored
+    )
+    if not hmac.compare_digest(mac_stored, expected_mac):
+        raise ValueError(f"Unauthenticated kernel execution {eid!r}: HMAC verification failed")
+    return {
+        "execution_id": eid,
+        "tool_name": tname,
+        "kernel_version": kver,
+        "verification_scope": vscope,
+        "consistent": cons,
+        "executed_at": exec_at,
+        "inputs": in_obj,
+        "inputs_sha256": in_sha_stored,
+        "outputs": out_obj,
+        "outputs_sha256": out_sha_stored,
+    }
+
+
+_QUANT_EXECUTION_TOOLS = frozenset(
+    {"academic_recompute_statistics", "academic_check_percentage", "academic_table_forensics"}
+)
+_BIB_EXECUTION_TOOLS = frozenset({"academic_verify_source", "academic_retraction_watch"})
+
+
+def canonical_payload_from_execution(eff_kind: str, exec_rec: Mapping[str, Any]) -> dict[str, Any]:
+    tname = str(exec_rec["tool_name"])
+    k_cons = exec_rec.get("consistent")
+    inputs = dict(exec_rec.get("inputs") or {})
+    outputs = dict(exec_rec.get("outputs") or {})
+    exec_at = str(exec_rec.get("executed_at") or "2026-01-01T00:00:00Z")
+
+    if eff_kind == "quantitative_audit":
+        assertion: dict[str, Any] = {
+            "statistic": tname,
+            "consistent": k_cons,
+            "inputs": inputs,
+            "recomputed": {
+                k: v
+                for k, v in outputs.items()
+                if k not in ("execution_id", "verification_scope")
+            },
+            "formula": f"kernel_execution:{tname}",
+            "reported": {
+                k: inputs[k]
+                for k in ("p_value", "p_value_literal", "percent", "ci_estimate", "check_sd", "reported_n")
+                if k in inputs
+            },
+            "library": f"academic-research-kernel/{exec_rec['kernel_version']}",
+            "note": f"Derived from kernel execution {exec_rec['execution_id']} ({exec_rec['verification_scope']})",
+        }
+        if isinstance(k_cons, bool):
+            assertion["discrepancy_detected"] = not k_cons
+        return {"assertions": [assertion]}
+
+    k_stance = "supports" if k_cons is True else ("contradicts" if k_cons is False else "qualifies")
+    status_map = {"supports": "supported", "contradicts": "contradicted", "qualifies": "unverifiable"}
+    norm_info = outputs.get("normalized") if isinstance(outputs.get("normalized"), Mapping) else {}
+    id_type = str(norm_info.get("type") or "doi")
+    id_val = outputs.get("target_doi") or norm_info.get("value") or inputs.get("identifier")
+    identifiers_map: dict[str, Any] = {"doi": None, "arxiv_id": None, "openalex_id": None, "pmid": None}
+    if id_type in identifiers_map and isinstance(id_val, str):
+        identifiers_map[id_type] = id_val
+
+    sources_list: list[dict[str, Any]] = []
+    raw_sources = outputs.get("sources")
+    if isinstance(raw_sources, Mapping) and raw_sources:
+        for s_name, s_obj in raw_sources.items():
+            if isinstance(s_obj, Mapping):
+                st_s = str(s_obj.get("status") or "failed")
+                if st_s not in ("ok", "failed", "skipped"):
+                    st_s = "failed"
+                src_entry: dict[str, Any] = {
+                    "source": str(s_name),
+                    "queried_at": str(s_obj.get("queried_at") or exec_at),
+                    "status": st_s,
+                    "raw_identifier": str(id_val) if isinstance(id_val, str) else None,
+                }
+                if s_obj.get("mode"):
+                    src_entry["coverage"] = str(s_obj["mode"])
+                sources_list.append(src_entry)
+    if not sources_list:
+        sources_list.append(
+            {
+                "source": tname,
+                "queried_at": exec_at,
+                "status": "ok" if k_cons is not None else "skipped",
+                "raw_identifier": str(id_val) if isinstance(id_val, str) else None,
+            }
+        )
+
+    return {
+        "schema_version": "1.0",
+        "query": str(inputs.get("identifier") or canonical_json(inputs.get("dois") or tname)),
+        "identifiers": identifiers_map,
+        "sources": sources_list,
+        "claims": [
+            {
+                "claim": f"{exec_rec['verification_scope']}:{id_val or tname}",
+                "evidence_type": "metadata",
+                "source": str(exec_rec["verification_scope"]),
+                "support_status": status_map[k_stance],
+            }
+        ],
+        "generated_at": exec_at,
+    }
+
+
+OMIT_PAYLOAD = object()
+
+
+def resolve_executed_artifact_payload(
+    kind: Optional[str],
+    exec_rec: Mapping[str, Any],
+    caller_payload: Any = OMIT_PAYLOAD,
+) -> tuple[str, dict[str, Any]]:
+    tname = str(exec_rec["tool_name"])
+    eff_kind = str(kind or ("quantitative_audit" if tname in _QUANT_EXECUTION_TOOLS else "evidence_receipt"))
+    if eff_kind == "quantitative_audit" and tname not in _QUANT_EXECUTION_TOOLS:
+        raise ValueError(f"Kernel execution {exec_rec['execution_id']!r} from tool {tname!r} cannot back quantitative_audit")
+    if eff_kind == "evidence_receipt" and tname not in _BIB_EXECUTION_TOOLS:
+        raise ValueError(f"Kernel execution {exec_rec['execution_id']!r} from tool {tname!r} cannot back evidence_receipt")
+    if eff_kind not in ("quantitative_audit", "evidence_receipt"):
+        raise ValueError(f"Kernel execution binding unsupported for artifact kind {eff_kind!r}")
+
+    canonical_pay = canonical_payload_from_execution(eff_kind, exec_rec)
+    if caller_payload is not OMIT_PAYLOAD:
+        if not isinstance(caller_payload, Mapping):
+            raise ValueError("payload must be a JSON object")
+        if canonical_json(caller_payload) != canonical_json(canonical_pay):
+            raise ValueError(
+                f"Execution receipt tamper/mismatch: supplied payload does not match canonical kernel execution payload ({exec_rec['execution_id']})"
+            )
+    return eff_kind, canonical_pay
 
 
 def canonical_literature_watch_key(raw: Any) -> str:
@@ -2109,6 +2376,89 @@ class ResearchStateDB:
             c_rows = conn.execute("SELECT * FROM claims ORDER BY claim_id").fetchall()
             ev_rows = conn.execute("SELECT * FROM claim_evidence ORDER BY claim_id, artifact_id, locator").fetchall()
             ce_rows = conn.execute("SELECT * FROM claim_edges ORDER BY src_claim_id, dst_claim_id, relation").fetchall()
+            art_kind_rows = conn.execute("SELECT artifact_id, kind, payload_json, payload_sha256 FROM artifacts").fetchall()
+            has_exec_tbl = (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='kernel_executions'"
+                ).fetchone()
+                is not None
+            )
+            has_exec_bindings = (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='artifact_execution_bindings'"
+                ).fetchone()
+                is not None
+            )
+            ke_rows = (
+                conn.execute(
+                    """
+                    SELECT * FROM kernel_executions
+                    WHERE execution_id IN (SELECT execution_id FROM artifact_execution_bindings)
+                    """
+                ).fetchall()
+                if (has_exec_tbl and has_exec_bindings)
+                else []
+            )
+            bind_rows = (
+                conn.execute("SELECT * FROM artifact_execution_bindings").fetchall()
+                if has_exec_bindings
+                else []
+            )
+
+        store_scope = self._store_scope_id()
+        art_kinds = {str(r["artifact_id"]): str(r["kind"]) for r in art_kind_rows}
+        art_live_shas: dict[str, Optional[str]] = {}
+        for r in art_kind_rows:
+            aid_r = str(r["artifact_id"])
+            stored_sha = str(r["payload_sha256"])
+            try:
+                recomp_sha = sha256_hex(canonical_json(json.loads(str(r["payload_json"]))))
+                art_live_shas[aid_r] = recomp_sha if recomp_sha == stored_sha else None
+            except Exception:
+                art_live_shas[aid_r] = None
+
+        verified_ke: dict[str, dict[str, Any]] = {}
+        for kr in ke_rows:
+            try:
+                vk = _verify_execution_row_dict(kr, store_scope=store_scope)
+                verified_ke[vk["execution_id"]] = vk
+            except Exception:
+                continue
+
+        exec_bindings: dict[str, dict[str, Any]] = {}
+        tampered_binding_artifacts: set[str] = set()
+        for r in bind_rows:
+            aid_b = str(r["artifact_id"])
+            eid_b = str(r["execution_id"])
+            vsc_b = str(r["verification_scope"])
+            pt_b = str(r["provenance_tier"])
+            ibc_b = str(r["ingest_bound_claim_id"]) if r["ingest_bound_claim_id"] is not None else None
+            bmac = str(r["binding_hmac"])
+            live_sha = art_live_shas.get(aid_b)
+            ak_b = art_kinds.get(aid_b, "")
+            if live_sha is not None and eid_b in verified_ke:
+                expected_bmac = _compute_binding_hmac(
+                    store_scope, aid_b, ak_b, live_sha, eid_b, vsc_b, pt_b, ibc_b
+                )
+                if (
+                    pt_b == "kernel_executed"
+                    and hmac.compare_digest(bmac, expected_bmac)
+                    and verified_ke[eid_b]["verification_scope"] == vsc_b
+                ):
+                    try:
+                        _, expected_pay = resolve_executed_artifact_payload(ak_b, verified_ke[eid_b])
+                        expected_pay_sha = sha256_hex(canonical_json(expected_pay))
+                    except Exception:
+                        expected_pay_sha = None
+                    if expected_pay_sha is not None and live_sha == expected_pay_sha:
+                        exec_bindings[aid_b] = {
+                            "execution_id": eid_b,
+                            "verification_scope": vsc_b,
+                            "artifact_provenance_tier": pt_b,
+                            "ingest_bound_claim_id": ibc_b,
+                        }
+                        continue
+            tampered_binding_artifacts.add(aid_b)
 
         claims = []
         for r in c_rows:
@@ -2135,19 +2485,62 @@ class ResearchStateDB:
         for r in ev_rows:
             art_s = str(r["artifact_id"])
             loc_s = str(r["locator"])
+            cid_edge = str(r["claim_id"])
+            eb = exec_bindings.get(art_s)
+            if eb is not None:
+                bound_at_ingest = bool(
+                    eb["ingest_bound_claim_id"] is not None and cid_edge == eb["ingest_bound_claim_id"]
+                )
+                art_tier = eb["artifact_provenance_tier"]
+                v_scope = eb["verification_scope"]
+                edge_meta: dict[str, Any] = {
+                    "artifact_provenance_tier": art_tier,
+                    "edge_provenance_tier": "caller_asserted_binding",
+                    "bound_at_ingest": bound_at_ingest,
+                    "verification_scope": v_scope,
+                    "execution_id": eb["execution_id"],
+                }
+            else:
+                ak = art_kinds.get(art_s, "")
+                v_scope = (
+                    "statistical_numerical_consistency_unverified"
+                    if ak == "quantitative_audit"
+                    else (
+                        "bibliographic_or_evidence_receipt_unverified"
+                        if ak == "evidence_receipt"
+                        else "external_assertion_unscoped"
+                    )
+                )
+                art_tier = "external_unverified"
+                edge_meta = {
+                    "artifact_provenance_tier": art_tier,
+                    "edge_provenance_tier": "caller_asserted_binding",
+                    "bound_at_ingest": False,
+                    "verification_scope": v_scope,
+                }
+                if art_s in tampered_binding_artifacts:
+                    edge_meta["unauthenticated_execution_binding"] = True
             ev_prefix = "ev-quant-" if art_s.startswith("results-") else "ev-"
             ev_id = ev_prefix + sha256_hex(canonical_json([art_s, loc_s]))[:20]
             if ev_id not in evidence_by_id:
+                anc_meta: dict[str, Any] = {
+                    "artifact_id": art_s,
+                    "artifact_provenance_tier": art_tier,
+                    "verification_scope": v_scope,
+                }
+                if eb is not None:
+                    anc_meta["execution_id"] = eb["execution_id"]
                 evidence_by_id[ev_id] = {
                     "id": ev_id,
                     "anchor_type": "evidence_receipt",
                     "locator": loc_s,
-                    "metadata": {"artifact_id": art_s, "stance": str(r["stance"])},
+                    "metadata": anc_meta,
                 }
             support_edges.append({
                 "evidence_id": ev_id,
-                "claim_id": str(r["claim_id"]),
+                "claim_id": cid_edge,
                 "support_status": stance_to_support[str(r["stance"])],
+                "metadata": dict(edge_meta),
             })
         evidence_anchors = list(evidence_by_id.values())
 
@@ -2515,6 +2908,158 @@ class ResearchStateDB:
             "correction_count": len(c_rows),
         }
 
+    def _store_scope_id(self) -> str:
+        if self.db_path == ":memory:":
+            return f"memory:{id(self)}"
+        assert self._resolved_path is not None
+        return f"file:{os.path.normcase(str(self._resolved_path))}"
+
+    def record_kernel_execution(
+        self,
+        execution_id: str,
+        tool_name: str,
+        kernel_version: str,
+        verification_scope: str,
+        consistent: Optional[bool],
+        executed_at: str,
+        inputs: Mapping[str, Any],
+        outputs: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        eid = _require_str_id(execution_id, "execution_id")
+        tname = _require_str_id(tool_name, "tool_name")
+        kver = _require_str_id(kernel_version, "kernel_version")
+        vscope = _require_str_id(verification_scope, "verification_scope")
+        exec_at = _require_str_id(executed_at, "executed_at")
+        cons_int: Optional[int] = None
+        if consistent is not None:
+            if type(consistent) is not bool:
+                raise TypeError("consistent must be bool or None")
+            cons_int = 1 if consistent else 0
+        in_json = canonical_json(inputs)
+        in_sha = sha256_hex(in_json)
+        out_json = canonical_json(outputs)
+        out_sha = sha256_hex(out_json)
+        expected_id = compute_kernel_execution_id(tname, kver, vscope, consistent, exec_at, in_sha, out_sha)
+        if eid != expected_id:
+            raise ValueError(f"Invalid execution_id {eid!r}; expected {expected_id!r}")
+        store_scope = self._store_scope_id()
+        mac = _compute_kernel_exec_hmac(
+            store_scope, eid, tname, kver, vscope, consistent, exec_at, in_sha, out_sha
+        )
+        with self.transaction() as conn:
+            existing = conn.execute(
+                "SELECT * FROM kernel_executions WHERE execution_id = ?",
+                (eid,),
+            ).fetchone()
+            if existing is not None:
+                verified_existing = _verify_execution_row_dict(existing, store_scope=store_scope)
+                if (
+                    verified_existing["tool_name"] != tname
+                    or verified_existing["kernel_version"] != kver
+                    or verified_existing["verification_scope"] != vscope
+                    or verified_existing["consistent"] != consistent
+                    or verified_existing["executed_at"] != exec_at
+                    or verified_existing["inputs_sha256"] != in_sha
+                    or verified_existing["outputs_sha256"] != out_sha
+                ):
+                    raise ValueError(f"Execution receipt collision/tamper on execution_id {eid!r}")
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO kernel_executions
+                    (execution_id, tool_name, kernel_version, verification_scope, consistent, executed_at, inputs_json, inputs_sha256, outputs_json, outputs_sha256, auth_hmac)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (eid, tname, kver, vscope, cons_int, exec_at, in_json, in_sha, out_json, out_sha, mac),
+                )
+        return {
+            "execution_id": eid,
+            "tool_name": tname,
+            "kernel_version": kver,
+            "verification_scope": vscope,
+            "consistent": consistent,
+            "executed_at": exec_at,
+            "inputs_sha256": in_sha,
+            "outputs_sha256": out_sha,
+        }
+
+    def get_kernel_execution(self, execution_id: str) -> Optional[dict[str, Any]]:
+        eid = _require_str_id(execution_id, "execution_id")
+        with self._read_snapshot() as conn:
+            has_tbl = (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='kernel_executions'"
+                ).fetchone()
+                is not None
+            )
+            if not has_tbl:
+                return None
+            row = conn.execute("SELECT * FROM kernel_executions WHERE execution_id = ?", (eid,)).fetchone()
+        if row is None:
+            return None
+        return _verify_execution_row_dict(row, store_scope=self._store_scope_id())
+
+    def bind_artifact_execution(
+        self,
+        artifact_id: str,
+        execution_id: str,
+        verification_scope: str,
+        provenance_tier: str = "kernel_executed",
+        ingest_bound_claim_id: Optional[str] = None,
+    ) -> None:
+        aid = _require_str_id(artifact_id, "artifact_id")
+        eid = _require_str_id(execution_id, "execution_id")
+        vscope = _require_str_id(verification_scope, "verification_scope")
+        ptier = _require_str_id(provenance_tier, "provenance_tier")
+        ibc = _require_str_id(ingest_bound_claim_id, "ingest_bound_claim_id") if ingest_bound_claim_id is not None else None
+        if ptier != "kernel_executed":
+            raise ValueError(f"Execution binding provenance_tier must be 'kernel_executed', got {ptier!r}")
+        store_scope = self._store_scope_id()
+        with self.transaction() as conn:
+            art_row = conn.execute(
+                "SELECT kind, payload_json, payload_sha256 FROM artifacts WHERE artifact_id = ?", (aid,)
+            ).fetchone()
+            if art_row is None:
+                raise ValueError(f"Cannot bind execution to non-existent artifact_id {aid!r}")
+            ak_b = str(art_row["kind"])
+            psha = str(art_row["payload_sha256"])
+            live_obj = json.loads(str(art_row["payload_json"]))
+            if not isinstance(live_obj, Mapping):
+                raise ValueError(f"Artifact {aid!r} payload_json must be a JSON object")
+            live_sha = sha256_hex(canonical_json(live_obj))
+            if live_sha != psha:
+                raise ValueError(f"Artifact {aid!r} payload_json does not match stored payload_sha256")
+            ke_row = conn.execute("SELECT * FROM kernel_executions WHERE execution_id = ?", (eid,)).fetchone()
+            if ke_row is None:
+                raise ValueError(f"Cannot bind unknown execution_id {eid!r}")
+            verified_ke = _verify_execution_row_dict(ke_row, store_scope=store_scope)
+            if verified_ke["verification_scope"] != vscope:
+                raise ValueError(f"Verification scope mismatch on execution binding {eid!r}")
+            resolve_executed_artifact_payload(ak_b, verified_ke, live_obj)
+            bmac = _compute_binding_hmac(store_scope, aid, ak_b, live_sha, eid, vscope, ptier, ibc)
+            existing = conn.execute(
+                "SELECT execution_id, verification_scope, provenance_tier, ingest_bound_claim_id, binding_hmac FROM artifact_execution_bindings WHERE artifact_id = ?",
+                (aid,),
+            ).fetchone()
+            if existing is not None:
+                if (
+                    str(existing["execution_id"]) != eid
+                    or str(existing["verification_scope"]) != vscope
+                    or str(existing["provenance_tier"]) != ptier
+                    or existing["ingest_bound_claim_id"] != ibc
+                    or not hmac.compare_digest(str(existing["binding_hmac"]), bmac)
+                ):
+                    raise ValueError(f"Conflicting execution binding on artifact_id {aid!r}")
+                return
+            conn.execute(
+                """
+                INSERT INTO artifact_execution_bindings
+                (artifact_id, execution_id, verification_scope, provenance_tier, ingest_bound_claim_id, binding_hmac)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (aid, eid, vscope, ptier, ibc, bmac),
+            )
+
     def snapshot_digest(self) -> str:
         """Deterministic order-invariant SHA-256 digest of all authoritative tables under one read snapshot."""
         tables = (
@@ -2535,6 +3080,31 @@ class ResearchStateDB:
             for tbl in tables:
                 rows = conn.execute(f"SELECT * FROM {tbl}").fetchall()
                 dump[tbl] = sorted((dict(r) for r in rows), key=canonical_json)
+            has_bind = (
+                conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='artifact_execution_bindings'"
+                ).fetchone()
+                is not None
+            )
+            if has_bind:
+                b_rows = conn.execute(
+                    """
+                    SELECT artifact_id, execution_id, verification_scope, provenance_tier, ingest_bound_claim_id
+                    FROM artifact_execution_bindings
+                    ORDER BY artifact_id
+                    """
+                ).fetchall()
+                if b_rows:
+                    dump["artifact_execution_bindings"] = [dict(r) for r in b_rows]
+                    ke_rows = conn.execute(
+                        """
+                        SELECT execution_id, tool_name, kernel_version, verification_scope, consistent, executed_at, inputs_sha256, outputs_sha256
+                        FROM kernel_executions
+                        WHERE execution_id IN (SELECT execution_id FROM artifact_execution_bindings)
+                        ORDER BY execution_id
+                        """
+                    ).fetchall()
+                    dump["bound_kernel_executions"] = [dict(r) for r in ke_rows]
             return sha256_hex(canonical_json(dump))
 
 

@@ -17,6 +17,7 @@ consume_receipt 消费 schemas/evidence-receipt.schema.json 1.0 回执，
 from __future__ import annotations
 
 import copy
+from collections import Counter
 import re
 from typing import Any
 
@@ -97,8 +98,13 @@ def normalize_title(text: Any) -> str:
 
 
 def normalize_author(name: Any) -> str:
-    """作者姓名规范文本：小写折叠、去标点、压缩空白。"""
-    return normalize_title(name)
+    """作者姓名规范文本：统一 'Last, First' 与 'First Last' 词序，小写折叠、去标点、压缩空白。"""
+    raw = str(name or '').strip()
+    if ',' in raw:
+        parts = [p.strip() for p in raw.split(',') if p.strip()]
+        if len(parts) == 2:
+            raw = f'{parts[1]} {parts[0]}'
+    return normalize_title(raw)
 
 
 def _title_tokens(text: Any) -> set:
@@ -252,7 +258,13 @@ def resolve(records: list) -> dict:
     years = [str(r.get('year') or '') for r in records]
 
     title_all = all(titles) and len(set(titles)) == 1
-    authors_all = all(authors) and all(set(a) == set(authors[0]) for a in authors)
+    non_empty_authors = [a for a in authors if a]
+    authors_all = bool(authors) and all(authors) and all(Counter(a) == Counter(authors[0]) for a in authors)
+    author_order_mismatch = (
+        len(non_empty_authors) > 1
+        and all(Counter(a) == Counter(non_empty_authors[0]) for a in non_empty_authors[1:])
+        and any(a != non_empty_authors[0] for a in non_empty_authors[1:])
+    )
     year_all = all(years) and len(set(years)) == 1
 
     match_fields = list(shared_kinds)
@@ -262,6 +274,14 @@ def resolve(records: list) -> dict:
         conflict_fields.append('title')
     if authors_all:
         match_fields.append('authors')
+    elif len(non_empty_authors) > 1 and any(Counter(a) != Counter(non_empty_authors[0]) for a in non_empty_authors[1:]):
+        conflict_fields.append('authors')
+    if author_order_mismatch:
+        result['uncertainty'].append({
+            'item': 'author order differs across observations',
+            'kind': 'author_order_mismatch',
+            'needs_human': True,
+        })
     if year_all:
         match_fields.append('year')
     elif len([y for y in years if y]) > 1 and len({y for y in years if y}) > 1:

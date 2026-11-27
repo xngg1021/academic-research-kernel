@@ -10,8 +10,10 @@ Provides:
 """
 from __future__ import annotations
 
+import collections
 import collections.abc
 from dataclasses import asdict
+import datetime as dt
 import importlib
 import json
 import math
@@ -23,7 +25,7 @@ from typing import Any, Callable, Mapping, Optional
 
 from ._stdlib import canonical_json, normalize_identifier, safe_path, sha256_hex, thaw, validate_schema
 from ._version import __version__
-from .state_db import ALLOWED_ARTIFACT_KINDS, ResearchStateDB
+from .state_db import ALLOWED_ARTIFACT_KINDS, ResearchStateDB, compute_kernel_execution_id
 
 MAX_MCP_FRAME_BYTES = 10 * 1024 * 1024
 MAX_MCP_DRAIN_BYTES = 64 * 1024 * 1024
@@ -74,6 +76,103 @@ def reset_session_db() -> None:
         if _SESSION_DB is not None:
             _SESSION_DB.close()
             _SESSION_DB = None
+
+
+def _register_kernel_execution(
+    tool_name: str,
+    args: Mapping[str, Any],
+    result: dict[str, Any],
+    *,
+    verification_scope: str,
+    consistent: Optional[bool],
+    executed_at: Optional[str] = None,
+) -> dict[str, Any]:
+    clean_inputs = {k: thaw(v) for k, v in args.items() if k != "db_path"}
+    clean_outputs = thaw(result)
+    in_json = canonical_json(clean_inputs)
+    out_json = canonical_json(clean_outputs)
+    in_sha = sha256_hex(in_json)
+    out_sha = sha256_hex(out_json)
+    exec_at = executed_at or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    exec_id = compute_kernel_execution_id(
+        tool_name,
+        __version__,
+        verification_scope,
+        consistent,
+        exec_at,
+        in_sha,
+        out_sha,
+    )
+    raw_db = args.get("db_path")
+    if raw_db is not None and str(raw_db).strip() not in ("", ":memory:"):
+        _with_db(
+            args,
+            lambda db: db.record_kernel_execution(
+                exec_id,
+                tool_name,
+                __version__,
+                verification_scope,
+                consistent,
+                exec_at,
+                clean_inputs,
+                clean_outputs,
+            ),
+        )
+    else:
+        get_session_db().record_kernel_execution(
+            exec_id,
+            tool_name,
+            __version__,
+            verification_scope,
+            consistent,
+            exec_at,
+            clean_inputs,
+            clean_outputs,
+        )
+    out = dict(result)
+    out["execution_id"] = exec_id
+    out["verification_scope"] = verification_scope
+    return out
+
+
+def _lookup_kernel_execution(args: Mapping[str, Any], execution_id: str) -> dict[str, Any]:
+    eid = str(execution_id or "").strip()
+    if not eid:
+        raise ValueError("execution_id must be a non-empty string")
+    raw_db = args.get("db_path")
+    if raw_db is not None and str(raw_db).strip() not in ("", ":memory:"):
+        ws = authorized_workspace_root()
+        target_p = safe_path(str(raw_db), root=ws)
+        if not target_p.is_file():
+            raise ValueError(f"Unknown or unauthenticated kernel execution_id {eid!r}: target db_path does not exist")
+        found_db = _with_db(args, lambda db: db.get_kernel_execution(eid), readonly=True)
+        if found_db is not None:
+            return found_db
+        raise ValueError(f"Unknown or expired kernel execution_id in target db_path: {eid!r}")
+    found_mem = get_session_db().get_kernel_execution(eid)
+    if found_mem is not None:
+        return found_mem
+    raise ValueError(f"Unknown or expired kernel execution_id: {eid!r}")
+
+
+def _canonical_payload_from_execution(eff_kind: str, exec_rec: Mapping[str, Any]) -> dict[str, Any]:
+    from .state_db import canonical_payload_from_execution
+
+    return canonical_payload_from_execution(eff_kind, exec_rec)
+
+
+def _resolve_executed_artifact_payload(
+    kind: Optional[str],
+    exec_rec: Mapping[str, Any],
+    caller_payload: Any = None,
+    *,
+    _has_caller_payload: bool = True,
+) -> tuple[str, dict[str, Any]]:
+    from .state_db import OMIT_PAYLOAD, resolve_executed_artifact_payload
+
+    return resolve_executed_artifact_payload(
+        kind, exec_rec, caller_payload if _has_caller_payload else OMIT_PAYLOAD
+    )
 
 
 def authorized_workspace_root() -> Path:
@@ -395,6 +494,8 @@ TOOLS: list[dict[str, Any]] = [
                 "bindings": {"type": "object"},
                 "receipts": {"type": "object"},
                 "content_payloads": {"type": "object"},
+                "execution_id": {"type": "string", "minLength": 1},
+                "require_kernel_execution": {"type": "boolean"},
             },
         },
     },
@@ -415,6 +516,8 @@ TOOLS: list[dict[str, Any]] = [
                 "bindings": {"type": "object"},
                 "receipts": {"type": "object"},
                 "content_payloads": {"type": "object"},
+                "execution_id": {"type": "string", "minLength": 1},
+                "require_kernel_execution": {"type": "boolean"},
             },
         },
     },
@@ -586,6 +689,7 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "additionalProperties": False,
             "properties": {
+                "db_path": {"type": "string"},
                 "kind": {"type": "string"},
                 "params": {"type": "object"},
                 "t_stat": {"type": "number"},
@@ -593,6 +697,9 @@ TOOLS: list[dict[str, Any]] = [
                 "p_value": {"type": "number"},
                 "p_value_literal": {"type": "string"},
                 "p_value_decimals": {"type": "integer"},
+                "p_operator": {"type": "string", "enum": ["=", "==", "<", "<=", ">", ">="]},
+                "stat_literal": {"type": "string"},
+                "stat_decimals": {"type": "integer"},
                 "f_stat": {"type": "number"},
                 "df1": {"type": "number"},
                 "df2": {"type": "number"},
@@ -642,6 +749,7 @@ TOOLS: list[dict[str, Any]] = [
             "additionalProperties": False,
             "required": ["count", "percent"],
             "properties": {
+                "db_path": {"type": "string"},
                 "count": {"type": "integer"},
                 "percent": {"type": ["number", "string"]},
                 "sample_size": {"type": "integer"},
@@ -658,6 +766,7 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "additionalProperties": False,
             "properties": {
+                "db_path": {"type": "string"},
                 "partition": {"type": "object"},
                 "ablation_matrix": {"type": ["object", "array"]},
                 "ablation_baseline_col": {"type": "integer"},
@@ -701,6 +810,7 @@ TOOLS: list[dict[str, Any]] = [
             "additionalProperties": False,
             "required": ["identifier"],
             "properties": {
+                "db_path": {"type": "string"},
                 "identifier": {"type": "string"},
                 "live": {"type": "boolean"},
                 "offline": {"type": "boolean"},
@@ -709,6 +819,11 @@ TOOLS: list[dict[str, Any]] = [
                 "openalex_record": {"type": "object"},
                 "crossref": {"type": "object"},
                 "crossref_record": {"type": "object"},
+                "cited_title": {"type": "string"},
+                "cited_authors": {"type": "array", "items": {"type": "string"}},
+                "cited_authors_et_al": {"type": "boolean"},
+                "cited_year": {"type": "integer"},
+                "cited_venue": {"type": "string"},
             },
         },
     },
@@ -1097,8 +1212,20 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
 
     if name == "research_artifact_ingest":
         is_dry = bool(a.get("dry_run", False))
+        req_exec = bool(a.get("require_kernel_execution", False))
+        exec_id_raw = a.get("execution_id")
+        if req_exec and not exec_id_raw:
+            raise ValueError(
+                "research_artifact_ingest with require_kernel_execution=True requires a valid kernel 'execution_id'"
+            )
+        exec_rec: Optional[dict[str, Any]] = None
+        if exec_id_raw is not None:
+            exec_rec = _lookup_kernel_execution(a, str(exec_id_raw))
+
         bound_cid, bound_aid = _validate_mcp_state_and_bindings(a, allow_inline_state=is_dry)
         if "envelope" in a and a["envelope"] is not None:
+            if any(k in a and a[k] is not None for k in ("payload", "artifact_id", "kind")):
+                raise ValueError("Cannot mix 'envelope' with top-level 'payload', 'artifact_id', or 'kind'")
             env = a["envelope"]
             if not isinstance(env, Mapping):
                 raise ValueError("envelope must be a JSON object")
@@ -1109,6 +1236,8 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             env_kind = str(env["artifact_kind"])
             env_sha = str(env["payload_sha256"]).lower()
             env_pay = env["payload"]
+            if exec_rec is not None:
+                _, _ = _resolve_executed_artifact_payload(env_kind, exec_rec, env_pay)
             comp_sha = sha256_hex(canonical_json(env_pay))
             if comp_sha != env_sha or env_id != f"art-{comp_sha[:32]}":
                 raise ValueError("Artifact envelope payload_sha256 or artifact_id mismatch")
@@ -1149,6 +1278,24 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             def _ingest_env(db: ResearchStateDB) -> dict[str, Any]:
                 with db.transaction() as conn:
                     rec0 = db.batch_ingest([item], atomic=True)[0]
+                    if exec_rec is not None:
+                        db.record_kernel_execution(
+                            str(exec_rec["execution_id"]),
+                            str(exec_rec["tool_name"]),
+                            str(exec_rec["kernel_version"]),
+                            str(exec_rec["verification_scope"]),
+                            exec_rec["consistent"],
+                            str(exec_rec["executed_at"]),
+                            exec_rec["inputs"],
+                            exec_rec["outputs"],
+                        )
+                        db.bind_artifact_execution(
+                            env_id,
+                            str(exec_rec["execution_id"]),
+                            str(exec_rec["verification_scope"]),
+                            provenance_tier="kernel_executed",
+                            ingest_bound_claim_id=bound_cid,
+                        )
                     if bound_cid and bound_stance_env is not None:
                         row_c = conn.execute("SELECT claim_text FROM claims WHERE claim_id = ?", (bound_cid,)).fetchone()
                         if row_c is None:
@@ -1157,18 +1304,32 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                     return {"valid": True, "receipt": rec0, "state_digest": db.snapshot_digest()}
 
             return _with_db(a, _ingest_env)
-        if not all(k in a and a[k] is not None for k in ("artifact_id", "kind", "payload")):
-            raise ValueError("research_artifact_ingest requires ('artifact_id', 'kind', 'payload') or 'envelope'")
+
+        eff_art_id = a.get("artifact_id")
+        eff_kind_raw = a.get("kind")
+        has_caller_pay = "payload" in a
+        eff_payload = a.get("payload")
+        if exec_rec is not None:
+            eff_kind_raw, eff_payload = _resolve_executed_artifact_payload(
+                str(eff_kind_raw) if eff_kind_raw is not None else None,
+                exec_rec,
+                eff_payload,
+                _has_caller_payload=has_caller_pay,
+            )
+            if eff_art_id is None:
+                eff_art_id = f"results-{str(exec_rec['execution_id']).removeprefix('kexec-')}"
+        if not all(x is not None for x in (eff_art_id, eff_kind_raw, eff_payload)):
+            raise ValueError("research_artifact_ingest requires ('artifact_id', 'kind', 'payload'), 'execution_id', or 'envelope'")
         auth_dry_s = _optional_auth_artifacts(a, allow_missing_file=True)
         aid_d, k_d, _, sha_d = ResearchStateDB._validate_artifact_semantics(
-            a["artifact_id"],
-            a["kind"],
-            a["payload"],
+            eff_art_id,
+            eff_kind_raw,
+            eff_payload,
             authoritative_artifacts=auth_dry_s,
             receipts=a.get("receipts"),
             content_payloads=a.get("content_payloads"),
         )
-        bound_stance_raw = _resolve_bound_claim_stance(k_d, a["payload"], bound_cid)
+        bound_stance_raw = _resolve_bound_claim_stance(k_d, eff_payload, bound_cid)
         if is_dry:
             return {
                 "valid": True,
@@ -1179,12 +1340,12 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                 "payload_sha256": sha_d,
             }
         parents_raw = list(a.get("parents") or ())
-        if bound_aid and bound_aid not in parents_raw and bound_aid != str(a["artifact_id"]):
+        if bound_aid and bound_aid not in parents_raw and bound_aid != str(eff_art_id):
             parents_raw.append(bound_aid)
         item = {
-            "artifact_id": a["artifact_id"],
-            "kind": a["kind"],
-            "payload": a["payload"],
+            "artifact_id": eff_art_id,
+            "kind": eff_kind_raw,
+            "payload": eff_payload,
             "parents": parents_raw,
             "relation": a.get("relation", "derived_from"),
             "receipts": a.get("receipts"),
@@ -1194,6 +1355,24 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         def _ingest_raw(db: ResearchStateDB) -> dict[str, Any]:
             with db.transaction() as conn:
                 rec0 = db.batch_ingest([item], atomic=True)[0]
+                if exec_rec is not None:
+                    db.record_kernel_execution(
+                        str(exec_rec["execution_id"]),
+                        str(exec_rec["tool_name"]),
+                        str(exec_rec["kernel_version"]),
+                        str(exec_rec["verification_scope"]),
+                        exec_rec["consistent"],
+                        str(exec_rec["executed_at"]),
+                        exec_rec["inputs"],
+                        exec_rec["outputs"],
+                    )
+                    db.bind_artifact_execution(
+                        str(eff_art_id),
+                        str(exec_rec["execution_id"]),
+                        str(exec_rec["verification_scope"]),
+                        provenance_tier="kernel_executed",
+                        ingest_bound_claim_id=bound_cid,
+                    )
                 if bound_cid and bound_stance_raw is not None:
                     row_c = conn.execute("SELECT claim_text FROM claims WHERE claim_id = ?", (bound_cid,)).fetchone()
                     if row_c is None:
@@ -1202,14 +1381,26 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                         bound_cid,
                         str(row_c[0]),
                         None,
-                        [(str(a["artifact_id"]), bound_stance_raw, "")],
+                        [(str(eff_art_id), bound_stance_raw, "")],
                     )
                 return {"receipt": rec0, "state_digest": db.snapshot_digest()}
 
         return _with_db(a, _ingest_raw)
 
     if name == "research_artifact_validate":
+        req_exec_v = bool(a.get("require_kernel_execution", False))
+        exec_id_v = a.get("execution_id")
+        if req_exec_v and not exec_id_v:
+            return {"valid": False, "errors": ["research_artifact_validate with require_kernel_execution=True requires 'execution_id'"]}
+        exec_rec_v: Optional[dict[str, Any]] = None
+        if exec_id_v is not None:
+            try:
+                exec_rec_v = _lookup_kernel_execution(a, str(exec_id_v))
+            except Exception as exc:
+                return {"valid": False, "errors": [str(exc)]}
         if "envelope" in a and a["envelope"] is not None:
+            if any(k in a and a[k] is not None for k in ("payload", "artifact_id", "kind")):
+                raise ValueError("Cannot mix 'envelope' with top-level 'payload', 'artifact_id', or 'kind'")
             env = a["envelope"]
             if not isinstance(env, Mapping):
                 return {"valid": False, "errors": ["envelope must be a JSON object"]}
@@ -1220,6 +1411,11 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             env_kind = str(env["artifact_kind"])
             env_sha = str(env["payload_sha256"]).lower()
             env_pay = env["payload"]
+            if exec_rec_v is not None:
+                try:
+                    _resolve_executed_artifact_payload(env_kind, exec_rec_v, env_pay)
+                except Exception as exc:
+                    return {"valid": False, "errors": [str(exc)]}
             comp_sha = sha256_hex(canonical_json(env_pay))
             if comp_sha != env_sha:
                 return {"valid": False, "errors": [f"Envelope payload_sha256 mismatch: expected {env_sha}, computed {comp_sha}"]}
@@ -1252,6 +1448,8 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             if errs:
                 return {"valid": False, "errors": errs}
         try:
+            if exec_rec_v is not None:
+                _resolve_executed_artifact_payload(kind, exec_rec_v, a["payload"])
             bound_cid_vr, _ = _validate_mcp_state_and_bindings(a, allow_inline_state=True)
             auth_val = _optional_auth_artifacts(a)
             ResearchStateDB._validate_artifact_semantics(
@@ -1394,8 +1592,11 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
 
     if name == "claim_evidence_validate":
         ceg_doc = a.get("ceg") if a.get("ceg") is not None else a.get("graph")
+        if ceg_doc is None and a.get("db_path") is not None and str(a.get("db_path")).strip():
+            is_ro_ceg = str(a.get("db_path")).strip() != ":memory:"
+            ceg_doc = _with_db(a, lambda db: db.export_ceg_dict(), readonly=is_ro_ceg)
         if not isinstance(ceg_doc, Mapping):
-            return {"valid": False, "errors": ["claim_evidence_validate requires a 'ceg' (or 'graph') object"]}
+            return {"valid": False, "errors": ["claim_evidence_validate requires a 'ceg' (or 'graph') object or 'db_path'"]}
         errs = list(validate_schema(ceg_doc, "claim-evidence-graph.schema.json"))
         try:
             from .venue_template_manager import validate_ceg_semantics
@@ -1581,11 +1782,24 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         denom = a.get("sample_size", a.get("n", a.get("denominator")))
         if isinstance(a["count"], bool) or isinstance(denom, bool):
             raise TypeError("count and sample_size must be integers, not booleans")
-        return rec_mod.check_percentage(a["count"], a["percent"], denominator=denom, decimals=a.get("decimals"))
+        pct_res = rec_mod.check_percentage(a["count"], a["percent"], denominator=denom, decimals=a.get("decimals"))
+        pct_cons = pct_res.get("consistent") if isinstance(pct_res.get("consistent"), bool) else None
+        return _register_kernel_execution(
+            "academic_check_percentage",
+            a,
+            pct_res,
+            verification_scope="statistical_numerical_consistency",
+            consistent=pct_cons,
+        )
 
     if name == "academic_recompute_statistics":
         rec_mod = _mod("recompute")
-        if "params" in a and "kind" in a:
+        if "params" in a:
+            if "kind" not in a or a["kind"] is None:
+                raise ValueError("Dispatch mode with 'params' requires 'kind'")
+            extra_stat_keys = set(a) - {"params", "kind", "db_path"}
+            if extra_stat_keys:
+                raise ValueError(f"Cannot mix kind+params dispatch with flat statistical fields: {sorted(extra_stat_keys)}")
             p = dict(a["params"] or {})
             dispatch = {
                 "t": rec_mod.p_from_t,
@@ -1598,83 +1812,233 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                 "required_sample_size": rec_mod.required_n_ttest,
                 "required-sample-size": rec_mod.required_n_ttest,
                 "required_n": rec_mod.required_n_ttest,
+                "stat_p_consistency": rec_mod.check_stat_p_consistency,
             }
             if a["kind"] not in dispatch:
                 raise ValueError(f"Unsupported statistics kind: {a['kind']!r}")
-            return dispatch[a["kind"]](**p)
+            res_k = dispatch[a["kind"]](**p)
+            cons_k = res_k.get("consistent") if isinstance(res_k.get("consistent"), bool) else None
+            return _register_kernel_execution(
+                "academic_recompute_statistics",
+                a,
+                res_k,
+                verification_scope="statistical_numerical_consistency",
+                consistent=cons_k,
+            )
+
+        if "df" in a and "t_stat" not in a and "chi2_stat" not in a:
+            raise ValueError("'df' requires 't_stat' or 'chi2_stat'")
 
         out_stat: dict[str, Any] = {}
         partial_errors: dict[str, str] = {}
+        verdict_flags: list[Optional[bool]] = []
+
+        def _agg_tri_bool(vals: Any) -> Optional[bool]:
+            items = list(vals)
+            if False in items:
+                return False
+            if None in items:
+                return None
+            return True
+        has_reported_p = ("p_value" in a and a["p_value"] is not None) or (
+            "p_value_literal" in a and a["p_value_literal"] is not None
+        )
+        p_op_raw = a.get("p_operator")
+        p_op = "=" if p_op_raw in (None, "==") else str(p_op_raw).strip()
+
+        def _attach_stat_consistency(kind_tag: str, stat_val: Any, df1_val: Any, df2_val: Any = None, *, recomputed_p: float) -> None:
+            import re as _re
+            from decimal import Decimal, InvalidOperation
+
+            raw_lit = a.get("p_value_literal")
+            eff_op = p_op
+            clean_lit: Optional[str] = None
+            if isinstance(raw_lit, str) and raw_lit.strip():
+                s_lit = _re.sub(r"^\s*[pP]\s*", "", raw_lit.strip())
+                m_op = _re.match(r"^(<=|>=|==|<|>|=)\s*(.+)$", s_lit)
+                if m_op:
+                    parsed_op_raw, num_part = m_op.group(1), m_op.group(2).strip()
+                    parsed_op = "=" if parsed_op_raw == "==" else parsed_op_raw
+                    if p_op_raw is not None and p_op != parsed_op:
+                        raise ValueError(
+                            f"Conflicting p_operator={p_op_raw!r} and operator in p_value_literal={raw_lit!r}"
+                        )
+                    eff_op = parsed_op
+                    clean_lit = ("0" + num_part) if num_part.startswith(".") else num_part
+                else:
+                    clean_lit = ("0" + s_lit) if s_lit.startswith(".") else s_lit
+
+            has_num_p = "p_value" in a and a["p_value"] is not None
+            if has_num_p:
+                if isinstance(a["p_value"], bool):
+                    raise TypeError("p_value must be a number, not bool")
+                num_p = float(a["p_value"])
+                if not math.isfinite(num_p) or not (0.0 <= num_p <= 1.0):
+                    raise ValueError("报告 p 值须在 [0,1]")
+            if clean_lit is not None:
+                try:
+                    lit_dec = Decimal(clean_lit)
+                except InvalidOperation as exc:
+                    raise ValueError(f"Invalid p_value_literal: {raw_lit!r}") from exc
+                if not lit_dec.is_finite() or not (Decimal(0) <= lit_dec <= Decimal(1)):
+                    raise ValueError("报告 p_value_literal 须在 [0,1]")
+                if has_num_p and Decimal(str(a["p_value"])) != lit_dec:
+                    spc_num = rec_mod.check_stat_p_consistency(
+                        kind_tag,
+                        stat_val,
+                        df1_val,
+                        df2_val,
+                        reported_p=a["p_value"],
+                        p_decimals=a.get("p_value_decimals"),
+                        stat_literal=a.get("stat_literal"),
+                        stat_decimals=a.get("stat_decimals"),
+                        op=p_op,
+                    )
+                    spc_lit = rec_mod.check_stat_p_consistency(
+                        kind_tag,
+                        stat_val,
+                        df1_val,
+                        df2_val,
+                        reported_p=clean_lit,
+                        reported_p_literal=clean_lit,
+                        stat_literal=a.get("stat_literal"),
+                        stat_decimals=a.get("stat_decimals"),
+                        op=eff_op,
+                    )
+                    both_ok = bool(spc_num["consistent"] is True and spc_lit["consistent"] is True)
+                    conflict_entry = {
+                        "consistent": False,
+                        "dual_p_input_conflict": True,
+                        "numeric_check": spc_num,
+                        "literal_check": spc_lit,
+                        "note": "Numeric p_value and p_value_literal disagree",
+                        "both_individually_consistent": both_ok,
+                    }
+                    by_t_conf = out_stat.setdefault("stat_p_consistency_by_test", {})
+                    by_t_conf[kind_tag] = conflict_entry
+                    out_stat["stat_p_consistency"] = (
+                        conflict_entry
+                        if len(by_t_conf) == 1
+                        else {"consistent": False, "by_test": dict(by_t_conf)}
+                    )
+                    pm_conf = out_stat.setdefault("p_match_by_test", {})
+                    pm_conf[kind_tag] = {
+                        "consistent": False,
+                        "error": "p_value conflicts with p_value_literal",
+                    }
+                    out_stat["p_match"] = (
+                        pm_conf[kind_tag]
+                        if len(pm_conf) == 1
+                        else {"consistent": False, "by_test": dict(pm_conf)}
+                    )
+                    verdict_flags.append(False)
+                    return
+
+            rep_val = a["p_value"] if has_num_p else clean_lit
+            spc = rec_mod.check_stat_p_consistency(
+                kind_tag,
+                stat_val,
+                df1_val,
+                df2_val,
+                reported_p=rep_val,
+                reported_p_literal=clean_lit,
+                p_decimals=a.get("p_value_decimals"),
+                stat_literal=a.get("stat_literal"),
+                stat_decimals=a.get("stat_decimals"),
+                op=eff_op,
+            )
+            by_test = out_stat.setdefault("stat_p_consistency_by_test", {})
+            by_test[kind_tag] = spc
+            if len(by_test) == 1:
+                out_stat["stat_p_consistency"] = spc
+            else:
+                out_stat["stat_p_consistency"] = {
+                    "consistent": _agg_tri_bool(v.get("consistent") for v in by_test.values()),
+                    "by_test": dict(by_test),
+                }
+            if eff_op == "=":
+                pm_res = rec_mod.check_p_match(
+                    rep_val,
+                    recomputed_p,
+                    decimals=a.get("p_value_decimals"),
+                    reported_literal=clean_lit,
+                )
+                if recomputed_p < 1e-300:
+                    pm_res = dict(pm_res)
+                    pm_res["consistent"] = spc.get("point_consistent")
+                    pm_res["confidence"] = spc.get("confidence", "low")
+                pm_by = out_stat.setdefault("p_match_by_test", {})
+                pm_by[kind_tag] = pm_res
+                if len(pm_by) == 1:
+                    out_stat["p_match"] = pm_res
+                else:
+                    out_stat["p_match"] = {
+                        "consistent": _agg_tri_bool(v.get("consistent") for v in pm_by.values()),
+                        "by_test": dict(pm_by),
+                    }
+            verdict_flags.append(spc.get("consistent"))
 
         def _run_part(label: str, fn: Callable[[], None]) -> None:
             try:
                 fn()
+            except (ValueError, TypeError):
+                raise
             except Exception as exc:
                 partial_errors[label] = f"{type(exc).__name__}: {exc}"
 
-        if "t_stat" in a or "df" in a:
+        if "t_stat" in a:
             def _do_t() -> None:
+                if "df" not in a:
+                    raise ValueError("'t_stat' requires 'df'")
                 r = rec_mod.p_from_t(a["t_stat"], a["df"], reported=a.get("p_value"))
                 out_stat.update(recomputed_p=r["recomputed"], p_receipt=r)
-                if "p_value" in a or "p_value_literal" in a:
-                    rep_val = a["p_value"] if "p_value" in a else a["p_value_literal"]
-                    try:
-                        pm = rec_mod.check_p_match(
-                            rep_val,
-                            r["recomputed"],
-                            decimals=a.get("p_value_decimals"),
-                            reported_literal=a.get("p_value_literal"),
-                        )
-                    except ValueError as exc:
-                        pm = {"consistent": False, "error": str(exc)}
-                    out_stat["p_match"] = pm
-                    out_stat["consistent"] = bool(pm.get("consistent"))
+                if has_reported_p:
+                    _attach_stat_consistency("t", a["t_stat"], a["df"], recomputed_p=r["recomputed"])
             _run_part("t_test", _do_t)
 
         if "f_stat" in a:
-            _run_part(
-                "f_test",
-                lambda: out_stat.update(
-                    **{
-                        "f_receipt": (r := rec_mod.p_from_f(a["f_stat"], a["df1"], a["df2"], reported=a.get("p_value"))),
-                        "recomputed_f_p": r["recomputed"],
-                    }
-                ),
-            )
+            def _do_f() -> None:
+                if "df1" not in a or "df2" not in a:
+                    raise ValueError("'f_stat' requires 'df1' and 'df2'")
+                r = rec_mod.p_from_f(a["f_stat"], a["df1"], a["df2"], reported=a.get("p_value"))
+                out_stat.update(f_receipt=r, recomputed_f_p=r["recomputed"])
+                if has_reported_p:
+                    _attach_stat_consistency("f", a["f_stat"], a["df1"], a["df2"], recomputed_p=r["recomputed"])
+            _run_part("f_test", _do_f)
 
         if "chi2_stat" in a:
-            _run_part(
-                "chi2_test",
-                lambda: out_stat.update(
-                    **{
-                        "chi2_receipt": (
-                            r := rec_mod.p_from_chi2(a["chi2_stat"], a.get("chi2_df", a.get("df")), reported=a.get("p_value"))
-                        ),
-                        "recomputed_chi2_p": r["recomputed"],
-                    }
-                ),
-            )
+            def _do_chi2() -> None:
+                chi_df = a.get("chi2_df", a.get("df"))
+                if chi_df is None:
+                    raise ValueError("'chi2_stat' requires 'chi2_df' or 'df'")
+                r = rec_mod.p_from_chi2(a["chi2_stat"], chi_df, reported=a.get("p_value"))
+                out_stat.update(chi2_receipt=r, recomputed_chi2_p=r["recomputed"])
+                if has_reported_p:
+                    _attach_stat_consistency("chi2", a["chi2_stat"], chi_df, recomputed_p=r["recomputed"])
+            _run_part("chi2_test", _do_chi2)
 
         if "beta" in a or "se" in a:
             def _do_z() -> None:
                 r = rec_mod.z_from_beta_se(a["beta"], a["se"], reported=a.get("z_value"))
                 out_stat.update(recomputed_z=r["recomputed"]["z"], recomputed_z_p=r["recomputed"]["p"], z_receipt=r)
+                if has_reported_p:
+                    _attach_stat_consistency("z", r["recomputed"]["z"], None, recomputed_p=r["recomputed"]["p"])
             _run_part("z_test", _do_z)
 
         if "ci_estimate" in a:
-            _run_part(
-                "ci_consistency",
-                lambda: out_stat.update(
-                    ci_consistency=rec_mod.check_ci_consistency(
-                        a["ci_estimate"],
-                        a["ci_lower"],
-                        a["ci_upper"],
-                        level=a.get("ci_level", 0.95),
-                        log_scale=a.get("ci_log_scale", False),
-                        ci_method=a.get("ci_method"),
-                    )
-                ),
-            )
+            def _do_ci() -> None:
+                ci_r = rec_mod.check_ci_consistency(
+                    a["ci_estimate"],
+                    a["ci_lower"],
+                    a["ci_upper"],
+                    level=a.get("ci_level", 0.95),
+                    log_scale=a.get("ci_log_scale", False),
+                    ci_method=a.get("ci_method"),
+                )
+                out_stat["ci_consistency"] = ci_r
+                if "consistent" in ci_r:
+                    verdict_flags.append(ci_r.get("consistent"))
+            _run_part("ci_consistency", _do_ci)
 
         if "cell_a" in a:
             _run_part(
@@ -1693,22 +2057,22 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             _run_part("effect_size", _do_d)
 
         if "check_sd" in a:
-            _run_part(
-                "sd_possible",
-                lambda: out_stat.update(
-                    sd_possible=rec_mod.check_sd_possible(a["check_sd"], a["scale_min"], a["scale_max"], n=a.get("sample_n"))
-                ),
-            )
+            def _do_sd() -> None:
+                sd_r = rec_mod.check_sd_possible(a["check_sd"], a["scale_min"], a["scale_max"], n=a.get("sample_n"))
+                out_stat["sd_possible"] = sd_r
+                if "consistent" in sd_r:
+                    verdict_flags.append(sd_r.get("consistent"))
+            _run_part("sd_possible", _do_sd)
 
         if "sample_df" in a:
-            _run_part(
-                "sample_size_from_df",
-                lambda: out_stat.update(
-                    sample_size_from_df=rec_mod.check_sample_size_from_df(
-                        a["sample_df"], a["reported_n"], kind=a.get("df_kind", "ttest_2sample"), n_params=a.get("n_params")
-                    )
-                ),
-            )
+            def _do_sdf() -> None:
+                sdf_r = rec_mod.check_sample_size_from_df(
+                    a["sample_df"], a["reported_n"], kind=a.get("df_kind", "ttest_2sample"), n_params=a.get("n_params")
+                )
+                out_stat["sample_size_from_df"] = sdf_r
+                if "consistent" in sdf_r:
+                    verdict_flags.append(sdf_r.get("consistent"))
+            _run_part("sample_size_from_df", _do_sdf)
 
         if "effect_size_d" in a:
             if "power_n1" in a:
@@ -1739,7 +2103,21 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             if not out_stat:
                 raise ValueError("; ".join(f"{k}: {v}" for k, v in partial_errors.items()))
             out_stat["partial_failure"] = partial_errors
-        return out_stat
+        eff_cons: Optional[bool] = None
+        if partial_errors:
+            eff_cons = False if (False in verdict_flags) else None
+            if eff_cons is False:
+                out_stat["consistent"] = False
+        elif verdict_flags:
+            eff_cons = _agg_tri_bool(verdict_flags)
+            out_stat["consistent"] = eff_cons
+        return _register_kernel_execution(
+            "academic_recompute_statistics",
+            a,
+            out_stat,
+            verification_scope="statistical_numerical_consistency",
+            consistent=eff_cons,
+        )
 
     if name == "academic_table_forensics":
         rec_mod = _mod("recompute")
@@ -1768,8 +2146,16 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
             out["storage_bandwidth_bounds"] = rec_mod.check_storage_bandwidth_bounds(**sb)
         if not out:
             raise ValueError("Provide at least one of: partition, ablation_matrix, storage_bandwidth")
-        out["consistent"] = all(v.get("consistent") is True for v in out.values() if isinstance(v, dict))
-        return out
+        tf_vals = [v.get("consistent") for v in out.values() if isinstance(v, dict) and "consistent" in v]
+        tf_cons: Optional[bool] = False if (False in tf_vals) else (None if (None in tf_vals) else True)
+        out["consistent"] = tf_cons
+        return _register_kernel_execution(
+            "academic_table_forensics",
+            a,
+            out,
+            verification_scope="table_arithmetic_conservation",
+            consistent=tf_cons,
+        )
 
     if name == "academic_meta_analyze":
         mc = _mod("meta_core")
@@ -1833,25 +2219,80 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
         offline = bool(a.get("offline")) or (a.get("live") is False and oa_in is None and cr_in is None)
         sources_out: dict[str, Any] = {}
         parsed = []
+        obs_ts = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         for s_name, pre_rec, live_fn, parse_fn in (
             ("openalex", oa_in, vw.fetch_openalex, vw.parse_openalex_work),
             ("crossref", cr_in, vw.fetch_crossref, vw.parse_crossref_work),
         ):
+            q_ts = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             if pre_rec is not None:
                 w = parse_fn(pre_rec)
-                sources_out[s_name] = {"status": "ok", "mode": "offline-record", "work": w}
+                sources_out[s_name] = {"status": "ok", "mode": "offline-record", "queried_at": q_ts, "work": w}
                 parsed.append(w)
             elif offline or not a.get("live", False):
-                sources_out[s_name] = {"status": "skipped", "reason": "offline mode; no record provided"}
+                sources_out[s_name] = {"status": "skipped", "queried_at": q_ts, "reason": "offline mode; no record provided"}
             else:
                 try:
                     w = parse_fn(live_fn(doi))
-                    sources_out[s_name] = {"status": "ok", "mode": "live", "work": w}
+                    sources_out[s_name] = {"status": "ok", "mode": "live", "queried_at": q_ts, "work": w}
                     parsed.append(w)
                 except Exception as exc:
-                    sources_out[s_name] = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+                    sources_out[s_name] = {"status": "failed", "queried_at": q_ts, "error": f"{type(exc).__name__}: {exc}"}
         cmp = vw.compare_works(parsed, target_doi=doi) if parsed else None
-        return {"normalized": norm, "target_doi": doi, "sources": sources_out, "comparison": cmp}
+        bound_srcs = list(cmp.get("positively_bound_sources") or []) if isinstance(cmp, dict) else []
+        mismatches = list(cmp.get("identity_binding_mismatch") or []) if isinstance(cmp, dict) else []
+        id_resolved = bool(len(bound_srcs) > 0 and len(mismatches) == 0)
+        is_retracted = bool(cmp.get("is_retracted")) if isinstance(cmp, dict) else False
+        has_cited = any(
+            a.get(k) is not None for k in ("cited_title", "cited_authors", "cited_year", "cited_venue")
+        )
+        cit_chk = vw.compare_cited_metadata(a, parsed, target_doi=doi) if (has_cited and parsed) else None
+        cit_match = cit_chk["citation_metadata_match"] if isinstance(cit_chk, dict) else None
+        modes_used = {
+            str(s_obj.get("mode"))
+            for s_obj in sources_out.values()
+            if isinstance(s_obj, Mapping) and s_obj.get("status") == "ok" and s_obj.get("mode")
+        }
+        if modes_used == {"live"}:
+            mode_suffix = "live"
+        elif modes_used == {"offline-record"}:
+            mode_suffix = "caller_record"
+        elif len(modes_used) > 1:
+            mode_suffix = "mixed_sources"
+        else:
+            mode_suffix = "unobserved"
+        v_scope = (
+            f"bibliographic_citation_faithfulness_{mode_suffix}"
+            if has_cited
+            else f"bibliographic_registry_identity_{mode_suffix}"
+        )
+        if not parsed:
+            cons_bib: Optional[bool] = None
+        elif mismatches or not id_resolved or is_retracted:
+            cons_bib = False
+        elif has_cited:
+            cons_bib = cit_match
+        else:
+            cons_bib = True
+        vs_out = {
+            "normalized": norm,
+            "target_doi": doi,
+            "identifier_resolved": id_resolved,
+            "is_retracted": is_retracted,
+            "citation_metadata_match": cit_match,
+            "citation_check": cit_chk,
+            "consistent": cons_bib,
+            "sources": sources_out,
+            "comparison": cmp,
+        }
+        return _register_kernel_execution(
+            "academic_verify_source",
+            a,
+            vs_out,
+            verification_scope=v_scope,
+            consistent=cons_bib,
+            executed_at=obs_ts,
+        )
 
     if name == "academic_openreview_audit":
         ora = _mod("openreview_audit")
