@@ -1,4 +1,4 @@
-# academic-research-kernel (`v3.0.0`)
+# academic-research-kernel (`v3.1.0`)
 
 <!-- mcp-name: io.github.xngg1021/academic-research-kernel -->
 
@@ -8,9 +8,12 @@
 
 Large language models summarize papers fluently yet fail predictably on exact arithmetic and external ground truth: they repeat miscalculated $p$-values, miss rounding-impossible percentages, cite retracted or fabricated DOIs, leave author metadata inside double-blind PDFs, and lose track of which source table backs which claim.
 
-`academic-research-kernel` (`3.0.0`) separates semantic reading from deterministic checks. Run it directly from your terminal or wire it into any MCP / `SKILL.md` agent workflow:
+`academic-research-kernel` (`3.1.0` on `main`; latest published PyPI release `3.0.0`) separates semantic reading from deterministic checks. Run it directly from your terminal or wire it into any MCP / `SKILL.md` agent workflow:
 
 ```bash
+# Latest Git tag / main (v3.1.0):
+uv tool install "academic-research-kernel[research] @ git+https://github.com/xngg1021/academic-research-kernel.git@v3.1.0"
+# Or latest published PyPI release (3.0.0):
 uv tool install "academic-research-kernel[research]==3.0.0"
 academic-research-kernel verify-work "10.1038/nature14539" --normalize-only
 # -> {"input": "10.1038/nature14539", "type": "doi", "value": "10.1038/nature14539", "canonical": "https://doi.org/10.1038/nature14539"}

@@ -1,4 +1,4 @@
-# Paper Audit & Research Workflow Output Contract (`v3.0.0`)
+# Paper Audit & Research Workflow Output Contract (`v3.1.0`)
 
 Every deterministic paper audit workflow (`academic-research-kernel research ...`) reads and writes schema-validated artifacts inside `--project <dir>`:
 

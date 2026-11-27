@@ -1,7 +1,7 @@
 ---
 name: cross-review
 description: "Run multi-model blind review, challenge, and synthesis."
-version: 3.0.0
+version: 3.1.0
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # Cross-Review Deliberation (`cross-review`)
 
-Coordinate **live multi-model blind review, anonymous challenge, and minority-protected synthesis** over a claim, paper, or codebase via `academic-research-kernel` (`3.0.0`) (distinct from `audit-peer-review`, which analyzes historical OpenReview conference records). Replaces legacy `cross-review-five` with a vendor-neutral participant roster (`ReviewPanelSpec`) across CLI and inline MCP.
+Coordinate **live multi-model blind review, anonymous challenge, and minority-protected synthesis** over a claim, paper, or codebase via `academic-research-kernel` (`3.1.0`) (distinct from `audit-peer-review`, which analyzes historical OpenReview conference records). Replaces legacy `cross-review-five` with a vendor-neutral participant roster (`ReviewPanelSpec`) across CLI and inline MCP.
 
 ## When to Use
 

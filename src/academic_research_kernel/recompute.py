@@ -214,10 +214,14 @@ def p_from_t(t, df, reported=None):
         _require(0 <= reported <= 1, '报告 p 值须在 [0,1]')
     st = _require_scipy_stats()
     in_dom = bool(_SUPPORTED_DF_MIN <= float(df) <= _SUPPORTED_DF_MAX and abs(float(t)) <= 1e150)
+    if not in_dom:
+        out = _result(reported, None, {'t': t, 'df': df, 'sided': 2},
+                      'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf', confidence='low')
+        out.update(status='unsupported_domain', consistent=None)
+        return out
     p = 2.0 * st.t.sf(abs(t), df)
     return _result(reported, float(p), {'t': t, 'df': df, 'sided': 2},
-                   'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf',
-                   confidence='high' if in_dom else 'low')
+                   'p = 2*sf_t(|t|, df)', 'scipy.stats.t.sf', confidence='high')
 
 
 @_finite_output
@@ -235,10 +239,14 @@ def p_from_f(f, df1, df2, reported=None):
         and float(f) <= 1e300
         and float(df1) * float(f) <= 1e300
     )
+    if not in_dom:
+        out = _result(reported, None, {'F': f, 'df1': df1, 'df2': df2},
+                      'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf', confidence='low')
+        out.update(status='unsupported_domain', consistent=None)
+        return out
     p = st.f.sf(f, df1, df2)
     return _result(reported, float(p), {'F': f, 'df1': df1, 'df2': df2},
-                   'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf',
-                   confidence='high' if in_dom else 'low')
+                   'p = sf_F(F, df1, df2)', 'scipy.stats.f.sf', confidence='high')
 
 
 @_finite_output
@@ -251,10 +259,14 @@ def p_from_chi2(chi2, df, reported=None):
     _require(chi2 >= 0, '卡方统计量须非负')
     st = _require_scipy_stats()
     in_dom = bool(_SUPPORTED_DF_MIN <= float(df) <= _SUPPORTED_DF_MAX and float(chi2) <= 1e300)
+    if not in_dom:
+        out = _result(reported, None, {'chi2': chi2, 'df': df},
+                      'p = sf_chi2(chi2, df)', 'scipy.stats.chi2.sf', confidence='low')
+        out.update(status='unsupported_domain', consistent=None)
+        return out
     p = st.chi2.sf(chi2, df)
     return _result(reported, float(p), {'chi2': chi2, 'df': df},
-                   'p = sf_chi2(chi2, df)', 'scipy.stats.chi2.sf',
-                   confidence='high' if in_dom else 'low')
+                   'p = sf_chi2(chi2, df)', 'scipy.stats.chi2.sf', confidence='high')
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +284,17 @@ def z_from_beta_se(beta, se, reported=None):
     _require(se > 0, '标准误须为正')
     st = _require_scipy_stats()
     z = beta / se
+    _finite('z', z)
+    if abs(float(z)) > 1e150:
+        out = _result(
+            reported,
+            {'z': float(z), 'p': None},
+            {'beta': beta, 'se': se},
+            'z = beta/se; p = 2*sf_norm(|z|)', 'scipy.stats.norm.sf',
+            confidence='low',
+        )
+        out.update(status='unsupported_domain', consistent=None)
+        return out
     p = 2.0 * st.norm.sf(abs(z))
     return _result(
         reported,

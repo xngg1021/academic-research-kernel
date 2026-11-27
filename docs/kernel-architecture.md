@@ -1,10 +1,10 @@
-# Research-State Kernel Architecture (`v3.0.0`)
+# Research-State Kernel Architecture (`v3.1.0`)
 
 ## Overview
 
-`academic-research-kernel` (`v3.0.0`) is an offline-first, deterministic scholarly verification and manuscript engineering runtime built on Python's standard library, `SQLite` (`STRICT` tables + `WAL` journaling + `application_id = 0x41524B33`, `user_version = 4`), and on-demand scientific libraries (`numpy`, `scipy`, `statsmodels`, `jsonschema`).
+`academic-research-kernel` (`v3.1.0`) is an offline-first, deterministic scholarly verification and manuscript engineering runtime built on Python's standard library, `SQLite` (`STRICT` tables + `WAL` journaling + `application_id = 0x41524B33`, `user_version = 4`), and on-demand scientific libraries (`numpy`, `scipy`, `statsmodels`, `jsonschema`).
 
-Rather than scattering dozens of duplicated helper scripts across skill directories, `v3.0.0` consolidates the entire runtime inside a single installable package (`src/academic_research_kernel/`), exposing **24 stdio MCP tools**, **26 canonical JSON Schemas** (`21` Draft 2020-12 + `5` Draft-07, all bound in `KIND_SCHEMA_MAP`), **20 CLI command groups** (with clean human-readable `3.0.0` aliases), and **7 First-Principles Agent Skills**:
+Rather than scattering dozens of duplicated helper scripts across skill directories, `v3.0.0+` consolidates the entire runtime inside a single installable package (`src/academic_research_kernel/`), exposing **24 stdio MCP tools**, **26 canonical JSON Schemas** (`21` Draft 2020-12 + `5` Draft-07, all bound in `KIND_SCHEMA_MAP`), **20 CLI command groups** (with clean human-readable `3.x` aliases), and **7 First-Principles Agent Skills**:
 
 ```mermaid
 flowchart TD

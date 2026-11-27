@@ -1,7 +1,7 @@
 ---
 name: audit-paper
 description: "Audit paper statistics, tables, claims, and ledgers."
-version: 3.0.0
+version: 3.1.0
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # Audit Paper (`audit-paper`)
 
-Check reported statistics, tables, source locators, and reproducibility checklists inside an external or paired paper via `academic-research-kernel` (`3.0.0`), outputting concrete item-level checks and SQLite evidence bindings rather than a blanket verdict on whole-paper truth. Consolidates `paper-research`, `quantitative-paper-audit`, `research-reproducibility`, `research-object-identity`, `claim-evidence-graph`, and `decision-ledger`.
+Check reported statistics, tables, source locators, and reproducibility checklists inside an external or paired paper via `academic-research-kernel` (`3.1.0`), outputting concrete item-level checks and SQLite evidence bindings rather than a blanket verdict on whole-paper truth. Consolidates `paper-research`, `quantitative-paper-audit`, `research-reproducibility`, `research-object-identity`, `claim-evidence-graph`, and `decision-ledger`.
 
 ## When to Use
 

@@ -39,7 +39,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def _make_wheel_from_source(dest: Path, *, mutate_files=None) -> Path:
     """Construct a valid synthetic wheel matching REPO_ROOT pyproject.toml, with optional mutation."""
-    ver = "3.0.0"
+    from academic_research_kernel._version import __version__ as ver
     whl_path = dest / f"academic_research_kernel-{ver}-py3-none-any.whl"
     dist_info = f"academic_research_kernel-{ver}.dist-info"
     files: dict[str, bytes] = {}
@@ -99,7 +99,7 @@ def _make_wheel_from_source(dest: Path, *, mutate_files=None) -> Path:
 
 
 def _make_sdist_from_source(dest: Path, *, drop_rels: set[str] | None = None, pkg_info_extra: str = "") -> Path:
-    ver = "3.0.0"
+    from academic_research_kernel._version import __version__ as ver
     sdist_path = dest / f"academic_research_kernel-{ver}.tar.gz"
     prefix = f"academic_research_kernel-{ver}"
     pyproj = release_gate._load_pyproject(REPO_ROOT)
@@ -221,15 +221,17 @@ def _run_offline_verify(*, peer_path: Path | None = None, inc_path: Path | None 
 # R-P0-01: Release artifact binding (extras, markers, WHEEL tag, sdist assets)
 # ---------------------------------------------------------------------------
 def test_rp0_01_wheel_and_sdist_source_binding_rejects_tampering(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from academic_research_kernel._version import __version__ as cur_ver
+
     c_whl_dir = tmp_path / "c_whl"
     c_whl_dir.mkdir()
     ctrl_whl = _make_wheel_from_source(c_whl_dir)
-    assert release_gate.inspect_artifact(ctrl_whl, "3.0.0", source_root=REPO_ROOT)["filename"].endswith(".whl")
+    assert release_gate.inspect_artifact(ctrl_whl, cur_ver, source_root=REPO_ROOT)["filename"].endswith(".whl")
 
     c_sd_dir = tmp_path / "c_sd"
     c_sd_dir.mkdir()
     ctrl_sd = _make_sdist_from_source(c_sd_dir)
-    assert release_gate.inspect_artifact(ctrl_sd, "3.0.0", source_root=REPO_ROOT)["filename"].endswith(".tar.gz")
+    assert release_gate.inspect_artifact(ctrl_sd, cur_ver, source_root=REPO_ROOT)["filename"].endswith(".tar.gz")
 
     def _strip_extras(files: dict[str, bytes], dist_info: str) -> None:
         lines = [ln for ln in files[f"{dist_info}/METADATA"].decode("utf-8").splitlines() if "extra ==" not in ln]
@@ -238,7 +240,7 @@ def test_rp0_01_wheel_and_sdist_source_binding_rejects_tampering(tmp_path: Path,
     d1 = tmp_path / "m1"
     d1.mkdir()
     with pytest.raises(ValueError, match="extra"):
-        release_gate.inspect_artifact(_make_wheel_from_source(d1, mutate_files=_strip_extras), "3.0.0", source_root=REPO_ROOT)
+        release_gate.inspect_artifact(_make_wheel_from_source(d1, mutate_files=_strip_extras), cur_ver, source_root=REPO_ROOT)
 
     def _add_extra_dep(files: dict[str, bytes], dist_info: str) -> None:
         raw = files[f"{dist_info}/METADATA"].decode("utf-8").rstrip("\n")
@@ -247,7 +249,7 @@ def test_rp0_01_wheel_and_sdist_source_binding_rejects_tampering(tmp_path: Path,
     d2 = tmp_path / "m2"
     d2.mkdir()
     with pytest.raises(ValueError, match="extra"):
-        release_gate.inspect_artifact(_make_wheel_from_source(d2, mutate_files=_add_extra_dep), "3.0.0", source_root=REPO_ROOT)
+        release_gate.inspect_artifact(_make_wheel_from_source(d2, mutate_files=_add_extra_dep), cur_ver, source_root=REPO_ROOT)
 
     def _bad_tag(files: dict[str, bytes], dist_info: str) -> None:
         files[f"{dist_info}/WHEEL"] = files[f"{dist_info}/WHEEL"].replace(b"py3-none-any", b"cp312-cp312-linux_x86_64")
@@ -255,20 +257,20 @@ def test_rp0_01_wheel_and_sdist_source_binding_rejects_tampering(tmp_path: Path,
     d3 = tmp_path / "m3"
     d3.mkdir()
     with pytest.raises(ValueError, match="Tag"):
-        release_gate.inspect_artifact(_make_wheel_from_source(d3, mutate_files=_bad_tag), "3.0.0", source_root=REPO_ROOT)
+        release_gate.inspect_artifact(_make_wheel_from_source(d3, mutate_files=_bad_tag), cur_ver, source_root=REPO_ROOT)
 
     d4 = tmp_path / "m4"
     d4.mkdir()
     with pytest.raises(ValueError, match="sdist"):
-        release_gate.inspect_artifact(_make_sdist_from_source(d4, drop_rels={"skills/", "tests/"}), "3.0.0", source_root=REPO_ROOT)
+        release_gate.inspect_artifact(_make_sdist_from_source(d4, drop_rels={"skills/", "tests/"}), cur_ver, source_root=REPO_ROOT)
 
     d5 = tmp_path / "m5"
     d5.mkdir()
     sdist_no_id = _make_sdist_from_source(d5, drop_rels={"REPOSITORY-IDENTITY.md"})
     with pytest.raises(ValueError, match="REPOSITORY-IDENTITY.md"):
-        release_gate.inspect_artifact(sdist_no_id, "3.0.0", source_root=REPO_ROOT)
+        release_gate.inspect_artifact(sdist_no_id, cur_ver, source_root=REPO_ROOT)
     with pytest.raises(ValueError, match="REPOSITORY-IDENTITY.md"):
-        release_gate.inspect_artifact(sdist_no_id, "3.0.0", source_root=None)
+        release_gate.inspect_artifact(sdist_no_id, cur_ver, source_root=None)
 
     both_dir = tmp_path / "both"
     both_dir.mkdir()

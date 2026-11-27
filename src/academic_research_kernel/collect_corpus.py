@@ -17,7 +17,9 @@ from urllib.request import Request
 from ._stdlib import canonical_json, normalize_doi
 from .research.sources import controlled_urlopen
 
-USER_AGENT = "academic-research-kernel/3.0.0"
+from ._version import __version__
+
+USER_AGENT = f"academic-research-kernel/{__version__}"
 KNOWN_LAYERS = ("text-search", "algorithmic-related", "topic-cross", "citation-pool")
 
 

@@ -1,7 +1,7 @@
 ---
 name: audit-peer-review
 description: "Audit OpenReview scores, reviews, and companion repos."
-version: 3.0.0
+version: 3.1.0
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # Audit Peer Review (`audit-peer-review`)
 
-Analyze published OpenReview score/word-count/unanimity distributions, inspect single-forum official reviews vs. meta-reviews, and inventory companion code repositories via `academic-research-kernel` (`3.0.0`); outputs descriptive snapshot statistics and screening cues rather than adjudicating review fairness or AI authorship.
+Analyze published OpenReview score/word-count/unanimity distributions, inspect single-forum official reviews vs. meta-reviews, and inventory companion code repositories via `academic-research-kernel` (`3.1.0`); outputs descriptive snapshot statistics and screening cues rather than adjudicating review fairness or AI authorship.
 
 ## When to Use
 

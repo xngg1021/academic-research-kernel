@@ -17,7 +17,9 @@ from urllib.request import Request
 from .research.sources import controlled_urlopen as urlopen, reject_link_or_reparse
 
 
-USER_AGENT = 'academic-research-kernel/1.2'
+from ._version import __version__
+
+USER_AGENT = f'academic-research-kernel/{__version__}'
 
 
 def _node_id(work: dict):

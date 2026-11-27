@@ -235,7 +235,8 @@ def fetch_github_tree(repo_slug: str) -> tuple[list[dict], bool, str | None, str
         except Exception:
             pass
 
-    headers = {"User-Agent": "academic-research-kernel/3.0.0", "Accept": "application/vnd.github+json"}
+    from ._version import __version__
+    headers = {"User-Agent": f"academic-research-kernel/{__version__}", "Accept": "application/vnd.github+json"}
     token = os.environ.get("GITHUB_TOKEN", "").strip() or os.environ.get("GH_TOKEN", "").strip()
     if token:
         headers["Authorization"] = f"Bearer {token}"

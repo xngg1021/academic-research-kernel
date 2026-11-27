@@ -1937,16 +1937,25 @@ def handle_tool_call(name: str, args: Mapping[str, Any] | None = None) -> dict[s
                     "by_test": dict(by_test),
                 }
             if eff_op == "=":
-                pm_res = rec_mod.check_p_match(
-                    rep_val,
-                    recomputed_p,
-                    decimals=a.get("p_value_decimals"),
-                    reported_literal=clean_lit,
-                )
-                if recomputed_p < 1e-300:
-                    pm_res = dict(pm_res)
-                    pm_res["consistent"] = spc.get("point_consistent")
-                    pm_res["confidence"] = spc.get("confidence", "low")
+                if recomputed_p is None:
+                    pm_res = {
+                        "consistent": None,
+                        "status": spc.get("status", "unsupported_domain"),
+                        "confidence": "low",
+                        "reported": float(rep_val) if isinstance(rep_val, (int, float)) else str(rep_val),
+                        "recomputed": None,
+                    }
+                else:
+                    pm_res = rec_mod.check_p_match(
+                        rep_val,
+                        recomputed_p,
+                        decimals=a.get("p_value_decimals"),
+                        reported_literal=clean_lit,
+                    )
+                    if recomputed_p < 1e-300:
+                        pm_res = dict(pm_res)
+                        pm_res["consistent"] = spc.get("point_consistent")
+                        pm_res["confidence"] = spc.get("confidence", "low")
                 pm_by = out_stat.setdefault("p_match_by_test", {})
                 pm_by[kind_tag] = pm_res
                 if len(pm_by) == 1:

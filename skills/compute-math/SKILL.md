@@ -1,7 +1,7 @@
 ---
 name: compute-math
 description: "Probe compute hardware and route scientific math tasks."
-version: 3.0.0
+version: 3.1.0
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # Scientific Computation & Hardware Probe (`compute-math`)
 
-Probe observable CPU/GPU/BLAS environments, emit schema-validated `ComputeReceipt` timing records (`compute-receipt-1.0`), and route numerical/symbolic tasks to installed scientific Python libraries via `academic-research-kernel` (`3.0.0`) (kernel CLI/MCP entrypoints perform capability probing and receipt measurement rather than acting as a standalone theorem prover or CAS). Consolidates `math-computation` and `scfabric`.
+Probe observable CPU/GPU/BLAS environments, emit schema-validated `ComputeReceipt` timing records (`compute-receipt-1.0`), and route numerical/symbolic tasks to installed scientific Python libraries via `academic-research-kernel` (`3.1.0`) (kernel CLI/MCP entrypoints perform capability probing and receipt measurement rather than acting as a standalone theorem prover or CAS). Consolidates `math-computation` and `scfabric`.
 
 ## When to Use
 

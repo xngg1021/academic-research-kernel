@@ -24,7 +24,9 @@ from urllib.request import Request
 from ._stdlib import safe_path
 from .research.sources import controlled_urlopen
 
-USER_AGENT = "Mozilla/5.0 (compatible; academic-research-kernel/3.0)"
+from ._version import __version__
+
+USER_AGENT = f"Mozilla/5.0 (compatible; academic-research-kernel/{__version__})"
 ACCEPT_VENUE_RE = re.compile(r"\b(?:poster|spotlight|oral|notable)\b", re.I)
 ACCEPT_DECISION_RE = re.compile(r"(?<!not\s)(?<!un)(?<!cannot\s)(?<!never\s)\baccept(?:ed)?\b(?!\s+threshold)", re.I)
 REJECT_DECISION_RE = re.compile(r"\breject(?:ed)?\b|\bdesk[\s_-]*reject", re.I)

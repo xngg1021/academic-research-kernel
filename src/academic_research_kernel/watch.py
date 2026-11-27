@@ -19,7 +19,9 @@ from .state_db import ResearchStateDB, canonical_literature_watch_key
 
 OPENALEX_BASE = "https://api.openalex.org"
 CROSSREF_BASE = "https://api.crossref.org/v1"
-USER_AGENT = "academic-research-kernel/3.0.0 (mailto:local@localhost)"
+from ._version import __version__
+
+USER_AGENT = f"academic-research-kernel/{__version__} (mailto:local@localhost)"
 
 RETRACTION_UPDATE_TYPES: frozenset[str] = frozenset({
     "retraction",

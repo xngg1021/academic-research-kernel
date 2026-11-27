@@ -1,7 +1,7 @@
 ---
 name: meta-analysis
 description: "Pool effect sizes, run subgroup WLS, and map literature."
-version: 3.0.0
+version: 3.1.0
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # Meta-Analysis & Literature Synthesis (`meta-analysis`)
 
-Deterministic effect-size pooling, subgroup $Q_{\text{between}}$ decomposition, weighted least squares (`WLS`) meta-regression, publication-bias diagnostics, citation graph analysis, and literature synthesis workflows via `academic-research-kernel` (`3.0.0`). Consolidates `systematic-review-meta-analysis` and `literature-analysis`.
+Deterministic effect-size pooling, subgroup $Q_{\text{between}}$ decomposition, weighted least squares (`WLS`) meta-regression, publication-bias diagnostics, citation graph analysis, and literature synthesis workflows via `academic-research-kernel` (`3.1.0`). Consolidates `systematic-review-meta-analysis` and `literature-analysis`.
 
 ## When to Use
 

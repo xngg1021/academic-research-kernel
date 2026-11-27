@@ -1,7 +1,7 @@
 ---
 name: check-submission
 description: "Check TeX anonymity, pages, tables, and venue styles."
-version: 3.0.0
+version: 3.1.0
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # Check Submission (`check-submission`)
 
-Gate **your own manuscript before submission**—checking multi-file LaTeX trees, venue page/section rules, double-blind PDF/source anonymity (treating generic third-party public URLs as review warnings while blocking author-linked or `--forbidden-token` leaks), `CEG` claim bindings, and receipt-backed `booktabs` tables via `academic-research-kernel` (`3.0.0`). Consolidates `academic-writing`.
+Gate **your own manuscript before submission**—checking multi-file LaTeX trees, venue page/section rules, double-blind PDF/source anonymity (treating generic third-party public URLs as review warnings while blocking author-linked or `--forbidden-token` leaks), `CEG` claim bindings, and receipt-backed `booktabs` tables via `academic-research-kernel` (`3.1.0`). Consolidates `academic-writing`.
 
 ## When to Use
 

@@ -1520,3 +1520,146 @@ def test_norm_title_preserves_relational_comparators_against_collision() -> None
         target_doi="10.1000/p",
     )
     assert chk_ok["citation_metadata_match"] is True
+
+
+def test_direct_recompute_and_mcp_kind_dispatch_reject_unsupported_domain_uniformly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Conditional-GO closure: direct p_from_t/p_from_f/p_from_chi2/z_from_beta_se and MCP kind+params must not emit numeric false zeros outside the joint domain."""
+    from math import atan, pi
+    from academic_research_kernel import mcp_server, recompute, state_db
+
+    # 1. Direct Python entrypoints outside the joint domain return None / unsupported_domain
+    rt = recompute.p_from_t(1e155, 1, reported=0.0)
+    assert rt["recomputed"] is None
+    assert rt["difference"] is None
+    assert rt["status"] == "unsupported_domain"
+    assert rt["consistent"] is None
+    assert rt["confidence"] == "low"
+
+    rf = recompute.p_from_f(1e301, 1e8, 0.001, reported=0.0)
+    assert rf["recomputed"] is None
+    assert rf["difference"] is None
+    assert rf["status"] == "unsupported_domain"
+    assert rf["consistent"] is None
+    assert rf["confidence"] == "low"
+
+    rc = recompute.p_from_chi2(1e301, 1, reported=0.0)
+    assert rc["recomputed"] is None
+    assert rc["difference"] is None
+    assert rc["status"] == "unsupported_domain"
+    assert rc["consistent"] is None
+    assert rc["confidence"] == "low"
+
+    rz = recompute.z_from_beta_se(1e155, 1.0)
+    assert rz["recomputed"]["z"] == pytest.approx(1e155)
+    assert rz["recomputed"]["p"] is None
+    assert rz["status"] == "unsupported_domain"
+    assert rz["consistent"] is None
+    assert rz["confidence"] == "low"
+
+    # 2. In-domain Cauchy tail remains deterministic and high-confidence
+    rt_in = recompute.p_from_t(1e100, 1)
+    assert rt_in["confidence"] == "high"
+    assert "status" not in rt_in
+    assert rt_in["recomputed"] == pytest.approx(2.0 * atan(1.0 / 1e100) / pi, rel=1e-12)
+
+    # 3. MCP kind+params dispatch AND flat parameter dispatch agree on unsupported domain and CEG unverifiability
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ARK_EXECUTION_KEY_HEX", "5a" * 32)
+    db_rel = "direct_dom_ceg.sqlite"
+
+    kind_t = mcp_server.handle_tool_call("academic_recompute_statistics", {
+        "db_path": db_rel,
+        "kind": "t",
+        "params": {"t": 1e155, "df": 1, "reported": 0.0},
+    })
+    assert kind_t["recomputed"] is None
+    assert kind_t["status"] == "unsupported_domain"
+    assert kind_t["consistent"] is None
+
+    kind_f = mcp_server.handle_tool_call("academic_recompute_statistics", {
+        "db_path": db_rel,
+        "kind": "f",
+        "params": {"f": 1e301, "df1": 1e8, "df2": 0.001},
+    })
+    assert kind_f["recomputed"] is None
+    assert kind_f["status"] == "unsupported_domain"
+    assert kind_f["consistent"] is None
+
+    flat_t = mcp_server.handle_tool_call("academic_recompute_statistics", {
+        "db_path": db_rel,
+        "t_stat": 1e155,
+        "df": 1,
+        "p_value": 0.0,
+    })
+    assert flat_t["recomputed_p"] is None
+    assert flat_t["p_match"]["consistent"] is None
+    assert flat_t["stat_p_consistency"]["consistent"] is None
+
+    mcp_server.handle_tool_call(
+        "claim_evidence_add",
+        {"db_path": db_rel, "claim_id": "CLM-KIND-DOM", "claim_text": "Claim relying on unsupported-domain kind+params t output"},
+    )
+    mcp_server.handle_tool_call(
+        "research_artifact_ingest",
+        {
+            "db_path": db_rel,
+            "artifact_id": "results-kind-dom",
+            "kind": "quantitative_audit",
+            "execution_id": kind_t["execution_id"],
+            "bindings": {"claim_id": "CLM-KIND-DOM"},
+        },
+    )
+    with state_db.ResearchStateDB(tmp_path / db_rel) as db:
+        ceg = db.export_ceg_dict()
+    assert ceg["support_edges"][0]["support_status"] == "unverifiable"
+    assert ceg["support_edges"][0]["metadata"]["artifact_provenance_tier"] == "kernel_executed"
+    assert ceg["support_edges"][0]["metadata"]["bound_at_ingest"] is True
+
+
+def test_release_identity_and_user_agent_version_synchronization() -> None:
+    """Ensure _version, manifests, 7 skills + portable mirrors, CHANGELOG, and outbound User-Agent strings stay synchronized."""
+    import json
+    from academic_research_kernel._version import __version__
+    from academic_research_kernel import (
+        build_citation_graph,
+        check_updates,
+        collect_corpus,
+        export_bibtex,
+        locate_oa,
+        openreview_audit,
+        verify_work,
+        watch,
+    )
+
+    repo_root = Path(__file__).resolve().parents[1]
+    assert __version__ == "3.1.0"
+    for ua_mod in (
+        build_citation_graph,
+        check_updates,
+        collect_corpus,
+        export_bibtex,
+        locate_oa,
+        openreview_audit,
+        verify_work,
+        watch,
+    ):
+        assert f"academic-research-kernel/{__version__}" in ua_mod.USER_AGENT
+
+    if (repo_root / "plugin.json").is_file():
+        plugin = json.loads((repo_root / "plugin.json").read_text("utf-8"))
+        assert plugin["version"] == __version__
+    if (repo_root / "server.json").is_file():
+        server = json.loads((repo_root / "server.json").read_text("utf-8"))
+        assert server["version"] == __version__
+        assert all(pkg["version"] == __version__ for pkg in server["packages"])
+
+    changelog = (repo_root / "CHANGELOG.md").read_text("utf-8")
+    assert f"## {__version__} — 2026-11-28" in changelog
+
+    for skill_md in sorted((repo_root / "skills").glob("*/SKILL.md")):
+        rel = skill_md.relative_to(repo_root / "skills")
+        mirror_md = repo_root / "src/academic_research_kernel/portable_skills" / rel
+        assert skill_md.read_bytes() == mirror_md.read_bytes()
+        assert f"\nversion: {__version__}\n" in skill_md.read_text("utf-8")

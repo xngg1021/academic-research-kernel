@@ -967,7 +967,8 @@ def discover_oa_fallback_urls(doi: str) -> list[tuple[str, str, str]]:
     with _pinned_public_dns():
         public_url(api_url)
         opener = build_opener(ProxyHandler({}), PublicRedirect())
-        req = Request(api_url, headers={'User-Agent': 'academic-research-kernel/2.2', 'Accept': 'application/json'})
+        from .._version import __version__
+        req = Request(api_url, headers={'User-Agent': f'academic-research-kernel/{__version__}', 'Accept': 'application/json'})
         try:
             with opener.open(req, timeout=15) as resp:
                 raw_bytes = resp.read(2 * 1024 * 1024 + 1)

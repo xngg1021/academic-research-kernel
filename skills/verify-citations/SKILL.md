@@ -1,7 +1,7 @@
 ---
 name: verify-citations
 description: "Verify DOIs, track retractions, merge corpora, find OA."
-version: 3.0.0
+version: 3.1.0
 author: Junfu Shi (SJF, xngg1021)
 license: LicenseRef-Source-Lineage-1.0
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # Verify Citations (`verify-citations`)
 
-Verify bibliographic identity, DOIs, Crossref update/retraction notices, SQLite watchlists, Union-Find corpus merges, and legal Open Access PDFs (`arXiv` plus `Unpaywall -> OpenAlex -> Semantic Scholar -> Europe PMC`) via `academic-research-kernel` (`3.0.0`); confirming a cited work exists and is unretracted does not by itself verify that the cited text supports a manuscript's substantive claim. Consolidates `academic-source-verification`, `retraction-watch`, `literature-watch`, and `collect_corpus`.
+Verify bibliographic identity, DOIs, Crossref update/retraction notices, SQLite watchlists, Union-Find corpus merges, and legal Open Access PDFs (`arXiv` plus `Unpaywall -> OpenAlex -> Semantic Scholar -> Europe PMC`) via `academic-research-kernel` (`3.1.0`); confirming a cited work exists and is unretracted does not by itself verify that the cited text supports a manuscript's substantive claim. Consolidates `academic-source-verification`, `retraction-watch`, `literature-watch`, and `collect_corpus`.
 
 ## When to Use
 
